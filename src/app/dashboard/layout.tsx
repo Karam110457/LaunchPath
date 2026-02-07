@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { requireAuth } from "@/lib/auth/guards";
 
-export default function DashboardLayout({
+/** Dashboard is protected: redirect to login if not authenticated. */
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  await requireAuth();
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-border/40 bg-background">

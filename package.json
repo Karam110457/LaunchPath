@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "audit": "npm audit",
+    "audit:fix": "npm audit fix",
+    "security-check": "npm run typecheck && npm run lint && npm run audit"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
@@ -18,7 +22,8 @@
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
