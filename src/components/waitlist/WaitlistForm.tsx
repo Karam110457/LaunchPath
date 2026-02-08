@@ -41,7 +41,9 @@ export function WaitlistForm() {
     }
   }, [state.status, email]);
 
-  const showStep2 = state.status === "success" && submittedEmail && step2State.status !== "success";
+  // Use submittedEmail ?? email so step 2 shows on first success render (before useEffect sets submittedEmail)
+  const step2Email = submittedEmail ?? (email && email.trim()) || null;
+  const showStep2 = state.status === "success" && step2State.status !== "success" && !!step2Email;
   const showFinalSuccess = state.status === "success" && (step2State.status === "success" || !showStep2);
 
   if (showFinalSuccess && !showStep2) {
@@ -91,7 +93,7 @@ export function WaitlistForm() {
             }
           }}
         >
-          <input type="hidden" name="email" value={submittedEmail ?? ""} />
+          <input type="hidden" name="email" value={step2Email ?? ""} />
           <div>
             <label htmlFor="role_stage" className="sr-only">Your stage</label>
             <select
