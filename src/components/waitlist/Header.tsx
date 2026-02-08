@@ -5,12 +5,23 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { trackWaitlistEvent } from "@/lib/analytics";
 
+const SCROLL_THRESHOLD = 24;
+
+function getScrollY(): number {
+  if (typeof window === "undefined") return 0;
+  return window.scrollY ?? document.documentElement.scrollTop ?? 0;
+}
+
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", handleScroll);
+    const handleScroll = () => {
+      const y = getScrollY();
+      setScrolled(y > SCROLL_THRESHOLD);
+    };
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -23,13 +34,17 @@ export function Header() {
   };
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 transition-all duration-300 ease-out pointer-events-none [&>*]:pointer-events-auto">
-      <div className={scrolled ? "pt-4 px-4 md:pt-6 md:px-6" : ""}>
+    <header className="fixed inset-x-0 top-0 z-50 pointer-events-none [&>*]:pointer-events-auto">
+      <div
+        className={`transition-[padding] duration-300 ease-out ${
+          scrolled ? "pt-4 px-4 md:pt-6 md:px-6" : "pt-0 px-0"
+        }`}
+      >
         <div
-          className={`flex items-center justify-between transition-all duration-300 ease-out ${
+          className={`flex items-center justify-between transition-[max-width,padding,border-radius,box-shadow,background-color,border-color] duration-300 ease-out ${
             scrolled
               ? "max-w-6xl mx-auto rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/30 py-3 px-5 md:px-6 md:py-4"
-              : "container mx-auto px-4 py-6"
+              : "container mx-auto px-4 py-6 rounded-none border border-transparent shadow-none bg-transparent"
           }`}
         >
           <Link href="/" className="font-serif italic text-2xl text-white tracking-tight hover:opacity-80 transition-opacity">
