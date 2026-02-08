@@ -47,25 +47,25 @@ export function Header() {
   }, []);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50">
+    <header className="fixed inset-x-0 top-0 z-50 pt-[var(--safe-area-inset-top)]">
       <div
         className={`pointer-events-auto transition-all duration-300 ease-out ${
-          scrolled ? "pt-4 px-4 md:pt-6 md:px-6" : "pt-0 px-0"
+          scrolled ? "pt-3 px-3 sm:pt-4 sm:px-4 md:pt-6 md:px-6" : "pt-0 px-0"
         }`}
       >
         <div
-          className={`flex items-center justify-between transition-all duration-300 ease-out ${
+          className={`flex items-center justify-between gap-3 transition-all duration-300 ease-out ${
             scrolled
-              ? "max-w-6xl mx-auto rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/30 py-3 px-5 md:px-6 md:py-4"
-              : "container mx-auto px-4 py-6"
+              ? "max-w-6xl mx-auto rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/30 py-2.5 px-3 sm:py-3 sm:px-5 md:px-6 md:py-4"
+              : "container mx-auto px-3 py-4 sm:px-4 sm:py-5 md:py-6"
           }`}
         >
           <Link
             href="/"
-            className="text-white hover:opacity-80 transition-opacity"
+            className="text-white hover:opacity-80 transition-opacity shrink-0 min-h-[44px] flex items-center"
             aria-label="LaunchPath home"
           >
-            <Logo className="text-2xl" />
+            <Logo className="text-xl sm:text-2xl" />
           </Link>
 
           <nav
@@ -101,7 +101,7 @@ export function Header() {
               scrollToWaitlist();
             }}
             variant="outline"
-            className="min-h-[44px] min-w-[44px] bg-white/5 border-white/10 hover:bg-white/10 text-white hover:text-white transition-all rounded-full px-6"
+            className="min-h-[44px] shrink-0 rounded-full bg-white/5 border-white/10 hover:bg-white/10 text-white hover:text-white transition-all text-sm sm:text-base px-4 sm:px-6 py-2 touch-manipulation"
             aria-label="Reserve my spot"
           >
             Reserve My Spot

@@ -10,7 +10,7 @@ import { BackgroundGrid } from "@/components/ui/background-grid";
 
 export default function WaitlistPage() {
   return (
-    <main className="min-h-screen text-foreground selection:bg-primary/20 selection:text-white relative" role="main">
+    <main className="min-h-[100dvh] text-foreground selection:bg-primary/20 selection:text-white relative pb-[var(--safe-area-inset-bottom)]" role="main">
       <BackgroundGrid />
       <Header />
       <Hero />

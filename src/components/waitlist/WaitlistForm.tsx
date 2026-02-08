@@ -42,20 +42,20 @@ export function WaitlistForm() {
   }, [state.status, email]);
 
   // Use submittedEmail ?? email so step 2 shows on first success render (before useEffect sets submittedEmail)
-  const step2Email = submittedEmail ?? (email && email.trim()) || null;
+  const step2Email = submittedEmail ?? ((email && email.trim()) || null);
   const showStep2 = state.status === "success" && step2State.status !== "success" && !!step2Email;
   const showFinalSuccess = state.status === "success" && (step2State.status === "success" || !showStep2);
 
   if (showFinalSuccess && !showStep2) {
     return (
       <div
-        className="flex items-center gap-3 text-primary bg-primary/5 px-6 py-4 rounded-xl border border-primary/20 animate-in fade-in slide-in-from-bottom-2 backdrop-blur-sm shadow-[0_0_20px_-10px_var(--primary)]"
+        className="flex items-center gap-3 text-primary bg-primary/5 px-4 sm:px-6 py-3 sm:py-4 rounded-xl border border-primary/20 animate-in fade-in slide-in-from-bottom-2 backdrop-blur-sm shadow-[0_0_20px_-10px_var(--primary)] w-full"
         role="status"
       >
         <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
           <CheckCircle2 className="w-5 h-5" aria-hidden />
         </div>
-        <span className="font-medium text-lg">{state.message}</span>
+        <span className="font-medium text-base sm:text-lg">{state.message}</span>
       </div>
     );
   }
@@ -63,13 +63,13 @@ export function WaitlistForm() {
   if (showFinalSuccess && step2State.status === "success") {
     return (
       <div
-        className="flex items-center gap-3 text-primary bg-primary/5 px-6 py-4 rounded-xl border border-primary/20 animate-in fade-in slide-in-from-bottom-2 backdrop-blur-sm"
+        className="flex items-center gap-3 text-primary bg-primary/5 px-4 sm:px-6 py-3 sm:py-4 rounded-xl border border-primary/20 animate-in fade-in slide-in-from-bottom-2 backdrop-blur-sm w-full"
         role="status"
       >
         <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
           <CheckCircle2 className="w-5 h-5" aria-hidden />
         </div>
-        <span className="font-medium text-lg">{step2State.message}</span>
+        <span className="font-medium text-base sm:text-lg">{step2State.message}</span>
       </div>
     );
   }
@@ -79,13 +79,13 @@ export function WaitlistForm() {
       step2ViewedRef.current = true;
     }
     return (
-      <div className="w-full max-w-md space-y-4 animate-in fade-in slide-in-from-bottom-2" role="region" aria-label="Optional: help us tailor your experience">
-        <p className="text-sm text-muted-foreground text-center">
+      <div className="w-full max-w-md space-y-3 sm:space-y-4 animate-in fade-in slide-in-from-bottom-2" role="region" aria-label="Optional: help us tailor your experience">
+        <p className="text-xs sm:text-sm text-muted-foreground text-center px-1">
           One quick question (optional). Skip if you prefer.
         </p>
         <form
           action={step2FormAction}
-          className="space-y-4"
+          className="space-y-3 sm:space-y-4"
           onSubmit={(e) => {
             const submitter = (e.nativeEvent as SubmitEvent).submitter;
             if (submitter?.getAttribute("name") !== "skipped") {
@@ -99,7 +99,7 @@ export function WaitlistForm() {
             <select
               id="role_stage"
               name="role_stage"
-              className="w-full min-h-[44px] rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30"
+              className="w-full min-h-[48px] rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30 touch-manipulation"
               aria-label="Your stage"
             >
               {ROLE_OPTIONS.map((opt) => (
@@ -114,16 +114,16 @@ export function WaitlistForm() {
               name="biggest_blocker"
               rows={3}
               placeholder="What's your biggest blocker right now? (optional)"
-              className="w-full min-h-[80px] rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30 resize-y"
+              className="w-full min-h-[80px] rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30 resize-y touch-manipulation"
               aria-label="Biggest blocker"
               maxLength={500}
             />
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col-reverse sm:flex-row flex-wrap gap-2">
             <Button
               type="submit"
               disabled={isStep2Pending}
-              className="min-h-[44px] px-6 font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl transition-all duration-200 disabled:opacity-80 disabled:cursor-not-allowed"
+              className="min-h-[48px] w-full sm:w-auto px-6 font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl transition-all duration-200 disabled:opacity-80 disabled:cursor-not-allowed touch-manipulation"
             >
               {isStep2Pending ? (
                 <>
@@ -140,7 +140,7 @@ export function WaitlistForm() {
               value="true"
               variant="ghost"
               disabled={isStep2Pending}
-              className="min-h-[44px] px-6 text-muted-foreground hover:text-foreground transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="min-h-[48px] w-full sm:w-auto px-6 text-muted-foreground hover:text-foreground transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed touch-manipulation"
               onClick={() => trackWaitlistEvent("waitlist_step2_skipped")}
             >
               {isStep2Pending ? "Saving…" : "Skip"}
@@ -148,7 +148,7 @@ export function WaitlistForm() {
           </div>
         </form>
         {step2State.status === "error" && (
-          <p className="text-sm text-red-400 text-center">{step2State.message}</p>
+          <p className="text-sm text-red-400 text-center px-2">{step2State.message}</p>
         )}
       </div>
     );
@@ -159,7 +159,7 @@ export function WaitlistForm() {
       id="waitlist-form"
       ref={formRef}
       action={formAction}
-      className="flex flex-col gap-4 w-full max-w-md relative group"
+      className="flex flex-col gap-3 sm:gap-4 w-full max-w-md relative group"
       onSubmit={() => trackWaitlistEvent("hero_cta_click", { action: "submit" })}
     >
       <input type="hidden" name="source_page" value="homepage" />
@@ -171,22 +171,24 @@ export function WaitlistForm() {
         autoComplete="off"
         aria-hidden
       />
-      <div className="relative flex flex-col gap-2">
-        <div className="relative flex gap-2 p-1.5 bg-white/5 border border-white/10 rounded-xl backdrop-blur-md focus-within:border-primary/50 focus-within:bg-white/10 transition-colors duration-300 shadow-lg">
+      <div className="relative flex flex-col gap-2 w-full">
+        <div className="relative flex flex-col sm:flex-row gap-2 p-1.5 sm:p-2 bg-white/5 border border-white/10 rounded-xl backdrop-blur-md focus-within:border-primary/50 focus-within:bg-white/10 transition-colors duration-300 shadow-lg">
           <Input
             type="email"
             name="email"
-            placeholder="Enter your email address…"
+            placeholder="Enter your email…"
             required
             value={email}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-            className="bg-transparent border-none focus-visible:ring-0 h-12 min-h-[44px] text-base placeholder:text-muted-foreground/50 px-4"
+            className="bg-transparent border-none focus-visible:ring-0 h-12 min-h-[44px] text-base sm:text-base placeholder:text-muted-foreground/50 px-4 touch-manipulation"
             aria-label="Email address"
+            inputMode="email"
+            autoComplete="email"
           />
           <Button
             type="submit"
             disabled={isPending}
-            className="h-12 min-h-[44px] min-w-[44px] px-8 font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 rounded-lg shadow-lg hover:shadow-primary/25 disabled:opacity-80 disabled:cursor-not-allowed"
+            className="h-12 min-h-[44px] w-full sm:w-auto sm:min-w-[44px] sm:px-8 font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 rounded-lg shadow-lg hover:shadow-primary/25 disabled:opacity-80 disabled:cursor-not-allowed touch-manipulation"
             aria-label="Reserve my spot"
             aria-busy={isPending}
           >
@@ -198,14 +200,14 @@ export function WaitlistForm() {
             ) : (
               <>
                 Reserve My Spot
-                <ArrowRight className="w-4 h-4 ml-2 shrink-0" aria-hidden />
+                <ArrowRight className="w-4 h-4 ml-2 shrink-0 hidden sm:block" aria-hidden />
               </>
             )}
           </Button>
         </div>
       </div>
       {state.status === "error" && (
-        <p className="text-sm text-red-400 animate-in fade-in text-center bg-red-500/10 py-2 rounded-lg border border-red-500/20" role="alert">
+        <p className="text-sm text-red-400 animate-in fade-in text-center bg-red-500/10 py-2 px-3 rounded-lg border border-red-500/20" role="alert">
           {state.message}
         </p>
       )}

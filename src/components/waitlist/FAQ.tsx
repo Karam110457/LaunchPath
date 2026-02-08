@@ -33,13 +33,13 @@ const ITEMS = [
 
 export function FAQ() {
   return (
-    <section id="faq" className="py-24 scroll-mt-24 md:scroll-mt-28" aria-label="FAQ">
+    <section id="faq" className="py-14 sm:py-20 md:py-24 scroll-mt-20 md:scroll-mt-28" aria-label="FAQ">
       <div className="container mx-auto px-4 max-w-3xl">
-        <div className="text-center mb-16">
-          <h2 className="font-serif italic text-3xl md:text-4xl text-white mb-4">
+        <div className="text-center mb-8 sm:mb-12 md:mb-16">
+          <h2 className="font-serif italic text-2xl sm:text-3xl md:text-4xl text-white mb-2 sm:mb-4">
             Common Questions
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             Everything you need to know before joining.
           </p>
         </div>
@@ -47,7 +47,7 @@ export function FAQ() {
         <Accordion
           type="single"
           collapsible
-          className="w-full space-y-4"
+          className="w-full space-y-3 sm:space-y-4"
           onValueChange={(value) => {
             if (value) trackWaitlistEvent("faq_opened", { question_id: value });
           }}
@@ -56,12 +56,12 @@ export function FAQ() {
             <AccordionItem
               key={i}
               value={`item-${i}`}
-              className="border border-white/10 bg-white/[0.02] rounded-xl px-6"
+              className="border border-white/10 bg-white/[0.02] rounded-xl px-4 sm:px-5 md:px-6"
             >
-              <AccordionTrigger className="text-white hover:text-primary transition-colors text-left text-lg py-6 min-h-[44px] [&[data-state=open]>svg]:rotate-180">
+              <AccordionTrigger className="text-white hover:text-primary transition-colors text-left text-base sm:text-lg py-4 sm:py-5 md:py-6 min-h-[48px] [&[data-state=open]>svg]:rotate-180 touch-manipulation">
                 {item.question}
               </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground text-base leading-relaxed pb-6">
+              <AccordionContent className="text-muted-foreground text-sm sm:text-base leading-relaxed pb-4 sm:pb-5 md:pb-6">
                 {item.answer}
               </AccordionContent>
             </AccordionItem>

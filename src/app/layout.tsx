@@ -23,6 +23,13 @@ export const metadata: Metadata = {
   description: "The guided path from confusion to your first sellable AI offer.",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover" as const,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
