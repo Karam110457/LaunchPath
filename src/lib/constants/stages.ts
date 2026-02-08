@@ -23,30 +23,24 @@ export function getStageLabel(internalKey: string): string {
   return STAGE_LABELS[internalKey as InternalStageKey] ?? internalKey;
 }
 
-/** Stage config for waitlist/How it Works: outcome, artifact, execution */
+/** Stage config for waitlist/How it Works */
 export const STAGES = [
   {
     internalKey: "offer_blueprint" as const,
-    step: "01",
-    title: "Offer Thesis",
-    description: "One sellable idea, validated. No guessing what the market wants.",
-    detail: "Validated offer doc",
-    time: "~15 min",
+    step: "1",
+    title: "Pick a Profitable Offer",
+    description: "Know exactly what to sell, who it's for, and why it wins.",
   },
   {
     internalKey: "build_plan" as const,
-    step: "02",
-    title: "Delivery System",
-    description: "Step-by-step build with tools and templates. Ship, don’t research.",
-    detail: "Step-by-step guide",
-    time: "~1–2 hrs",
+    step: "2",
+    title: "Map Your Build Path",
+    description: "Get the tool stack, workflow sequence, and implementation order to execute fast.",
   },
   {
     internalKey: "sales_pack" as const,
-    step: "03",
-    title: "Revenue Engine",
-    description: "Scripts, outreach, objection handling. Start real conversations.",
-    detail: "Outreach scripts",
-    time: "~30 min",
+    step: "3",
+    title: "Deploy the Client Acquisition Plan",
+    description: "Receive a step-by-step go-to-market plan, plus sales call prep and training, so you can convert demand into clients.",
   },
 ] as const;
