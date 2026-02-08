@@ -2,7 +2,7 @@ import { Quote, ShieldCheck } from "lucide-react";
 
 export function Trust() {
   return (
-    <section id="why" className="py-32 border-t border-white/5 relative overflow-hidden">
+    <section id="why" className="py-32 relative overflow-hidden">
       <div className="absolute top-20 left-10 md:left-40 text-white/[0.02]" aria-hidden>
         <Quote className="w-64 h-64 rotate-180" />
       </div>

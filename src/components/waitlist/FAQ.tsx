@@ -33,7 +33,7 @@ const ITEMS = [
 
 export function FAQ() {
   return (
-    <section id="faq" className="py-24 border-t border-white/5">
+    <section id="faq" className="py-24">
       <div className="container mx-auto px-4 max-w-3xl">
         <div className="text-center mb-16">
           <h2 className="font-serif italic text-3xl md:text-4xl text-white mb-4">
