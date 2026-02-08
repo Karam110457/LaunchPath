@@ -32,14 +32,14 @@ export default function TermsOfServicePage() {
           <section>
             <h2 className="text-lg font-semibold text-white mb-2">1. Agreement to Terms</h2>
             <p>
-              By accessing or using LaunchPath (&quot;Service,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;), including our website, waitlist, and any guided software experience we provide (e.g., offer thesis, delivery system, revenue engine), you agree to be bound by these Terms of Service. If you do not agree, do not use the Service.
+              By accessing or using LaunchPath (&quot;Service,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;), including our website, waitlist, and any guided software experience we provide (e.g., offer blueprints, build plans, sales packs), you agree to be bound by these Terms of Service. If you do not agree, do not use the Service.
             </p>
           </section>
 
           <section>
             <h2 className="text-lg font-semibold text-white mb-2">2. Description of Service</h2>
             <p>
-              LaunchPath is a guided software experience that helps users—particularly AI beginners—move from idea to a first sellable AI offer. The Service may include: collecting your goals and inputs, generating outputs such as offer thesis, delivery system, and revenue engine, and related tools (e.g., validation, competitor analysis). We may offer early access via a waitlist and may update or discontinue features at our discretion.
+              LaunchPath is a guided software experience that helps users—particularly AI beginners—move from idea to a first sellable AI offer. The Service may include: collecting your goals and inputs, generating outputs such as offer one-pagers, step-by-step build plans, and sales packs, and related tools (e.g., validation, competitor analysis). We may offer early access via a waitlist and may update or discontinue features at our discretion.
             </p>
           </section>
 
@@ -68,7 +68,7 @@ export default function TermsOfServicePage() {
           <section>
             <h2 className="text-lg font-semibold text-white mb-2">5. Your Content and Our Outputs</h2>
             <p>
-              You retain ownership of the inputs you provide (e.g., ideas, goals). By using the Service, you grant us a license to use, process, and store that content as necessary to provide and improve the Service. Outputs we generate (e.g., offer thesis, delivery system, revenue engine) are provided for your use in accordance with these Terms. We do not guarantee that outputs are error-free, complete, or suitable for any particular business or legal purpose; you use them at your own risk and are responsible for your own business and legal compliance.
+              You retain ownership of the inputs you provide (e.g., ideas, goals). By using the Service, you grant us a license to use, process, and store that content as necessary to provide and improve the Service. Outputs we generate (e.g., offer blueprints, build plans) are provided for your use in accordance with these Terms. We do not guarantee that outputs are error-free, complete, or suitable for any particular business or legal purpose; you use them at your own risk and are responsible for your own business and legal compliance.
             </p>
           </section>
 

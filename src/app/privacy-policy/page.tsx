@@ -32,7 +32,7 @@ export default function PrivacyPolicyPage() {
           <section>
             <h2 className="text-lg font-semibold text-white mb-2">1. Introduction</h2>
             <p>
-              LaunchPath (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) operates the LaunchPath service, a guided software experience that helps users create sellable AI offers via an offer thesis, delivery system, and revenue engine. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our website and services, including when you join our waitlist or use our product.
+              LaunchPath (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) operates the LaunchPath service, a guided software experience that helps users create sellable AI offers, build plans, and sales packs. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our website and services, including when you join our waitlist or use our product.
             </p>
           </section>
 
@@ -52,7 +52,7 @@ export default function PrivacyPolicyPage() {
             <ul className="list-disc pl-6 space-y-1 mt-2">
               <li>Provide, maintain, and improve the LaunchPath service.</li>
               <li>Communicate with you (e.g., waitlist updates, product access, and important notices).</li>
-              <li>Personalize your experience and tailor outputs (e.g., offer thesis, delivery system) to your inputs.</li>
+              <li>Personalize your experience and tailor outputs (e.g., offer blueprints, build plans) to your inputs.</li>
               <li>Analyze usage to improve our product and understand how people use LaunchPath.</li>
               <li>Comply with legal obligations and protect our rights and the security of our systems.</li>
             </ul>

@@ -47,16 +47,16 @@ export function Header() {
   }, []);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 pt-[var(--safe-area-inset-top)] isolate [transform:translateZ(0)] [backface-visibility:hidden]">
+    <header className="fixed inset-x-0 top-0 z-50 pt-[var(--safe-area-inset-top)]">
       <div
-        className={`pointer-events-auto md:transition-all md:duration-300 md:ease-out ${
+        className={`pointer-events-auto transition-all duration-300 ease-out ${
           scrolled ? "pt-3 px-3 sm:pt-4 sm:px-4 md:pt-6 md:px-6" : "pt-0 px-0"
         }`}
       >
         <div
-          className={`flex items-center justify-between gap-3 md:transition-all md:duration-300 md:ease-out ${
+          className={`flex items-center justify-between gap-3 transition-all duration-300 ease-out ${
             scrolled
-              ? "max-w-6xl mx-auto rounded-xl md:rounded-2xl bg-black/60 md:bg-black/40 border border-white/10 shadow-lg md:shadow-2xl md:shadow-black/30 py-2.5 px-3 sm:py-3 sm:px-5 md:px-6 md:py-4 md:backdrop-blur-xl"
+              ? "max-w-6xl mx-auto rounded-2xl bg-black/50 md:bg-black/40 border border-white/10 shadow-2xl shadow-black/30 py-2.5 px-3 sm:py-3 sm:px-5 md:px-6 md:py-4 md:backdrop-blur-xl"
               : "container mx-auto px-3 py-4 sm:px-4 sm:py-5 md:py-6"
           }`}
         >

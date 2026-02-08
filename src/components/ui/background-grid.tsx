@@ -38,9 +38,9 @@ export function BackgroundGrid() {
         />
       ))}
 
-      {/* Ambient glow: no blur on mobile (iOS perf); blur from md up */}
-      <div className="absolute top-[-20%] left-[20%] w-[400px] h-[400px] md:w-[600px] md:h-[600px] bg-primary/15 md:bg-primary/10 rounded-full mix-blend-screen opacity-40 md:opacity-30 md:blur-[150px]" />
-      <div className="absolute bottom-[-20%] right-[20%] w-[300px] h-[300px] md:w-[500px] md:h-[500px] bg-primary/10 md:bg-primary/5 rounded-full mix-blend-screen opacity-30 md:opacity-20 md:blur-[120px]" />
+      {/* Subtle Green Glow (Ambient) */}
+      <div className="absolute top-[-20%] left-[20%] w-[600px] h-[600px] bg-primary/10 blur-[150px] rounded-full mix-blend-screen opacity-30" />
+      <div className="absolute bottom-[-20%] right-[20%] w-[500px] h-[500px] bg-primary/5 blur-[120px] rounded-full mix-blend-screen opacity-20" />
     </div>
   );
 }

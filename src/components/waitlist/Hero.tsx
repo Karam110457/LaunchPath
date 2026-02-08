@@ -7,8 +7,7 @@ export function Hero() {
       className="relative min-h-[100dvh] flex flex-col justify-center pt-28 pb-12 sm:pt-32 sm:pb-16 md:min-h-screen md:pt-44 md:pb-0 overflow-hidden"
       aria-label="Hero"
     >
-      {/* Gradient orb: no blur on mobile (filter:blur is expensive on iOS); blur only from md up */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] sm:w-[600px] md:w-[1000px] h-[300px] sm:h-[400px] md:h-[600px] bg-primary/25 md:bg-primary/20 rounded-full pointer-events-none opacity-50 md:opacity-40 mix-blend-screen md:blur-[120px]" aria-hidden />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] sm:w-[800px] md:w-[1000px] h-[400px] sm:h-[500px] md:h-[600px] bg-primary/20 blur-[100px] md:blur-[120px] rounded-full pointer-events-none opacity-40 mix-blend-screen" aria-hidden />
 
       <div className="container relative z-10 mx-auto flex flex-col items-center text-center px-4">
         <div
