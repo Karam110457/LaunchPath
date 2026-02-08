@@ -4,7 +4,7 @@ import { WaitlistForm } from "./WaitlistForm";
 export function Hero() {
   return (
     <section
-      className="relative min-h-[100dvh] flex flex-col justify-center pt-28 pb-12 sm:pt-32 sm:pb-16 md:min-h-screen md:pt-44 md:pb-0 overflow-hidden"
+      className="relative min-h-[100dvh] flex flex-col justify-center pt-24 pb-12 sm:pt-28 sm:pb-16 md:min-h-screen md:pt-40 md:pb-0 overflow-hidden"
       aria-label="Hero"
     >
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] sm:w-[800px] md:w-[1000px] h-[400px] sm:h-[500px] md:h-[600px] bg-primary/20 blur-[100px] md:blur-[120px] rounded-full pointer-events-none opacity-40 mix-blend-screen" aria-hidden />
@@ -22,8 +22,8 @@ export function Hero() {
         </div>
 
         <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl tracking-tight text-white mb-4 sm:mb-6 md:mb-8 max-w-5xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100 leading-[0.95] break-words px-1">
-          <span className="block text-white/95">From Confused Beginner to </span>
-          <span className="italic text-primary block mt-1 sm:mt-2">First AI Client</span>
+          <span className="block text-white/95">From Confused</span>
+          <span className="block mt-1 sm:mt-2"><span className="text-white/95">Beginner to </span><span className="italic text-primary">First AI Client</span></span>
         </h1>
 
         <p className="text-xs sm:text-sm md:text-base lg:text-lg text-muted-foreground/90 max-w-2xl mb-5 sm:mb-6 md:mb-8 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200 font-light leading-relaxed px-1">
