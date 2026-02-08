@@ -21,13 +21,13 @@ export function Hero() {
           <span className="tracking-wide uppercase font-medium">Accepting early access members</span>
         </div>
 
-        <h1 className="font-serif text-5xl sm:text-6xl md:text-6xl lg:text-8xl xl:text-9xl tracking-tight text-white mb-4 sm:mb-6 md:mb-8 max-w-5xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100 leading-[0.95] break-words px-1">
-          <span className="block text-white/95">Stop learning.</span>
-          <span className="italic text-primary block mt-1 sm:mt-2">Start shipping.</span>
+        <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl tracking-tight text-white mb-4 sm:mb-6 md:mb-8 max-w-5xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100 leading-[0.95] break-words px-1">
+          <span className="block text-white/95">From Confused Beginner to </span>
+          <span className="italic text-primary block mt-1 sm:mt-2">First AI Client</span>
         </h1>
 
-        <p className="text-sm sm:text-base md:text-lg lg:text-2xl text-muted-foreground/90 max-w-2xl mb-5 sm:mb-6 md:mb-8 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200 font-light leading-relaxed px-1">
-          Get a <strong className="font-semibold text-white">validated offer</strong>, a <strong className="font-semibold text-white">step-by-step build path</strong>, and a <strong className="font-semibold text-white">client acquisition system</strong> in one guided flow, designed to help you land your <strong className="font-semibold text-white">first client</strong> and <strong className="font-semibold text-white">scale with confidence</strong>.
+        <p className="text-xs sm:text-sm md:text-base lg:text-lg text-muted-foreground/90 max-w-2xl mb-5 sm:mb-6 md:mb-8 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200 font-light leading-relaxed px-1">
+          Get a validated offer, a step-by-step build path, and a client acquisition system in one guided flow, designed to help you land your <strong className="font-semibold text-white">first client</strong> and scale with confidence.
         </p>
 
         <div className="animate-in fade-in slide-in-from-bottom-10 duration-700 delay-300 w-full max-w-full sm:max-w-md flex flex-col items-center gap-4 sm:gap-6">
