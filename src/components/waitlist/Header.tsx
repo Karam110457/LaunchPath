@@ -23,37 +23,39 @@ export function Header() {
   };
 
   return (
-    <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? "bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/5 py-3"
-          : "bg-transparent py-6"
-      }`}
-    >
-      <div className="container mx-auto px-4 flex items-center justify-between">
-        <Link href="/" className="font-serif italic text-2xl text-white tracking-tight hover:opacity-80 transition-opacity">
-          LaunchPath
-        </Link>
-
-        <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
-          <button onClick={() => document.getElementById("problem")?.scrollIntoView({ behavior: "smooth" })} className="hover:text-white transition-colors">
-            The Problem
-          </button>
-          <button onClick={() => document.getElementById("solution")?.scrollIntoView({ behavior: "smooth" })} className="hover:text-white transition-colors">
-            How it Works
-          </button>
-          <button onClick={() => document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" })} className="hover:text-white transition-colors">
-            FAQ
-          </button>
-        </nav>
-
-        <Button 
-          onClick={scrollToWaitlist}
-          variant="outline"
-          className="bg-white/5 border-white/10 hover:bg-white/10 text-white hover:text-white transition-all rounded-full px-6"
+    <header className="fixed inset-x-0 top-0 z-50 transition-all duration-300 ease-out">
+      <div className={scrolled ? "pt-4 px-4 md:pt-6 md:px-6" : ""}>
+        <div
+          className={`flex items-center justify-between transition-all duration-300 ease-out ${
+            scrolled
+              ? "max-w-6xl mx-auto rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-xl shadow-black/20 py-3 px-5 md:px-6"
+              : "container mx-auto px-4 py-6"
+          }`}
         >
-          Join Waitlist
-        </Button>
+          <Link href="/" className="font-serif italic text-2xl text-white tracking-tight hover:opacity-80 transition-opacity">
+            LaunchPath
+          </Link>
+
+          <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
+            <button onClick={() => document.getElementById("problem")?.scrollIntoView({ behavior: "smooth" })} className="hover:text-white transition-colors">
+              The Problem
+            </button>
+            <button onClick={() => document.getElementById("solution")?.scrollIntoView({ behavior: "smooth" })} className="hover:text-white transition-colors">
+              How it Works
+            </button>
+            <button onClick={() => document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" })} className="hover:text-white transition-colors">
+              FAQ
+            </button>
+          </nav>
+
+          <Button 
+            onClick={scrollToWaitlist}
+            variant="outline"
+            className="bg-white/5 border-white/10 hover:bg-white/10 text-white hover:text-white transition-all rounded-full px-6"
+          >
+            Join Waitlist
+          </Button>
+        </div>
       </div>
     </header>
   );

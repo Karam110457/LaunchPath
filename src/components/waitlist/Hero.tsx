@@ -2,7 +2,7 @@ import { WaitlistForm } from "./WaitlistForm";
 
 export function Hero() {
   return (
-    <section className="relative min-h-screen flex flex-col justify-center pt-20 overflow-hidden">
+    <section className="relative min-h-screen flex flex-col justify-center pt-36 md:pt-44 overflow-hidden">
       {/* Background Effects */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-primary/20 blur-[120px] rounded-full pointer-events-none opacity-40 mix-blend-screen" />
       <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
