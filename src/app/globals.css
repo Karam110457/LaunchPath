@@ -152,6 +152,12 @@
   }
 }
 
+/*
+ * iOS: avoid filter:blur() and backdrop-filter on mobile—Safari composites them
+ * on the CPU and causes scroll jank. Header uses no blur on mobile; hero/background
+ * orbs use solid gradients on mobile and blur only from md up (see components).
+ */
+
 /* Centered page container: max-width + horizontal margin auto + consistent padding */
 @layer components {
   .container {

@@ -1,5 +1,19 @@
 # **LaunchPath — Product Requirements Document (v1)**
 
+## **Terminology (user-facing vs internal keys)**
+
+User-facing names used in product, waitlist, and marketing:
+
+| User-facing       | Internal key (API/DB) |
+|-------------------|------------------------|
+| **Offer Thesis**  | `offer_blueprint`      |
+| **Delivery System** | `build_plan`         |
+| **Revenue Engine** | `sales_pack`          |
+
+Internal keys remain unchanged so existing code and data keep working. Use the table above when displaying labels or updating copy.
+
+---
+
 ## **1\) Product Summary**
 
 **LaunchPath** helps AI beginners go from confusion to first sellable AI offer by guiding them through a fixed flow: **Offer → Build → Sell**.  
@@ -43,10 +57,10 @@ This follows current PRD best practice of customer-outcome clarity, clear scope,
 
 ## **5\) Product Goals (MVP)**
 
-1. User creates first **Offer Blueprint** in one session.  
-2. User leaves with actionable **Build Plan** \+ **Sales Pack**.  
+1. User creates first **Offer Thesis** in one session.  
+2. User leaves with actionable **Delivery System** \+ **Revenue Engine**.  
 3. User can iterate/re-run with new constraints (not same output each time).  
-4. User can use advanced tools (validate, competitor, pivot, sales prep) after core blueprint exists.
+4. User can use advanced tools (validate, competitor, pivot, sales prep) after core offer thesis exists.
 
 ## **6\) Non-Goals (MVP)**
 
@@ -77,8 +91,8 @@ User can edit this profile anytime.
 No prompt required. System routes user through:
 
 1. Offer Verdict  
-2. Build Plan  
-3. Sales Pack
+2. Delivery System  
+3. Revenue Engine
 
 ### **Path 2 — “I already have an idea”**
 
@@ -91,14 +105,14 @@ User enters 1–3 line idea prompt. System runs:
 
 ## **Step C: Chat Experience**
 
-Chat remains free-form for follow-up/refinement (Manus-style), but always grounded in the **active Offer Blueprint** context.
+Chat remains free-form for follow-up/refinement (Manus-style), but always grounded in the **active Offer Thesis** context.
 
 ## **8\) Product Structure (User-Facing)**
 
 No visible “mode picker” at start.  
 Behind the scenes, LaunchPath auto-selects modules in sequence.
 
-Visible **Tools** (after first blueprint exists):
+Visible **Tools** (after first offer thesis exists):
 
 * Validate Idea  
 * Competitor Analysis  
@@ -109,22 +123,22 @@ Visible **Tools** (after first blueprint exists):
 
 ## **9\) Key Artifacts**
 
-### **Offer Blueprint (primary saved object)**
+### **Offer Thesis (primary saved object)**
 
 Contains:
 
 * Offer One-Pager (what/who/outcome)  
-* Build Blueprint (steps/tools/templates/testing)  
-* Sales Pack (outreach/call handling)  
+* Delivery System (steps/tools/templates/testing)  
+* Revenue Engine (outreach/call handling)  
 * Assumptions \+ constraints  
 * Version history
 
 Users can:
 
-* iterate current blueprint  
+* iterate current offer thesis  
 * clone to new angle  
-* create new blueprint  
-* set one “active blueprint” for focused chat
+* create new offer thesis  
+* set one “active offer thesis” for focused chat
 
 ## **10\) Repeat Runs Logic (How outputs stay different)**
 
@@ -139,7 +153,7 @@ Each rerun requires a **Run Objective**:
 
 System uses:
 
-* saved profile \+ active blueprint \+ run objective  
+* saved profile \+ active offer thesis \+ run objective  
   to generate materially different outputs.
 
 ## **11\) Messaging Framework**
@@ -172,10 +186,10 @@ Avoid leading with:
 
 ## **13\) Success Metrics (first 90 days)**
 
-* Activation: % users completing first Offer Blueprint  
+* Activation: % users completing first Offer Thesis  
 * Time-to-value: median time to first complete Offer→Build→Sell package  
 * Retention: week-2 and week-4 return rate  
-* Reuse: avg blueprint iterations per active user  
+* Reuse: avg offer thesis iterations per active user  
 * Monetization: credits consumed per active user  
 * Outcome proxy: % users reporting first prospect conversations started
 
@@ -186,9 +200,9 @@ Avoid leading with:
 * onboarding profile  
 * 2 entry paths  
 * Offer→Build→Sell guided flow  
-* active blueprint memory  
+* active offer thesis memory  
 * basic tool unlocks (validate/pivot/sales prep; competitor if data quality is ready)  
-* saved blueprints \+ clone \+ rerun objective
+* saved offer theses \+ clone \+ rerun objective
 
 **Exclude**
 
@@ -198,7 +212,7 @@ Avoid leading with:
 ## **15\) Risks and Mitigations**
 
 * **Risk:** users drift into random chat  
-  **Mitigation:** keep active blueprint context \+ suggested next-action chips.  
+  **Mitigation:** keep active offer thesis context \+ suggested next-action chips.  
 * **Risk:** outputs feel generic  
   **Mitigation:** constraint-driven reruns \+ required run objective \+ profile grounding.  
 * **Risk:** analysis paralysis returns  
@@ -210,11 +224,11 @@ Avoid leading with:
 
 Every user, regardless of entry path, should end up with:
 
-1. **Offer Blueprint**
+1. **Offer Thesis**
 
-2. **Build Plan**
+2. **Delivery System**
 
-3. **Sales Plan**
+3. **Revenue Engine**
 
 Everything else (validate, competitor, pivot, sales prep) is support tooling around that.
 
@@ -266,7 +280,7 @@ Before finalizing offer:
 
 If fail: auto-pivot inside flow (no extra clicks).
 
-### **Step 4 — Offer Blueprint Created**
+### **Step 4 — Offer Thesis Created**
 
 Contains:
 
@@ -280,7 +294,7 @@ Contains:
 
 * starter pricing recommendation
 
-### **Step 5 — Build Plan**
+### **Step 5 — Delivery System**
 
 Generate:
 
@@ -296,7 +310,7 @@ Generate:
 
 * delivery SOP
 
-### **Step 6 — Sales Plan**
+### **Step 6 — Revenue Engine**
 
 Generate:
 
@@ -345,19 +359,19 @@ Run automatically:
 
 3 outcomes:
 
-1. **Go** → proceed to Offer Blueprint refinement
+1. **Go** → proceed to Offer Thesis refinement
 
 2. **Go with changes** → recommended edits first
 
 3. **No-go** → auto-generate 2 pivot options
 
-### **Step 4 — Offer Blueprint (same object as Path 1\)**
+### **Step 4 — Offer Thesis (same object as Path 1\)**
 
-Once validated/refined, save blueprint and continue into:
+Once validated/refined, save offer thesis and continue into:
 
-* Build Plan
+* Delivery System
 
-* Sales Plan
+* Revenue Engine
 
 So Path 2 still ends at the same core deliverables.
 
@@ -369,7 +383,7 @@ You want them visible. Good. Show as **Tools**, not initial choices.
 
 ## **Tool availability by stage**
 
-### **Before Offer Blueprint exists**
+### **Before Offer Thesis exists**
 
 Only allow:
 
@@ -377,7 +391,7 @@ Only allow:
 
 * Ask Anything (chat)
 
-### **After Offer Blueprint exists**
+### **After Offer Thesis exists**
 
 Unlock:
 
@@ -414,13 +428,13 @@ When user clicks “Run Again,” require one:
 
 * different niche
 
-Then rerun against same profile \+ existing blueprint \+ new objective.
+Then rerun against same profile \+ existing offer thesis \+ new objective.
 
 Also allow:
 
-* **Clone Blueprint** (new variant)
+* **Clone Offer Thesis** (new variant)
 
-* **Set Active Blueprint** (chat context anchor)
+* **Set Active Offer Thesis** (chat context anchor)
 
 ---
 
@@ -431,7 +445,7 @@ You said no report editor. Correct. Keep chat natural.
 
 Every follow-up message uses:
 
-* active blueprint
+* active offer thesis
 
 * saved profile
 
@@ -443,7 +457,7 @@ Chat outputs can be normal text, but should always suggest structured actions:
 
 * “Apply this to Offer”
 
-* “Regenerate Build Plan”
+* “Regenerate Delivery System”
 
 * “Create Call Prep”
 
@@ -489,15 +503,15 @@ Your audience needs “first 7 days” clarity, not strategy theatre.
 
    * Path 2: Have idea
 
-3. Generate/refine Offer Blueprint
+3. Generate/refine Offer Thesis
 
-4. Generate Build Plan
+4. Generate Delivery System
 
-5. Generate Sales Plan
+5. Generate Revenue Engine
 
 6. Unlock advanced tools
 
-7. Repeat runs via objective-based reruns \+ blueprint cloning
+7. Repeat runs via objective-based reruns \+ offer thesis cloning
 
 That’s coherent, scalable, and aligned with your market.
 

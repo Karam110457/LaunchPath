@@ -11,11 +11,11 @@ import { trackWaitlistEvent } from "@/lib/analytics";
 const ITEMS = [
   {
     question: "Is this a course or a software tool?",
-    answer: "LaunchPath is a guided software experience. You answer a few questions and get three concrete outputs: a validated offer one-pager, a step-by-step build plan (tools and templates), and a sales pack (scripts and outreach). It’s not a video course; it’s an interactive flow that produces artifacts you can use immediately.",
+    answer: "LaunchPath is a guided software experience. You answer a few questions and get three concrete outputs: an offer thesis (validated one-pager), a delivery system (step-by-step build with tools and templates), and a revenue engine (scripts and outreach). It’s not a video course; it’s an interactive flow that produces artifacts you can use immediately.",
   },
   {
     question: "Do I need to know how to code?",
-    answer: "No. We assume you’re an AI beginner. The build plans use no-code and low-code options (e.g. Make, Zapier, ChatGPT, simple prompts). If you can follow steps and copy-paste, you can build what we recommend.",
+    answer: "No. We assume you’re an AI beginner. The delivery system uses no-code and low-code options (e.g. Make, Zapier, ChatGPT, simple prompts). If you can follow steps and copy-paste, you can build what we recommend.",
   },
   {
     question: "What if I don't have an idea yet?",
