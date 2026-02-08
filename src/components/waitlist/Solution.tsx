@@ -17,7 +17,7 @@ export function Solution() {
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground font-light px-1">
             LaunchPath removes the noise. One fixed flow to your first sale.
           </p>
-          <p className="text-sm sm:text-base text-primary/90 font-medium mt-3">
+          <p className="text-sm sm:text-base text-primary/90 font-medium mt-2">
             All in under 60 minutes.
           </p>
         </div>
@@ -40,9 +40,12 @@ export function Solution() {
                     <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-pulse motion-reduce:animate-none" aria-hidden />
                   )}
                 </div>
-                <h3 className="text-xl sm:text-2xl font-serif font-light italic text-white mb-3 group-hover:text-primary transition-colors duration-300">
+                <h3 className="text-xl sm:text-2xl font-serif font-light italic text-white mb-1 group-hover:text-primary transition-colors duration-300">
                   {item.title}
                 </h3>
+                <p className="text-[10px] sm:text-xs text-primary/90 mb-3 sm:mb-4 uppercase tracking-wide font-medium">
+                  {item.detail}
+                </p>
                 <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-xs mx-auto px-1">
                   {item.description}
                 </p>
