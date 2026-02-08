@@ -16,7 +16,7 @@ export function Trust() {
           </div>
 
           <div className="text-center mt-6 sm:mt-8 mb-6 sm:mb-10">
-            <h2 className="font-serif italic text-2xl sm:text-3xl md:text-5xl text-white mb-2 sm:mb-4">
+            <h2 className="font-serif font-light italic text-2xl sm:text-3xl md:text-5xl text-white mb-2 sm:mb-4">
               Why LaunchPath?
             </h2>
             <p className="text-primary font-medium tracking-wide uppercase text-xs sm:text-sm">

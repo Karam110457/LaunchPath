@@ -11,7 +11,7 @@ export function Solution() {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] sm:text-xs font-medium text-primary mb-4 sm:mb-6 uppercase tracking-wider">
             The LaunchPath Method
           </div>
-          <h2 className="font-serif italic text-3xl sm:text-4xl md:text-6xl text-white mb-4 sm:mb-6">
+          <h2 className="font-serif font-light italic text-3xl sm:text-4xl md:text-6xl text-white mb-4 sm:mb-6">
             One Clear Path
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground font-light px-1">
@@ -31,13 +31,13 @@ export function Solution() {
                   <div className="absolute inset-3 sm:inset-4 rounded-full bg-white/[0.06] group-hover:bg-primary/10 transition-colors duration-300" />
                   <div className="relative z-20 flex flex-col items-center gap-0.5 sm:gap-1">
                     <Icon className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white/70 group-hover:text-primary transition-colors duration-300" aria-hidden />
-                    <span className="font-serif italic text-xs sm:text-sm text-muted-foreground/70">Step {item.step}</span>
+                    <span className="font-serif font-light italic text-xs sm:text-sm text-muted-foreground/70">Step {item.step}</span>
                   </div>
                   {i === 1 && (
                     <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-pulse motion-reduce:animate-none" aria-hidden />
                   )}
                 </div>
-                <h3 className="text-xl sm:text-2xl font-serif text-white mb-1 group-hover:text-primary transition-colors duration-300">
+                <h3 className="text-xl sm:text-2xl font-serif font-light italic text-white mb-1 group-hover:text-primary transition-colors duration-300">
                   {item.title}
                 </h3>
                 <p className="text-[10px] sm:text-xs text-primary/90 mb-2 sm:mb-3 uppercase tracking-wide font-medium">

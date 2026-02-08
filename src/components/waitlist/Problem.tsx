@@ -5,7 +5,7 @@ export function Problem() {
     <section id="problem" className="py-16 sm:py-24 md:py-32 relative overflow-hidden scroll-mt-20 md:scroll-mt-28" aria-label="The Problem">
       <div className="container mx-auto relative z-10 px-4">
         <div className="max-w-3xl mx-auto text-center mb-10 sm:mb-16 md:mb-20">
-          <h2 className="font-serif italic text-3xl sm:text-4xl md:text-5xl text-white mb-4 sm:mb-6">
+          <h2 className="font-serif font-light italic text-3xl sm:text-4xl md:text-5xl text-white mb-4 sm:mb-6">
             Stuck in the &quot;Learning Loop&quot;?
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground font-light leading-relaxed px-1">
@@ -42,7 +42,7 @@ export function Problem() {
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4 sm:mb-6 text-muted-foreground group-hover:text-primary group-hover:border-primary/30 transition-colors duration-500">
                   <item.icon className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <h3 className="text-lg sm:text-xl font-medium text-white mb-2 sm:mb-3 font-serif italic">{item.title}</h3>
+                <h3 className="text-lg sm:text-xl font-serif font-light italic text-white mb-2 sm:mb-3">{item.title}</h3>
                 <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                   {item.description}
                 </p>

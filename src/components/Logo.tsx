@@ -11,7 +11,7 @@ export function Logo({ className }: LogoProps) {
   return (
     <span className={cn("tracking-tight inline-flex", className)}>
       <span className="font-bold font-sans">Launch</span>
-      <span className="font-serif italic">Path</span>
+      <span className="font-serif font-light italic">Path</span>
     </span>
   );
 }
