@@ -29,7 +29,7 @@ This report documents production-grade security controls implemented for LaunchP
 
 | Header | Value / behavior |
 |--------|-------------------|
-| Content-Security-Policy | Strict: `default-src 'self'`, `script-src 'self'`, `style-src 'self' 'unsafe-inline'`, `frame-ancestors 'none'`, `connect-src` includes Supabase; `upgrade-insecure-requests` in production only. |
+| Content-Security-Policy | Strict: `default-src 'self'`, `script-src 'self' 'unsafe-inline'` (and `'unsafe-eval'` in dev only), `style-src 'self' 'unsafe-inline'`, `frame-ancestors 'none'`, `connect-src` includes Supabase; `upgrade-insecure-requests` in production only. **CSP note:** `script-src 'unsafe-inline'` is required for Next.js (hydration and chunk loading use inline scripts). For stricter CSP, use Next.js Proxy convention with nonces (see Next.js CSP docs). |
 | X-Frame-Options | DENY |
 | X-Content-Type-Options | nosniff |
 | Referrer-Policy | strict-origin-when-cross-origin |
@@ -39,7 +39,7 @@ This report documents production-grade security controls implemented for LaunchP
 
 **Files:** `src/lib/security/headers.ts`, `src/lib/supabase/middleware.ts` (applies headers), `next.config.ts`.
 
-**CSP note:** `style-src 'unsafe-inline'` is required for Next.js/Tailwind in many setups. For stricter CSP, move to nonce-based styles and document in this report.
+**CSP note:** `style-src 'unsafe-inline'` is required for Next.js/Tailwind. `script-src 'unsafe-inline'` is required for Next.js hydration and chunk scripts. For stricter CSP (no unsafe-inline), use the Next.js Proxy convention with per-request nonces and dynamic rendering; document in this report if implemented.
 
 ### C) AuthN / AuthZ
 

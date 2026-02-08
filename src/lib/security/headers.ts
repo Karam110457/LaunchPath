@@ -9,15 +9,23 @@ import { type NextResponse } from "next/server";
 const isProduction = process.env.NODE_ENV === "production";
 
 /**
- * Content-Security-Policy: strict default. Next.js requires 'unsafe-inline' for style
- * in dev; we allow it for 'self' only. For production consider moving to nonce-based styles.
- * - script-src: 'self' only (no eval; add nonce when using inline scripts).
+ * Content-Security-Policy: strict default.
+ * - script-src: 'self' and 'unsafe-inline' are required for Next.js (hydration and chunk
+ *   loading use inline scripts). For stricter CSP use the Proxy convention with nonces
+ *   (see Next.js CSP docs). In dev, 'unsafe-eval' is needed for some tooling.
+ * - style-src: 'unsafe-inline' required for Tailwind/Next.js.
  * - frame-ancestors: 'none' prevents embedding (same as X-Frame-Options DENY).
  */
 function getCsp(): string {
+  const scriptSrc = [
+    "'self'",
+    "'unsafe-inline'", // Next.js inline scripts (hydration, chunks)
+    ...(isProduction ? [] : ["'unsafe-eval'"]), // Dev tooling
+  ].join(" ");
+
   const directives = [
     "default-src 'self'",
-    "script-src 'self'",
+    `script-src ${scriptSrc}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data: https://fonts.gstatic.com",
