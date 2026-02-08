@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { logger } from "@/lib/security/logger";
 
 export type Step2State = {
   status: "idle" | "success" | "error";
@@ -31,7 +32,7 @@ export async function completeWaitlistStep2(
     .eq("email", email);
 
   if (error) {
-    console.error("Waitlist step2 error:", error);
+    logger.error("Waitlist step2 update failed", { code: error.code, message: error.message });
     return { status: "error", message: "Something went wrong. Please try again." };
   }
 

@@ -2,7 +2,7 @@ import { XCircle, RefreshCcw, Layers, HelpCircle } from "lucide-react";
 
 export function Problem() {
   return (
-    <section id="problem" className="py-32 relative overflow-hidden">
+    <section id="problem" className="py-32 relative overflow-hidden scroll-mt-24 md:scroll-mt-28" aria-label="The Problem">
       <div className="container mx-auto relative z-10 px-4">
         <div className="max-w-3xl mx-auto text-center mb-20">
           <h2 className="font-serif italic text-4xl md:text-5xl text-white mb-6">

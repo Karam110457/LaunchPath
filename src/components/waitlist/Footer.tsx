@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Twitter, Github } from "lucide-react";
 import { Logo } from "@/components/Logo";
 
 export function Footer() {
@@ -11,18 +10,14 @@ export function Footer() {
             <Logo className="text-lg text-white" />
             <p>© {new Date().getFullYear()} LaunchPath. All rights reserved.</p>
           </div>
-          
+
           <div className="flex items-center gap-8">
-            <Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link>
-            <Link href="#" className="hover:text-white transition-colors">Terms of Service</Link>
-            <div className="flex items-center gap-4 border-l border-white/10 pl-8">
-              <Link href="#" className="hover:text-white transition-colors">
-                <Twitter className="w-4 h-4" />
-              </Link>
-              <Link href="#" className="hover:text-white transition-colors">
-                <Github className="w-4 h-4" />
-              </Link>
-            </div>
+            <Link href="/privacy-policy" className="hover:text-white transition-colors">
+              Privacy Policy
+            </Link>
+            <Link href="/terms-of-service" className="hover:text-white transition-colors">
+              Terms of Service
+            </Link>
           </div>
         </div>
       </div>

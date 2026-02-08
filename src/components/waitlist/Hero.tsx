@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { WaitlistForm } from "./WaitlistForm";
 
 export function Hero() {
@@ -37,9 +38,9 @@ export function Hero() {
 
           <p className="text-[11px] md:text-xs text-muted-foreground/70 max-w-sm text-center leading-relaxed">
             No spam. By signing up you agree to our{" "}
-            <a href="#" className="underline hover:text-white/80 transition-colors">Terms</a>
+            <Link href="/terms-of-service" className="underline hover:text-white/80 transition-colors">Terms</Link>
             {" "}and{" "}
-            <a href="#" className="underline hover:text-white/80 transition-colors">Privacy Policy</a>.
+            <Link href="/privacy-policy" className="underline hover:text-white/80 transition-colors">Privacy Policy</Link>.
           </p>
 
           <p className="text-xs text-muted-foreground/60">

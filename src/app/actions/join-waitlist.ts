@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
+import { logger } from "@/lib/security/logger";
 
 export type State = {
   status: "idle" | "success" | "error";
@@ -64,7 +65,7 @@ export async function joinWaitlist(prevState: State, formData: FormData): Promis
     if (error.code === "23505") {
       return { status: "success", message: "You're already on the list!" };
     }
-    console.error("Waitlist error:", error);
+    logger.error("Waitlist signup failed", { code: error.code, message: error.message });
     return { status: "error", message: "Something went wrong. Please try again." };
   }
 

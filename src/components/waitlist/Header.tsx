@@ -16,7 +16,7 @@ export function Header() {
   }, []);
 
   const scrollToWaitlist = () => {
-    const form = document.querySelector("form");
+    const form = document.getElementById("waitlist-form") ?? document.querySelector("form");
     if (form) {
       const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       form.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "center" });

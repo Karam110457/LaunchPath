@@ -121,19 +121,27 @@ export function WaitlistForm() {
             <Button
               type="submit"
               disabled={isStep2Pending}
-              className="min-h-[44px] px-6 font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl"
+              className="min-h-[44px] px-6 font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl transition-all duration-200 disabled:opacity-80 disabled:cursor-not-allowed"
             >
-              {isStep2Pending ? <Loader2 className="w-5 h-5 animate-spin" aria-hidden /> : "Submit"}
+              {isStep2Pending ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin shrink-0" aria-hidden />
+                  <span className="ml-2">Saving…</span>
+                </>
+              ) : (
+                "Submit"
+              )}
             </Button>
             <Button
               type="submit"
               name="skipped"
               value="true"
               variant="ghost"
-              className="min-h-[44px] px-6 text-muted-foreground hover:text-foreground"
+              disabled={isStep2Pending}
+              className="min-h-[44px] px-6 text-muted-foreground hover:text-foreground transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
               onClick={() => trackWaitlistEvent("waitlist_step2_skipped")}
             >
-              Skip
+              {isStep2Pending ? "Saving…" : "Skip"}
             </Button>
           </div>
         </form>
@@ -146,6 +154,7 @@ export function WaitlistForm() {
 
   return (
     <form
+      id="waitlist-form"
       ref={formRef}
       action={formAction}
       className="flex flex-col gap-4 w-full max-w-md relative group"
@@ -175,15 +184,19 @@ export function WaitlistForm() {
           <Button
             type="submit"
             disabled={isPending}
-            className="h-12 min-h-[44px] min-w-[44px] px-8 font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all rounded-lg shadow-lg hover:shadow-primary/25"
+            className="h-12 min-h-[44px] min-w-[44px] px-8 font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 rounded-lg shadow-lg hover:shadow-primary/25 disabled:opacity-80 disabled:cursor-not-allowed"
             aria-label="Reserve my spot"
+            aria-busy={isPending}
           >
             {isPending ? (
-              <Loader2 className="w-5 h-5 animate-spin" aria-hidden />
+              <>
+                <Loader2 className="w-5 h-5 animate-spin shrink-0" aria-hidden />
+                <span className="ml-2 sr-only sm:not-sr-only">Joining…</span>
+              </>
             ) : (
               <>
                 Reserve My Spot
-                <ArrowRight className="w-4 h-4 ml-2" aria-hidden />
+                <ArrowRight className="w-4 h-4 ml-2 shrink-0" aria-hidden />
               </>
             )}
           </Button>
