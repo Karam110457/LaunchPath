@@ -12,7 +12,8 @@ const initialState: State = { status: "idle", message: "" };
 const initialStep2State: Step2State = { status: "idle", message: "" };
 
 const ROLE_OPTIONS = [
-  { value: "", label: "Select your stage…" },
+  { value: "", label: "Select your stage…", placeholder: true },
+  { value: "dont_know_start", label: "Don't know where to start" },
   { value: "exploring", label: "Just exploring" },
   { value: "building_side", label: "Building something on the side" },
   { value: "ready_first_client", label: "Ready to get first client" },
@@ -36,48 +37,64 @@ function StageSelect() {
     }
   }, [open]);
 
+  const options = ROLE_OPTIONS.filter((o) => !o.placeholder);
+
   return (
     <div ref={ref} className="relative">
       <input type="hidden" name="role_stage" value={value} />
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full min-h-[48px] rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base text-left text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30 touch-manipulation flex items-center justify-between gap-2"
+        className={`w-full min-h-[48px] rounded-xl border px-4 py-3 text-base text-left text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30 touch-manipulation flex items-center justify-between gap-2 transition-colors ${
+          open
+            ? "border-primary/30 bg-white/[0.07] ring-2 ring-primary/20"
+            : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/[0.07]"
+        }`}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label="Your stage"
         id="role_stage_label"
       >
-        <span className={selected.value ? "text-foreground" : "text-muted-foreground"}>
+        <span className={selected.value ? "text-foreground font-medium" : "text-muted-foreground"}>
           {selected.label}
         </span>
-        <ChevronDown className={`w-5 h-5 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
+        <ChevronDown
+          className={`w-5 h-5 shrink-0 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          aria-hidden
+        />
       </button>
       {open && (
-        <ul
-          role="listbox"
-          aria-labelledby="role_stage_label"
-          className="absolute z-50 mt-1 w-full rounded-xl border border-white/10 bg-[oklch(0.145_0_0)] shadow-xl py-1 max-h-[280px] overflow-auto"
-        >
-          {ROLE_OPTIONS.map((opt) => (
-            <li
-              key={opt.value || "empty"}
-              role="option"
-              aria-selected={value === opt.value}
-              onClick={() => {
-                setValue(opt.value);
-                setOpen(false);
-              }}
-              className={`px-4 py-3 text-base cursor-pointer transition-colors ${
-                value === opt.value
-                  ? "bg-primary/20 text-primary"
-                  : "text-foreground hover:bg-white/10"
-              }`}
-            >
-              {opt.label}
-            </li>
-          ))}
-        </ul>
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] md:backdrop-blur-none md:bg-transparent"
+            aria-hidden
+            onClick={() => setOpen(false)}
+          />
+          <ul
+            role="listbox"
+            aria-labelledby="role_stage_label"
+            className="absolute z-50 mt-2 w-full rounded-xl border border-white/15 bg-card shadow-xl shadow-black/40 py-2 max-h-[320px] overflow-auto animate-in fade-in slide-in-from-top-2 duration-200"
+          >
+            {options.map((opt, i) => (
+              <li
+                key={opt.value}
+                role="option"
+                aria-selected={value === opt.value}
+                onClick={() => {
+                  setValue(opt.value);
+                  setOpen(false);
+                }}
+                className={`px-4 py-3 text-base cursor-pointer transition-colors first:pt-3 last:pb-3 ${
+                  value === opt.value
+                    ? "bg-primary/15 text-primary font-medium"
+                    : "text-foreground hover:bg-white/10"
+                } ${i < options.length - 1 ? "border-b border-white/5" : ""}`}
+              >
+                {opt.label}
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );
@@ -157,9 +174,9 @@ export function WaitlistForm() {
       step2ViewedRef.current = true;
     }
     return (
-      <div className="w-full max-w-md space-y-3 sm:space-y-4 animate-in fade-in slide-in-from-bottom-2" role="region" aria-label="Optional: help us tailor your experience">
+      <div className="w-full max-w-md space-y-3 sm:space-y-4 animate-in fade-in slide-in-from-bottom-2" role="region" aria-label="Help us tailor your roadmap">
         <p className="text-xs sm:text-sm text-muted-foreground text-center px-1">
-          One quick question (optional). Skip if you prefer.
+          This helps us tailor your roadmap.
         </p>
         <form
           action={step2FormAction}
@@ -182,7 +199,7 @@ export function WaitlistForm() {
               id="biggest_blocker"
               name="biggest_blocker"
               rows={3}
-              placeholder="What's your biggest blocker right now? (optional)"
+              placeholder="What's your biggest blocker right now?"
               className="w-full min-h-[80px] rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30 resize-y touch-manipulation"
               aria-label="Biggest blocker"
               maxLength={500}

@@ -38,6 +38,6 @@ export async function completeWaitlistStep2(
 
   return {
     status: "success",
-    message: skipped ? "You're all set. We'll be in touch." : "Thanks — that helps us tailor your experience.",
+    message: skipped ? "You're all set. We'll be in touch." : "Thanks — that helps us tailor your roadmap.",
   };
 }
