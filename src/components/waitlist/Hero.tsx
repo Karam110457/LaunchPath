@@ -21,9 +21,10 @@ export function Hero() {
           <span className="tracking-wide uppercase font-medium">Accepting early access members</span>
         </div>
 
-        <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl tracking-tight text-white mb-4 sm:mb-6 md:mb-8 max-w-5xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100 leading-[0.95] break-words px-1">
-          <span className="block text-white/95">From Confused Beginner to</span>
-          <span className="block mt-1 sm:mt-2 italic text-primary">First AI Client</span>
+        <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl tracking-tight text-white mb-4 sm:mb-6 md:mb-8 max-w-5xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100 leading-[0.95] px-1">
+          <span className="text-white/95">From Confused Beginner to</span>
+          <br />
+          <span className="italic text-primary mt-1 sm:mt-2 inline-block">First AI Client</span>
         </h1>
 
         <p className="text-xs sm:text-sm md:text-base lg:text-lg text-muted-foreground/90 max-w-2xl mb-5 sm:mb-6 md:mb-8 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200 font-light leading-relaxed px-1">
