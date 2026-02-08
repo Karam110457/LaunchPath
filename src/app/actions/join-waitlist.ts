@@ -1,0 +1,67 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import { headers } from "next/headers";
+
+export type State = {
+  status: "idle" | "success" | "error";
+  message: string;
+};
+
+// Basic in-memory rate limit (for demonstration - use Redis/KV in prod)
+const RATE_LIMIT_MAP = new Map<string, { count: number; lastReset: number }>();
+
+function checkRateLimit(ip: string) {
+  const now = Date.now();
+  const window = 60 * 1000; // 1 minute
+  const limit = 5;
+
+  const record = RATE_LIMIT_MAP.get(ip) || { count: 0, lastReset: now };
+
+  if (now - record.lastReset > window) {
+    record.count = 0;
+    record.lastReset = now;
+  }
+
+  record.count++;
+  RATE_LIMIT_MAP.set(ip, record);
+
+  return record.count <= limit;
+}
+
+export async function joinWaitlist(prevState: State, formData: FormData): Promise<State> {
+  // 1. Honeypot check
+  const honeypot = formData.get("confirm_email"); // Hidden field
+  if (honeypot) {
+    // Silent success for bots
+    return { status: "success", message: "You're on the list!" };
+  }
+
+  // 2. Rate Limit
+  const ip = (await headers()).get("x-forwarded-for") || "unknown";
+  if (!checkRateLimit(ip)) {
+    return { status: "error", message: "Too many requests. Please try again later." };
+  }
+
+  // 3. Validation
+  const email = formData.get("email") as string;
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { status: "error", message: "Please enter a valid email address." };
+  }
+
+  // 4. Database Insert
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("waitlist")
+    .insert({ email, source: "homepage_v1" });
+
+  if (error) {
+    if (error.code === "23505") { // Unique violation
+      return { status: "success", message: "You're already on the list!" };
+    }
+    console.error("Waitlist error:", error);
+    return { status: "error", message: "Something went wrong. Please try again." };
+  }
+
+  return { status: "success", message: "You're on the list! Watch your inbox." };
+}
