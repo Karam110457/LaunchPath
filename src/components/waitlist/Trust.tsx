@@ -27,15 +27,19 @@ export function Trust() {
           <ul className="space-y-4 sm:space-y-5 md:space-y-6 text-muted-foreground text-sm sm:text-base md:text-lg leading-relaxed max-w-2xl mx-auto list-none pl-0">
             <li className="flex gap-2 sm:gap-3">
               <span className="text-primary shrink-0 mt-0.5" aria-hidden>•</span>
-              <span><strong className="text-white font-medium">Most &quot;experts&quot; sell theory.</strong> LaunchPath sells execution: one offer thesis, one delivery system, one revenue engine.</span>
+              <span><strong className="text-white font-medium">Most &quot;experts&quot; sell theory.</strong> LaunchPath gives you a prescribed execution plan.</span>
             </li>
             <li className="flex gap-2 sm:gap-3">
               <span className="text-primary shrink-0 mt-0.5" aria-hidden>•</span>
-              <span>Structured system, not a generic chat. Forces decisions, shipping, and outreach.</span>
+              <span>Structured guidance, not generic chat: offer validation, build path, and acquisition strategy.</span>
             </li>
             <li className="flex gap-2 sm:gap-3">
               <span className="text-primary shrink-0 mt-0.5" aria-hidden>•</span>
-              <span>We don&apos;t promise get rich quick. We promise you get <strong className="text-white border-b border-primary/50 pb-0.5">competent fast</strong>.</span>
+              <span>You get step-by-step direction plus sales prep and call training to execute with confidence.</span>
+            </li>
+            <li className="flex gap-2 sm:gap-3">
+              <span className="text-primary shrink-0 mt-0.5" aria-hidden>•</span>
+              <span>We don&apos;t promise get rich quick. We help you get <strong className="text-white border-b border-primary/50 pb-0.5">competent—fast</strong>.</span>
             </li>
           </ul>
         </div>
