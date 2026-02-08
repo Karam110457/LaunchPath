@@ -50,18 +50,23 @@ export async function joinWaitlist(prevState: State, formData: FormData): Promis
   }
 
   // 4. Database Insert
+  const sourcePage = (formData.get("source_page") as string) || "homepage";
   const supabase = await createClient();
   const { error } = await supabase
     .from("waitlist")
-    .insert({ email, source: "homepage_v1" });
+    .insert({
+      email,
+      source: "homepage_v1",
+      source_page: sourcePage,
+    });
 
   if (error) {
-    if (error.code === "23505") { // Unique violation
+    if (error.code === "23505") {
       return { status: "success", message: "You're already on the list!" };
     }
     console.error("Waitlist error:", error);
     return { status: "error", message: "Something went wrong. Please try again." };
   }
 
-  return { status: "success", message: "You're on the list! Watch your inbox." };
+  return { status: "success", message: "You're on the list! One quick question (optional) below." };
 }

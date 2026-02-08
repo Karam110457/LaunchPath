@@ -1,79 +1,196 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { joinWaitlist, type State } from "@/app/actions/join-waitlist";
+import { completeWaitlistStep2, type Step2State } from "@/app/actions/complete-waitlist-step2";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, ArrowRight, CheckCircle2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { trackWaitlistEvent } from "@/lib/analytics";
 
 const initialState: State = { status: "idle", message: "" };
+const initialStep2State: Step2State = { status: "idle", message: "" };
+
+const ROLE_OPTIONS = [
+  { value: "", label: "Select your stage…" },
+  { value: "exploring", label: "Just exploring" },
+  { value: "building_side", label: "Building something on the side" },
+  { value: "ready_first_client", label: "Ready to get first client" },
+  { value: "have_clients_scale", label: "Already have clients, want to scale" },
+  { value: "other", label: "Other" },
+];
 
 export function WaitlistForm() {
   const [state, formAction, isPending] = useActionState(joinWaitlist, initialState);
+  const [step2State, step2FormAction, isStep2Pending] = useActionState(completeWaitlistStep2, initialStep2State);
   const [email, setEmail] = useState("");
+  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const step2ViewedRef = useRef(false);
+
+  useEffect(() => {
+    trackWaitlistEvent("waitlist_view");
+  }, []);
 
   useEffect(() => {
     if (state.status === "success") {
+      setSubmittedEmail(email || null);
       setEmail("");
+      trackWaitlistEvent("waitlist_step1_submitted");
     }
-  }, [state.status]);
+  }, [state.status, email]);
 
-  if (state.status === "success") {
+  const showStep2 = state.status === "success" && submittedEmail && step2State.status !== "success";
+  const showFinalSuccess = state.status === "success" && (step2State.status === "success" || !showStep2);
+
+  if (showFinalSuccess && !showStep2) {
     return (
-      <div className="flex items-center gap-3 text-primary bg-primary/5 px-6 py-4 rounded-xl border border-primary/20 animate-in fade-in slide-in-from-bottom-2 backdrop-blur-sm shadow-[0_0_20px_-10px_var(--primary)]">
+      <div
+        className="flex items-center gap-3 text-primary bg-primary/5 px-6 py-4 rounded-xl border border-primary/20 animate-in fade-in slide-in-from-bottom-2 backdrop-blur-sm shadow-[0_0_20px_-10px_var(--primary)]"
+        role="status"
+      >
         <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-          <CheckCircle2 className="w-5 h-5" />
+          <CheckCircle2 className="w-5 h-5" aria-hidden />
         </div>
         <span className="font-medium text-lg">{state.message}</span>
       </div>
     );
   }
 
-  return (
-    <form action={formAction} className="flex flex-col gap-4 w-full max-w-md relative group">
-      {/* Glow Effect behind form */}
-      <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/5 rounded-xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+  if (showFinalSuccess && step2State.status === "success") {
+    return (
+      <div
+        className="flex items-center gap-3 text-primary bg-primary/5 px-6 py-4 rounded-xl border border-primary/20 animate-in fade-in slide-in-from-bottom-2 backdrop-blur-sm"
+        role="status"
+      >
+        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+          <CheckCircle2 className="w-5 h-5" aria-hidden />
+        </div>
+        <span className="font-medium text-lg">{step2State.message}</span>
+      </div>
+    );
+  }
 
+  if (showStep2) {
+    if (!step2ViewedRef.current) {
+      step2ViewedRef.current = true;
+    }
+    return (
+      <div className="w-full max-w-md space-y-4 animate-in fade-in slide-in-from-bottom-2" role="region" aria-label="Optional: help us tailor your experience">
+        <p className="text-sm text-muted-foreground text-center">
+          One quick question (optional). Skip if you prefer.
+        </p>
+        <form
+          action={step2FormAction}
+          className="space-y-4"
+          onSubmit={(e) => {
+            const submitter = (e.nativeEvent as SubmitEvent).submitter;
+            if (submitter?.getAttribute("name") !== "skipped") {
+              trackWaitlistEvent("waitlist_step2_submitted");
+            }
+          }}
+        >
+          <input type="hidden" name="email" value={submittedEmail ?? ""} />
+          <div>
+            <label htmlFor="role_stage" className="sr-only">Your stage</label>
+            <select
+              id="role_stage"
+              name="role_stage"
+              className="w-full min-h-[44px] rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30"
+              aria-label="Your stage"
+            >
+              {ROLE_OPTIONS.map((opt) => (
+                <option key={opt.value || "empty"} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="biggest_blocker" className="sr-only">Biggest blocker</label>
+            <textarea
+              id="biggest_blocker"
+              name="biggest_blocker"
+              rows={3}
+              placeholder="What's your biggest blocker right now? (optional)"
+              className="w-full min-h-[80px] rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30 resize-y"
+              aria-label="Biggest blocker"
+              maxLength={500}
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="submit"
+              disabled={isStep2Pending}
+              className="min-h-[44px] px-6 font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl"
+            >
+              {isStep2Pending ? <Loader2 className="w-5 h-5 animate-spin" aria-hidden /> : "Submit"}
+            </Button>
+            <Button
+              type="submit"
+              name="skipped"
+              value="true"
+              variant="ghost"
+              className="min-h-[44px] px-6 text-muted-foreground hover:text-foreground"
+              onClick={() => trackWaitlistEvent("waitlist_step2_skipped")}
+            >
+              Skip
+            </Button>
+          </div>
+        </form>
+        {step2State.status === "error" && (
+          <p className="text-sm text-red-400 text-center">{step2State.message}</p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <form
+      ref={formRef}
+      action={formAction}
+      className="flex flex-col gap-4 w-full max-w-md relative group"
+      onSubmit={() => trackWaitlistEvent("hero_cta_click", { action: "submit" })}
+    >
+      <input type="hidden" name="source_page" value="homepage" />
+      <input
+        type="text"
+        name="confirm_email"
+        style={{ display: "none" }}
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden
+      />
       <div className="relative flex flex-col gap-2">
-        {/* Honeypot field - hidden from users */}
-        <input
-          type="text"
-          name="confirm_email"
-          style={{ display: "none" }}
-          tabIndex={-1}
-          autoComplete="off"
-        />
-        
-        <div className="relative flex gap-2 p-1.5 bg-white/5 border border-white/10 rounded-xl backdrop-blur-md focus-within:border-primary/50 focus-within:bg-white/10 transition-all duration-300 shadow-lg">
+        <div className="relative flex gap-2 p-1.5 bg-white/5 border border-white/10 rounded-xl backdrop-blur-md focus-within:border-primary/50 focus-within:bg-white/10 transition-colors duration-300 shadow-lg">
           <Input
             type="email"
             name="email"
-            placeholder="Enter your email address..."
+            placeholder="Enter your email address…"
             required
             value={email}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-            className="bg-transparent border-none focus-visible:ring-0 h-12 text-base placeholder:text-muted-foreground/50 px-4"
+            className="bg-transparent border-none focus-visible:ring-0 h-12 min-h-[44px] text-base placeholder:text-muted-foreground/50 px-4"
+            aria-label="Email address"
           />
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={isPending}
-            className="h-12 px-8 font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all rounded-lg shadow-lg hover:shadow-primary/25"
+            className="h-12 min-h-[44px] min-w-[44px] px-8 font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all rounded-lg shadow-lg hover:shadow-primary/25"
+            aria-label="Reserve my spot"
           >
             {isPending ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="w-5 h-5 animate-spin" aria-hidden />
             ) : (
               <>
-                Join Waitlist
-                <ArrowRight className="w-4 h-4 ml-2" />
+                Reserve My Spot
+                <ArrowRight className="w-4 h-4 ml-2" aria-hidden />
               </>
             )}
           </Button>
         </div>
       </div>
-      
       {state.status === "error" && (
-        <p className="text-sm text-red-400 animate-in fade-in text-center bg-red-500/10 py-2 rounded-lg border border-red-500/20">
+        <p className="text-sm text-red-400 animate-in fade-in text-center bg-red-500/10 py-2 rounded-lg border border-red-500/20" role="alert">
           {state.message}
         </p>
       )}

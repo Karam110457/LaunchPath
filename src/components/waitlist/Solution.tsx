@@ -1,4 +1,4 @@
-import { Check, ArrowRight, Sparkles, Hammer, Banknote } from "lucide-react";
+import { Sparkles, Hammer, Banknote } from "lucide-react";
 
 export function Solution() {
   return (
@@ -17,8 +17,7 @@ export function Solution() {
         </div>
 
         <div className="relative max-w-5xl mx-auto">
-          {/* Connecting Line (Desktop) */}
-          <div className="hidden md:block absolute top-16 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+          <div className="hidden md:block absolute top-16 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-white/25 to-transparent" aria-hidden />
 
           <div className="grid md:grid-cols-3 gap-16 relative z-10">
             {[
@@ -27,44 +26,45 @@ export function Solution() {
                 icon: Sparkles,
                 title: "Offer Blueprint",
                 description: "We help you pick ONE sellable idea. No more guessing what the market wants.",
-                detail: "Output: Validated Offer Doc"
+                detail: "Output: Validated Offer Doc",
+                time: "~15 min",
               },
               {
                 step: "02",
                 icon: Hammer,
                 title: "Build Plan",
                 description: "A step-by-step blueprint to build your system. Tools, templates, and code.",
-                detail: "Output: Step-by-step Guide"
+                detail: "Output: Step-by-step Guide",
+                time: "~1–2 hrs",
               },
               {
                 step: "03",
                 icon: Banknote,
                 title: "Sales Pack",
                 description: "Everything you need to sell it. Scripts, outreach plans, and objection handling.",
-                detail: "Output: Outreach Scripts"
+                detail: "Output: Outreach Scripts",
+                time: "~30 min",
               },
             ].map((item, i) => (
               <div key={i} className="flex flex-col items-center text-center group">
-                <div className="w-32 h-32 rounded-full bg-[#0a0a0a] border border-white/10 flex items-center justify-center mb-8 relative z-10 transition-transform duration-500 group-hover:scale-105 group-hover:border-primary/30 shadow-2xl">
-                  {/* Inner Glow */}
-                  <div className="absolute inset-4 rounded-full bg-white/5 group-hover:bg-primary/5 transition-colors duration-500" />
-                  
+                <div className="w-32 h-32 rounded-full bg-[#0c0c0c] border-2 border-white/20 flex items-center justify-center mb-8 relative z-10 transition-all duration-300 group-hover:scale-105 group-hover:border-primary/40 shadow-2xl">
+                  <div className="absolute inset-4 rounded-full bg-white/[0.06] group-hover:bg-primary/10 transition-colors duration-300" />
                   <div className="relative z-20 flex flex-col items-center gap-1">
-                    <item.icon className="w-8 h-8 text-white/40 group-hover:text-primary transition-colors duration-500" />
-                    <span className="font-serif italic text-sm text-muted-foreground/50">Step {item.step}</span>
+                    <item.icon className="w-8 h-8 text-white/70 group-hover:text-primary transition-colors duration-300" aria-hidden />
+                    <span className="font-serif italic text-sm text-muted-foreground/70">Step {item.step}</span>
                   </div>
-
-                  {/* Active Pulse for middle item */}
                   {i === 1 && (
-                    <div className="absolute inset-0 rounded-full border border-primary/20 animate-pulse" />
+                    <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-pulse motion-reduce:animate-none" aria-hidden />
                   )}
                 </div>
-                
-                <h3 className="text-2xl font-serif text-white mb-2 group-hover:text-primary transition-colors duration-300">
+                <h3 className="text-2xl font-serif text-white mb-1 group-hover:text-primary transition-colors duration-300">
                   {item.title}
                 </h3>
-                <p className="text-sm font-medium text-primary/80 mb-3 uppercase tracking-wide text-[10px]">
+                <p className="text-xs text-primary/90 mb-3 uppercase tracking-wide font-medium">
                   {item.detail}
+                </p>
+                <p className="text-[11px] text-muted-foreground/80 mb-3 font-medium">
+                  {item.time}
                 </p>
                 <p className="text-base text-muted-foreground leading-relaxed max-w-xs mx-auto">
                   {item.description}

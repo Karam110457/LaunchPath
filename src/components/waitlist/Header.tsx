@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { trackWaitlistEvent } from "@/lib/analytics";
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
@@ -18,7 +19,8 @@ export function Header() {
   const scrollToWaitlist = () => {
     const form = document.querySelector("form");
     if (form) {
-      form.scrollIntoView({ behavior: "smooth", block: "center" });
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      form.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "center" });
     }
   };
 
@@ -36,24 +38,52 @@ export function Header() {
             LaunchPath
           </Link>
 
-          <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
-            <button onClick={() => document.getElementById("problem")?.scrollIntoView({ behavior: "smooth" })} className="hover:text-white transition-colors">
+          <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground" aria-label="Main">
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById("problem");
+                const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                el?.scrollIntoView({ behavior: reduce ? "auto" : "smooth" });
+              }}
+              className="min-h-[44px] min-w-[44px] flex items-center hover:text-white transition-colors"
+            >
               The Problem
             </button>
-            <button onClick={() => document.getElementById("solution")?.scrollIntoView({ behavior: "smooth" })} className="hover:text-white transition-colors">
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById("solution");
+                const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                el?.scrollIntoView({ behavior: reduce ? "auto" : "smooth" });
+              }}
+              className="min-h-[44px] min-w-[44px] flex items-center hover:text-white transition-colors"
+            >
               How it Works
             </button>
-            <button onClick={() => document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" })} className="hover:text-white transition-colors">
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById("faq");
+                const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                el?.scrollIntoView({ behavior: reduce ? "auto" : "smooth" });
+              }}
+              className="min-h-[44px] min-w-[44px] flex items-center hover:text-white transition-colors"
+            >
               FAQ
             </button>
           </nav>
 
-          <Button 
-            onClick={scrollToWaitlist}
+          <Button
+            onClick={() => {
+              trackWaitlistEvent("hero_cta_click", { location: "nav" });
+              scrollToWaitlist();
+            }}
             variant="outline"
-            className="bg-white/5 border-white/10 hover:bg-white/10 text-white hover:text-white transition-all rounded-full px-6"
+            className="min-h-[44px] min-w-[44px] bg-white/5 border-white/10 hover:bg-white/10 text-white hover:text-white transition-all rounded-full px-6"
+            aria-label="Reserve my spot"
           >
-            Join Waitlist
+            Reserve My Spot
           </Button>
         </div>
       </div>
