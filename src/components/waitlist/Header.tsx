@@ -2,30 +2,57 @@
 
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { trackWaitlistEvent } from "@/lib/analytics";
+
+function smoothScroll(id: string) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const prefersReducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)"
+  ).matches;
+  el.scrollIntoView({
+    behavior: prefersReducedMotion ? "auto" : "smooth",
+    block: "start",
+  });
+}
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", handleScroll);
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    // Check immediately in case page is already scrolled
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const scrollToWaitlist = () => {
-    const form = document.getElementById("waitlist-form") ?? document.querySelector("form");
+  const scrollToWaitlist = useCallback(() => {
+    const form =
+      document.getElementById("waitlist-form") ??
+      document.querySelector("form");
     if (form) {
-      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      form.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "center" });
+      const prefersReducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches;
+      form.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "center",
+      });
     }
-  };
+  }, []);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 transition-all duration-300 ease-out pointer-events-none [&>*]:pointer-events-auto">
-      <div className={`transition-all duration-300 ease-out ${scrolled ? "pt-4 px-4 md:pt-6 md:px-6" : "pt-0 px-0"}`}>
+    <header className="fixed inset-x-0 top-0 z-50">
+      <div
+        className={`pointer-events-auto transition-all duration-300 ease-out ${
+          scrolled ? "pt-4 px-4 md:pt-6 md:px-6" : "pt-0 px-0"
+        }`}
+      >
         <div
           className={`flex items-center justify-between transition-all duration-300 ease-out ${
             scrolled
@@ -33,40 +60,35 @@ export function Header() {
               : "container mx-auto px-4 py-6"
           }`}
         >
-          <Link href="/" className="text-white hover:opacity-80 transition-opacity" aria-label="LaunchPath home">
+          <Link
+            href="/"
+            className="text-white hover:opacity-80 transition-opacity"
+            aria-label="LaunchPath home"
+          >
             <Logo className="text-2xl" />
           </Link>
 
-          <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground" aria-label="Main">
+          <nav
+            className="hidden md:flex items-center gap-8 text-sm text-muted-foreground"
+            aria-label="Main"
+          >
             <button
               type="button"
-              onClick={() => {
-                const el = document.getElementById("problem");
-                const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-                el?.scrollIntoView({ behavior: reduce ? "auto" : "smooth" });
-              }}
+              onClick={() => smoothScroll("problem")}
               className="min-h-[44px] min-w-[44px] flex items-center hover:text-white transition-colors"
             >
               The Problem
             </button>
             <button
               type="button"
-              onClick={() => {
-                const el = document.getElementById("solution");
-                const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-                el?.scrollIntoView({ behavior: reduce ? "auto" : "smooth" });
-              }}
+              onClick={() => smoothScroll("solution")}
               className="min-h-[44px] min-w-[44px] flex items-center hover:text-white transition-colors"
             >
               How it Works
             </button>
             <button
               type="button"
-              onClick={() => {
-                const el = document.getElementById("faq");
-                const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-                el?.scrollIntoView({ behavior: reduce ? "auto" : "smooth" });
-              }}
+              onClick={() => smoothScroll("faq")}
               className="min-h-[44px] min-w-[44px] flex items-center hover:text-white transition-colors"
             >
               FAQ
