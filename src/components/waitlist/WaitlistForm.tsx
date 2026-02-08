@@ -28,6 +28,8 @@ export function WaitlistForm() {
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const step2ViewedRef = useRef(false);
+  // Persist email for step 2 so we show the form even if React/form resets after action
+  const step2EmailRef = useRef<string | null>(null);
 
   useEffect(() => {
     trackWaitlistEvent("waitlist_view");
@@ -35,21 +37,31 @@ export function WaitlistForm() {
 
   useEffect(() => {
     if (state.status === "success") {
-      setSubmittedEmail(email || null);
+      const captured = (email && email.trim()) || step2EmailRef.current || null;
+      if (captured) step2EmailRef.current = captured;
+      setSubmittedEmail(captured);
       setEmail("");
       trackWaitlistEvent("waitlist_step1_submitted");
     }
   }, [state.status, email]);
 
-  // Use submittedEmail ?? email so step 2 shows on first success render (before useEffect sets submittedEmail)
-  const step2Email = submittedEmail ?? ((email && email.trim()) || null);
+  // Prefer email from server action so step 2 shows even if client form state is reset after submit
+  const step2Email =
+    (state.status === "success" && state.email) ||
+    step2EmailRef.current ||
+    submittedEmail ||
+    (email && email.trim()) ||
+    null;
+  if (state.status === "success" && step2State.status !== "success" && step2Email) {
+    step2EmailRef.current = step2Email;
+  }
   const showStep2 = state.status === "success" && step2State.status !== "success" && !!step2Email;
   const showFinalSuccess = state.status === "success" && (step2State.status === "success" || !showStep2);
 
   if (showFinalSuccess && !showStep2) {
     return (
       <div
-        className="flex items-center gap-3 text-primary bg-primary/5 px-4 sm:px-6 py-3 sm:py-4 rounded-xl border border-primary/20 animate-in fade-in slide-in-from-bottom-2 backdrop-blur-sm shadow-[0_0_20px_-10px_var(--primary)] w-full"
+        className="flex items-center gap-3 text-primary bg-primary/5 px-4 sm:px-6 py-3 sm:py-4 rounded-xl border border-primary/20 animate-in fade-in slide-in-from-bottom-2 md:backdrop-blur-sm shadow-[0_0_20px_-10px_var(--primary)] w-full"
         role="status"
       >
         <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
@@ -63,7 +75,7 @@ export function WaitlistForm() {
   if (showFinalSuccess && step2State.status === "success") {
     return (
       <div
-        className="flex items-center gap-3 text-primary bg-primary/5 px-4 sm:px-6 py-3 sm:py-4 rounded-xl border border-primary/20 animate-in fade-in slide-in-from-bottom-2 backdrop-blur-sm w-full"
+        className="flex items-center gap-3 text-primary bg-primary/5 px-4 sm:px-6 py-3 sm:py-4 rounded-xl border border-primary/20 animate-in fade-in slide-in-from-bottom-2 md:backdrop-blur-sm w-full"
         role="status"
       >
         <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
@@ -172,7 +184,7 @@ export function WaitlistForm() {
         aria-hidden
       />
       <div className="relative flex flex-col gap-2 w-full">
-        <div className="relative flex flex-col sm:flex-row gap-2 p-1.5 sm:p-2 bg-white/5 border border-white/10 rounded-xl backdrop-blur-md focus-within:border-primary/50 focus-within:bg-white/10 transition-colors duration-300 shadow-lg">
+        <div className="relative flex flex-col sm:flex-row gap-2 p-1.5 sm:p-2 bg-white/10 md:bg-white/5 border border-white/10 rounded-xl md:backdrop-blur-md focus-within:border-primary/50 focus-within:bg-white/10 transition-colors duration-300 shadow-lg">
           <Input
             type="email"
             name="email"

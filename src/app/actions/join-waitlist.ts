@@ -7,6 +7,8 @@ import { logger } from "@/lib/security/logger";
 export type State = {
   status: "idle" | "success" | "error";
   message: string;
+  /** Set on success so the client can show step 2 even if form state resets */
+  email?: string;
 };
 
 // Basic in-memory rate limit (for demonstration - use Redis/KV in prod)
@@ -37,6 +39,7 @@ export async function joinWaitlist(prevState: State, formData: FormData): Promis
     // Silent success for bots
     return { status: "success", message: "You're on the list!" };
   }
+  // Note: rate limit and validation errors don't return email
 
   // 2. Rate Limit
   const ip = (await headers()).get("x-forwarded-for") || "unknown";
@@ -63,11 +66,11 @@ export async function joinWaitlist(prevState: State, formData: FormData): Promis
 
   if (error) {
     if (error.code === "23505") {
-      return { status: "success", message: "You're already on the list!" };
+      return { status: "success", message: "You're already on the list!", email };
     }
     logger.error("Waitlist signup failed", { code: error.code, message: error.message });
     return { status: "error", message: "Something went wrong. Please try again." };
   }
 
-  return { status: "success", message: "You're on the list! One quick question (optional) below." };
+  return { status: "success", message: "You're on the list! One quick question (optional) below.", email };
 }

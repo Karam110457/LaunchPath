@@ -119,12 +119,37 @@
   --sidebar-ring: oklch(0.80 0 0);
 }
 
+/*
+ * Primary on P3 (iOS/macOS): oklch can render darker due to gamut mapping.
+ * Use slightly higher lightness so it matches sRGB appearance on Windows.
+ */
+@media (color-gamut: p3) {
+  :root, .dark {
+    --primary: oklch(0.68 0.15 165);
+    --ring: oklch(0.68 0.15 165);
+  }
+}
+
 /* Safe area for notched devices (iOS, Android) */
 :root {
   --safe-area-inset-top: env(safe-area-inset-top, 0px);
   --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-inset-left: env(safe-area-inset-left, 0px);
   --safe-area-inset-right: env(safe-area-inset-right, 0px);
+}
+
+/*
+ * Mobile / touch: shorten animations to avoid "content loads in late then pops" jank.
+ * On iOS, long duration/delay + backdrop-blur causes main-thread contention; content
+ * paints when you scroll and then the animation runs, which feels glitchy. Shortening
+ * duration and removing delay makes the reveal instant or near-instant so it feels
+ * intentional rather than broken.
+ */
+@media (max-width: 768px), (hover: none) {
+  [class*="animate-in"] {
+    animation-duration: 0.25s !important;
+    animation-delay: 0s !important;
+  }
 }
 
 /* Centered page container: max-width + horizontal margin auto + consistent padding */
@@ -175,6 +200,15 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  /* Promote compositing on scroll-heavy sections to reduce paint jank on iOS */
+  @media (max-width: 768px) {
+    [id="problem"],
+    [id="solution"],
+    [id="why"],
+    [id="faq"] {
+      contain: layout style paint;
+    }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {

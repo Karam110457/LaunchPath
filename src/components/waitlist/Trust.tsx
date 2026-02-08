@@ -8,8 +8,8 @@ export function Trust() {
       </div>
 
       <div className="container mx-auto relative z-10 px-4">
-        <div className="max-w-4xl mx-auto border border-white/10 rounded-2xl sm:rounded-3xl p-5 sm:p-6 md:p-8 lg:p-16 shadow-2xl relative backdrop-blur-sm bg-black/20">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full border border-white/10 flex items-center justify-center p-1 bg-black/40 backdrop-blur-md">
+        <div className="max-w-4xl mx-auto border border-white/10 rounded-2xl sm:rounded-3xl p-5 sm:p-6 md:p-8 lg:p-16 shadow-2xl relative md:backdrop-blur-sm bg-black/30 md:bg-black/20">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full border border-white/10 flex items-center justify-center p-1 bg-black/50 md:bg-black/40 md:backdrop-blur-md">
             <div className="w-full h-full rounded-full bg-white/5 flex items-center justify-center overflow-hidden">
               <ShieldCheck className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-primary/80" aria-hidden />
             </div>

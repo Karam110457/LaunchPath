@@ -56,7 +56,7 @@ export function Header() {
         <div
           className={`flex items-center justify-between gap-3 transition-all duration-300 ease-out ${
             scrolled
-              ? "max-w-6xl mx-auto rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/30 py-2.5 px-3 sm:py-3 sm:px-5 md:px-6 md:py-4"
+              ? "max-w-6xl mx-auto rounded-2xl bg-black/50 md:bg-black/40 border border-white/10 shadow-2xl shadow-black/30 py-2.5 px-3 sm:py-3 sm:px-5 md:px-6 md:py-4 md:backdrop-blur-xl"
               : "container mx-auto px-3 py-4 sm:px-4 sm:py-5 md:py-6"
           }`}
         >

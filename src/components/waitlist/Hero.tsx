@@ -11,7 +11,7 @@ export function Hero() {
 
       <div className="container relative z-10 mx-auto flex flex-col items-center text-center px-4">
         <div
-          className="inline-flex items-center gap-2 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full bg-white/5 border border-white/10 text-xs sm:text-sm text-muted-foreground mb-5 sm:mb-6 md:mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700 backdrop-blur-sm hover:bg-white/10 transition-colors cursor-default"
+          className="inline-flex items-center gap-2 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full bg-white/10 md:bg-white/5 border border-white/10 text-xs sm:text-sm text-muted-foreground mb-5 sm:mb-6 md:mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700 md:backdrop-blur-sm hover:bg-white/10 transition-colors cursor-default"
           style={{ animationDuration: "var(--motion-duration, 700ms)" }}
         >
           <span className="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2">
@@ -21,12 +21,12 @@ export function Hero() {
           <span className="tracking-wide uppercase font-medium">Accepting early access members</span>
         </div>
 
-        <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-8xl xl:text-9xl tracking-tight text-white mb-4 sm:mb-6 md:mb-8 max-w-5xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100 leading-[0.95] break-words px-1">
+        <h1 className="font-serif text-5xl sm:text-6xl md:text-6xl lg:text-8xl xl:text-9xl tracking-tight text-white mb-4 sm:mb-6 md:mb-8 max-w-5xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100 leading-[0.95] break-words px-1">
           <span className="block text-white/95">Stop learning.</span>
           <span className="italic text-primary block mt-1 sm:mt-2">Start shipping.</span>
         </h1>
 
-        <p className="text-base sm:text-lg md:text-2xl text-muted-foreground/90 max-w-2xl mb-3 sm:mb-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200 font-light leading-relaxed px-1">
+        <p className="text-sm sm:text-base md:text-lg lg:text-2xl text-muted-foreground/90 max-w-2xl mb-3 sm:mb-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200 font-light leading-relaxed px-1">
           Get one sellable offer, a step-by-step build plan, and a sales pack — in one guided flow. No endless research.
         </p>
         <p className="text-xs sm:text-sm text-white/70 max-w-xl mb-5 sm:mb-6 md:mb-8 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200 px-1">
