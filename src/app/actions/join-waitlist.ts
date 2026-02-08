@@ -49,8 +49,9 @@ export async function joinWaitlist(prevState: State, formData: FormData): Promis
     return { status: "error", message: "Too many requests. Please try again later." };
   }
 
-  // 3. Validation
-  const email = formData.get("email") as string;
+  // 3. Validation (normalize so step 2 lookup matches)
+  const rawEmail = (formData.get("email") as string)?.trim() ?? "";
+  const email = rawEmail.toLowerCase();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { status: "error", message: "Please enter a valid email address." };
   }

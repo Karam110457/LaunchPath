@@ -12,7 +12,7 @@ export async function completeWaitlistStep2(
   _prevState: Step2State,
   formData: FormData
 ): Promise<Step2State> {
-  const email = (formData.get("email") as string)?.trim();
+  const email = (formData.get("email") as string)?.trim()?.toLowerCase() ?? "";
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     logger.warn("Waitlist step2: invalid or missing email", { email: email ? "(present)" : "missing" });
     return { status: "error", message: "Invalid email." };
