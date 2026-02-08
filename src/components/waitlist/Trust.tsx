@@ -1,34 +1,42 @@
-import { User } from "lucide-react";
+import { User, Quote } from "lucide-react";
 
 export function Trust() {
   return (
-    <section className="py-24 border-t border-white/5 bg-white/[0.02]">
-      <div className="container mx-auto">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex flex-col md:flex-row gap-8 items-start md:items-center mb-12">
-            <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-              <User className="w-8 h-8 text-white/50" />
-            </div>
-            <div>
-              <h2 className="font-serif text-2xl md:text-3xl text-white mb-2">
-                Builder, not Guru.
-              </h2>
-              <p className="text-muted-foreground">
-                I'm not here to sell you a dream. I'm here to show you the reality of building with AI.
-              </p>
+    <section className="py-32 border-t border-white/5 bg-white/[0.02] relative overflow-hidden">
+      {/* Decorative Quote Mark */}
+      <div className="absolute top-20 left-10 md:left-40 text-white/[0.02]">
+        <Quote className="w-64 h-64 rotate-180" />
+      </div>
+
+      <div className="container mx-auto relative z-10">
+        <div className="max-w-4xl mx-auto bg-[#0a0a0a] border border-white/5 rounded-3xl p-8 md:p-16 shadow-2xl relative">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full bg-[#0a0a0a] border border-white/10 flex items-center justify-center p-1">
+            <div className="w-full h-full rounded-full bg-white/5 flex items-center justify-center overflow-hidden">
+               <User className="w-10 h-10 text-white/20" />
             </div>
           </div>
 
-          <div className="space-y-6 text-lg text-muted-foreground leading-relaxed font-light">
+          <div className="text-center mt-8 mb-12">
+            <h2 className="font-serif italic text-3xl md:text-5xl text-white mb-4">
+              Builder, not Guru.
+            </h2>
+            <p className="text-primary font-medium tracking-wide uppercase text-sm">
+              The Mission
+            </p>
+          </div>
+
+          <div className="space-y-8 text-lg md:text-xl text-muted-foreground leading-relaxed font-light text-center max-w-2xl mx-auto">
             <p>
-              <strong className="text-white font-medium">Most "experts" sell theory.</strong> They tell you what could work, but they don't show you the messy middle.
+              <strong className="text-white font-serif italic text-2xl block mb-2">Most "experts" sell theory.</strong> 
+              They tell you what could work, but they don't show you the messy middle.
             </p>
             <p>
               LaunchPath is different. It's built on the systems I use every day. 
               I document what breaks, how I fix it, and how I turn mistakes into shortcuts for you.
             </p>
-            <p>
-              My goal isn't to make you "rich quick". It's to make you <span className="text-white underline decoration-white/30 underline-offset-4">competent fast</span>.
+            <p className="border-t border-white/5 pt-8 mt-8">
+              My goal isn't to make you "rich quick". <br />
+              It's to make you <span className="text-white border-b border-primary/50 pb-0.5">competent fast</span>.
             </p>
           </div>
         </div>
