@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Twitter, Github } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 export function Footer() {
   return (
@@ -7,7 +8,7 @@ export function Footer() {
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex flex-col items-center md:items-start gap-2">
-            <span className="font-serif italic text-lg text-white">LaunchPath</span>
+            <Logo className="text-lg text-white" />
             <p>© {new Date().getFullYear()} LaunchPath. All rights reserved.</p>
           </div>
           

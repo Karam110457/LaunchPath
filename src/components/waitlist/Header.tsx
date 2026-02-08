@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/Logo";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { trackWaitlistEvent } from "@/lib/analytics";
@@ -32,8 +33,8 @@ export function Header() {
               : "container mx-auto px-4 py-6"
           }`}
         >
-          <Link href="/" className="font-serif italic text-2xl text-white tracking-tight hover:opacity-80 transition-opacity">
-            LaunchPath
+          <Link href="/" className="text-white hover:opacity-80 transition-opacity" aria-label="LaunchPath home">
+            <Logo className="text-2xl" />
           </Link>
 
           <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground" aria-label="Main">
