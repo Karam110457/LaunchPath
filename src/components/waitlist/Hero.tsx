@@ -26,11 +26,8 @@ export function Hero() {
           <span className="italic text-primary block mt-1 sm:mt-2">Start shipping.</span>
         </h1>
 
-        <p className="text-sm sm:text-base md:text-lg lg:text-2xl text-muted-foreground/90 max-w-2xl mb-3 sm:mb-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200 font-light leading-relaxed px-1">
-          One offer thesis, one delivery system, one revenue engine — in one guided flow. No endless research.
-        </p>
-        <p className="text-xs sm:text-sm text-white/70 max-w-xl mb-5 sm:mb-6 md:mb-8 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200 px-1">
-          Used by AI beginners to go from stuck to first client. Execution-first, no hype.
+        <p className="text-sm sm:text-base md:text-lg lg:text-2xl text-muted-foreground/90 max-w-2xl mb-5 sm:mb-6 md:mb-8 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200 font-light leading-relaxed px-1">
+          Get a <strong className="font-semibold text-white">validated offer</strong>, a <strong className="font-semibold text-white">step-by-step build path</strong>, and a <strong className="font-semibold text-white">client acquisition system</strong> in one guided flow, designed to help you land your <strong className="font-semibold text-white">first client</strong> and <strong className="font-semibold text-white">scale with confidence</strong>.
         </p>
 
         <div className="animate-in fade-in slide-in-from-bottom-10 duration-700 delay-300 w-full max-w-full sm:max-w-md flex flex-col items-center gap-4 sm:gap-6">
