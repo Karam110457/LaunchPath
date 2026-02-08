@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { joinWaitlist, type State } from "@/app/actions/join-waitlist";
 import { completeWaitlistStep2, type Step2State } from "@/app/actions/complete-waitlist-step2";
 import { Button } from "@/components/ui/button";
@@ -24,8 +25,31 @@ const ROLE_OPTIONS = [
 function StageSelect() {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
+  const [listStyle, setListStyle] = useState<{ top: number; left: number; width: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const selected = ROLE_OPTIONS.find((o) => o.value === value) ?? ROLE_OPTIONS[0];
+
+  // Position dropdown with fixed so it's never clipped by overflow-hidden ancestors (e.g. Hero).
+  useEffect(() => {
+    if (!open || !buttonRef.current) {
+      setListStyle(null);
+      return;
+    }
+    const rect = buttonRef.current.getBoundingClientRect();
+    const padding = 8;
+    const listHeight = 320;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUp = spaceBelow < listHeight && rect.top > spaceBelow;
+    const top = openUp
+      ? Math.max(padding, rect.top - listHeight - padding)
+      : rect.bottom + padding;
+    setListStyle({
+      left: rect.left,
+      width: rect.width,
+      top,
+    });
+  }, [open]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -37,12 +61,66 @@ function StageSelect() {
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    function closeOnScroll() {
+      setOpen(false);
+    }
+    window.addEventListener("scroll", closeOnScroll, { capture: true });
+    return () => window.removeEventListener("scroll", closeOnScroll, { capture: true });
+  }, [open]);
+
   const options = ROLE_OPTIONS.filter((o) => !o.placeholder);
+
+  const dropdownContent =
+    open && listStyle && typeof document !== "undefined"
+      ? createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] md:backdrop-blur-none md:bg-transparent"
+              aria-hidden
+              onClick={() => setOpen(false)}
+            />
+            <ul
+              role="listbox"
+              aria-labelledby="role_stage_label"
+              className="fixed z-50 rounded-xl border border-white/15 bg-card shadow-xl shadow-black/40 py-2 max-h-[320px] overflow-auto animate-in fade-in slide-in-from-top-2 duration-200"
+              style={{
+                top: listStyle.top,
+                left: listStyle.left,
+                width: listStyle.width,
+                minWidth: 200,
+              }}
+            >
+              {options.map((opt, i) => (
+                <li
+                  key={opt.value}
+                  role="option"
+                  aria-selected={value === opt.value}
+                  onClick={() => {
+                    setValue(opt.value);
+                    setOpen(false);
+                  }}
+                  className={`px-4 py-3 text-base cursor-pointer transition-colors first:pt-3 last:pb-3 ${
+                    value === opt.value
+                      ? "bg-primary/15 text-primary font-medium"
+                      : "text-foreground hover:bg-white/10"
+                  } ${i < options.length - 1 ? "border-b border-white/5" : ""}`}
+                >
+                  {opt.label}
+                </li>
+              ))}
+            </ul>
+          </>,
+          document.body
+        )
+      : null;
 
   return (
     <div ref={ref} className="relative">
       <input type="hidden" name="role_stage" value={value} />
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         className={`w-full min-h-[48px] rounded-xl border px-4 py-3 text-base text-left text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30 touch-manipulation flex items-center justify-between gap-2 transition-colors ${
@@ -63,39 +141,7 @@ function StageSelect() {
           aria-hidden
         />
       </button>
-      {open && (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] md:backdrop-blur-none md:bg-transparent"
-            aria-hidden
-            onClick={() => setOpen(false)}
-          />
-          <ul
-            role="listbox"
-            aria-labelledby="role_stage_label"
-            className="absolute z-50 mt-2 w-full rounded-xl border border-white/15 bg-card shadow-xl shadow-black/40 py-2 max-h-[320px] overflow-auto animate-in fade-in slide-in-from-top-2 duration-200"
-          >
-            {options.map((opt, i) => (
-              <li
-                key={opt.value}
-                role="option"
-                aria-selected={value === opt.value}
-                onClick={() => {
-                  setValue(opt.value);
-                  setOpen(false);
-                }}
-                className={`px-4 py-3 text-base cursor-pointer transition-colors first:pt-3 last:pb-3 ${
-                  value === opt.value
-                    ? "bg-primary/15 text-primary font-medium"
-                    : "text-foreground hover:bg-white/10"
-                } ${i < options.length - 1 ? "border-b border-white/5" : ""}`}
-              >
-                {opt.label}
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+      {dropdownContent}
     </div>
   );
 }
