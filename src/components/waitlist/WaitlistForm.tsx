@@ -1,17 +1,16 @@
 "use client";
 
 import { useActionState } from "react";
-import { joinWaitlist } from "@/app/actions/join-waitlist";
+import { joinWaitlist, type State } from "@/app/actions/join-waitlist";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+const initialState: State = { status: "idle", message: "" };
+
 export function WaitlistForm() {
-  const [state, formAction, isPending] = useActionState(joinWaitlist, {
-    status: "idle",
-    message: "",
-  });
+  const [state, formAction, isPending] = useActionState(joinWaitlist, initialState);
   const [email, setEmail] = useState("");
 
   useEffect(() => {
@@ -48,7 +47,7 @@ export function WaitlistForm() {
             placeholder="Enter your email"
             required
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
             className="bg-background/50 border-white/10 focus:border-white/20 h-12"
           />
           <Button 
