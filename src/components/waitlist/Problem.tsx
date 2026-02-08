@@ -3,7 +3,7 @@ import { XCircle } from "lucide-react";
 export function Problem() {
   return (
     <section className="py-24 border-t border-white/5 bg-white/[0.02]">
-      <div className="container px-4">
+      <div className="container mx-auto">
         <div className="max-w-2xl mx-auto text-center mb-16">
           <h2 className="font-serif text-3xl md:text-4xl text-white mb-4">
             Stuck in the "Learning Loop"?

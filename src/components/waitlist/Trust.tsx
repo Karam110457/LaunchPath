@@ -3,7 +3,7 @@ import { User } from "lucide-react";
 export function Trust() {
   return (
     <section className="py-24 border-t border-white/5 bg-white/[0.02]">
-      <div className="container px-4">
+      <div className="container mx-auto">
         <div className="max-w-3xl mx-auto">
           <div className="flex flex-col md:flex-row gap-8 items-start md:items-center mb-12">
             <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center shrink-0">

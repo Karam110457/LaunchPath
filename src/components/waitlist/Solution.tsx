@@ -3,7 +3,7 @@ import { Check, ArrowRight } from "lucide-react";
 export function Solution() {
   return (
     <section className="py-24 border-t border-white/5">
-      <div className="container px-4">
+      <div className="container mx-auto">
         <div className="max-w-2xl mx-auto text-center mb-16">
           <h2 className="font-serif text-3xl md:text-4xl text-white mb-4">
             One Clear Path

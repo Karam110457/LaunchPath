@@ -6,7 +6,7 @@ export function Hero() {
       {/* Background Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-white/[0.02] blur-[100px] rounded-full pointer-events-none" />
       
-      <div className="container relative z-10 flex flex-col items-center text-center px-4">
+      <div className="container relative z-10 mx-auto flex flex-col items-center text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-sm text-muted-foreground mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span>Accepting early access members</span>
