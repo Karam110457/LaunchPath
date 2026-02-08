@@ -21,7 +21,7 @@ export function WaitlistForm() {
 
   if (state.status === "success") {
     return (
-      <div className="flex items-center gap-2 text-emerald-400 bg-emerald-400/10 px-4 py-3 rounded-lg border border-emerald-400/20 animate-in fade-in slide-in-from-bottom-2">
+      <div className="flex items-center gap-2 text-primary bg-primary/10 px-4 py-3 rounded-lg border border-primary/20 animate-in fade-in slide-in-from-bottom-2">
         <CheckCircle2 className="w-5 h-5" />
         <span className="font-medium">{state.message}</span>
       </div>
@@ -48,12 +48,12 @@ export function WaitlistForm() {
             required
             value={email}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-            className="bg-background/50 border-white/10 focus:border-white/20 h-12"
+            className="bg-background/50 border-white/10 focus:border-primary/50 h-12"
           />
           <Button 
             type="submit" 
             disabled={isPending}
-            className="h-12 px-6 font-medium bg-white text-black hover:bg-white/90 transition-all"
+            className="h-12 px-6 font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
           >
             {isPending ? (
               <Loader2 className="w-4 h-4 animate-spin" />

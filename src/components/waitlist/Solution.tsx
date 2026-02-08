@@ -42,7 +42,7 @@ export function Solution() {
                   </span>
                   {/* Active Ring */}
                   {i === 1 && (
-                    <div className="absolute inset-0 rounded-full border border-white/20 animate-pulse" />
+                    <div className="absolute inset-0 rounded-full border border-primary/50 animate-pulse" />
                   )}
                 </div>
                 <h3 className="text-xl font-medium text-white mb-3">{item.title}</h3>
