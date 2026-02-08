@@ -38,9 +38,11 @@ export function BackgroundGrid() {
         />
       ))}
 
-      {/* Subtle Green Glow (Ambient) */}
-      <div className="absolute top-[-20%] left-[20%] w-[600px] h-[600px] bg-primary/10 blur-[150px] rounded-full mix-blend-screen opacity-30" />
-      <div className="absolute bottom-[-20%] right-[20%] w-[500px] h-[500px] bg-primary/5 blur-[120px] rounded-full mix-blend-screen opacity-20" />
+      {/* Subtle Green Glow (Ambient). Hidden on mobile: filter:blur is expensive on iOS and causes scroll jank. */}
+      <div className="absolute top-[-20%] left-[20%] w-[600px] h-[600px] bg-primary/10 blur-[150px] rounded-full mix-blend-screen opacity-30 hidden md:block" aria-hidden />
+      <div className="absolute bottom-[-20%] right-[20%] w-[500px] h-[500px] bg-primary/5 blur-[120px] rounded-full mix-blend-screen opacity-20 hidden md:block" aria-hidden />
+      {/* Mobile: cheap gradient instead of blur for ambient glow */}
+      <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-primary/5 opacity-60 md:opacity-0 pointer-events-none" aria-hidden />
     </div>
   );
 }

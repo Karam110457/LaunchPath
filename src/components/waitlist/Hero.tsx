@@ -11,7 +11,7 @@ export function Hero() {
 
       <div className="container relative z-10 mx-auto flex flex-col items-center text-center px-4">
         <div
-          className="inline-flex items-center gap-2 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full bg-white/10 md:bg-white/5 border border-white/10 text-xs sm:text-sm text-muted-foreground mb-5 sm:mb-6 md:mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700 md:backdrop-blur-sm hover:bg-white/10 transition-colors cursor-default"
+          className="inline-flex items-center gap-2 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full bg-white/10 md:bg-white/5 border border-white/10 text-xs sm:text-sm text-muted-foreground mb-8 sm:mb-6 md:mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700 md:backdrop-blur-sm hover:bg-white/10 transition-colors cursor-default"
           style={{ animationDuration: "var(--motion-duration, 700ms)" }}
         >
           <span className="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2">
@@ -21,17 +21,17 @@ export function Hero() {
           <span className="tracking-wide uppercase font-medium">Accepting early access members</span>
         </div>
 
-        <h1 className="font-serif font-light italic text-5xl sm:text-5xl md:text-6xl lg:text-6xl xl:text-7xl tracking-tight text-white mb-4 sm:mb-6 md:mb-8 max-w-5xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100 leading-[0.95] break-words mx-auto">
+        <h1 className="font-serif font-light italic text-6xl sm:text-6xl md:text-7xl lg:text-7xl xl:text-8xl tracking-tight text-white mb-8 sm:mb-6 md:mb-8 max-w-5xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100 leading-[0.95] break-words mx-auto">
           <span className="text-white/95">From Confused Beginner to</span>
           <br />
           <span className="text-primary mt-1 sm:mt-2 inline-block">First AI Client</span>
         </h1>
 
-        <p className="text-xs sm:text-sm md:text-base lg:text-lg text-muted-foreground/90 max-w-2xl mb-5 sm:mb-6 md:mb-8 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200 font-light leading-relaxed mx-auto">
-          Get a validated offer, a step-by-step build path, and a client acquisition system in one guided flow, designed to help you land your <strong className="font-semibold text-white">first client</strong> and scale with confidence.
+        <p className="text-xs sm:text-sm md:text-base lg:text-lg text-muted-foreground/90 max-w-2xl mb-8 sm:mb-6 md:mb-8 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200 font-light leading-relaxed mx-auto">
+          Get a <strong className="font-semibold text-white">validated offer</strong>, a <strong className="font-semibold text-white">step-by-step build path</strong>, and a <strong className="font-semibold text-white">client acquisition system</strong> in one guided flow, designed to help you land your <strong className="font-semibold text-white">first client</strong> and scale with confidence.
         </p>
 
-        <div className="animate-in fade-in slide-in-from-bottom-10 duration-700 delay-300 w-full max-w-full sm:max-w-md flex flex-col items-center gap-4 sm:gap-6">
+        <div className="animate-in fade-in slide-in-from-bottom-10 duration-700 delay-300 w-full max-w-full sm:max-w-md flex flex-col items-center gap-6 sm:gap-6">
           <WaitlistForm />
 
           <p className="text-[11px] sm:text-xs text-muted-foreground/70 max-w-sm text-center leading-relaxed px-2">

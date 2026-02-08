@@ -198,16 +198,28 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    /* Remove 300ms tap delay on iOS (with viewport max-scale, iOS already does this; this reinforces). */
+    -webkit-tap-highlight-color: transparent;
+  }
   body {
     @apply bg-background text-foreground;
+    /* Smooth touch scrolling; lets browser optimize scroll without waiting for JS. */
+    touch-action: manipulation;
   }
-  /* Promote compositing on scroll-heavy sections to reduce paint jank on iOS */
+  /*
+   * iOS / mobile: containment + content-visibility so the browser can skip painting
+   * below-the-fold sections until they're near the viewport. Reduces initial paint
+   * and keeps scroll responsive. contain-intrinsic-block-size avoids layout jump.
+   */
   @media (max-width: 768px) {
     [id="problem"],
     [id="solution"],
     [id="why"],
     [id="faq"] {
       contain: layout style paint;
+      content-visibility: auto;
+      contain-intrinsic-block-size: 600px;
     }
   }
   @media (prefers-reduced-motion: reduce) {

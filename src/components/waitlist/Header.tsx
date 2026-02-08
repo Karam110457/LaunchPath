@@ -47,7 +47,10 @@ export function Header() {
   }, []);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 pt-[var(--safe-area-inset-top)]">
+    <header
+        className="fixed inset-x-0 top-0 z-50 pt-[var(--safe-area-inset-top)]"
+        style={{ transform: "translateZ(0)" }}
+      >
       <div
         className={`pointer-events-auto transition-all duration-300 ease-out ${
           scrolled ? "pt-3 px-3 sm:pt-4 sm:px-4 md:pt-6 md:px-6" : "pt-0 px-0"
