@@ -1,12 +1,11 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { joinWaitlist, type State } from "@/app/actions/join-waitlist";
 import { completeWaitlistStep2, type Step2State } from "@/app/actions/complete-waitlist-step2";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, ArrowRight, CheckCircle2 } from "lucide-react";
-import { useState } from "react";
+import { Loader2, ArrowRight, CheckCircle2, ChevronDown } from "lucide-react";
 import { trackWaitlistEvent } from "@/lib/analytics";
 
 const initialState: State = { status: "idle", message: "" };
@@ -20,6 +19,69 @@ const ROLE_OPTIONS = [
   { value: "have_clients_scale", label: "Already have clients, want to scale" },
   { value: "other", label: "Other" },
 ];
+
+function StageSelect() {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = ROLE_OPTIONS.find((o) => o.value === value) ?? ROLE_OPTIONS[0];
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    if (open) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <input type="hidden" name="role_stage" value={value} />
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full min-h-[48px] rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base text-left text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30 touch-manipulation flex items-center justify-between gap-2"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="Your stage"
+        id="role_stage_label"
+      >
+        <span className={selected.value ? "text-foreground" : "text-muted-foreground"}>
+          {selected.label}
+        </span>
+        <ChevronDown className={`w-5 h-5 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
+      </button>
+      {open && (
+        <ul
+          role="listbox"
+          aria-labelledby="role_stage_label"
+          className="absolute z-50 mt-1 w-full rounded-xl border border-white/10 bg-[oklch(0.145_0_0)] shadow-xl py-1 max-h-[280px] overflow-auto"
+        >
+          {ROLE_OPTIONS.map((opt) => (
+            <li
+              key={opt.value || "empty"}
+              role="option"
+              aria-selected={value === opt.value}
+              onClick={() => {
+                setValue(opt.value);
+                setOpen(false);
+              }}
+              className={`px-4 py-3 text-base cursor-pointer transition-colors ${
+                value === opt.value
+                  ? "bg-primary/20 text-primary"
+                  : "text-foreground hover:bg-white/10"
+              }`}
+            >
+              {opt.label}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export function WaitlistForm() {
   const [state, formAction, isPending] = useActionState(joinWaitlist, initialState);
@@ -55,7 +117,11 @@ export function WaitlistForm() {
   if (state.status === "success" && step2State.status !== "success" && step2Email) {
     step2EmailRef.current = step2Email;
   }
-  const showStep2 = state.status === "success" && step2State.status !== "success" && !!step2Email;
+  const showStep2 =
+    state.status === "success" &&
+    step2State.status !== "success" &&
+    !!step2Email &&
+    !state.alreadyOnList;
   const showFinalSuccess = state.status === "success" && (step2State.status === "success" || !showStep2);
 
   if (showFinalSuccess && !showStep2) {
@@ -107,17 +173,8 @@ export function WaitlistForm() {
         >
           <input type="hidden" name="email" value={step2Email ?? ""} />
           <div>
-            <label htmlFor="role_stage" className="sr-only">Your stage</label>
-            <select
-              id="role_stage"
-              name="role_stage"
-              className="w-full min-h-[48px] rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30 touch-manipulation"
-              aria-label="Your stage"
-            >
-              {ROLE_OPTIONS.map((opt) => (
-                <option key={opt.value || "empty"} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+            <label htmlFor="role_stage_label" className="sr-only">Your stage</label>
+            <StageSelect />
           </div>
           <div>
             <label htmlFor="biggest_blocker" className="sr-only">Biggest blocker</label>

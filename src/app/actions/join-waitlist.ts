@@ -9,6 +9,8 @@ export type State = {
   message: string;
   /** Set on success so the client can show step 2 even if form state resets */
   email?: string;
+  /** True when email was already on list; do not show step 2 */
+  alreadyOnList?: boolean;
 };
 
 // Basic in-memory rate limit (for demonstration - use Redis/KV in prod)
@@ -66,11 +68,11 @@ export async function joinWaitlist(prevState: State, formData: FormData): Promis
 
   if (error) {
     if (error.code === "23505") {
-      return { status: "success", message: "You're already on the list!", email };
+      return { status: "success", message: "You're already on the list. We'll be in touch.", alreadyOnList: true };
     }
     logger.error("Waitlist signup failed", { code: error.code, message: error.message });
     return { status: "error", message: "Something went wrong. Please try again." };
   }
 
-  return { status: "success", message: "You're on the list! One quick question (optional) below.", email };
+  return { status: "success", message: "You're on the list!", email };
 }
