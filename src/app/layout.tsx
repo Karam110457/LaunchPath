@@ -26,6 +26,10 @@ const tiemposHeadline = localFont({
 export const metadata: Metadata = {
   title: "LaunchPath — Stop learning AI. Start shipping.",
   description: "The guided path from confusion to your first sellable AI offer.",
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
 };
 
 export const viewport = {

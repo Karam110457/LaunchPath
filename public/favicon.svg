@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" role="img" aria-label="LaunchPath">
+  <!-- L: bold sans (Launch style) -->
+  <text x="1" y="23" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-weight="700" font-size="20" fill="white">L</text>
+  <!-- P: italic serif (Path style) -->
+  <text x="13" y="23" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="300" font-size="20" fill="white">P</text>
+</svg>
