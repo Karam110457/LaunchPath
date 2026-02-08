@@ -7,7 +7,6 @@ export function Hero() {
       aria-label="Hero"
     >
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-primary/20 blur-[120px] rounded-full pointer-events-none opacity-40 mix-blend-screen" aria-hidden />
-      <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" aria-hidden />
 
       <div className="container relative z-10 mx-auto flex flex-col items-center text-center px-4">
         <div

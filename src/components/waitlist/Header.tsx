@@ -1,10 +1,19 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { trackWaitlistEvent } from "@/lib/analytics";
 
 export function Header() {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const scrollToWaitlist = () => {
     const form = document.querySelector("form");
     if (form) {
@@ -15,8 +24,14 @@ export function Header() {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 transition-all duration-300 ease-out pointer-events-none [&>*]:pointer-events-auto">
-      <div className="pt-4 px-4 md:pt-6 md:px-6">
-        <div className="max-w-6xl mx-auto flex items-center justify-between rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/30 py-3 px-5 md:px-6 md:py-4 transition-all duration-300 ease-out">
+      <div className={scrolled ? "pt-4 px-4 md:pt-6 md:px-6" : ""}>
+        <div
+          className={`flex items-center justify-between transition-all duration-300 ease-out ${
+            scrolled
+              ? "max-w-6xl mx-auto rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/30 py-3 px-5 md:px-6 md:py-4"
+              : "container mx-auto px-4 py-6"
+          }`}
+        >
           <Link href="/" className="font-serif italic text-2xl text-white tracking-tight hover:opacity-80 transition-opacity">
             LaunchPath
           </Link>
