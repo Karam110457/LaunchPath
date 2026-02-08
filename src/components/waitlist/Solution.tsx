@@ -2,8 +2,8 @@ import { Check, ArrowRight, Sparkles, Hammer, Banknote } from "lucide-react";
 
 export function Solution() {
   return (
-    <section className="py-32 border-t border-white/5 bg-gradient-to-b from-[#0a0a0a] to-black relative">
-      <div className="container mx-auto">
+    <section id="solution" className="py-32 border-t border-white/5 bg-gradient-to-b from-[#0a0a0a] to-black relative">
+      <div className="container mx-auto px-4">
         <div className="max-w-3xl mx-auto text-center mb-24">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-medium text-primary mb-6 uppercase tracking-wider">
             The LaunchPath Method
@@ -25,20 +25,23 @@ export function Solution() {
               {
                 step: "01",
                 icon: Sparkles,
-                title: "Offer Verdict",
+                title: "Offer Blueprint",
                 description: "We help you pick ONE sellable idea. No more guessing what the market wants.",
+                detail: "Output: Validated Offer Doc"
               },
               {
                 step: "02",
                 icon: Hammer,
                 title: "Build Plan",
                 description: "A step-by-step blueprint to build your system. Tools, templates, and code.",
+                detail: "Output: Step-by-step Guide"
               },
               {
                 step: "03",
                 icon: Banknote,
                 title: "Sales Pack",
                 description: "Everything you need to sell it. Scripts, outreach plans, and objection handling.",
+                detail: "Output: Outreach Scripts"
               },
             ].map((item, i) => (
               <div key={i} className="flex flex-col items-center text-center group">
@@ -57,9 +60,12 @@ export function Solution() {
                   )}
                 </div>
                 
-                <h3 className="text-2xl font-serif text-white mb-4 group-hover:text-primary transition-colors duration-300">
+                <h3 className="text-2xl font-serif text-white mb-2 group-hover:text-primary transition-colors duration-300">
                   {item.title}
                 </h3>
+                <p className="text-sm font-medium text-primary/80 mb-3 uppercase tracking-wide text-[10px]">
+                  {item.detail}
+                </p>
                 <p className="text-base text-muted-foreground leading-relaxed max-w-xs mx-auto">
                   {item.description}
                 </p>
