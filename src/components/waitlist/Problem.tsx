@@ -3,9 +3,6 @@ import { XCircle, RefreshCcw, Layers, HelpCircle } from "lucide-react";
 export function Problem() {
   return (
     <section id="problem" className="py-32 relative overflow-hidden">
-      {/* Subtle Grid Background */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
-
       <div className="container mx-auto relative z-10 px-4">
         <div className="max-w-3xl mx-auto text-center mb-20">
           <h2 className="font-serif italic text-4xl md:text-5xl text-white mb-6">

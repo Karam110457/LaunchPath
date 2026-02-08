@@ -2,7 +2,7 @@ import { Sparkles, Hammer, Banknote } from "lucide-react";
 
 export function Solution() {
   return (
-    <section id="solution" className="py-32 border-t border-white/5 bg-gradient-to-b from-[#0a0a0a] to-black relative">
+    <section id="solution" className="py-32 border-t border-white/5 relative">
       <div className="container mx-auto px-4">
         <div className="max-w-3xl mx-auto text-center mb-24">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-medium text-primary mb-6 uppercase tracking-wider">

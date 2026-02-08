@@ -2,14 +2,14 @@ import { Quote, ShieldCheck } from "lucide-react";
 
 export function Trust() {
   return (
-    <section id="why" className="py-32 border-t border-white/5 bg-white/[0.02] relative overflow-hidden">
+    <section id="why" className="py-32 border-t border-white/5 relative overflow-hidden">
       <div className="absolute top-20 left-10 md:left-40 text-white/[0.02]" aria-hidden>
         <Quote className="w-64 h-64 rotate-180" />
       </div>
 
       <div className="container mx-auto relative z-10 px-4">
-        <div className="max-w-4xl mx-auto bg-[#0a0a0a] border border-white/10 rounded-3xl p-8 md:p-16 shadow-2xl relative">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full bg-[#0a0a0a] border border-white/10 flex items-center justify-center p-1">
+        <div className="max-w-4xl mx-auto border border-white/10 rounded-3xl p-8 md:p-16 shadow-2xl relative backdrop-blur-sm bg-black/20">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full border border-white/10 flex items-center justify-center p-1 bg-black/40 backdrop-blur-md">
             <div className="w-full h-full rounded-full bg-white/5 flex items-center justify-center overflow-hidden">
               <ShieldCheck className="w-10 h-10 text-primary/80" aria-hidden />
             </div>

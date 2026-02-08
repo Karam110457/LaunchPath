@@ -6,10 +6,12 @@ import { Trust } from "@/components/waitlist/Trust";
 import { FAQ } from "@/components/waitlist/FAQ";
 import { Footer } from "@/components/waitlist/Footer";
 import { SectionViewTracker } from "@/components/waitlist/SectionViewTracker";
+import { BackgroundGrid } from "@/components/ui/background-grid";
 
 export default function WaitlistPage() {
   return (
-    <main className="min-h-screen bg-background text-foreground selection:bg-primary/20 selection:text-white" role="main">
+    <main className="min-h-screen text-foreground selection:bg-primary/20 selection:text-white relative" role="main">
+      <BackgroundGrid />
       <Header />
       <Hero />
       <Problem />
