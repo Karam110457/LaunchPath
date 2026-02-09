@@ -571,3 +571,134 @@ That’s coherent, scalable, and aligned with your market.
 
 * The trial experience should feel generous, but incomplete by design: **they taste the outcome, then hit a clean upgrade wall.**
 
+## **Ralph Loop Execution Layer**
+
+To improve output quality and reliability at scale, LaunchPath will introduce a Ralph Loop Execution Layer for selected artifact-generation workflows.
+
+### **Purpose**
+
+The Ralph Loop Execution Layer is designed to:
+
+* reduce context drift during multi-step generation,
+
+* maintain consistency across linked outputs,
+* handle parallel sub-tasks inside a single workflow pass,
+* improve quality before the user sees final artifacts.
+
+This is not a generic “extra prompt.” It is a controlled generation loop with validation, revision, and assembly logic.
+
+### **Where It Applies**
+
+Ralph loops will be used in high-value flows where output coherence matters most, including:
+
+* Offer artifact generation and refinement,
+* Build-path artifact compilation,
+* Acquisition planning artifacts,
+* Sales prep artifacts (objection handling, call structure, roleplay summaries).
+
+### **Core Benefits**
+
+* Lower context rot: Each iteration re-anchors to structured state, constraints, and prior accepted decisions.
+* Higher output coherence: Linked artifacts stay aligned (offer, delivery path, acquisition strategy).
+* Parallel task execution: Research, critique, formatting, and synthesis can run as coordinated sub-steps.
+* Better first-pass usability: Users receive outputs that are already stress-tested and improved.
+* Scalable quality control: Standardized loop behavior reduces variability across users and sessions.
+
+### **Execution Model**
+
+Each Ralph-enabled run follows a controlled sequence:
+
+* Generate initial draft from current user state and constraints.
+* Critique against predefined quality rubric.
+* Patch weak sections with targeted revisions.
+* Validate schema, consistency, and decision alignment.
+* Assemble final artifact bundle for user delivery.
+
+### **Guardrails**
+
+To preserve speed, cost, and reliability:
+
+* hard cap on iterations per run,
+* token/time budget limits,
+
+* minimum “material change” threshold between revisions,
+
+* strict schema enforcement for all outputs,
+* fallback to best valid draft if loop budget is exceeded.
+
+### **Product Impact**
+
+This layer strengthens LaunchPath’s positioning from “AI-generated advice” to an execution-grade decision system.
+By combining structured state + iterative quality control + multi-task orchestration, LaunchPath can deliver faster, more reliable, and more actionable artifacts than standard single-pass AI SaaS patterns.
+
+## **Proprietary Business Model Naming Framework**
+
+### **Objective**
+
+LaunchPath will define and standardize a proprietary name for the core business model it prescribes to users.
+This name will become a strategic brand asset used across product UX, onboarding, marketing, and sales enablement.
+
+### **Why Deferred Naming**
+
+The model name will be finalized after product maturity milestones are reached to ensure it reflects:
+
+* real user workflows,
+* repeatable success patterns,
+* actual transformation delivered by the platform.
+
+Premature naming risks mismatch between brand language and product truth.
+
+### **Scope**
+
+This framework covers:
+
+* the naming of the recommended LaunchPath business model,
+
+* the model’s short descriptor and narrative,
+
+* consistent usage rules across all user-facing surfaces.
+
+It does not define the final name at this stage.
+
+### **Naming Criteria**
+
+The final model name must:
+
+* map directly to LaunchPath’s core promise and mechanics,
+
+* be distinct and ownable in market positioning,
+* be easy to understand and repeat verbally,
+* support both beginner and operator-level audiences,
+* remain durable as features evolve.
+
+### **Inputs Required Before Finalization**
+
+Final naming work begins only after the following are available:
+
+* stable product workflow (offer → build path → acquisition path),
+* validated output artifacts and user journey,
+* early cohort outcome signals,
+* qualitative language from user interviews and support logs,
+* GTM positioning direction for launch phase.
+
+### **Decision Process**
+
+* Generate naming candidates from product behavior and user language.
+* Run internal scoring against criteria (clarity, distinctiveness, fit, durability).
+* Test top candidates in controlled messaging (landing copy, onboarding copy, sales conversations).
+* Select final name and lock terminology.
+* Publish usage guidance for product, marketing, and sales teams.
+
+### **Deliverables**
+
+* Final proprietary model name,
+* one-line model definition,
+* messaging hierarchy (headline, subheadline, explainer),
+* approved terminology guide for consistent cross-channel use.
+
+### **Timing**
+
+* **Status:** Planned (Post-MVP / Pre-Scale Branding Phase)
+* **Owner:** Product + GTM
+* **Dependency:** Completion of core product flows and initial outcome validation.
+
