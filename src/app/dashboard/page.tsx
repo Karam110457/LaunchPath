@@ -1,46 +1,114 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { PageShell } from "@/components/layout/PageShell";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowRight, CheckCircle2, Circle, Clock } from "lucide-react";
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Your LaunchPath workspace. Add protected routes and data here.
-        </p>
+    <PageShell
+      title="Overview"
+      description="Welcome back. Here is your progress towards your first sellable AI offer."
+    >
+      <div className="grid gap-6 md:grid-cols-3">
+        {/* Progress Cards */}
+        <Card className="relative overflow-hidden border-primary/20 bg-primary/5">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <CheckCircle2 className="h-24 w-24" />
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Step 1</CardTitle>
+            <h3 className="text-2xl font-serif italic">Offer Thesis</h3>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2 text-primary mb-4">
+              <CheckCircle2 className="h-5 w-5" />
+              <span className="font-medium">Completed</span>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Your offer is defined and validated.
+            </p>
+            <Button variant="outline" size="sm" className="w-full bg-background/50 backdrop-blur-sm">
+              View Offer
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Step 2</CardTitle>
+            <h3 className="text-2xl font-serif italic">Delivery System</h3>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2 text-yellow-500 mb-4">
+              <Clock className="h-5 w-5" />
+              <span className="font-medium">In Progress</span>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Building your delivery assets and SOPs.
+            </p>
+            <Button size="sm" className="w-full">
+              Continue Building <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden opacity-60">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Step 3</CardTitle>
+            <h3 className="text-2xl font-serif italic">Revenue Engine</h3>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2 text-muted-foreground mb-4">
+              <Circle className="h-5 w-5" />
+              <span className="font-medium">Locked</span>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Complete the delivery system to unlock sales.
+            </p>
+            <Button variant="ghost" size="sm" className="w-full" disabled>
+              Locked
+            </Button>
+          </CardContent>
+        </Card>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+
+      {/* Recent Activity / Next Steps */}
+      <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Getting started</CardTitle>
-            <CardDescription>
-              Add auth checks with createClient() from @/lib/supabase/server
-            </CardDescription>
+            <CardTitle>Next Actions</CardTitle>
+            <CardDescription>Recommended steps to move forward</CardDescription>
           </CardHeader>
+          <CardContent className="space-y-4">
+            {[
+              "Finalize your tool stack selection",
+              "Draft your delivery SOP v1",
+              "Review competitor analysis updates"
+            ].map((action, i) => (
+              <div key={i} className="flex items-start gap-3 p-3 rounded-lg border bg-card/50 hover:bg-accent/50 transition-colors cursor-pointer">
+                <div className="mt-0.5 h-5 w-5 rounded-full border border-primary/30 flex items-center justify-center flex-shrink-0">
+                  <div className="h-2.5 w-2.5 rounded-full bg-primary opacity-0 hover:opacity-100 transition-opacity" />
+                </div>
+                <span className="text-sm">{action}</span>
+              </div>
+            ))}
+          </CardContent>
         </Card>
+
         <Card>
           <CardHeader>
-            <CardTitle>Database</CardTitle>
-            <CardDescription>
-              Use Supabase tables and RLS. Generate types with Supabase CLI.
-            </CardDescription>
+            <CardTitle>Quick Tools</CardTitle>
+            <CardDescription>Access your toolkit</CardDescription>
           </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Realtime</CardTitle>
-            <CardDescription>
-              Subscribe to changes with supabase.channel() in client components.
-            </CardDescription>
-          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-4">
+            {["Validate Idea", "Competitor Analysis", "Pivot Offer", "Sales Prep"].map((tool) => (
+              <Button key={tool} variant="outline" className="h-auto py-4 flex flex-col gap-2 items-center justify-center text-center">
+                <span className="font-medium">{tool}</span>
+              </Button>
+            ))}
+          </CardContent>
         </Card>
       </div>
-    </div>
+    </PageShell>
   );
 }
