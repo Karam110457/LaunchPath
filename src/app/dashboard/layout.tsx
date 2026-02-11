@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { requireAuth } from "@/lib/auth/guards";
+import { SignOutButton } from "./SignOutButton";
 
 /** Dashboard is protected: redirect to login if not authenticated. */
 export default async function DashboardLayout({
@@ -28,6 +29,7 @@ export default async function DashboardLayout({
                 Home
               </Button>
             </Link>
+            <SignOutButton />
           </nav>
         </div>
       </header>
