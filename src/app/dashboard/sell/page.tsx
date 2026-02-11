@@ -2,12 +2,13 @@ import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Copy, MessageSquare, Phone, Users } from "lucide-react";
+import { STAGE_LABELS } from "@/lib/constants/stages";
 
 export default function SellPage() {
   return (
     <PageShell
-      title="Revenue Engine"
-      description="Your system for generating leads and closing deals."
+      title={STAGE_LABELS.sales_pack}
+      description="Your go-to-market plan: scripts, targeting, and call training to get your first clients."
     >
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Outreach */}

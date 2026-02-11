@@ -3,12 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Edit2, Share2, Copy } from "lucide-react";
+import { STAGE_LABELS } from "@/lib/constants/stages";
 
 export default function OfferPage() {
   return (
     <PageShell
-      title="Offer Thesis"
-      description="Your core offer definition. This is the foundation of your business."
+      title={STAGE_LABELS.offer_blueprint}
+      description="Your core offer: what to sell, who it's for, and why it wins. The foundation of your business."
       action={
         <div className="flex gap-2">
           <Button variant="outline" size="sm">
@@ -17,7 +18,7 @@ export default function OfferPage() {
           </Button>
           <Button size="sm">
             <Edit2 className="mr-2 h-4 w-4" />
-            Edit Thesis
+            Edit Offer
           </Button>
         </div>
       }

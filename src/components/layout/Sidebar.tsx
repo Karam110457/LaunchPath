@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { STAGE_LABELS_SHORT } from "@/lib/constants/stages";
 
 const navItems = [
   {
@@ -24,17 +25,17 @@ const navItems = [
     exact: true,
   },
   {
-    title: "Offer Thesis",
+    title: STAGE_LABELS_SHORT.offer_blueprint,
     href: "/dashboard/offer",
     icon: FileText,
   },
   {
-    title: "Delivery System",
+    title: STAGE_LABELS_SHORT.build_plan,
     href: "/dashboard/build",
     icon: Package,
   },
   {
-    title: "Revenue Engine",
+    title: STAGE_LABELS_SHORT.sales_pack,
     href: "/dashboard/sell",
     icon: Rocket,
   },

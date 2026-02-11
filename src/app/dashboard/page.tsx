@@ -2,6 +2,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, CheckCircle2, Circle, Clock } from "lucide-react";
+import { STAGE_LABELS } from "@/lib/constants/stages";
 
 export default function DashboardPage() {
   return (
@@ -17,7 +18,7 @@ export default function DashboardPage() {
           </div>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Step 1</CardTitle>
-            <h3 className="text-2xl font-serif italic">Offer Thesis</h3>
+            <h3 className="text-2xl font-serif italic">{STAGE_LABELS.offer_blueprint}</h3>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 text-primary mb-4">
@@ -36,7 +37,7 @@ export default function DashboardPage() {
         <Card className="relative overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Step 2</CardTitle>
-            <h3 className="text-2xl font-serif italic">Delivery System</h3>
+            <h3 className="text-2xl font-serif italic">{STAGE_LABELS.build_plan}</h3>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 text-yellow-500 mb-4">
@@ -44,7 +45,7 @@ export default function DashboardPage() {
               <span className="font-medium">In Progress</span>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Building your delivery assets and SOPs.
+              Your tool stack, checklist, and build order.
             </p>
             <Button size="sm" className="w-full">
               Continue Building <ArrowRight className="ml-2 h-4 w-4" />
@@ -55,7 +56,7 @@ export default function DashboardPage() {
         <Card className="relative overflow-hidden opacity-60">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Step 3</CardTitle>
-            <h3 className="text-2xl font-serif italic">Revenue Engine</h3>
+            <h3 className="text-2xl font-serif italic">{STAGE_LABELS.sales_pack}</h3>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 text-muted-foreground mb-4">
@@ -63,7 +64,7 @@ export default function DashboardPage() {
               <span className="font-medium">Locked</span>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Complete the delivery system to unlock sales.
+              Complete your build path to unlock scripts and get clients.
             </p>
             <Button variant="ghost" size="sm" className="w-full" disabled>
               Locked
@@ -82,7 +83,7 @@ export default function DashboardPage() {
           <CardContent className="space-y-4">
             {[
               "Finalize your tool stack selection",
-              "Draft your delivery SOP v1",
+              "Draft your build-path SOP",
               "Review competitor analysis updates"
             ].map((action, i) => (
               <div key={i} className="flex items-start gap-3 p-3 rounded-lg border bg-card/50 hover:bg-accent/50 transition-colors cursor-pointer">

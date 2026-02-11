@@ -3,12 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CheckSquare, Layers, FileText, Download } from "lucide-react";
+import { STAGE_LABELS } from "@/lib/constants/stages";
 
 export default function BuildPage() {
   return (
     <PageShell
-      title="Delivery System"
-      description="The blueprint for building and delivering your offer."
+      title={STAGE_LABELS.build_plan}
+      description="Your tool stack, workflow sequence, and implementation order."
       action={
         <Button variant="outline" size="sm">
           <Download className="mr-2 h-4 w-4" />

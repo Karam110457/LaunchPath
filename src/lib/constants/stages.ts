@@ -1,26 +1,37 @@
 /**
- * LaunchPath stage terminology — premium, execution-first naming.
+ * LaunchPath stage terminology — simple, beginner-friendly (matches waitlist).
  * Internal keys (offer_blueprint, build_plan, sales_pack) stay unchanged for API/DB.
- * User-facing labels: Offer Thesis, Delivery System, Revenue Engine.
  *
- * Mapping (internal → display):
- *   offer_blueprint → Offer Thesis
- *   build_plan      → Delivery System
- *   sales_pack      → Revenue Engine
+ * User-facing (no jargon):
+ *   offer_blueprint → Pick a Profitable Offer / "My Offer" (short)
+ *   build_plan      → Map Your Build Path / "Build Path" (short)
+ *   sales_pack      → Launch Client Acquisition / "Get Clients" (short)
  */
 
 export type InternalStageKey = "offer_blueprint" | "build_plan" | "sales_pack";
 
-/** Display labels for nav, cards, and CTAs */
+/** Full labels for page titles, cards, and CTAs (waitlist tone) */
 export const STAGE_LABELS: Record<InternalStageKey, string> = {
-  offer_blueprint: "Offer Thesis",
-  build_plan: "Delivery System",
-  sales_pack: "Revenue Engine",
+  offer_blueprint: "Pick a Profitable Offer",
+  build_plan: "Map Your Build Path",
+  sales_pack: "Launch Client Acquisition",
 };
 
-/** Get display label from internal key */
+/** Short labels for sidebar/nav */
+export const STAGE_LABELS_SHORT: Record<InternalStageKey, string> = {
+  offer_blueprint: "My Offer",
+  build_plan: "Build Path",
+  sales_pack: "Get Clients",
+};
+
+/** Get full display label from internal key */
 export function getStageLabel(internalKey: string): string {
   return STAGE_LABELS[internalKey as InternalStageKey] ?? internalKey;
+}
+
+/** Get short label for nav/sidebar */
+export function getStageLabelShort(internalKey: string): string {
+  return STAGE_LABELS_SHORT[internalKey as InternalStageKey] ?? STAGE_LABELS[internalKey as InternalStageKey] ?? internalKey;
 }
 
 /** Stage config for waitlist/How it Works: outcome, artifact, execution */

@@ -2,15 +2,15 @@
 
 ## **Terminology (user-facing vs internal keys)**
 
-User-facing names used in product, waitlist, and marketing:
+Internal keys remain unchanged so existing code and data keep working.
 
-| User-facing       | Internal key (API/DB) |
-|-------------------|------------------------|
-| **Offer Thesis**  | `offer_blueprint`      |
-| **Delivery System** | `build_plan`         |
-| **Revenue Engine** | `sales_pack`          |
+| In-app / waitlist (simple, no jargon) | Internal key (API/DB) |
+|---------------------------------------|------------------------|
+| **Pick a Profitable Offer** / “My Offer” | `offer_blueprint`      |
+| **Map Your Build Path** / “Build Path”   | `build_plan`         |
+| **Launch Client Acquisition** / “Get Clients” | `sales_pack`          |
 
-Internal keys remain unchanged so existing code and data keep working. Use the table above when displaying labels or updating copy.
+Use the left column for all user-facing copy (product, waitlist, marketing). Code and APIs use the internal keys.
 
 ---
 
