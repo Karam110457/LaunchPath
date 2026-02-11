@@ -24,6 +24,11 @@ export default async function DashboardLayout({
                 Dashboard
               </Button>
             </Link>
+            <Link href="/dashboard/account">
+              <Button variant="ghost" size="sm">
+                Account
+              </Button>
+            </Link>
             <Link href="/">
               <Button variant="outline" size="sm">
                 Home
