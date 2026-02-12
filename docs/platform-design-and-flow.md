@@ -245,3 +245,87 @@ Things not explicitly in the PRD (or only lightly mentioned) that would strength
 | **Optional “why this recommendation”** | For direction engine / validate: a short “Why we suggested this” (2–3 bullets). Builds trust and learning without overwhelming. |
 | **Mobile-friendly read view** | They may check their offer or scripts on the go; ensure offer detail, build path, and get-clients pages are readable (not just desktop). |
 | **Simple “first conversation” tracker** | Post-MVP: one field or check “Had first prospect conversation?” with optional date. Feeds into outcome proxy metric and reminds them of the goal. |
+
+---
+
+## 10. Container entity flow and one-shot creation (product vision)
+
+This section captures the product vision: **log in → onboarding → start a [container] → one flow produces the full blueprint → memory per container → chat for retention.** The container (what we name the “thing” they’re building) should fit our audience: AI beginners going for their **first sellable AI system** and **first client**. “Business” is too vague for them; see §10.5 for the chosen name.
+
+### 10.5 Naming the container (not “business”)
+
+**Why “business” doesn’t work:** For our audience, “business” is abstract and heavy. They’re not thinking “I’m starting a business”—they’re thinking “I want one sellable system and my first client.” The name should feel like **one concrete thing** they’re building and taking to market.
+
+**Recommended name: System**
+
+| Name | Pros | Cons |
+|------|------|------|
+| **System** | Directly from north star (“ship one sellable **system**”). Clear: one system = one offer + build path + get-clients plan. Fits “first sellable AI system.” | Slightly technical; still very clear for AI-curious beginners. |
+| **Playbook** | Warm, familiar. “Your playbook” = your full plan. “Start a new playbook.” Implies something you follow. | Less tied to “system” in our messaging. |
+| **Launch** | Brand-aligned (LaunchPath). “Start a launch” / “My launches.” Action-oriented. | Can sound like a one-time event rather than an ongoing workspace. |
+| **Offer** | The “thing I’m taking to market.” “My offers.” | We already use “offer” for the one-pager artifact; risk of overload. |
+| **Path** | “My paths.” | Conflicts with “Build Path” (stage name). Avoid. |
+| **Business** | — | Too vague for target audience. Avoid. |
+
+**Decision:** Use **System** as the container name in product and docs. Copy examples:
+
+- **“Start a new system”** / **“Build my system”** (CTA)
+- **“My systems”** (nav: list of their systems)
+- **“Your system includes: your offer, build path, and plan to get clients.”**
+- Internal/API: table `systems` (id, user_id, name, created_at); link offer_blueprint, build_plan, sales_pack to system_id.
+
+**If you prefer a warmer tone:** **Playbook** is a strong alternative—“Start a new playbook,” “My playbooks,” “Your playbook has your offer, build path, and get-clients plan.” Use one consistently.
+
+In the rest of §10, **“system”** is used; replace with “playbook” (or “launch”) if you lock that instead.
+
+---
+
+### 10.1 Flow you described
+
+1. **Log in** → **Complete onboarding** (goal, time, outreach, build preference, leverage, skill). Save once; use for all future systems.
+2. **Start a system** (or playbook). User has a clear action: “Start a new system” / “Build my system.”
+3. **Press Start** → **Answer a few questions** (path: need direction vs have idea + 2–3 short questions).
+4. **One flow does the whole thing:** in a single run we produce **offer + build path + client acquisition** (and any other direction artifacts). Not “complete step 1, then step 2, then step 3” as separate user actions—one orchestrated flow that outputs the full blueprint.
+5. **Direction only for now:** no landing page builder, no in-app agent builder, no outreach execution. Optional later: landing page (Lovable-style), build AI agents in-app, run outreach, paid ads, content. MVP = clarity and direction.
+6. **Exports and visualization:** e.g. **n8n-compatible JSON** so they can take the build path into n8n; **React Flow** (or similar) to **visualize the system** (offer → build steps → acquisition) for clarity.
+7. **Memory per system:** each system stores all artifacts + context so the AI knows the full picture and can **edit artifacts** and answer in context.
+8. **Chat and freeform = retention:** chat windows and freeform conversation are the surface for “use over and over”—refine, edit, ask “what next,” run tools. Features should be engineered so returning to chat and iterating is natural and valuable.
+
+### 10.2 Analysis and opinion
+
+**What’s strong**
+
+- **System (or playbook) as the container** is the right abstraction. One user, many systems; each system = one offer + one build path + one get-clients plan + memory + chat. Fits “Start a new system” and “Open System A vs B.”
+- **Onboarding first, reused everywhere** matches the PRD and reduces repeated questions. One profile, many systems.
+- **One flow that produces everything** is a strong UX: “Press Start, answer a few questions, we build your whole system.” Single commitment, single wait, full blueprint at the end. Reduces drop-off between steps and feels like a clear “we built it” moment.
+- **Memory per system** is correct: every chat and tool is scoped to that system’s artifacts and history so the AI can edit and suggest consistently. No context bleed between systems.
+- **Chat as the retention surface** is right. If they keep coming back to ask “tweak my offer,” “add a competitor check,” “prep me for this call,” the product stays sticky. Engineering chat + artifact editing + suggested actions supports that.
+- **Direction-only MVP** keeps scope sane. n8n JSON and React Flow visualization add real value (portability + clarity) without building execution tools yet. Landing page builder, in-app agent builder, outreach/ads can follow once direction is solid.
+
+**Risks and tradeoffs**
+
+- **One long flow:** If the run takes 1–2 minutes, we need **progress/streaming** (“Building your offer… Building your build path… Building your get-clients plan…”) so it doesn’t feel like a black box. Consider showing step-by-step progress and/or streaming the first artifact while the rest generate.
+- **“Few questions” vs onboarding:** Don’t repeat the full onboarding in the flow. The few questions should be **path + 2–3 specifics** (e.g. “I need direction” vs “I have an idea”; if idea, the idea; maybe “primary constraint: time vs money”). Everything else comes from saved profile.
+- **Editing after one-shot:** When we generate everything in one go, we still need **per-artifact edit** (change offer headline, add a build step, tweak a script). Memory + chat + “Edit this section” actions cover that; ensure the UI makes “edit artifact” obvious.
+
+**How this changes the current design**
+
+- **Entity model:** Introduce **System** (table `systems`) as the top-level entity. Under it: profile (user-level), offer_blueprint, build_plan, sales_pack, chat history, and any “memory” blob. Sidebar/header: “My systems” + active system selector.
+- **Creation flow:** One **CreateSystem** (or “Build my system”) entry: “Start” → few questions → **one Mastra workflow** that runs Direction → RealityFilter → Offer → BuildPath → SalesPack (and any other steps) in sequence, persists all, then shows the full result. Optionally allow “regenerate one part” later (e.g. “Regenerate build path only”).
+- **Pages:** Overview can be “per system” (this system’s progress) or global (list of systems). Offer / Build Path / Get Clients pages are **per system**; chat is per system with full memory.
+
+### 10.3 Concrete recommendations
+
+| Recommendation | Implementation note |
+|----------------|----------------------|
+| **One-shot “Build my system” workflow** | Single Mastra workflow that: reads profile + flow answers → Direction (or Validate for Path 2) → RealityFilter → generate and persist offer_blueprint → generate and persist build_plan → generate and persist sales_pack. Return or stream progress so UI can show “Step 1/3… 2/3… 3/3.” |
+| **System as first-class entity** | New table `systems`: id, user_id, name, created_at; link offer_blueprint, build_plan, sales_pack to system_id. All chat and tools scoped by system_id. |
+| **Memory per system** | Store: (1) artifacts in DB (already), (2) chat history per system, (3) optional summary or embedding for “system context” that the AI gets every time. Mastra/agent reads this context for every message and for artifact-editing actions. |
+| **n8n-ready export** | When we have build_plan (tool stack, steps, order), add an export step that produces **n8n-compatible JSON** (or a format they can import). Document “Import this into n8n to run your workflow.” |
+| **React Flow (or similar) visualization** | A “System canvas” or “Your system at a glance” view: nodes for Offer, Build phases, Acquisition phases; edges for flow. Data comes from offer_blueprint + build_plan + sales_pack. Helps them see the whole system and spot gaps. |
+| **Chat + retention** | Chat always in context of active system; suggested actions that trigger workflows (“Regenerate build path,” “Run competitor check,” “Edit offer headline”). Consider “What to do next” suggestions based on state (e.g. “You have an offer and build path; run Sales Prep before your call.”). |
+| **Future roadmap (out of MVP)** | Log and prioritize for later: landing page builder (Lovable-style), in-app AI agent builder, run outreach or connect paid ads/content. Keep MVP focused on direction + memory + chat + export/visualization. |
+
+### 10.4 Summary
+
+Your flow fits the PRD and strengthens it: **one flow, one system, full blueprint, memory, chat for retention.** For MVP we should (1) add **System** as the container (name tuned for our audience; “business” is too vague), (2) implement **one-shot “Build my system”** workflow with progress/streaming, (3) scope **memory and chat** per system, (4) add **n8n JSON export** and **React Flow–style visualization** for direction and clarity, and (5) keep execution (landing page, agents, outreach, ads) for a later phase.
