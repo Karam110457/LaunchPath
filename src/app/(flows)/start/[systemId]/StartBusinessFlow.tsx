@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowRight,
   ArrowLeft,
@@ -19,14 +20,19 @@ import {
   TrendingUp,
   Search,
   AlertCircle,
+  ExternalLink,
 } from "lucide-react";
 import { saveStartBusinessProgress } from "@/app/actions/start-business";
 import { runNicheAnalysis, chooseRecommendation } from "@/app/actions/ai-analyze";
+import { generateOfferDetails } from "@/app/actions/generate-offer";
+import { generateSystem } from "@/app/actions/generate-system";
+import { saveOffer } from "@/app/actions/save-offer";
 import type { Tables } from "@/types/database";
 import type {
   StartBusinessAnswers,
   DirectionPath,
   AIRecommendation,
+  Offer,
 } from "@/types/start-business";
 import {
   INTENT_OPTIONS,
@@ -153,10 +159,33 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
   const [aiError, setAiError] = useState<string | null>(null);
   const [isAnalysing, setIsAnalysing] = useState(false);
 
+  // Offer builder state (Step 8 sub-steps)
+  const [offerSubStep, setOfferSubStep] = useState(0);
+  const [offerData, setOfferData] = useState<Partial<Offer>>({
+    segment: "",
+    transformation_from: "",
+    transformation_to: "",
+    system_description: "",
+    pricing_setup: 0,
+    pricing_monthly: 0,
+    guarantee: "",
+    delivery_model: answers.delivery_model ?? "build_once",
+  });
+  const [offerAiLoaded, setOfferAiLoaded] = useState(false);
+  const [offerError, setOfferError] = useState<string | null>(null);
+
+  // Chosen recommendation (from step 7)
+  const [chosenRec, setChosenRec] = useState<AIRecommendation | null>(
+    (system.chosen_recommendation as AIRecommendation | null) ?? null
+  );
+
+  // System generation state (Step 9)
+  const [demoUrl, setDemoUrl] = useState<string | null>(system.demo_url);
+  const [systemError, setSystemError] = useState<string | null>(null);
+
   const steps = computeSteps(profile, answers);
   const currentStep = steps[stepIndex];
   const totalSteps = steps.length;
-  const isLastInteractiveStep = currentStep?.id === "location";
 
   // Save progress on step transitions
   const saveProgress = useCallback(
@@ -599,6 +628,7 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
               startTransition(async () => {
                 const result = await chooseRecommendation(system.id, rec);
                 if (!result.error) {
+                  setChosenRec(rec);
                   handleNext();
                 }
               });
@@ -608,21 +638,61 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
         );
 
       case "offer_builder":
-        return <OfferBuilderMock onNext={handleNext} />;
+        return (
+          <OfferBuilderStep
+            systemId={system.id}
+            profile={profile}
+            chosenRec={chosenRec}
+            offerSubStep={offerSubStep}
+            setOfferSubStep={setOfferSubStep}
+            offerData={offerData}
+            setOfferData={setOfferData}
+            offerAiLoaded={offerAiLoaded}
+            setOfferAiLoaded={setOfferAiLoaded}
+            offerError={offerError}
+            setOfferError={setOfferError}
+            answers={answers}
+            onBuild={() => {
+              startTransition(async () => {
+                const result = await saveOffer(system.id, offerData);
+                if (result.error) {
+                  setOfferError(result.error);
+                } else {
+                  handleNext();
+                }
+              });
+            }}
+            isPending={isPending}
+          />
+        );
 
       case "system_generation":
-        return <SystemGenerationMock />;
+        return (
+          <SystemGenerationStep
+            systemId={system.id}
+            systemError={systemError}
+            setSystemError={setSystemError}
+            setDemoUrl={setDemoUrl}
+            onComplete={handleNext}
+          />
+        );
 
       case "system_ready":
-        return <SystemReadyMock onDashboard={() => router.push("/dashboard")} />;
+        return (
+          <SystemReadyStep
+            demoUrl={demoUrl}
+            offerData={offerData}
+            onDashboard={() => router.push("/dashboard")}
+          />
+        );
 
       default:
         return null;
     }
   }
 
-  // For mock steps, some have their own navigation
-  const isMockStep = [
+  // These steps manage their own navigation
+  const hasOwnNavigation = [
     "ai_analysis",
     "results",
     "offer_builder",
@@ -641,8 +711,8 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
       >
         {renderStep()}
 
-        {/* Navigation (hidden for mock steps that have their own) */}
-        {!isMockStep && (
+        {/* Navigation (hidden for steps that manage their own) */}
+        {!hasOwnNavigation && (
           <div className="flex items-center justify-between pt-4">
             <Button
               variant="ghost"
@@ -1021,88 +1091,552 @@ function ResultsStep({
   );
 }
 
-function OfferBuilderMock({ onNext }: { onNext: () => void }) {
+// --- Pricing calculation (deterministic from profile) ---
+function calculatePricing(
+  revenueGoal: string | null,
+  pricingDirection: string | null
+): { setup: number; monthly: number } {
+  if (revenueGoal === "500_1k") return { setup: 0, monthly: 400 };
+  if (revenueGoal === "1k_3k") return { setup: 300, monthly: 600 };
+
+  if (revenueGoal === "3k_5k") {
+    if (pricingDirection === "fewer_high_ticket") return { setup: 500, monthly: 1500 };
+    return { setup: 300, monthly: 500 };
+  }
+
+  if (revenueGoal === "5k_10k_plus") {
+    if (pricingDirection === "monthly_retainer") return { setup: 800, monthly: 2000 };
+    if (pricingDirection === "base_plus_percentage") return { setup: 500, monthly: 500 };
+    if (pricingDirection === "volume_play") return { setup: 200, monthly: 400 };
+    return { setup: 500, monthly: 1200 };
+  }
+
+  return { setup: 300, monthly: 600 };
+}
+
+// --- Offer summary row ---
+function OfferSummaryRow({
+  label,
+  value,
+  isLast,
+}: {
+  label: string;
+  value?: string;
+  isLast?: boolean;
+}) {
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-serif italic">Your complete offer</h2>
-      <Card>
-        <CardContent className="pt-6 space-y-3 text-sm">
-          <div className="flex justify-between border-b border-border/50 pb-2">
-            <span className="text-muted-foreground">Niche</span>
-            <span className="font-medium">Window cleaning companies</span>
-          </div>
-          <div className="flex justify-between border-b border-border/50 pb-2">
-            <span className="text-muted-foreground">Segment</span>
-            <span className="font-medium">£10–30k/month residential</span>
-          </div>
-          <div className="flex justify-between border-b border-border/50 pb-2">
-            <span className="text-muted-foreground">Service</span>
-            <span className="font-medium">AI Lead Qualification System</span>
-          </div>
-          <div className="flex justify-between border-b border-border/50 pb-2">
-            <span className="text-muted-foreground">Pricing</span>
-            <span className="font-medium">£500/month</span>
-          </div>
-          <div className="flex justify-between pb-2">
-            <span className="text-muted-foreground">Guarantee</span>
-            <span className="font-medium">10 leads in 30 days or free</span>
-          </div>
-        </CardContent>
-      </Card>
-      <p className="text-xs text-center text-muted-foreground">
-        The full offer builder with AI will be interactive. This is a preview.
-      </p>
-      <Button className="w-full" onClick={onNext}>
-        Build My System
-        <ArrowRight className="h-4 w-4 ml-2" />
-      </Button>
+    <div
+      className={`flex justify-between gap-4 ${
+        !isLast ? "border-b border-border/50 pb-2" : ""
+      }`}
+    >
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <span className="font-medium text-right">{value || "—"}</span>
     </div>
   );
 }
 
-function SystemGenerationMock() {
-  const [progress, setProgress] = useState(0);
-  const steps = [
-    "Creating your AI agent",
-    "Building your demo page",
-    "Generating niche-specific form",
-    "Configuring lead scoring",
-    "Setting up tracking",
-    "Finding prospects",
-    "Writing personalised messages",
+// --- STEP 8: Offer Builder (5 sub-steps) ---
+function OfferBuilderStep({
+  systemId,
+  profile,
+  chosenRec,
+  offerSubStep,
+  setOfferSubStep,
+  offerData,
+  setOfferData,
+  offerAiLoaded,
+  setOfferAiLoaded,
+  offerError,
+  setOfferError,
+  answers,
+  onBuild,
+  isPending,
+}: {
+  systemId: string;
+  profile: Profile;
+  chosenRec: AIRecommendation | null;
+  offerSubStep: number;
+  setOfferSubStep: React.Dispatch<React.SetStateAction<number>>;
+  offerData: Partial<Offer>;
+  setOfferData: React.Dispatch<React.SetStateAction<Partial<Offer>>>;
+  offerAiLoaded: boolean;
+  setOfferAiLoaded: React.Dispatch<React.SetStateAction<boolean>>;
+  offerError: string | null;
+  setOfferError: React.Dispatch<React.SetStateAction<string | null>>;
+  answers: Partial<StartBusinessAnswers>;
+  onBuild: () => void;
+  isPending: boolean;
+}) {
+  const hasLoaded = useRef(false);
+  const blockers = profile.blockers ?? [];
+
+  // Auto-load AI content + calculate pricing on mount
+  useEffect(() => {
+    if (hasLoaded.current || offerAiLoaded) return;
+    hasLoaded.current = true;
+
+    const pricing = calculatePricing(
+      profile.revenue_goal,
+      answers.pricing_direction ?? null
+    );
+
+    setOfferData((prev) => ({
+      ...prev,
+      segment: chosenRec?.target_segment.description ?? "",
+      pricing_setup: pricing.setup,
+      pricing_monthly: pricing.monthly,
+      delivery_model: answers.delivery_model ?? "build_once",
+    }));
+
+    generateOfferDetails(systemId).then((result) => {
+      if (result.error) {
+        setOfferError(result.error);
+      } else {
+        setOfferData((prev) => ({
+          ...prev,
+          transformation_from: result.transformation_from ?? "",
+          transformation_to: result.transformation_to ?? "",
+          system_description: result.system_description ?? "",
+          guarantee: result.guarantee ?? "",
+        }));
+        setOfferAiLoaded(true);
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function updateField<K extends keyof Offer>(key: K, value: Offer[K]) {
+    setOfferData((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function nextSub() {
+    setOfferSubStep((s) => Math.min(s + 1, 4));
+  }
+  function prevSub() {
+    setOfferSubStep((s) => Math.max(s - 1, 0));
+  }
+
+  const subLabels = ["Segment", "Transformation", "Pricing", "Guarantee", "Summary"];
+
+  return (
+    <div className="space-y-6">
+      {/* Sub-step indicator */}
+      <p className="text-xs text-muted-foreground">
+        Step {offerSubStep + 1} of 5 — {subLabels[offerSubStep]}
+      </p>
+
+      {/* 8a: Segment confirmation */}
+      {offerSubStep === 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl sm:text-2xl font-serif font-light italic tracking-tight">
+            Who you&apos;re helping
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Based on the analysis, here&apos;s your target segment. Edit if needed.
+          </p>
+          <Card>
+            <CardContent className="pt-6 space-y-3">
+              <div>
+                <Label className="text-xs text-muted-foreground">
+                  Target segment
+                </Label>
+                <Input
+                  value={offerData.segment ?? ""}
+                  onChange={(e) => updateField("segment", e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              {chosenRec && (
+                <p className="text-sm text-muted-foreground italic">
+                  {chosenRec.target_segment.why}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* 8b: Transformation */}
+      {offerSubStep === 1 && (
+        <div className="space-y-4">
+          <h2 className="text-xl sm:text-2xl font-serif font-light italic tracking-tight">
+            The transformation you deliver
+          </h2>
+          {blockers.includes("no_offer") && (
+            <p className="text-sm text-primary bg-primary/5 rounded-lg px-3 py-2">
+              You&apos;re not selling AI — you&apos;re selling a transformation.
+              The tech is just how you deliver it.
+            </p>
+          )}
+          {blockers.includes("cant_build") && (
+            <p className="text-sm text-primary bg-primary/5 rounded-lg px-3 py-2">
+              We build everything for you. You focus on selling and managing
+              client relationships.
+            </p>
+          )}
+          {!offerAiLoaded && !offerError ? (
+            <div className="flex items-center gap-3 text-sm text-muted-foreground py-8 justify-center">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>AI is crafting your transformation copy...</span>
+            </div>
+          ) : offerError ? (
+            <div className="text-center py-8">
+              <AlertCircle className="h-6 w-6 text-red-400 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">{offerError}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2"
+                onClick={() => {
+                  setOfferError(null);
+                  hasLoaded.current = false;
+                }}
+              >
+                Try again
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  Where they are now (the problem)
+                </Label>
+                <Textarea
+                  value={offerData.transformation_from ?? ""}
+                  onChange={(e) =>
+                    updateField("transformation_from", e.target.value)
+                  }
+                  rows={2}
+                />
+              </div>
+              <div className="flex justify-center">
+                <ArrowRight className="h-4 w-4 text-muted-foreground rotate-90" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  Where they&apos;ll be (the result)
+                </Label>
+                <Textarea
+                  value={offerData.transformation_to ?? ""}
+                  onChange={(e) =>
+                    updateField("transformation_to", e.target.value)
+                  }
+                  rows={2}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  Your system (what you deliver)
+                </Label>
+                <Textarea
+                  value={offerData.system_description ?? ""}
+                  onChange={(e) =>
+                    updateField("system_description", e.target.value)
+                  }
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 8c: Pricing */}
+      {offerSubStep === 2 && (
+        <div className="space-y-4">
+          <h2 className="text-xl sm:text-2xl font-serif font-light italic tracking-tight">
+            Your pricing
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Pre-calculated from your revenue goal. Adjust if needed.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Setup fee</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                  £
+                </span>
+                <Input
+                  type="number"
+                  value={offerData.pricing_setup ?? 0}
+                  onChange={(e) =>
+                    updateField("pricing_setup", parseInt(e.target.value) || 0)
+                  }
+                  className="pl-7"
+                  min={0}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Monthly</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                  £
+                </span>
+                <Input
+                  type="number"
+                  value={offerData.pricing_monthly ?? 0}
+                  onChange={(e) =>
+                    updateField(
+                      "pricing_monthly",
+                      parseInt(e.target.value) || 0
+                    )
+                  }
+                  className="pl-7"
+                  min={0}
+                />
+              </div>
+              <span className="text-xs text-muted-foreground">
+                /month per client
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 8d: Guarantee */}
+      {offerSubStep === 3 && (
+        <div className="space-y-4">
+          <h2 className="text-xl sm:text-2xl font-serif font-light italic tracking-tight">
+            Your guarantee
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            A strong guarantee eliminates risk for your prospect. Edit or skip.
+          </p>
+          {blockers.includes("scared_delivery") && (
+            <p className="text-sm text-primary bg-primary/5 rounded-lg px-3 py-2">
+              The AI runs automatically — you&apos;re not doing the work. The
+              system handles delivery.
+            </p>
+          )}
+          {blockers.includes("cant_find_clients") && (
+            <p className="text-sm text-primary bg-primary/5 rounded-lg px-3 py-2">
+              A prospect list is coming in the next step. Finding leads
+              won&apos;t be a problem.
+            </p>
+          )}
+          {!offerAiLoaded && !offerError ? (
+            <div className="flex items-center gap-3 text-sm text-muted-foreground py-4 justify-center">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Generating your guarantee...</span>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <Textarea
+                value={offerData.guarantee ?? ""}
+                onChange={(e) => updateField("guarantee", e.target.value)}
+                rows={3}
+                placeholder="e.g., 10 qualified leads in 30 days or your money back"
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => updateField("guarantee", "")}
+                className="text-xs text-muted-foreground"
+              >
+                Skip guarantee for now
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 8e: Summary */}
+      {offerSubStep === 4 && (
+        <div className="space-y-4">
+          <h2 className="text-xl sm:text-2xl font-serif font-light italic tracking-tight">
+            Your complete offer
+          </h2>
+          {blockers.includes("cant_build") && (
+            <p className="text-sm text-primary bg-primary/5 rounded-lg px-3 py-2">
+              Remember: we build the entire system. You focus on the business.
+            </p>
+          )}
+          {blockers.includes("keep_switching") && (
+            <p className="text-sm text-primary bg-primary/5 rounded-lg px-3 py-2">
+              This is your best path. Trust the process — the data picked this
+              for a reason.
+            </p>
+          )}
+          <Card>
+            <CardContent className="pt-6 space-y-3 text-sm">
+              <OfferSummaryRow label="Segment" value={offerData.segment} />
+              <OfferSummaryRow
+                label="From"
+                value={offerData.transformation_from}
+              />
+              <OfferSummaryRow
+                label="To"
+                value={offerData.transformation_to}
+              />
+              <OfferSummaryRow
+                label="System"
+                value={offerData.system_description}
+              />
+              <OfferSummaryRow
+                label="Pricing"
+                value={
+                  offerData.pricing_setup
+                    ? `£${offerData.pricing_setup} setup + £${offerData.pricing_monthly}/month`
+                    : `£${offerData.pricing_monthly}/month`
+                }
+              />
+              {offerData.guarantee ? (
+                <OfferSummaryRow
+                  label="Guarantee"
+                  value={offerData.guarantee}
+                  isLast
+                />
+              ) : (
+                <OfferSummaryRow
+                  label="Guarantee"
+                  value="None (you can add one later)"
+                  isLast
+                />
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Sub-step navigation */}
+      <div className="flex items-center justify-between pt-4">
+        <Button
+          variant="ghost"
+          onClick={prevSub}
+          disabled={offerSubStep === 0}
+          className="text-muted-foreground"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+        {offerSubStep < 4 ? (
+          <Button
+            onClick={nextSub}
+            disabled={
+              offerSubStep === 1 && !offerAiLoaded && !offerError
+            }
+          >
+            Continue
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+        ) : (
+          <Button onClick={onBuild} disabled={isPending}>
+            {isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                Build My System
+                <Sparkles className="h-4 w-4 ml-2" />
+              </>
+            )}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// --- STEP 9: System Generation ---
+function SystemGenerationStep({
+  systemId,
+  systemError,
+  setSystemError,
+  setDemoUrl,
+  onComplete,
+}: {
+  systemId: string;
+  systemError: string | null;
+  setSystemError: React.Dispatch<React.SetStateAction<string | null>>;
+  setDemoUrl: React.Dispatch<React.SetStateAction<string | null>>;
+  onComplete: () => void;
+}) {
+  const [progressIndex, setProgressIndex] = useState(0);
+  const hasStarted = useRef(false);
+
+  const progressSteps = [
+    "Mapping your niche agent",
+    "Generating demo page",
+    "Building lead qualification form",
+    "Configuring scoring rules",
+    "Creating your unique URL",
   ];
 
-  useState(() => {
-    let i = 0;
+  // Auto-start system generation
+  useEffect(() => {
+    if (hasStarted.current) return;
+    hasStarted.current = true;
+
+    generateSystem(systemId).then((result) => {
+      if (result.error) {
+        setSystemError(result.error);
+      } else {
+        setDemoUrl(result.demo_url);
+        setTimeout(() => onComplete(), 1500);
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Animate progress steps
+  useEffect(() => {
+    if (systemError) return;
     const interval = setInterval(() => {
-      i++;
-      setProgress(i);
-      if (i >= steps.length) clearInterval(interval);
-    }, 2500);
+      setProgressIndex((prev) => {
+        if (prev >= progressSteps.length - 1) return prev;
+        return prev + 1;
+      });
+    }, 1500);
     return () => clearInterval(interval);
-  });
+  }, [systemError, progressSteps.length]);
+
+  if (systemError) {
+    return (
+      <div className="space-y-6 py-8">
+        <div className="text-center">
+          <AlertCircle className="h-8 w-8 text-red-400 mx-auto mb-4" />
+          <h2 className="text-xl font-serif italic">Something went wrong</h2>
+          <p className="text-sm text-muted-foreground mt-2">{systemError}</p>
+        </div>
+        <div className="flex justify-center">
+          <Button
+            onClick={() => {
+              setSystemError(null);
+              hasStarted.current = false;
+            }}
+          >
+            Try Again
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 py-8">
       <div className="text-center">
         <Sparkles className="h-8 w-8 text-primary mx-auto mb-4 animate-pulse" />
         <h2 className="text-xl font-serif italic">Building your system...</h2>
+        <p className="text-sm text-muted-foreground mt-2">
+          Creating your AI-powered demo page
+        </p>
       </div>
       <div className="space-y-3">
-        {steps.map((step, i) => (
+        {progressSteps.map((step, i) => (
           <div key={step} className="flex items-center gap-3 text-sm">
-            {i < progress ? (
+            {i < progressIndex ? (
               <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-            ) : i === progress ? (
+            ) : i === progressIndex ? (
               <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" />
             ) : (
               <div className="h-4 w-4 rounded border border-muted-foreground/30 shrink-0" />
             )}
             <span
               className={
-                i < progress
+                i < progressIndex
                   ? "text-foreground"
-                  : i === progress
+                  : i === progressIndex
                     ? "text-primary"
                     : "text-muted-foreground"
               }
@@ -1112,16 +1646,18 @@ function SystemGenerationMock() {
           </div>
         ))}
       </div>
-      <p className="text-xs text-center text-muted-foreground pt-4">
-        System generation will be connected to the AI pipeline soon.
-      </p>
     </div>
   );
 }
 
-function SystemReadyMock({
+// --- STEP 10: System Ready ---
+function SystemReadyStep({
+  demoUrl,
+  offerData,
   onDashboard,
 }: {
+  demoUrl: string | null;
+  offerData: Partial<Offer>;
   onDashboard: () => void;
 }) {
   return (
@@ -1136,35 +1672,61 @@ function SystemReadyMock({
       <Card>
         <CardContent className="pt-6 space-y-4">
           <div className="space-y-2">
-            <h4 className="text-sm font-medium text-muted-foreground">Demo Page</h4>
-            <p className="text-sm font-mono text-primary">
-              demo.launchpath.ai/you/window-clean-87
-            </p>
+            <h4 className="text-sm font-medium text-muted-foreground">
+              Your Demo Page
+            </h4>
+            {demoUrl ? (
+              <a
+                href={demoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-mono text-primary hover:underline flex items-center gap-1.5"
+              >
+                {demoUrl}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                URL will be available shortly
+              </p>
+            )}
           </div>
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-muted-foreground">Prospects Found</h4>
-            <p className="text-sm">25 prospects in your target area</p>
-          </div>
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-muted-foreground">Messages Ready</h4>
-            <p className="text-sm">25 personalised messages</p>
-          </div>
+          {offerData.segment && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-muted-foreground">
+                Your Offer
+              </h4>
+              <div className="text-sm space-y-1">
+                <p>
+                  <span className="text-muted-foreground">Segment:</span>{" "}
+                  {offerData.segment}
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Pricing:</span>{" "}
+                  {offerData.pricing_setup
+                    ? `£${offerData.pricing_setup} setup + £${offerData.pricing_monthly}/mo`
+                    : `£${offerData.pricing_monthly}/mo`}
+                </p>
+                {offerData.guarantee && (
+                  <p>
+                    <span className="text-muted-foreground">Guarantee:</span>{" "}
+                    {offerData.guarantee}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       <div className="space-y-3">
         <h3 className="text-sm font-medium">What to do now:</h3>
         <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-          <li>Try your own demo (click link above)</li>
-          <li>Copy your first message</li>
-          <li>Send it on LinkedIn</li>
-          <li>Watch your dashboard for engagement</li>
+          <li>Try your own demo page (click the link above)</li>
+          <li>Share it with a prospect to see real results</li>
+          <li>Check your dashboard for submissions</li>
         </ol>
       </div>
-
-      <p className="text-xs text-center text-muted-foreground">
-        Demo page, prospects, and messages will be real once AI is connected.
-      </p>
 
       <Button className="w-full" onClick={onDashboard}>
         Go to Dashboard

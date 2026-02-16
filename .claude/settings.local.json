@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "mcp__claude_ai_Supabase__list_tables"
+      "mcp__claude_ai_Supabase__list_tables",
+      "WebFetch(domain:mastra.ai)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

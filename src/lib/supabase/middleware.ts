@@ -38,6 +38,7 @@ export async function updateSession(request: NextRequest) {
     const isStartRoute = pathname.startsWith("/start");
     const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/signup");
     const isApiRoute = pathname.startsWith("/api");
+    const isDemoRoute = pathname.startsWith("/demo");
     const isPublicRoute =
       pathname === "/" ||
       pathname.startsWith("/terms") ||
@@ -52,7 +53,8 @@ export async function updateSession(request: NextRequest) {
       !isOnboardingRoute &&
       !isAuthRoute &&
       !isApiRoute &&
-      !isPublicRoute
+      !isPublicRoute &&
+      !isDemoRoute
     ) {
       const url = request.nextUrl.clone();
       url.pathname = "/onboarding";
