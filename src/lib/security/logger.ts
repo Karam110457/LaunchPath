@@ -61,8 +61,6 @@ export const logger = {
     console.error(serialize(message, meta));
   },
   debug(message: string, meta?: Record<string, unknown>) {
-    if (process.env.NODE_ENV === "development") {
-      console.debug(serialize(message, meta));
-    }
+    console.debug(serialize(message, meta));
   },
 };

@@ -514,6 +514,52 @@ ${DEMO_OUTPUT_SCHEMA}`,
 };
 
 /**
+ * Build a fallback agent config for niches that don't match any pre-built agent.
+ * Uses the niche name and solution from the AI recommendation to create a dynamic config.
+ */
+export function buildFallbackAgent(niche: string, solution?: string): AgentConfig {
+  return {
+    id: "fallback",
+    niche,
+    name: `${niche} — AI Qualifier`,
+    description: solution ?? `AI-powered lead qualification for ${niche}.`,
+    systemPrompt: `You are a lead qualification AI for "${niche}" businesses. You analyse incoming enquiries and determine lead quality, estimated value, and priority.
+
+## How to Score
+- Assess the prospect's need, urgency, budget, and fit for the service
+- Consider the size and type of the request
+- Factor in timeline and readiness to proceed
+
+## Priority Rules
+- HIGH (80-100): Strong need + urgent + budget-aligned + clear scope
+- MEDIUM (50-79): Genuine interest but some factors are unclear or moderate
+- LOW (0-49): Low urgency, unclear need, or poor budget fit
+
+${DEMO_OUTPUT_SCHEMA}`,
+    formFields: [
+      { key: "name", label: "Your name", type: "text", placeholder: "Jane Smith", required: true },
+      { key: "company", label: "Company / organisation", type: "text", placeholder: "Your company name", required: false },
+      { key: "service_needed", label: "What do you need help with?", type: "textarea", placeholder: "Describe what you're looking for...", required: true },
+      { key: "urgency", label: "How urgent is this?", type: "select", required: true, options: [
+        { value: "asap", label: "ASAP — need help immediately" },
+        { value: "this_month", label: "Within this month" },
+        { value: "next_few_months", label: "Next 1-3 months" },
+        { value: "just_exploring", label: "Just exploring options" },
+      ]},
+      { key: "budget", label: "Approximate budget", type: "select", required: false, options: [
+        { value: "under_500", label: "Under $500" },
+        { value: "500_2000", label: "$500 – $2,000" },
+        { value: "2000_5000", label: "$2,000 – $5,000" },
+        { value: "5000_plus", label: "$5,000+" },
+        { value: "not_sure", label: "Not sure yet" },
+      ]},
+      { key: "location", label: "Location", type: "text", placeholder: "e.g., Austin, TX", required: false },
+      { key: "notes", label: "Anything else?", type: "textarea", placeholder: "Any other details that would help us understand your needs...", required: false },
+    ],
+  };
+}
+
+/**
  * Look up an agent config by its slug.
  */
 export function getAgentForNiche(nicheSlug: string): AgentConfig | null {

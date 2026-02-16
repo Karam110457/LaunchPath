@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getAgentForNiche, findAgentSlug } from "@/lib/ai/agents/registry";
+import { findAgentSlug, getAgentForNiche, buildFallbackAgent } from "@/lib/ai/agents/registry";
 import { DemoPage } from "./DemoPage";
 
 interface DemoPageProps {
@@ -32,8 +32,11 @@ export default async function DemoPageRoute({ params }: DemoPageProps) {
     notFound();
   }
 
+  // Try matching a pre-built agent; fall back to generic for custom niches
   const agentSlug = findAgentSlug(chosenRec.niche);
-  const agent = agentSlug ? getAgentForNiche(agentSlug) : null;
+  const agent = agentSlug
+    ? getAgentForNiche(agentSlug)
+    : buildFallbackAgent(chosenRec.niche, chosenRec.your_solution);
 
   if (!agent) {
     notFound();

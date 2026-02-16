@@ -4,7 +4,7 @@ import { rateLimit, getClientIdentifier } from "@/lib/api/rate-limit";
 import { demoSubmissionSchema } from "@/lib/validations/demo-submission";
 import { findAgentSlug } from "@/lib/ai/agents/registry";
 import { demoResultSchema } from "@/lib/ai/schemas";
-import { demoAgents } from "@/mastra/agents/demo-agents";
+import { getDemoAgent } from "@/mastra/agents/demo-agents";
 import { logger } from "@/lib/security/logger";
 
 /**
@@ -51,22 +51,16 @@ export async function POST(
 
   const chosenRec = system.chosen_recommendation as {
     niche: string;
+    your_solution?: string;
   } | null;
 
   if (!chosenRec) {
     return jsonErrorResponse("Demo not configured.", 404);
   }
 
-  // Look up Mastra agent
+  // Look up Mastra agent (falls back to dynamic agent for custom niches)
   const agentSlug = findAgentSlug(chosenRec.niche);
-  if (!agentSlug) {
-    return jsonErrorResponse("Agent not found for this niche.", 404);
-  }
-
-  const agent = demoAgents[`demo-${agentSlug}`];
-  if (!agent) {
-    return jsonErrorResponse("Agent not found for this niche.", 404);
-  }
+  const { agent } = getDemoAgent(agentSlug, chosenRec.niche, chosenRec.your_solution);
 
   try {
     const userMessage = `Analyse this submission and return your assessment as JSON.\n\nForm data:\n${JSON.stringify(data.form_data, null, 2)}`;
