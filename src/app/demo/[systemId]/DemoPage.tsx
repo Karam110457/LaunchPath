@@ -67,8 +67,22 @@ export function DemoPage({
         throw new Error(body.error || `Request failed (${res.status})`);
       }
 
-      const data = await res.json();
-      setResult(data.result);
+      // Consume the streaming response
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response stream");
+
+      const decoder = new TextDecoder();
+      let accumulated = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        accumulated += decoder.decode(value, { stream: true });
+      }
+
+      // Parse accumulated text as DemoResult JSON
+      const parsed = JSON.parse(accumulated) as DemoResult;
+      setResult(parsed);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

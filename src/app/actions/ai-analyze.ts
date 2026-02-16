@@ -1,10 +1,11 @@
 "use server";
 
-import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
-import { SERGE_SYSTEM_PROMPT, buildUserContext } from "@/lib/ai/serge-prompt";
+import { buildUserContext } from "@/lib/ai/serge-prompt";
+import { nicheAnalysisOutputSchema } from "@/lib/ai/schemas";
+import { mastra } from "@/mastra";
 import { logger } from "@/lib/security/logger";
-import type { AIRecommendation } from "@/types/start-business";
+import type { AIRecommendation } from "@/lib/ai/schemas";
 
 interface AnalyzeResult {
   recommendations: AIRecommendation[] | null;
@@ -14,18 +15,12 @@ interface AnalyzeResult {
 
 /**
  * Run AI niche analysis for a system.
- * Calls Sonnet 4.5 with the Serge framework prompt + user context.
+ * Calls the Serge Mastra agent with structured output.
  * Saves results to user_systems.ai_recommendations.
  */
 export async function runNicheAnalysis(
   systemId: string
 ): Promise<AnalyzeResult> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    logger.error("ANTHROPIC_API_KEY not configured");
-    return { recommendations: null, reasoning: null, error: "AI service not configured." };
-  }
-
   const supabase = await createClient();
   const {
     data: { user },
@@ -62,9 +57,6 @@ export async function runNicheAnalysis(
   const profile = profileResult.data;
 
   // Determine recommendation count based on profile
-  // Users who keep switching get 1 directive recommendation
-  // Beginners get 3 to explore
-  // Everyone else gets 3
   const keepsSwitching = (profile.blockers ?? []).includes("keep_switching");
   const recommendationCount = keepsSwitching ? 1 : 3;
 
@@ -98,49 +90,15 @@ export async function runNicheAnalysis(
   );
 
   try {
-    const client = new Anthropic({ apiKey });
-
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-5-20250929",
-      max_tokens: 4096,
-      system: SERGE_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userContext }],
+    const agent = mastra.getAgent("serge");
+    const result = await agent.generate(userContext, {
+      structuredOutput: { schema: nicheAnalysisOutputSchema },
     });
 
-    // Extract text content from response
-    const textBlock = message.content.find((block) => block.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
-      logger.error("AI response contained no text", { systemId });
-      return { recommendations: null, reasoning: null, error: "AI returned an empty response." };
-    }
+    const parsed = result.object;
 
-    // Parse JSON from the response
-    const raw = textBlock.text.trim();
-    let parsed: { recommendations: AIRecommendation[]; reasoning: string };
-
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      // Sometimes the model wraps JSON in markdown code blocks
-      const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) {
-        parsed = JSON.parse(jsonMatch[1].trim());
-      } else {
-        logger.error("AI response was not valid JSON", {
-          systemId,
-          responsePreview: raw.slice(0, 200),
-        });
-        return {
-          recommendations: null,
-          reasoning: null,
-          error: "AI returned an invalid response. Please try again.",
-        };
-      }
-    }
-
-    // Validate the structure
-    if (!Array.isArray(parsed.recommendations) || parsed.recommendations.length === 0) {
-      logger.error("AI response missing recommendations array", { systemId });
+    if (!parsed || !Array.isArray(parsed.recommendations) || parsed.recommendations.length === 0) {
+      logger.error("AI response missing recommendations", { systemId });
       return {
         recommendations: null,
         reasoning: null,

@@ -20,11 +20,4 @@ export interface AgentConfig {
   formFields: FormField[];
 }
 
-export interface DemoResult {
-  priority: "HIGH" | "MEDIUM" | "LOW";
-  score: number;
-  estimated_value: string;
-  insights: string[];
-  next_steps: string[];
-  fit_analysis: Record<string, string>;
-}
+export type { DemoResult } from "@/lib/ai/schemas";

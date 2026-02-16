@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
   env: {},
   // Security: disable x-powered-by to reduce fingerprinting
   poweredByHeader: false,
+  // Mastra needs to be bundled server-side only
+  serverExternalPackages: ["@mastra/*"],
 };
 
 export default nextConfig;

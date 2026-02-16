@@ -1,11 +1,9 @@
 "use server";
 
-import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
-import {
-  OFFER_SYSTEM_PROMPT,
-  buildOfferContext,
-} from "@/lib/ai/offer-prompt";
+import { buildOfferContext } from "@/lib/ai/offer-prompt";
+import { offerDetailsOutputSchema } from "@/lib/ai/schemas";
+import { mastra } from "@/mastra";
 import { logger } from "@/lib/security/logger";
 
 interface OfferDetailsResult {
@@ -17,24 +15,12 @@ interface OfferDetailsResult {
 }
 
 /**
- * Generate offer details (transformation copy + guarantee) using AI.
+ * Generate offer details (transformation copy + guarantee) using the Mastra offer agent.
  * Pricing is NOT generated here — it's calculated client-side from profile data.
  */
 export async function generateOfferDetails(
   systemId: string
 ): Promise<OfferDetailsResult> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    logger.error("ANTHROPIC_API_KEY not configured");
-    return {
-      transformation_from: null,
-      transformation_to: null,
-      system_description: null,
-      guarantee: null,
-      error: "AI service not configured.",
-    };
-  }
-
   const supabase = await createClient();
   const {
     data: { user },
@@ -124,55 +110,12 @@ export async function generateOfferDetails(
   );
 
   try {
-    const client = new Anthropic({ apiKey });
-
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-5-20250929",
-      max_tokens: 1024,
-      system: OFFER_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userContext }],
+    const agent = mastra.getAgent("offer");
+    const result = await agent.generate(userContext, {
+      structuredOutput: { schema: offerDetailsOutputSchema },
     });
 
-    const textBlock = message.content.find((block) => block.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
-      logger.error("Offer AI response contained no text", { systemId });
-      return {
-        transformation_from: null,
-        transformation_to: null,
-        system_description: null,
-        guarantee: null,
-        error: "AI returned an empty response.",
-      };
-    }
-
-    const raw = textBlock.text.trim();
-    let parsed: {
-      transformation_from: string;
-      transformation_to: string;
-      system_description: string;
-      guarantee: string;
-    };
-
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) {
-        parsed = JSON.parse(jsonMatch[1].trim());
-      } else {
-        logger.error("Offer AI response was not valid JSON", {
-          systemId,
-          responsePreview: raw.slice(0, 200),
-        });
-        return {
-          transformation_from: null,
-          transformation_to: null,
-          system_description: null,
-          guarantee: null,
-          error: "AI returned an invalid response. Please try again.",
-        };
-      }
-    }
+    const parsed = result.object;
 
     logger.info("Offer details generated", { systemId, userId: user.id });
 

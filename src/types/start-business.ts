@@ -19,28 +19,7 @@ export interface StartBusinessAnswers {
   location_target: string | null;
 }
 
-export interface AIRecommendation {
-  niche: string;
-  score: number;
-  target_segment: { description: string; why: string };
-  bottleneck: string;
-  strategic_insight: string;
-  your_solution: string;
-  revenue_potential: {
-    per_client: string;
-    target_clients: number;
-    monthly_total: string;
-  };
-  why_for_you: string;
-  ease_of_finding: string;
-  segment_scores: {
-    roi_from_service: number;
-    can_afford_it: number;
-    guarantee_results: number;
-    easy_to_find: number;
-    total: number;
-  };
-}
+export type { AIRecommendation } from "@/lib/ai/schemas";
 
 export interface Offer {
   segment: string;

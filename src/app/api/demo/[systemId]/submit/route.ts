@@ -1,16 +1,17 @@
-import { NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { validateBody, jsonErrorResponse } from "@/lib/api/validate";
 import { rateLimit, getClientIdentifier } from "@/lib/api/rate-limit";
 import { demoSubmissionSchema } from "@/lib/validations/demo-submission";
-import { getAgentForNiche, findAgentSlug } from "@/lib/ai/agents/registry";
+import { findAgentSlug } from "@/lib/ai/agents/registry";
+import { demoResultSchema } from "@/lib/ai/schemas";
+import { demoAgents } from "@/mastra/agents/demo-agents";
 import { logger } from "@/lib/security/logger";
 
 /**
  * POST /api/demo/[systemId]/submit
  * Public endpoint — no auth required. Rate limited: 10 req/min per IP.
- * Processes a demo form submission through the niche-specific AI agent.
+ * Processes a demo form submission through the niche-specific Mastra agent.
+ * Returns a streaming text response.
  */
 export async function POST(
   request: Request,
@@ -35,13 +36,6 @@ export async function POST(
   );
   if (validationError) return validationError;
 
-  // Check API key
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    logger.error("ANTHROPIC_API_KEY not configured for demo submission");
-    return jsonErrorResponse("AI service not configured.", 503);
-  }
-
   // Fetch system
   const supabase = await createClient();
   const { data: system, error: fetchError } = await supabase
@@ -63,70 +57,56 @@ export async function POST(
     return jsonErrorResponse("Demo not configured.", 404);
   }
 
-  // Look up agent
+  // Look up Mastra agent
   const agentSlug = findAgentSlug(chosenRec.niche);
-  const agent = agentSlug ? getAgentForNiche(agentSlug) : null;
+  if (!agentSlug) {
+    return jsonErrorResponse("Agent not found for this niche.", 404);
+  }
 
+  const agent = demoAgents[`demo-${agentSlug}`];
   if (!agent) {
     return jsonErrorResponse("Agent not found for this niche.", 404);
   }
 
-  // Call AI with agent's system prompt + form data
   try {
-    const client = new Anthropic({ apiKey });
-
     const userMessage = `Analyse this submission and return your assessment as JSON.\n\nForm data:\n${JSON.stringify(data.form_data, null, 2)}`;
 
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-5-20250929",
-      max_tokens: 1024,
-      system: agent.systemPrompt,
-      messages: [{ role: "user", content: userMessage }],
+    const stream = await agent.stream(userMessage, {
+      structuredOutput: { schema: demoResultSchema },
     });
 
-    const textBlock = message.content.find((block) => block.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
-      logger.error("Demo AI response contained no text", { systemId });
-      return jsonErrorResponse("AI returned an empty response.", 500);
-    }
+    // Save to DB when structured output is ready (fire-and-forget)
+    stream.object
+      .then(async (result) => {
+        const { error: insertError } = await supabase
+          .from("demo_submissions")
+          .insert({
+            system_id: systemId,
+            form_data: data.form_data,
+            result,
+            ip_address: ip,
+          });
 
-    const raw = textBlock.text.trim();
-    let result: Record<string, unknown>;
-
-    try {
-      result = JSON.parse(raw);
-    } catch {
-      const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) {
-        result = JSON.parse(jsonMatch[1].trim());
-      } else {
-        logger.error("Demo AI response was not valid JSON", {
+        if (insertError) {
+          logger.error("Failed to save demo submission", {
+            systemId,
+            code: insertError.code,
+          });
+        }
+      })
+      .catch((err) => {
+        logger.error("Demo structured output failed", {
           systemId,
-          responsePreview: raw.slice(0, 200),
+          error: err instanceof Error ? err.message : String(err),
         });
-        return jsonErrorResponse("AI returned an invalid response.", 500);
-      }
-    }
-
-    // Save submission to database
-    const { error: insertError } = await supabase
-      .from("demo_submissions")
-      .insert({
-        system_id: systemId,
-        form_data: data.form_data,
-        result,
-        ip_address: ip,
       });
 
-    if (insertError) {
-      logger.error("Failed to save demo submission", {
-        systemId,
-        code: insertError.code,
-      });
-      // Don't fail the request — still return the result
-    }
-
-    return NextResponse.json({ result });
+    return new Response(stream.textStream as ReadableStream, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache",
+      },
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     logger.error("Demo AI call failed", { systemId, error: msg });
