@@ -1,115 +1,122 @@
+import { requireAuth } from "@/lib/auth/guards";
+import { createClient } from "@/lib/supabase/server";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, CheckCircle2, Circle, Clock } from "lucide-react";
-import { STAGE_LABELS } from "@/lib/constants/stages";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { Plus, ArrowRight, Rocket } from "lucide-react";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const user = await requireAuth();
+  const supabase = await createClient();
+
+  const { data: systems } = await supabase
+    .from("user_systems")
+    .select("id, status, intent, offer, demo_url, created_at, current_step")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  const hasSystems = systems && systems.length > 0;
+
   return (
     <PageShell
       title="Overview"
-      description="Welcome back. Here is your progress towards your first sellable AI offer."
+      description="Your systems and progress."
+      action={
+        <Button asChild>
+          <Link href="/start">
+            <Plus className="h-4 w-4 mr-2" />
+            New System
+          </Link>
+        </Button>
+      }
     >
-      <div className="grid gap-6 md:grid-cols-3">
-        {/* Progress Cards */}
-        <Card className="relative overflow-hidden border-primary/20 bg-primary/5">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <CheckCircle2 className="h-24 w-24" />
-          </div>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Step 1</CardTitle>
-            <h3 className="text-2xl font-serif italic">{STAGE_LABELS.offer_blueprint}</h3>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2 text-primary mb-4">
-              <CheckCircle2 className="h-5 w-5" />
-              <span className="font-medium">Completed</span>
+      {hasSystems ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {systems.map((system) => {
+            const offer = system.offer as {
+              segment?: string;
+              system_description?: string;
+              pricing_monthly?: number;
+            } | null;
+
+            return (
+              <Card key={system.id} className="relative overflow-hidden">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <Badge
+                      variant="secondary"
+                      className={
+                        system.status === "complete"
+                          ? "bg-primary/10 text-primary border-primary/20"
+                          : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+                      }
+                    >
+                      {system.status === "complete"
+                        ? "Live"
+                        : `Step ${system.current_step}/10`}
+                    </Badge>
+                  </div>
+                  <CardTitle className="mt-2 text-lg">
+                    {offer?.system_description ?? "System in progress"}
+                  </CardTitle>
+                  <CardDescription>
+                    {offer?.segment ?? "Setting up..."}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    {offer?.pricing_monthly && (
+                      <span className="text-sm font-mono text-muted-foreground">
+                        £{offer.pricing_monthly}/mo
+                      </span>
+                    )}
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link
+                        href={
+                          system.status === "in_progress"
+                            ? `/start/${system.id}`
+                            : `/dashboard`
+                        }
+                      >
+                        {system.status === "in_progress" ? "Continue" : "View"}
+                        <ArrowRight className="h-4 w-4 ml-1" />
+                      </Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <Rocket className="h-6 w-6 text-primary" />
             </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              Your offer is defined and validated.
+            <h3 className="text-lg font-medium mb-2">No systems yet</h3>
+            <p className="text-sm text-muted-foreground mb-6 max-w-sm">
+              Start your first business system. We&apos;ll guide you from niche
+              discovery to a working demo page and ready-to-send prospect
+              messages.
             </p>
-            <Button variant="outline" size="sm" className="w-full bg-background/50 backdrop-blur-sm">
-              View Offer
+            <Button asChild>
+              <Link href="/start">
+                Start Your First Business
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Link>
             </Button>
           </CardContent>
         </Card>
-
-        <Card className="relative overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Step 2</CardTitle>
-            <h3 className="text-2xl font-serif italic">{STAGE_LABELS.build_plan}</h3>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2 text-yellow-500 mb-4">
-              <Clock className="h-5 w-5" />
-              <span className="font-medium">In Progress</span>
-            </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              Your tool stack, checklist, and build order.
-            </p>
-            <Button size="sm" className="w-full">
-              Continue Building <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden opacity-60">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Step 3</CardTitle>
-            <h3 className="text-2xl font-serif italic">{STAGE_LABELS.sales_pack}</h3>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2 text-muted-foreground mb-4">
-              <Circle className="h-5 w-5" />
-              <span className="font-medium">Locked</span>
-            </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              Complete your build path to unlock scripts and get clients.
-            </p>
-            <Button variant="ghost" size="sm" className="w-full" disabled>
-              Locked
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Activity / Next Steps */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Next Actions</CardTitle>
-            <CardDescription>Recommended steps to move forward</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {[
-              "Finalize your tool stack selection",
-              "Draft your build-path SOP",
-              "Review competitor analysis updates"
-            ].map((action, i) => (
-              <div key={i} className="flex items-start gap-3 p-3 rounded-lg border bg-card/50 hover:bg-accent/50 transition-colors cursor-pointer">
-                <div className="mt-0.5 h-5 w-5 rounded-full border border-primary/30 flex items-center justify-center flex-shrink-0">
-                  <div className="h-2.5 w-2.5 rounded-full bg-primary opacity-0 hover:opacity-100 transition-opacity" />
-                </div>
-                <span className="text-sm">{action}</span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Tools</CardTitle>
-            <CardDescription>Access your toolkit</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
-            {["Validate Idea", "Competitor Analysis", "Pivot Offer", "Sales Prep"].map((tool) => (
-              <Button key={tool} variant="outline" className="h-auto py-4 flex flex-col gap-2 items-center justify-center text-center">
-                <span className="font-medium">{tool}</span>
-              </Button>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+      )}
     </PageShell>
   );
 }

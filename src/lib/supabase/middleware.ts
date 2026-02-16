@@ -29,7 +29,50 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    const pathname = request.nextUrl.pathname;
+
+    const isOnboardingRoute = pathname.startsWith("/onboarding");
+    const isStartRoute = pathname.startsWith("/start");
+    const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/signup");
+    const isApiRoute = pathname.startsWith("/api");
+    const isPublicRoute =
+      pathname === "/" ||
+      pathname.startsWith("/terms") ||
+      pathname.startsWith("/privacy");
+
+    const onboardingCompleted =
+      user.user_metadata?.onboarding_completed === true;
+
+    // Force onboarding before any protected route
+    if (
+      !onboardingCompleted &&
+      !isOnboardingRoute &&
+      !isAuthRoute &&
+      !isApiRoute &&
+      !isPublicRoute
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/onboarding";
+      return NextResponse.redirect(url);
+    }
+
+    // Completed users visiting /onboarding go to dashboard
+    if (onboardingCompleted && isOnboardingRoute) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
+
+    // Users who haven't onboarded can't access /start yet
+    if (!onboardingCompleted && isStartRoute) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/onboarding";
+      return NextResponse.redirect(url);
+    }
+  }
 
   return supabaseResponse;
 }

@@ -12,7 +12,135 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      user_profiles: {
+        Row: {
+          id: string
+          time_availability: string | null
+          outreach_comfort: string | null
+          technical_comfort: string | null
+          revenue_goal: string | null
+          current_situation: string | null
+          blockers: string[]
+          onboarding_completed: boolean
+          onboarding_completed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          time_availability?: string | null
+          outreach_comfort?: string | null
+          technical_comfort?: string | null
+          revenue_goal?: string | null
+          current_situation?: string | null
+          blockers?: string[]
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          time_availability?: string | null
+          outreach_comfort?: string | null
+          technical_comfort?: string | null
+          revenue_goal?: string | null
+          current_situation?: string | null
+          blockers?: string[]
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_systems: {
+        Row: {
+          id: string
+          user_id: string
+          status: string
+          current_step: number
+          intent: string | null
+          direction_path: string | null
+          industry_interests: string[] | null
+          own_idea: string | null
+          tried_niche: string | null
+          what_went_wrong: string | null
+          current_niche: string | null
+          current_clients: number | null
+          current_pricing: string | null
+          growth_direction: string | null
+          delivery_model: string | null
+          pricing_direction: string | null
+          location_city: string | null
+          location_target: string | null
+          ai_recommendations: Json | null
+          chosen_recommendation: Json | null
+          offer: Json | null
+          demo_url: string | null
+          prospects: Json | null
+          messages: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          status?: string
+          current_step?: number
+          intent?: string | null
+          direction_path?: string | null
+          industry_interests?: string[] | null
+          own_idea?: string | null
+          tried_niche?: string | null
+          what_went_wrong?: string | null
+          current_niche?: string | null
+          current_clients?: number | null
+          current_pricing?: string | null
+          growth_direction?: string | null
+          delivery_model?: string | null
+          pricing_direction?: string | null
+          location_city?: string | null
+          location_target?: string | null
+          ai_recommendations?: Json | null
+          chosen_recommendation?: Json | null
+          offer?: Json | null
+          demo_url?: string | null
+          prospects?: Json | null
+          messages?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          status?: string
+          current_step?: number
+          intent?: string | null
+          direction_path?: string | null
+          industry_interests?: string[] | null
+          own_idea?: string | null
+          tried_niche?: string | null
+          what_went_wrong?: string | null
+          current_niche?: string | null
+          current_clients?: number | null
+          current_pricing?: string | null
+          growth_direction?: string | null
+          delivery_model?: string | null
+          pricing_direction?: string | null
+          location_city?: string | null
+          location_target?: string | null
+          ai_recommendations?: Json | null
+          chosen_recommendation?: Json | null
+          offer?: Json | null
+          demo_url?: string | null
+          prospects?: Json | null
+          messages?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

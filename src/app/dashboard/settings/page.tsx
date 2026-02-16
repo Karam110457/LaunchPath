@@ -1,11 +1,22 @@
+import { requireAuth } from "@/lib/auth/guards";
+import { createClient } from "@/lib/supabase/server";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+import { OnboardingProfileCard } from "@/components/settings/OnboardingProfileCard";
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const user = await requireAuth();
+  const supabase = await createClient();
+
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
   return (
     <PageShell
       title="Settings"
@@ -20,7 +31,7 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" value="user@example.com" disabled />
+              <Input id="email" value={user.email ?? ""} disabled />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="name">Display Name</Label>
@@ -29,6 +40,8 @@ export default function SettingsPage() {
             <Button>Save Changes</Button>
           </CardContent>
         </Card>
+
+        {profile && <OnboardingProfileCard profile={profile} />}
 
         <Card>
           <CardHeader>
