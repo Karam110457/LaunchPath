@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useCallback } from "react";
+import { useState, useTransition, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { FlowShell } from "@/components/flows/FlowShell";
 import { OptionCard } from "@/components/flows/OptionCard";
@@ -9,10 +9,25 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowRight, ArrowLeft, Loader2, CheckCircle2, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowLeft,
+  Loader2,
+  CheckCircle2,
+  Sparkles,
+  Target,
+  TrendingUp,
+  Search,
+  AlertCircle,
+} from "lucide-react";
 import { saveStartBusinessProgress } from "@/app/actions/start-business";
+import { runNicheAnalysis, chooseRecommendation } from "@/app/actions/ai-analyze";
 import type { Tables } from "@/types/database";
-import type { StartBusinessAnswers, DirectionPath } from "@/types/start-business";
+import type {
+  StartBusinessAnswers,
+  DirectionPath,
+  AIRecommendation,
+} from "@/types/start-business";
 import {
   INTENT_OPTIONS,
   INDUSTRY_OPTIONS,
@@ -129,6 +144,14 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
     location_city: system.location_city ?? null,
     location_target: system.location_target ?? null,
   });
+
+  // AI state
+  const [aiRecommendations, setAiRecommendations] = useState<AIRecommendation[] | null>(
+    (system.ai_recommendations as AIRecommendation[] | null) ?? null
+  );
+  const [aiReasoning, setAiReasoning] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [isAnalysing, setIsAnalysing] = useState(false);
 
   const steps = computeSteps(profile, answers);
   const currentStep = steps[stepIndex];
@@ -521,12 +544,68 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
           </StepContent>
         );
 
-      // --- MOCK STEPS (6-10) ---
+      // --- AI STEPS (6-7) + MOCK STEPS (8-10) ---
       case "ai_analysis":
-        return <AIAnalysisMock />;
+        return (
+          <AIAnalysisStep
+            systemId={system.id}
+            isAnalysing={isAnalysing}
+            error={aiError}
+            onStart={() => {
+              setAiError(null);
+              setIsAnalysing(true);
+              startTransition(async () => {
+                const result = await runNicheAnalysis(system.id);
+                setIsAnalysing(false);
+                if (result.error) {
+                  setAiError(result.error);
+                } else {
+                  setAiRecommendations(result.recommendations);
+                  setAiReasoning(result.reasoning);
+                  // Auto-advance to results
+                  const next = stepIndex + 1;
+                  setStepIndex(next);
+                  saveProgress(next);
+                }
+              });
+            }}
+            onRetry={() => {
+              setAiError(null);
+              setIsAnalysing(true);
+              startTransition(async () => {
+                const result = await runNicheAnalysis(system.id);
+                setIsAnalysing(false);
+                if (result.error) {
+                  setAiError(result.error);
+                } else {
+                  setAiRecommendations(result.recommendations);
+                  setAiReasoning(result.reasoning);
+                  const next = stepIndex + 1;
+                  setStepIndex(next);
+                  saveProgress(next);
+                }
+              });
+            }}
+          />
+        );
 
       case "results":
-        return <ResultsMock onNext={handleNext} />;
+        return (
+          <ResultsStep
+            recommendations={aiRecommendations}
+            reasoning={aiReasoning}
+            profile={profile}
+            onChoose={(rec) => {
+              startTransition(async () => {
+                const result = await chooseRecommendation(system.id, rec);
+                if (!result.error) {
+                  handleNext();
+                }
+              });
+            }}
+            isPending={isPending}
+          />
+        );
 
       case "offer_builder":
         return <OfferBuilderMock onNext={handleNext} />;
@@ -619,11 +698,25 @@ function StepContent({
   );
 }
 
-// --- MOCK COMPONENTS for Steps 6-10 ---
+// --- REAL AI COMPONENTS for Steps 6-7 ---
 
-function AIAnalysisMock() {
-  const [progress, setProgress] = useState(0);
-  const steps = [
+function AIAnalysisStep({
+  systemId,
+  isAnalysing,
+  error,
+  onStart,
+  onRetry,
+}: {
+  systemId: string;
+  isAnalysing: boolean;
+  error: string | null;
+  onStart: () => void;
+  onRetry: () => void;
+}) {
+  const [progressIndex, setProgressIndex] = useState(0);
+  const hasStarted = useRef(false);
+
+  const progressSteps = [
     "Analysing your profile",
     "Scanning 70+ validated niches",
     "Scoring market opportunities",
@@ -633,37 +726,69 @@ function AIAnalysisMock() {
     "Building recommendations",
   ];
 
-  useState(() => {
-    let i = 0;
+  // Auto-start analysis on mount
+  useEffect(() => {
+    if (!hasStarted.current && !error) {
+      hasStarted.current = true;
+      onStart();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Animate progress steps while analysing
+  useEffect(() => {
+    if (!isAnalysing) return;
+    setProgressIndex(0);
     const interval = setInterval(() => {
-      i++;
-      setProgress(i);
-      if (i >= steps.length) clearInterval(interval);
-    }, 2000);
+      setProgressIndex((prev) => {
+        if (prev >= progressSteps.length - 1) return prev;
+        return prev + 1;
+      });
+    }, 3000);
     return () => clearInterval(interval);
-  });
+  }, [isAnalysing, progressSteps.length]);
+
+  if (error) {
+    return (
+      <div className="space-y-6 py-8">
+        <div className="text-center">
+          <AlertCircle className="h-8 w-8 text-red-400 mx-auto mb-4" />
+          <h2 className="text-xl font-serif italic">Something went wrong</h2>
+          <p className="text-sm text-muted-foreground mt-2">{error}</p>
+        </div>
+        <div className="flex justify-center">
+          <Button onClick={onRetry}>
+            Try Again
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 py-8">
       <div className="text-center">
         <Sparkles className="h-8 w-8 text-primary mx-auto mb-4 animate-pulse" />
         <h2 className="text-xl font-serif italic">Finding your opportunity...</h2>
+        <p className="text-sm text-muted-foreground mt-2">
+          AI is analysing your profile against 70+ validated niches
+        </p>
       </div>
       <div className="space-y-3">
-        {steps.map((step, i) => (
+        {progressSteps.map((step, i) => (
           <div key={step} className="flex items-center gap-3 text-sm">
-            {i < progress ? (
+            {i < progressIndex ? (
               <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-            ) : i === progress ? (
+            ) : i === progressIndex ? (
               <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" />
             ) : (
               <div className="h-4 w-4 rounded border border-muted-foreground/30 shrink-0" />
             )}
             <span
               className={
-                i < progress
+                i < progressIndex
                   ? "text-foreground"
-                  : i === progress
+                  : i === progressIndex
                     ? "text-primary"
                     : "text-muted-foreground"
               }
@@ -673,53 +798,225 @@ function AIAnalysisMock() {
           </div>
         ))}
       </div>
-      <p className="text-xs text-center text-muted-foreground pt-4">
-        This is a preview — AI analysis will be connected soon.
-      </p>
     </div>
   );
 }
 
-function ResultsMock({ onNext }: { onNext: () => void }) {
+// --- Score bar component ---
+function ScoreBar({
+  label,
+  score,
+  maxScore,
+  icon,
+}: {
+  label: string;
+  score: number;
+  maxScore: number;
+  icon: React.ReactNode;
+}) {
+  const percentage = Math.round((score / maxScore) * 100);
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-xs">
+        <span className="flex items-center gap-1.5 text-muted-foreground">
+          {icon}
+          {label}
+        </span>
+        <span className="font-mono font-medium">{score}/{maxScore}</span>
+      </div>
+      <div className="h-2 bg-muted rounded-full overflow-hidden">
+        <div
+          className="h-full bg-primary rounded-full transition-all duration-700 ease-out"
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// --- Recommendation card ---
+function RecommendationCard({
+  rec,
+  rank,
+  isOnly,
+  onChoose,
+  isPending,
+}: {
+  rec: AIRecommendation;
+  rank: number;
+  isOnly: boolean;
+  onChoose: () => void;
+  isPending: boolean;
+}) {
+  return (
+    <Card className={rank === 1 ? "border-primary/30" : ""}>
+      <CardContent className="pt-6 space-y-5">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-primary uppercase tracking-wider">
+            {isOnly ? "Your best path" : `#${rank} Recommended`}
+          </span>
+          <span className="text-sm font-mono text-muted-foreground">
+            {rec.score}/100
+          </span>
+        </div>
+
+        {/* Niche name */}
+        <h3 className="text-lg font-medium">{rec.niche}</h3>
+
+        {/* Score bars */}
+        <div className="space-y-3">
+          <ScoreBar
+            label="ROI from service"
+            score={rec.segment_scores.roi_from_service}
+            maxScore={25}
+            icon={<TrendingUp className="h-3 w-3" />}
+          />
+          <ScoreBar
+            label="Can afford it"
+            score={rec.segment_scores.can_afford_it}
+            maxScore={25}
+            icon={<Target className="h-3 w-3" />}
+          />
+          <ScoreBar
+            label="Can guarantee results"
+            score={rec.segment_scores.guarantee_results}
+            maxScore={25}
+            icon={<CheckCircle2 className="h-3 w-3" />}
+          />
+          <ScoreBar
+            label="Easy to find"
+            score={rec.segment_scores.easy_to_find}
+            maxScore={25}
+            icon={<Search className="h-3 w-3" />}
+          />
+        </div>
+
+        {/* Key info */}
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <p>
+            <span className="font-medium text-foreground">Who you help:</span>{" "}
+            {rec.target_segment.description}
+          </p>
+          <p>
+            <span className="font-medium text-foreground">Problem you solve:</span>{" "}
+            {rec.bottleneck}
+          </p>
+          <p>
+            <span className="font-medium text-foreground">Your solution:</span>{" "}
+            {rec.your_solution}
+          </p>
+          <p>
+            <span className="font-medium text-foreground">Revenue:</span>{" "}
+            {rec.revenue_potential.per_client}/client, {rec.revenue_potential.target_clients} clients
+            in month 1-2 = {rec.revenue_potential.monthly_total}/mo
+          </p>
+          <p>
+            <span className="font-medium text-foreground">How to find them:</span>{" "}
+            {rec.ease_of_finding}
+          </p>
+        </div>
+
+        {/* Strategic insight */}
+        <div className="bg-muted/50 rounded-lg p-3 text-sm">
+          <p className="font-medium text-foreground text-xs uppercase tracking-wider mb-1">
+            Strategic insight
+          </p>
+          <p className="text-muted-foreground">{rec.strategic_insight}</p>
+        </div>
+
+        {/* Why this fits YOU */}
+        <p className="text-sm italic text-muted-foreground border-l-2 border-primary/30 pl-3">
+          &ldquo;{rec.why_for_you}&rdquo;
+        </p>
+
+        {/* CTA */}
+        <Button className="w-full" onClick={onChoose} disabled={isPending}>
+          {isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <>
+              Choose This Niche
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </>
+          )}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ResultsStep({
+  recommendations,
+  reasoning,
+  profile,
+  onChoose,
+  isPending,
+}: {
+  recommendations: AIRecommendation[] | null;
+  reasoning: string | null;
+  profile: Profile;
+  onChoose: (rec: AIRecommendation) => void;
+  isPending: boolean;
+}) {
+  if (!recommendations || recommendations.length === 0) {
+    return (
+      <div className="space-y-6 py-8 text-center">
+        <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto" />
+        <p className="text-sm text-muted-foreground">
+          No recommendations available. Please go back and try again.
+        </p>
+      </div>
+    );
+  }
+
+  const isOnlyOne = recommendations.length === 1;
+  const keepsSwitching = (profile.blockers ?? []).includes("keep_switching");
+
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-serif italic">Your top recommendation</h2>
-      <Card className="border-primary/30">
-        <CardContent className="pt-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-primary uppercase tracking-wider">
-              #1 Recommended
-            </span>
-            <span className="text-sm font-mono text-muted-foreground">87/100</span>
-          </div>
-          <h3 className="text-lg font-medium">Window Cleaning Lead System</h3>
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <p>
-              <span className="font-medium text-foreground">Who you help:</span>{" "}
-              Residential window cleaners doing £10–30k/month
-            </p>
-            <p>
-              <span className="font-medium text-foreground">Problem you solve:</span>{" "}
-              Can&apos;t generate consistent leads without relying on word of mouth
-            </p>
-            <p>
-              <span className="font-medium text-foreground">Revenue:</span>{" "}
-              £500–1,500/mo per client
-            </p>
-          </div>
-          <p className="text-sm italic text-muted-foreground border-l-2 border-primary/30 pl-3">
-            &ldquo;This niche has a fast close cycle because the demo sells itself.
-            With your profile, you can realistically serve 2–3 clients in month 1.&rdquo;
+      <div className="space-y-2">
+        <h2 className="text-xl sm:text-2xl font-serif font-light italic tracking-tight">
+          {isOnlyOne
+            ? "Your best path forward"
+            : `Your top ${recommendations.length} opportunities`}
+        </h2>
+        {keepsSwitching && isOnlyOne && (
+          <p className="text-sm text-muted-foreground">
+            Based on your profile, we&apos;ve narrowed it to one clear recommendation.
+            Trust the process — this is your best path based on the data.
           </p>
-        </CardContent>
-      </Card>
-      <p className="text-xs text-center text-muted-foreground">
-        AI-powered recommendations coming soon. This is sample data.
-      </p>
-      <Button className="w-full" onClick={onNext}>
-        Choose This Niche
-        <ArrowRight className="h-4 w-4 ml-2" />
-      </Button>
+        )}
+        {!isOnlyOne && (
+          <p className="text-sm text-muted-foreground">
+            Each scored against ROI, affordability, deliverability, and reach.
+            Pick the one that resonates most.
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        {recommendations.map((rec, i) => (
+          <RecommendationCard
+            key={rec.niche}
+            rec={rec}
+            rank={i + 1}
+            isOnly={isOnlyOne}
+            onChoose={() => onChoose(rec)}
+            isPending={isPending}
+          />
+        ))}
+      </div>
+
+      {reasoning && (
+        <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
+          <p className="font-medium text-foreground text-xs uppercase tracking-wider mb-1">
+            Why these niches
+          </p>
+          <p>{reasoning}</p>
+        </div>
+      )}
     </div>
   );
 }

@@ -8,9 +8,9 @@ export const serverEnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 
   // --- AI / LLM ---
-  // The API key for the AI provider (OpenAI, Anthropic, etc.) powering LaunchPath generations.
   // NEVER expose to client. Only used in server-side API routes.
   OPENAI_API_KEY: z.string().min(1).optional(),
+  ANTHROPIC_API_KEY: z.string().startsWith("sk-ant-").optional(),
 
   // --- Payments ---
   // Stripe secret key for credit purchases, subscriptions, webhooks.

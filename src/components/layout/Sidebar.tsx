@@ -6,16 +6,12 @@ import { cn } from "@/lib/utils";
 import { Logo } from "@/components/Logo";
 import {
   LayoutDashboard,
-  FileText,
-  Package,
-  Rocket,
-  Wrench,
+  Plus,
   Settings,
   LogOut,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { STAGE_LABELS_SHORT } from "@/lib/constants/stages";
 
 const navItems = [
   {
@@ -25,24 +21,9 @@ const navItems = [
     exact: true,
   },
   {
-    title: STAGE_LABELS_SHORT.offer_blueprint,
-    href: "/dashboard/offer",
-    icon: FileText,
-  },
-  {
-    title: STAGE_LABELS_SHORT.build_plan,
-    href: "/dashboard/build",
-    icon: Package,
-  },
-  {
-    title: STAGE_LABELS_SHORT.sales_pack,
-    href: "/dashboard/sell",
-    icon: Rocket,
-  },
-  {
-    title: "Tools",
-    href: "/dashboard/tools",
-    icon: Wrench,
+    title: "New System",
+    href: "/start",
+    icon: Plus,
   },
 ];
 
