@@ -1,7 +1,7 @@
 import { requireAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
-import { StartBusinessFlow } from "./StartBusinessFlow";
+import { ChatFlow } from "./ChatFlow";
 
 interface Props {
   params: Promise<{ systemId: string }>;
@@ -29,5 +29,5 @@ export default async function StartBusinessPage({ params }: Props) {
 
   if (!profile) redirect("/onboarding");
 
-  return <StartBusinessFlow system={system} profile={profile} />;
+  return <ChatFlow system={system} profile={profile} />;
 }

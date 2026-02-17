@@ -80,6 +80,7 @@ export type Database = {
           demo_url: string | null
           prospects: Json | null
           messages: Json | null
+          conversation_history: Json | null
           created_at: string
           updated_at: string
         }
@@ -108,6 +109,7 @@ export type Database = {
           demo_url?: string | null
           prospects?: Json | null
           messages?: Json | null
+          conversation_history?: Json | null
           created_at?: string
           updated_at?: string
         }
@@ -136,6 +138,7 @@ export type Database = {
           demo_url?: string | null
           prospects?: Json | null
           messages?: Json | null
+          conversation_history?: Json | null
           created_at?: string
           updated_at?: string
         }
