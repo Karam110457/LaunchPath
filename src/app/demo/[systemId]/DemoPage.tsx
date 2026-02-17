@@ -236,7 +236,7 @@ export function DemoPage({
                         placeholder={field.placeholder}
                       />
                     )}
-                    {"helpText" in field && field.helpText && (
+                    {"helpText" in field && typeof field.helpText === "string" && (
                       <p className="text-xs text-muted-foreground">
                         {field.helpText}
                       </p>
