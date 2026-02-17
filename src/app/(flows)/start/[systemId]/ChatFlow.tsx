@@ -26,7 +26,7 @@ export function ChatFlow({ system, profile: _profile }: ChatFlowProps) {
     ? (system.conversation_history as unknown as Parameters<typeof useChatStream>[0]["initialHistory"])
     : [];
 
-  const { messages, isStreaming, isTyping, sendMessage, handleCardResponse, startOver } =
+  const { messages, isStreaming, isTyping, isThinking, thinkingText, sendMessage, handleCardResponse, startOver } =
     useChatStream({
       systemId: system.id,
       initialHistory,
@@ -52,6 +52,8 @@ export function ChatFlow({ system, profile: _profile }: ChatFlowProps) {
       messages={messages}
       isStreaming={isStreaming}
       isTyping={isTyping}
+      isThinking={isThinking}
+      thinkingText={thinkingText}
       onSendMessage={sendMessage}
       onCardComplete={handleCardResponse}
       onStartOver={startOver}

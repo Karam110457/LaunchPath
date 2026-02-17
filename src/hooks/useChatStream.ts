@@ -36,6 +36,8 @@ interface UseChatStreamReturn {
   messages: ChatMessage[];
   isStreaming: boolean;
   isTyping: boolean;
+  isThinking: boolean;
+  thinkingText: string;
   sendMessage: (text: string, addBubble?: boolean) => void;
   handleCardResponse: (
     cardId: string,
@@ -104,6 +106,8 @@ export function useChatStream({
   );
   const [isStreaming, setIsStreaming] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
+  const [thinkingText, setThinkingText] = useState("");
 
   // Ref for the conversation history (persisted form) — updated after each exchange
   const historyRef = useRef<ConversationMessage[]>(initialHistory);
@@ -149,8 +153,21 @@ export function useChatStream({
   const processEvent = useCallback(
     (event: ServerEvent) => {
       switch (event.type) {
+        case "thinking": {
+          setIsTyping(false);
+          setIsThinking(true);
+          setThinkingText((prev) => prev + event.text);
+          break;
+        }
+
+        case "thinking-done": {
+          setIsThinking(false);
+          break;
+        }
+
         case "text-delta": {
           setIsTyping(false);
+          setIsThinking(false);
           setMessages((prev) => {
             const streamId = streamingMessageIdRef.current;
             if (!streamId) {
@@ -234,12 +251,14 @@ export function useChatStream({
           }
           setIsStreaming(false);
           setIsTyping(false);
+          setIsThinking(false);
           break;
         }
 
         case "error": {
           setIsStreaming(false);
           setIsTyping(false);
+          setIsThinking(false);
           streamingMessageIdRef.current = null;
           setMessages((prev) => [
             ...prev,
@@ -282,6 +301,8 @@ export function useChatStream({
 
       setIsStreaming(true);
       setIsTyping(true);
+      setIsThinking(false);
+      setThinkingText("");
       streamingMessageIdRef.current = null;
 
       void (async () => {
@@ -421,6 +442,8 @@ export function useChatStream({
     messages,
     isStreaming,
     isTyping,
+    isThinking,
+    thinkingText,
     sendMessage,
     handleCardResponse,
     startOver,

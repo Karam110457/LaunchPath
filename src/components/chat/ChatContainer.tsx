@@ -6,7 +6,8 @@
  * Layout:
  * - Minimal header (logo + Start Over button)
  * - Scrollable message list (auto-scrolls to bottom)
- * - Typing indicator (when agent is thinking)
+ * - Thinking bubble (when agent is reasoning)
+ * - Typing indicator (when agent is about to speak)
  * - Pinned InputBar at bottom
  */
 
@@ -14,6 +15,7 @@ import { useEffect, useRef } from "react";
 import { RotateCcw } from "lucide-react";
 import type { ChatMessage as ChatMessageType } from "@/lib/chat/types";
 import { ChatMessage } from "./ChatMessage";
+import { ThinkingBubble } from "./ThinkingBubble";
 import { TypingIndicator } from "./TypingIndicator";
 import { InputBar } from "./InputBar";
 
@@ -21,6 +23,8 @@ interface ChatContainerProps {
   messages: ChatMessageType[];
   isStreaming: boolean;
   isTyping: boolean;
+  isThinking: boolean;
+  thinkingText: string;
   onSendMessage: (text: string) => void;
   onCardComplete: (cardId: string, displayText: string, structuredMessage: string) => void;
   onStartOver: () => void;
@@ -30,17 +34,24 @@ export function ChatContainer({
   messages,
   isStreaming,
   isTyping,
+  isThinking,
+  thinkingText,
   onSendMessage,
   onCardComplete,
   onStartOver,
 }: ChatContainerProps) {
-  const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive or content streams in
+  // Auto-scroll to bottom when new messages arrive or content streams in.
+  // Use scrollTo on the list container — scrollIntoView cascades to the
+  // window and pushes the viewport past the fixed container, causing a
+  // white gap below the input bar while the agent is streaming.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+    const el = listRef.current;
+    if (el) {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    }
+  }, [messages, isTyping, isThinking, thinkingText]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-white">
@@ -80,14 +91,18 @@ export function ChatContainer({
           />
         ))}
 
-        {isTyping && (
+        {/* Thinking indicator — shows agent's reasoning */}
+        {(isThinking || thinkingText) && isStreaming && (
+          <ThinkingBubble thinkingText={thinkingText} isThinking={isThinking} />
+        )}
+
+        {/* Typing indicator — shows before first token */}
+        {isTyping && !isThinking && (
           <div className="px-4">
             <TypingIndicator />
           </div>
         )}
 
-        {/* Scroll anchor */}
-        <div ref={bottomRef} />
       </div>
 
       {/* Input */}

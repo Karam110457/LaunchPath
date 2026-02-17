@@ -486,7 +486,18 @@ export function createChatTools(
           recommendations: parsed.recommendations,
         });
 
-        return { recommendations: parsed.recommendations, reasoning: parsed.reasoning };
+        // Return minimal summary — full data is in the score cards the user sees.
+        // Returning the full recommendations would tempt the model to re-describe them.
+        const summaries = parsed.recommendations.map((r: { niche: string; score: number }) => ({
+          niche: r.niche,
+          score: r.score,
+        }));
+        return {
+          success: true,
+          count: summaries.length,
+          niches: summaries,
+          note: "Score cards are displayed to the user. Do NOT list recommendation details in text.",
+        };
       } catch (err) {
         clearInterval(progressInterval);
         logger.error("Niche analysis failed in chat tool", { systemId, error: String(err) });
@@ -658,9 +669,19 @@ export function createChatTools(
     },
   });
 
+  const offerFieldsSchema = z.object({
+    segment: z.string().optional(),
+    transformation_from: z.string().optional(),
+    transformation_to: z.string().optional(),
+    system_description: z.string().optional(),
+    pricing_setup: z.union([z.number(), z.string()]).transform(Number).optional(),
+    pricing_monthly: z.union([z.number(), z.string()]).transform(Number).optional(),
+    guarantee_text: z.string().optional(),
+  });
+
   const save_offer_section = tool({
     description:
-      "Save the user's confirmed (possibly edited) offer section values to the database.",
+      "Save the user's confirmed (possibly edited) offer section values to the database. Only valid offer field keys are accepted.",
     inputSchema: z.object({
       updates: z
         .record(z.string(), z.unknown())
@@ -669,6 +690,15 @@ export function createChatTools(
         ),
     }),
     execute: async ({ updates }) => {
+      // Validate and coerce — only allow known offer fields
+      const parsed = offerFieldsSchema.safeParse(updates);
+      const validated = parsed.success ? parsed.data : updates;
+
+      // Strip undefined values
+      const clean = Object.fromEntries(
+        Object.entries(validated).filter(([, v]) => v !== undefined)
+      );
+
       const { data: current } = await supabase
         .from("user_systems")
         .select("offer")
@@ -676,14 +706,105 @@ export function createChatTools(
         .single();
 
       const currentOffer = (current?.offer as Record<string, unknown>) ?? {};
-      const merged = { ...currentOffer, ...updates };
+      const merged = { ...currentOffer, ...clean };
 
       await supabase
         .from("user_systems")
         .update({ offer: merged })
         .eq("id", systemId);
 
-      return { saved: true };
+      return { saved: true, updatedFields: Object.keys(clean) };
+    },
+  });
+
+  // ---------------------------------------------------------------------------
+  // Offer card tools — emit editable-content and offer-summary cards
+  // ---------------------------------------------------------------------------
+
+  const show_offer_story = tool({
+    description:
+      "Show the editable-content card for Exchange 1 (the business story). Call after generate_offer returns. Fields: segment, transformation_from, transformation_to, system_description.",
+    inputSchema: z.object({}),
+    execute: async () => {
+      const { data: freshSystem } = await supabase
+        .from("user_systems")
+        .select("offer")
+        .eq("id", systemId)
+        .single();
+
+      const offer = (freshSystem?.offer ?? {}) as Record<string, unknown>;
+
+      emitCard(emit, {
+        type: "editable-content",
+        id: "offer-story",
+        title: "Your Business Story",
+        subtitle: "Edit anything that doesn't feel right",
+        fields: [
+          { name: "segment", label: "Target Segment", value: String(offer.segment ?? ""), type: "textarea" },
+          { name: "transformation_from", label: "Where they are now", value: String(offer.transformation_from ?? ""), type: "textarea" },
+          { name: "transformation_to", label: "Where they'll be", value: String(offer.transformation_to ?? ""), type: "textarea" },
+          { name: "system_description", label: "What you deliver", value: String(offer.system_description ?? ""), type: "textarea" },
+        ],
+        confirmLabel: "Looks good",
+      });
+
+      return { displayed: true, section: "story" };
+    },
+  });
+
+  const show_offer_pricing = tool({
+    description:
+      "Show the editable-content card for Exchange 2 (pricing and guarantee). Call after the user confirms Exchange 1. Fields: pricing_setup, pricing_monthly, guarantee_text.",
+    inputSchema: z.object({}),
+    execute: async () => {
+      const { data: freshSystem } = await supabase
+        .from("user_systems")
+        .select("offer")
+        .eq("id", systemId)
+        .single();
+
+      const offer = (freshSystem?.offer ?? {}) as Record<string, unknown>;
+
+      emitCard(emit, {
+        type: "editable-content",
+        id: "offer-pricing",
+        title: "The Commitment",
+        subtitle: "Your pricing and guarantee",
+        fields: [
+          { name: "pricing_setup", label: "Setup Fee", value: String(offer.pricing_setup ?? "0"), type: "number", prefix: "£" },
+          { name: "pricing_monthly", label: "Monthly Fee", value: String(offer.pricing_monthly ?? "0"), type: "number", prefix: "£" },
+          { name: "guarantee_text", label: "Guarantee", value: String(offer.guarantee_text ?? ""), type: "textarea" },
+        ],
+        confirmLabel: "Confirm pricing",
+      });
+
+      return { displayed: true, section: "pricing" };
+    },
+  });
+
+  const show_offer_review = tool({
+    description:
+      "Show the offer-summary card for Exchange 3 (final review). Call after the user confirms Exchange 2. Shows the complete offer with a 'Build My System' CTA.",
+    inputSchema: z.object({}),
+    execute: async () => {
+      const { data: freshSystem } = await supabase
+        .from("user_systems")
+        .select("offer")
+        .eq("id", systemId)
+        .single();
+
+      const parsed = assembledOfferSchema.safeParse(freshSystem?.offer);
+      if (!parsed.success) {
+        return { error: "Could not load offer for review." };
+      }
+
+      emitCard(emit, {
+        type: "offer-summary",
+        id: "offer-review",
+        offer: parsed.data,
+      });
+
+      return { displayed: true, section: "review" };
     },
   });
 
@@ -840,6 +961,9 @@ export function createChatTools(
     save_niche_choice,
     generate_offer,
     save_offer_section,
+    show_offer_story,
+    show_offer_pricing,
+    show_offer_review,
     generate_system,
   };
 }

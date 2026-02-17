@@ -44,7 +44,7 @@ export function InputBar({ onSend, disabled = false }: InputBarProps) {
   };
 
   return (
-    <div className="border-t border-zinc-200 bg-white px-4 py-3">
+    <div className="flex-shrink-0 border-t border-zinc-200 bg-white px-4 py-3">
       <div
         className={cn(
           "flex items-end gap-2 rounded-xl border border-zinc-300 bg-white px-3 py-2",

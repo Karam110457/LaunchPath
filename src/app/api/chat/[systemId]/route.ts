@@ -109,10 +109,10 @@ export async function POST(
         messages: aiMessages,
         tools,
         stopWhen: stepCountIs(10),
-        onChunk({ chunk }) {
-          if (chunk.type === "text-delta") {
-            emit({ type: "text-delta", delta: chunk.text });
-          }
+        providerOptions: {
+          anthropic: {
+            thinking: { type: "enabled", budgetTokens: 10000 },
+          },
         },
         async onFinish({ response }) {
           // Build updated conversation history
@@ -177,11 +177,27 @@ export async function POST(
         },
       });
 
-      // Consume the stream to trigger onChunk/onFinish callbacks
+      // Process the stream — emit text deltas + thinking events to the SSE
+      let wasThinking = false;
       for await (const chunk of result.fullStream) {
-        // text-delta already handled in onChunk
+        if (chunk.type === "reasoning-delta") {
+          if (!wasThinking) {
+            wasThinking = true;
+          }
+          emit({ type: "thinking", text: chunk.text });
+        } else if (chunk.type === "reasoning-end") {
+          if (wasThinking) {
+            wasThinking = false;
+            emit({ type: "thinking-done" });
+          }
+        } else if (chunk.type === "text-delta") {
+          if (wasThinking) {
+            wasThinking = false;
+            emit({ type: "thinking-done" });
+          }
+          emit({ type: "text-delta", delta: chunk.text });
+        }
         // tool calls are handled within the tool execute functions (emit via closure)
-        void chunk; // satisfy the linter
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";

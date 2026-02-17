@@ -89,6 +89,8 @@ export type CardData =
 export type ServerEvent =
   | { type: "text-delta"; delta: string }
   | { type: "text-done" }
+  | { type: "thinking"; text: string }
+  | { type: "thinking-done" }
   | { type: "tool-start"; toolName: string }
   | { type: "progress"; cardId: string; stepId: string; status: "active" | "done"; label?: string }
   | { type: "card"; card: CardData }
