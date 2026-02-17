@@ -21,7 +21,6 @@ import {
   DELIVERY_MODEL_FULL_OPTIONS,
   PRICING_STANDARD_OPTIONS,
   PRICING_EXPANDED_OPTIONS,
-  LOCATION_TARGET_OPTIONS,
   GROWTH_DIRECTION_OPTIONS,
 } from "@/types/start-business";
 import { mastra } from "@/mastra";
@@ -50,7 +49,7 @@ export function createChatTools(
   systemId: string,
   supabase: SupabaseClient,
   profile: Profile,
-  system: System
+  _system: System
 ) {
   // -------------------------------------------------------------------------
   // INPUT-REQUEST TOOLS
@@ -936,17 +935,11 @@ export function createChatTools(
         return { error: "Missing niche or offer data." };
       }
 
-      const DEMO_STEP_LABELS: Record<string, string> = {
-        "generate-demo-config": "Designing your demo page...",
-        "validate-demo-config": "Reviewing your demo page...",
-      };
-
+      // Steps must match the actual workflow step IDs exactly.
+      // The demo-builder workflow has 2 steps: generate-demo-config and validate-demo-config.
       const demoSteps: ProgressStep[] = [
         { id: "generate-demo-config", label: "Designing your demo page...", status: "pending" },
-        { id: "niche-agent", label: "Mapping your niche agent...", status: "pending" },
-        { id: "form-fields", label: "Building lead qualification form...", status: "pending" },
-        { id: "scoring", label: "Configuring scoring rules...", status: "pending" },
-        { id: "validate-demo-config", label: "Finalising your unique URL...", status: "pending" },
+        { id: "validate-demo-config", label: "Finalising your system...", status: "pending" },
       ];
 
       const trackerId = "system-generation-progress";
@@ -986,7 +979,7 @@ export function createChatTools(
           if (chunkType === "workflow-step-start") {
             const payload = c.payload as Record<string, unknown> | undefined;
             const stepName = payload?.stepName as string | undefined;
-            if (stepName && DEMO_STEP_LABELS[stepName]) {
+            if (stepName) {
               emit({ type: "progress", cardId: trackerId, stepId: stepName, status: "active" });
             }
           } else if (chunkType === "workflow-step-result") {
