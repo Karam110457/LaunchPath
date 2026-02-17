@@ -22,7 +22,7 @@ const DEMO_STEP_LABELS: Record<string, string> = {
 };
 
 export async function POST(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ systemId: string }> }
 ) {
   const { systemId } = await params;
@@ -88,16 +88,16 @@ export async function POST(
           inputData: {
             chosenRecommendation: chosenRec,
             offer: {
-              segment: offer.segment,
-              transformation_from: offer.transformation_from,
-              transformation_to: offer.transformation_to,
-              system_description: offer.system_description,
-              guarantee_text: offer.guarantee_text,
-              guarantee_type: offer.guarantee_type,
-              pricing_setup: offer.pricing_setup,
-              pricing_monthly: offer.pricing_monthly,
-              pricing_rationale: offer.pricing_rationale,
-              delivery_model: offer.delivery_model,
+              segment: offer.segment ?? "",
+              transformation_from: offer.transformation_from ?? "",
+              transformation_to: offer.transformation_to ?? "",
+              system_description: offer.system_description ?? "",
+              guarantee_text: offer.guarantee_text ?? "",
+              guarantee_type: offer.guarantee_type ?? "",
+              pricing_setup: offer.pricing_setup ?? 0,
+              pricing_monthly: offer.pricing_monthly ?? 0,
+              pricing_rationale: offer.pricing_rationale ?? "",
+              delivery_model: offer.delivery_model ?? "not specified",
             },
           },
         });
