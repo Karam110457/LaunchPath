@@ -1,9 +1,11 @@
 "use client";
 
 /**
- * StreamingText — renders text with a blinking cursor while streaming.
+ * StreamingText — renders markdown text with a blinking cursor while streaming.
  * When streaming is done the cursor disappears.
  */
+
+import ReactMarkdown from "react-markdown";
 
 interface StreamingTextProps {
   content: string;
@@ -12,14 +14,51 @@ interface StreamingTextProps {
 
 export function StreamingText({ content, isStreaming }: StreamingTextProps) {
   return (
-    <span className="whitespace-pre-wrap break-words">
-      {content}
+    <div className="prose-chat break-words">
+      <ReactMarkdown
+        components={{
+          // Keep paragraphs tight (no extra margin in chat)
+          p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+          // Inline styles
+          strong: ({ children }) => (
+            <strong className="font-semibold">{children}</strong>
+          ),
+          em: ({ children }) => <em>{children}</em>,
+          // Lists
+          ul: ({ children }) => (
+            <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>
+          ),
+          li: ({ children }) => <li className="pl-0.5">{children}</li>,
+          // Links
+          a: ({ children, href }) => (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-indigo-600 underline hover:text-indigo-800"
+            >
+              {children}
+            </a>
+          ),
+          // Code
+          code: ({ children }) => (
+            <code className="bg-zinc-100 px-1 py-0.5 rounded text-sm">
+              {children}
+            </code>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
       {isStreaming && (
         <span
           className="inline-block w-0.5 h-4 bg-current ml-0.5 -mb-0.5 animate-pulse"
           aria-hidden="true"
         />
       )}
-    </span>
+    </div>
   );
 }
