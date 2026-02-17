@@ -31,10 +31,10 @@ interface ChatMessageProps {
 export function ChatMessage({ message, onCardComplete }: ChatMessageProps) {
   if (message.role === "user") {
     return (
-      <div className="flex justify-end px-4">
+      <div className="flex justify-end">
         <div
           className={cn(
-            "max-w-[80%] rounded-2xl rounded-tr-sm px-4 py-2.5",
+            "max-w-[75%] rounded-2xl rounded-tr-sm px-4 py-2.5",
             message.isCardResponse
               ? "bg-muted text-muted-foreground text-sm"
               : "bg-primary text-primary-foreground text-sm"
@@ -58,10 +58,8 @@ export function ChatMessage({ message, onCardComplete }: ChatMessageProps) {
       .trim();
     if (!cleaned && !message.isStreaming) return null;
     return (
-      <div className="px-4">
-        <div className="text-sm text-foreground leading-relaxed max-w-[600px]">
-          <StreamingText content={cleaned} isStreaming={message.isStreaming} />
-        </div>
+      <div className="text-sm text-foreground leading-relaxed">
+        <StreamingText content={cleaned} isStreaming={message.isStreaming} />
       </div>
     );
   }
@@ -74,7 +72,7 @@ export function ChatMessage({ message, onCardComplete }: ChatMessageProps) {
   };
 
   return (
-    <div className="px-4">
+    <div>
       {(() => {
         switch (card.type) {
           case "option-selector":

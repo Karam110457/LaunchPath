@@ -155,28 +155,28 @@ export function ChatContainer({
       {/* Message list — pb-36 so last message clears the floating input */}
       <div
         ref={listRef}
-        className="flex-1 overflow-y-auto py-3 space-y-2 pb-36"
+        className="flex-1 overflow-y-auto py-3 pb-36"
         aria-label="Conversation"
       >
-        {messages.map((message) => (
-          <ChatMessage
-            key={message.id}
-            message={message}
-            onCardComplete={onCardComplete}
-          />
-        ))}
+        <div className="max-w-3xl mx-auto w-full px-4 space-y-2">
+          {messages.map((message) => (
+            <ChatMessage
+              key={message.id}
+              message={message}
+              onCardComplete={onCardComplete}
+            />
+          ))}
 
-        {/* Thinking indicator */}
-        {(isThinking || thinkingText) && isStreaming && (
-          <ThinkingBubble thinkingText={thinkingText} isThinking={isThinking} />
-        )}
+          {/* Thinking indicator */}
+          {(isThinking || thinkingText) && isStreaming && (
+            <ThinkingBubble thinkingText={thinkingText} isThinking={isThinking} />
+          )}
 
-        {/* Typing indicator */}
-        {isTyping && !isThinking && (
-          <div className="px-4">
+          {/* Typing indicator */}
+          {isTyping && !isThinking && (
             <TypingIndicator />
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Floating glassy input */}

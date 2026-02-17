@@ -138,6 +138,38 @@
   --safe-area-inset-right: env(safe-area-inset-right, 0px);
 }
 
+/* ── AI chat animations ─────────────────────────────────────────────────────── */
+
+/* Dot wave: smooth 3-dot typing indicator */
+@keyframes dot-wave {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
+  30% { transform: translateY(-5px); opacity: 1; }
+}
+
+/* Cursor blink: authentic terminal-style blink (on 530ms, off 470ms) */
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Shimmer sweep: left-to-right shimmer for thinking state */
+@keyframes shimmer-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+/* Thinking arc: slow rotating arc icon */
+@keyframes thinking-arc {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Thinking glow pulse: soft border glow while reasoning */
+@keyframes thinking-glow {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.60 0.16 165 / 0.0); }
+  50% { box-shadow: 0 0 0 2px oklch(0.60 0.16 165 / 0.2), 0 0 16px 0 oklch(0.60 0.16 165 / 0.1); }
+}
+
 /*
  * Mobile / touch: shorten animations to avoid "content loads in late then pops" jank.
  * On iOS, long duration/delay + backdrop-blur causes main-thread contention; content

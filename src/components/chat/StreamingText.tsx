@@ -55,7 +55,8 @@ export function StreamingText({ content, isStreaming }: StreamingTextProps) {
       </ReactMarkdown>
       {isStreaming && (
         <span
-          className="inline-block w-0.5 h-4 bg-current ml-0.5 -mb-0.5 animate-pulse"
+          className="inline-block w-0.5 h-[1em] bg-primary/80 ml-0.5 -mb-[0.1em] rounded-[1px]"
+          style={{ animation: "cursor-blink 1.06s step-end infinite" }}
           aria-hidden="true"
         />
       )}

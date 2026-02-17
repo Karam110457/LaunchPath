@@ -1,17 +1,24 @@
 "use client";
 
 /**
- * TypingIndicator — three bouncing dots shown while waiting for the first
- * token from the agent (between send and first text-delta).
+ * TypingIndicator — shown between message send and first token arrival.
+ * Three dots with a smooth wave animation in primary/accent color.
  */
 
 export function TypingIndicator() {
   return (
-    <div className="flex items-center gap-1 px-4 py-3 w-fit">
+    <div className="flex items-center gap-1.5 py-2" aria-label="Agent is thinking…">
       <span className="sr-only">Agent is thinking…</span>
-      <span className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.32s]" />
-      <span className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.16s]" />
-      <span className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" />
+      {[0, 160, 320].map((delay) => (
+        <span
+          key={delay}
+          className="block w-2 h-2 rounded-full bg-primary/60"
+          style={{
+            animation: "dot-wave 1.3s ease-in-out infinite",
+            animationDelay: `${delay}ms`,
+          }}
+        />
+      ))}
     </div>
   );
 }
