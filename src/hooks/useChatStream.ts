@@ -47,13 +47,56 @@ interface UseChatStreamReturn {
   startOver: () => void;
 }
 
-/** Strip tool markers like [tools:request_intent,save_collected_answers] from display text */
+/** Strip tool markers and meta-text from display text */
 function stripToolMarkers(text: string): string {
   return text
     .replace(/\[tools?:[^\]]*\]/gi, "")
     .replace(/\[card[^\]]*\]/gi, "")
     .replace(/\[tool[^\]]*\]/gi, "")
+    .replace(/\[awaiting[^\]]*\]/gi, "")
     .trim();
+}
+
+/**
+ * Extract a clean display label from a structured card response message.
+ * e.g. "[offer-story confirmed: {...}]" → "Confirmed: Your Business Story"
+ * e.g. "[niche-choice: {...}]" → "Selected a niche"
+ * e.g. "[intent selected: first_client]" → "First client"
+ * Returns null if not a structured message.
+ */
+function cleanCardResponseDisplay(raw: string): string | null {
+  const trimmed = raw.trim();
+
+  // [offer-story confirmed: ...] or [offer-pricing confirmed: ...]
+  if (trimmed.startsWith("[offer-story confirmed:")) return "Confirmed: Your Business Story";
+  if (trimmed.startsWith("[offer-pricing confirmed:")) return "Confirmed: Pricing & Guarantee";
+  if (trimmed.startsWith("[build-system: confirmed]")) return "Build My System";
+
+  // [niche-choice: {...JSON...}]
+  const nicheMatch = trimmed.match(/^\[niche-choice:\s*(\{[\s\S]*\})\]$/);
+  if (nicheMatch) {
+    try {
+      const data = JSON.parse(nicheMatch[1]);
+      return `Selected: ${data.niche ?? "a niche"}`;
+    } catch {
+      return "Selected a niche";
+    }
+  }
+
+  // [field selected: value] — e.g. [intent selected: first_client]
+  const fieldMatch = trimmed.match(/^\[([\w_-]+)\s+selected:\s*(.+)\]$/);
+  if (fieldMatch) {
+    const value = fieldMatch[2].replace(/_/g, " ");
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  }
+
+  // [location: ...]
+  if (trimmed.startsWith("[location:")) {
+    const inner = trimmed.slice(10, -1).trim();
+    return inner || "Location set";
+  }
+
+  return null;
 }
 
 /**
@@ -68,12 +111,16 @@ function restoreMessages(history: ConversationMessage[]): ChatMessage[] {
     if (m.role === "user" && m.content === "[CONVERSATION_START]") continue;
 
     if (m.role === "user") {
-      // Detect structured card responses like [intent selected: first_client]
-      const isStructured = /^\[[\w_]+[\s:]/.test(m.content.trim());
+      // Detect structured card responses — starts with [ or is raw JSON
+      const isStructured = /^\[[\w_-]+[\s:]/.test(m.content.trim()) || /^\{[\s\S]*\}$/.test(m.content.trim());
+
+      // For structured messages, show a clean label instead of raw JSON
+      const cleanLabel = cleanCardResponseDisplay(m.content);
+
       result.push({
         id: generateId(),
         role: "user",
-        content: m.content,
+        content: cleanLabel ?? m.content,
         isCardResponse: isStructured,
         timestamp: m.timestamp,
       });
@@ -329,6 +376,8 @@ export function useChatStream({
           const decoder = new TextDecoder();
           let buffer = "";
 
+          let receivedDone = false;
+
           while (true) {
             const { value, done } = await reader.read();
             if (done) break;
@@ -351,6 +400,7 @@ export function useChatStream({
                 }
 
                 if (event.type === "done") {
+                  receivedDone = true;
                   // Use the server's authoritative content (includes text + tool names)
                   // Falls back to client-accumulated text if server didn't send content
                   const assistantContent = event.assistantContent || accumulatedText || "[card]";
@@ -376,10 +426,37 @@ export function useChatStream({
               }
             }
           }
+
+          // Safety net: if stream closed without a "done" event, clean up
+          if (!receivedDone) {
+            console.warn("Stream ended without done event — recovering.");
+            if (accumulatedText) {
+              historyRef.current = [
+                ...historyRef.current,
+                { role: "user", content: text, timestamp: now() },
+                { role: "assistant", content: accumulatedText, timestamp: now() },
+              ];
+            }
+            // Finalize any streaming message
+            if (streamingMessageIdRef.current) {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === streamingMessageIdRef.current && msg.role === "assistant" && msg.type === "text"
+                    ? { ...msg, isStreaming: false }
+                    : msg
+                )
+              );
+              streamingMessageIdRef.current = null;
+            }
+            setIsStreaming(false);
+            setIsTyping(false);
+            setIsThinking(false);
+          }
         } catch (err) {
           console.error("Chat stream error:", err);
           setIsStreaming(false);
           setIsTyping(false);
+          setIsThinking(false);
           streamingMessageIdRef.current = null;
         }
       })();

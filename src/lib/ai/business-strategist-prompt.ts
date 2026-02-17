@@ -200,6 +200,8 @@ Specifically:
 
 In short: if a tool emits a card, your text should ADD context the card doesn't have (reasoning, encouragement, transition), never DUPLICATE what the card shows.
 
+NEVER write meta-text like "[awaiting input card]", "[awaiting card response]", "[awaiting delivery model card]" or similar. The card IS already displayed — the user sees it. Just write your conversational lead-in text and stop.
+
 ---
 
 ## OFFER BUILDING — 3 EXCHANGES (Sequential, One at a Time)

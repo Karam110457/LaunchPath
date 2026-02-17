@@ -108,7 +108,7 @@ export async function POST(
         system: systemPrompt,
         messages: aiMessages,
         tools,
-        stopWhen: stepCountIs(10),
+        stopWhen: stepCountIs(20),
         providerOptions: {
           anthropic: {
             thinking: { type: "enabled", budgetTokens: 10000 },
