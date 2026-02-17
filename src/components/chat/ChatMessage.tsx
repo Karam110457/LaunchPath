@@ -49,9 +49,12 @@ export function ChatMessage({ message, onCardComplete }: ChatMessageProps) {
   if (message.type === "text") {
     // Strip AI meta-text like [card], [awaiting...], [tool_call ...], etc.
     const cleaned = message.content
+      .replace(/\[tools?:[^\]]*\]/gi, "")
       .replace(/\[card[^\]]*\]/gi, "")
+      .replace(/\[tool_?call[^\]]*\]/gi, "")
       .replace(/\[tool[^\]]*\]/gi, "")
       .replace(/\[awaiting[^\]]*\]/gi, "")
+      .replace(/\[waiting[^\]]*\]/gi, "")
       .trim();
     if (!cleaned && !message.isStreaming) return null;
     return (

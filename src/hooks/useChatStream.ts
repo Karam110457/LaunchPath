@@ -47,32 +47,37 @@ interface UseChatStreamReturn {
   startOver: () => void;
 }
 
-/** Strip tool markers and meta-text from display text */
+/** Strip tool markers and meta-text from assistant display text */
 function stripToolMarkers(text: string): string {
   return text
     .replace(/\[tools?:[^\]]*\]/gi, "")
     .replace(/\[card[^\]]*\]/gi, "")
+    .replace(/\[tool_?call[^\]]*\]/gi, "")
     .replace(/\[tool[^\]]*\]/gi, "")
     .replace(/\[awaiting[^\]]*\]/gi, "")
+    .replace(/\[waiting[^\]]*\]/gi, "")
     .trim();
 }
 
 /**
  * Extract a clean display label from a structured card response message.
- * e.g. "[offer-story confirmed: {...}]" → "Confirmed: Your Business Story"
- * e.g. "[niche-choice: {...}]" → "Selected a niche"
- * e.g. "[intent selected: first_client]" → "First client"
- * Returns null if not a structured message.
+ * Cards send structured messages like "[offer-story confirmed: {...}]" or
+ * "[intent selected: first_client]". On reload, we convert these to clean labels.
+ * Returns null if the message isn't a structured card response.
  */
 function cleanCardResponseDisplay(raw: string): string | null {
   const trimmed = raw.trim();
 
-  // [offer-story confirmed: ...] or [offer-pricing confirmed: ...]
+  // --- Specific patterns (nice labels) ---
+
+  // Editable-content confirmations
   if (trimmed.startsWith("[offer-story confirmed:")) return "Confirmed: Your Business Story";
   if (trimmed.startsWith("[offer-pricing confirmed:")) return "Confirmed: Pricing & Guarantee";
-  if (trimmed.startsWith("[build-system: confirmed]")) return "Build My System";
 
-  // [niche-choice: {...JSON...}]
+  // Build system trigger
+  if (trimmed.startsWith("[build-system:")) return "Build My System";
+
+  // Niche choice — extract niche name from JSON
   const nicheMatch = trimmed.match(/^\[niche-choice:\s*(\{[\s\S]*\})\]$/);
   if (nicheMatch) {
     try {
@@ -83,17 +88,34 @@ function cleanCardResponseDisplay(raw: string): string | null {
     }
   }
 
-  // [field selected: value] — e.g. [intent selected: first_client]
+  // Option-selector — [field selected: value] e.g. [intent selected: first_client]
   const fieldMatch = trimmed.match(/^\[([\w_-]+)\s+selected:\s*(.+)\]$/);
   if (fieldMatch) {
     const value = fieldMatch[2].replace(/_/g, " ");
     return value.charAt(0).toUpperCase() + value.slice(1);
   }
 
-  // [location: ...]
+  // Location card — [location: city="London", target="local"]
   if (trimmed.startsWith("[location:")) {
-    const inner = trimmed.slice(10, -1).trim();
-    return inner || "Location set";
+    const cityMatch = trimmed.match(/city="([^"]*)"/);
+    return cityMatch?.[1] || "Location set";
+  }
+
+  // Text-input cards — [card-id: "user's typed text"]
+  const textInputMatch = trimmed.match(/^\[([\w_-]+):\s*"(.*)"\]$/);
+  if (textInputMatch) {
+    const value = textInputMatch[2];
+    return value.length > 60 ? value.slice(0, 57) + "..." : value || "Response submitted";
+  }
+
+  // --- Catch-all: any remaining [bracket-wrapped] structured message ---
+  if (/^\[[\w_-]+[\s:]/.test(trimmed) && trimmed.endsWith("]")) {
+    return "Response submitted";
+  }
+
+  // Raw JSON object
+  if (/^\{[\s\S]*\}$/.test(trimmed)) {
+    return "Response submitted";
   }
 
   return null;
