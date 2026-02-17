@@ -158,7 +158,7 @@ export function ChatContainer({
         className="flex-1 overflow-y-auto py-3 pb-36"
         aria-label="Conversation"
       >
-        <div className="max-w-3xl mx-auto w-full px-4 space-y-2">
+        <div className="max-w-3xl mx-auto w-full px-4 space-y-5">
           {messages.map((message) => (
             <ChatMessage
               key={message.id}

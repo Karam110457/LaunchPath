@@ -19,17 +19,17 @@ export function StreamingText({ content, isStreaming: _isStreaming }: StreamingT
         components={{
           // ── Headings ──────────────────────────────────────────────────────
           h1: ({ children }) => (
-            <h1 className="text-base font-bold text-foreground mt-5 mb-2 first:mt-0 pb-1.5 border-b border-border/40">
+            <h1 className="text-xl font-bold text-foreground mt-6 mb-2.5 first:mt-0 pb-2 border-b border-border/50">
               {children}
             </h1>
           ),
           h2: ({ children }) => (
-            <h2 className="text-sm font-bold text-foreground mt-4 mb-1.5 first:mt-0 pb-1 border-b border-border/30">
+            <h2 className="text-lg font-bold text-foreground mt-5 mb-2 first:mt-0 pb-1.5 border-b border-border/30">
               {children}
             </h2>
           ),
           h3: ({ children }) => (
-            <h3 className="text-sm font-semibold text-foreground/90 mt-3 mb-1 first:mt-0">
+            <h3 className="text-base font-semibold text-foreground mt-4 mb-1.5 first:mt-0">
               {children}
             </h3>
           ),

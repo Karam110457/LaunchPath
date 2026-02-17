@@ -58,7 +58,7 @@ export function ChatMessage({ message, onCardComplete }: ChatMessageProps) {
       .trim();
     if (!cleaned && !message.isStreaming) return null;
     return (
-      <div className="text-sm text-foreground leading-relaxed">
+      <div className="text-sm text-foreground leading-relaxed py-1">
         <StreamingText content={cleaned} isStreaming={message.isStreaming} />
       </div>
     );
