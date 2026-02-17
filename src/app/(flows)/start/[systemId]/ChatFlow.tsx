@@ -9,7 +9,7 @@
  * For completed systems, reconstructs the system-ready card from DB data.
  */
 
-import { useEffect, useRef, useMemo } from "react";
+import { useMemo } from "react";
 import type { Tables } from "@/types/database";
 import type { ChatMessage } from "@/lib/chat/types";
 import type { AssembledOffer } from "@/lib/ai/schemas";
@@ -34,20 +34,6 @@ export function ChatFlow({ system, profile: _profile }: ChatFlowProps) {
       systemId: system.id,
       initialHistory,
     });
-
-  const didGreet = useRef(false);
-
-  // Trigger greeting on first load if no history
-  useEffect(() => {
-    if (!didGreet.current && initialHistory.length === 0) {
-      didGreet.current = true;
-      const timer = setTimeout(() => {
-        sendMessage("[CONVERSATION_START]");
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // For completed systems, reconstruct the system-ready card if it's not already in messages
   const displayMessages = useMemo((): ChatMessage[] => {
