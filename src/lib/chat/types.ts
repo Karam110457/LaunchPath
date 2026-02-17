@@ -92,7 +92,7 @@ export type ServerEvent =
   | { type: "tool-start"; toolName: string }
   | { type: "progress"; cardId: string; stepId: string; status: "active" | "done"; label?: string }
   | { type: "card"; card: CardData }
-  | { type: "done" }
+  | { type: "done"; assistantContent?: string }
   | { type: "error"; message: string };
 
 // ---------------------------------------------------------------------------

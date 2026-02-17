@@ -122,8 +122,8 @@ export async function POST(
             timestamp: new Date().toISOString(),
           };
 
-          // Collect assistant messages from the response
-          const assistantContent = response.messages
+          // Collect assistant text from the response
+          const assistantText = response.messages
             .filter((m) => m.role === "assistant")
             .map((m) => {
               if (typeof m.content === "string") return m.content;
@@ -138,9 +138,25 @@ export async function POST(
             .filter(Boolean)
             .join("\n");
 
+          // Collect tool call names so the agent has context on next turn
+          const toolNames = response.messages
+            .filter((m) => m.role === "assistant")
+            .flatMap((m) => {
+              if (!Array.isArray(m.content)) return [];
+              return m.content
+                .filter((p) => p.type === "tool-call")
+                .map((p) => (p as { type: "tool-call"; toolName: string }).toolName);
+            });
+
+          const toolSuffix = toolNames.length > 0
+            ? `\n[tools:${toolNames.join(",")}]`
+            : "";
+
+          const fullContent = (assistantText + toolSuffix).trim() || "[tools:unknown]";
+
           const newAssistantMessage: ConversationMessage = {
             role: "assistant",
-            content: assistantContent || "[card]",
+            content: fullContent,
             timestamp: new Date().toISOString(),
           };
 
@@ -157,7 +173,7 @@ export async function POST(
             .eq("id", systemId)
             .eq("user_id", user.id);
 
-          emit({ type: "done" });
+          emit({ type: "done", assistantContent: fullContent });
         },
       });
 

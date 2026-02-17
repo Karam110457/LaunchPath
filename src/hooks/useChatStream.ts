@@ -11,12 +11,11 @@
  * - Typing indicator state
  */
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import type {
   ChatMessage,
   ConversationMessage,
   ServerEvent,
-  CardData,
   ProgressStep,
 } from "@/lib/chat/types";
 
@@ -37,7 +36,7 @@ interface UseChatStreamReturn {
   messages: ChatMessage[];
   isStreaming: boolean;
   isTyping: boolean;
-  sendMessage: (text: string) => void;
+  sendMessage: (text: string, addBubble?: boolean) => void;
   handleCardResponse: (
     cardId: string,
     displayText: string,
@@ -46,34 +45,54 @@ interface UseChatStreamReturn {
   startOver: () => void;
 }
 
+/** Strip tool markers like [tools:request_intent,save_collected_answers] from display text */
+function stripToolMarkers(text: string): string {
+  return text
+    .replace(/\[tools?:[^\]]*\]/gi, "")
+    .replace(/\[card[^\]]*\]/gi, "")
+    .replace(/\[tool[^\]]*\]/gi, "")
+    .trim();
+}
+
 /**
  * Restore persisted conversation history into the ChatMessage format.
- * Cards from history are shown in completed/collapsed state.
+ * Filters system signals, detects card responses, strips tool markers.
  */
 function restoreMessages(history: ConversationMessage[]): ChatMessage[] {
-  return history.map((m) => {
+  const result: ChatMessage[] = [];
+
+  for (const m of history) {
+    // Skip system signals
+    if (m.role === "user" && m.content === "[CONVERSATION_START]") continue;
+
     if (m.role === "user") {
-      return {
+      // Detect structured card responses like [intent selected: first_client]
+      const isStructured = /^\[[\w_]+[\s:]/.test(m.content.trim());
+      result.push({
         id: generateId(),
-        role: "user" as const,
+        role: "user",
         content: m.content,
-        isCardResponse: !!m.cardRef,
+        isCardResponse: isStructured,
         timestamp: m.timestamp,
-      };
+      });
+      continue;
     }
 
-    // Assistant messages with a card ref are shown as collapsed cards
-    // We can't fully restore the card without the original data, so we show
-    // them as text with a "completed" marker
-    return {
+    // Assistant message — strip tool markers for display
+    const displayContent = stripToolMarkers(m.content);
+    if (!displayContent) continue; // Skip empty (tool-only) assistant messages
+
+    result.push({
       id: generateId(),
-      role: "assistant" as const,
-      type: "text" as const,
-      content: m.content === "[card]" ? "" : m.content,
+      role: "assistant",
+      type: "text",
+      content: displayContent,
       isStreaming: false,
       timestamp: m.timestamp,
-    };
-  });
+    });
+  }
+
+  return result;
 }
 
 export function useChatStream({
@@ -92,11 +111,6 @@ export function useChatStream({
   // Ref to the current streaming message id (so we can append deltas to it)
   const streamingMessageIdRef = useRef<string | null>(null);
 
-  // Track active progress cards: cardId → Map<stepId, status>
-  const progressCardsRef = useRef<Map<string, Map<string, "pending" | "active" | "done">>>(
-    new Map()
-  );
-
   /**
    * Update a progress card's step status in the messages array.
    */
@@ -112,7 +126,6 @@ export function useChatStream({
           ) {
             const updatedSteps: ProgressStep[] = msg.card.steps.map((step) => {
               if (step.id === stepId) return { ...step, status };
-              // If marking this step done, previous active steps are also done
               if (status === "active" && step.status === "active") {
                 return { ...step, status: "done" };
               }
@@ -141,7 +154,6 @@ export function useChatStream({
           setMessages((prev) => {
             const streamId = streamingMessageIdRef.current;
             if (!streamId) {
-              // Start a new streaming message
               const newId = generateId();
               streamingMessageIdRef.current = newId;
               return [
@@ -156,7 +168,6 @@ export function useChatStream({
                 },
               ];
             }
-            // Append to existing streaming message
             return prev.map((msg) =>
               msg.id === streamId && msg.role === "assistant" && msg.type === "text"
                 ? { ...msg, content: msg.content + event.delta }
@@ -167,7 +178,6 @@ export function useChatStream({
         }
 
         case "text-done": {
-          // Mark the streaming message as complete
           setMessages((prev) =>
             prev.map((msg) => {
               if (msg.id === streamingMessageIdRef.current && msg.role === "assistant" && msg.type === "text") {
@@ -181,7 +191,6 @@ export function useChatStream({
         }
 
         case "card": {
-          // Close any open streaming text message first
           if (streamingMessageIdRef.current) {
             setMessages((prev) =>
               prev.map((msg) =>
@@ -213,7 +222,6 @@ export function useChatStream({
         }
 
         case "done": {
-          // Finalise any open streaming message
           if (streamingMessageIdRef.current) {
             setMessages((prev) =>
               prev.map((msg) =>
@@ -233,7 +241,6 @@ export function useChatStream({
           setIsStreaming(false);
           setIsTyping(false);
           streamingMessageIdRef.current = null;
-          // Add error message to chat
           setMessages((prev) => [
             ...prev,
             {
@@ -278,6 +285,9 @@ export function useChatStream({
       streamingMessageIdRef.current = null;
 
       void (async () => {
+        // Track accumulated text from this exchange for history fallback
+        let accumulatedText = "";
+
         try {
           const response = await fetch(`/api/chat/${systemId}`, {
             method: "POST",
@@ -314,8 +324,16 @@ export function useChatStream({
               try {
                 const event = JSON.parse(raw) as ServerEvent;
 
+                // Accumulate text for history fallback
+                if (event.type === "text-delta") {
+                  accumulatedText += event.delta;
+                }
+
                 if (event.type === "done") {
-                  // The server saves the history — we update our local ref
+                  // Use the server's authoritative content (includes text + tool names)
+                  // Falls back to client-accumulated text if server didn't send content
+                  const assistantContent = event.assistantContent || accumulatedText || "[card]";
+
                   historyRef.current = [
                     ...historyRef.current,
                     {
@@ -325,7 +343,7 @@ export function useChatStream({
                     },
                     {
                       role: "assistant",
-                      content: "[card]",
+                      content: assistantContent,
                       timestamp: now(),
                     },
                   ];
@@ -368,7 +386,7 @@ export function useChatStream({
         })
       );
 
-      // Add user message
+      // Add user message (display text shown in bubble)
       const userMsg: ChatMessage = {
         id: generateId(),
         role: "user",

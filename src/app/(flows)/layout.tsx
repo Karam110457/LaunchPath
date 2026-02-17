@@ -7,5 +7,5 @@ export default async function FlowsLayout({
 }) {
   await requireAuth();
 
-  return <div className="h-[100dvh] overflow-hidden bg-white">{children}</div>;
+  return <div className="fixed inset-0 bg-white overflow-hidden">{children}</div>;
 }
