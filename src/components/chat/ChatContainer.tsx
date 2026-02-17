@@ -4,11 +4,11 @@
  * ChatContainer — the outer shell of the chat interface.
  *
  * Layout:
- * - Minimal header (logo + Start Over button)
+ * - Minimal header (title + Start Over button)
  * - Scrollable message list (auto-scrolls to bottom)
  * - Thinking bubble (when agent is reasoning)
  * - Typing indicator (when agent is about to speak)
- * - Pinned InputBar at bottom
+ * - Floating glassy InputBar pinned at bottom
  */
 
 import { useEffect, useRef } from "react";
@@ -50,11 +50,11 @@ export function ChatContainer({
   }, [messages, isTyping, isThinking, thinkingText]);
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-background">
+    <div className="relative flex flex-col h-full overflow-hidden bg-background">
       {/* Minimal header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background z-10 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-foreground tracking-tight">LaunchPath</span>
+          <span className="text-sm font-semibold text-foreground tracking-tight">Start your business</span>
         </div>
         <button
           onClick={onStartOver}
@@ -67,10 +67,10 @@ export function ChatContainer({
         </button>
       </header>
 
-      {/* Message list */}
+      {/* Message list — pb-36 so last message clears the floating input */}
       <div
         ref={listRef}
-        className="flex-1 overflow-y-auto py-6 space-y-4"
+        className="flex-1 overflow-y-auto py-6 space-y-4 pb-36"
         aria-label="Conversation"
       >
         {messages.length === 0 && (
@@ -98,11 +98,12 @@ export function ChatContainer({
             <TypingIndicator />
           </div>
         )}
-
       </div>
 
-      {/* Input */}
-      <InputBar onSend={onSendMessage} disabled={isStreaming} />
+      {/* Floating glassy input — absolutely positioned at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 px-4 pb-5 pt-3 z-10">
+        <InputBar onSend={onSendMessage} disabled={isStreaming} />
+      </div>
     </div>
   );
 }

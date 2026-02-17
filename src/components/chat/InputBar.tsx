@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * InputBar — the pinned message input at the bottom of the chat.
+ * InputBar — floating glassy message input.
  * Disabled while the agent is streaming. Enter to send, Shift+Enter for newline.
  */
 
@@ -43,11 +43,16 @@ export function InputBar({ onSend, disabled = false }: InputBarProps) {
   };
 
   return (
-    <div className="flex-shrink-0 border-t border-border bg-background px-4 py-3">
+    <div className="w-full max-w-3xl mx-auto">
+      {/* Glassy floating card */}
       <div
         className={cn(
-          "flex items-end gap-2 rounded-xl border border-border bg-card px-3 py-2",
-          "focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/30",
+          "flex items-end gap-3 rounded-2xl px-4 py-3",
+          "bg-card/80 backdrop-blur-md",
+          "border border-border/60",
+          "shadow-xl shadow-black/30",
+          "transition-all duration-200",
+          "focus-within:border-primary/50 focus-within:shadow-primary/5",
           disabled && "opacity-60"
         )}
       >
@@ -59,7 +64,7 @@ export function InputBar({ onSend, disabled = false }: InputBarProps) {
           disabled={disabled}
           rows={1}
           placeholder={disabled ? "Agent is thinking…" : "Type a message…"}
-          className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none min-h-[24px] max-h-[160px] py-0.5"
+          className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[24px] max-h-[160px] py-0.5"
           style={{ lineHeight: "1.5" }}
         />
         <button
@@ -67,17 +72,19 @@ export function InputBar({ onSend, disabled = false }: InputBarProps) {
           disabled={!value.trim() || disabled}
           aria-label="Send message"
           className={cn(
-            "flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg transition-colors",
+            "flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-200 mb-0.5",
             value.trim() && !disabled
-              ? "bg-primary text-primary-foreground hover:bg-primary/90"
-              : "bg-muted text-muted-foreground cursor-not-allowed"
+              ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/30"
+              : "bg-muted/60 text-muted-foreground cursor-not-allowed"
           )}
         >
-          <Send className="w-4 h-4" />
+          <Send className="w-3.5 h-3.5" />
         </button>
       </div>
-      <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
-        Press Enter to send · Shift+Enter for new line
+
+      {/* Hint */}
+      <p className="mt-2 text-center text-[11px] text-muted-foreground/40">
+        Enter to send · Shift+Enter for new line
       </p>
     </div>
   );
