@@ -292,6 +292,97 @@ export function createChatTools(
   });
 
   // -------------------------------------------------------------------------
+  // DYNAMIC CARD TOOLS
+  // General-purpose tools for ad-hoc questions that don't map to a standard
+  // data collection field. The agent decides when to use these vs plain text.
+  // -------------------------------------------------------------------------
+
+  const present_choices = tool({
+    description:
+      "Present an interactive choice card to the user for ANY ad-hoc question. Use this instead of listing options as plain text. Do NOT use this for standard data collection fields — use the specific request_* tools for those.",
+    inputSchema: z.object({
+      id: z
+        .string()
+        .describe(
+          "A unique kebab-case identifier for this question, e.g. 'strategic-vs-hands-on', 'timeline-preference'. Must NOT match any standard field name."
+        ),
+      question: z.string().describe("The question to display above the options."),
+      options: z
+        .array(
+          z.object({
+            value: z.string().describe("Machine-readable value returned when selected."),
+            label: z.string().describe("Human-readable label shown on the button."),
+            description: z
+              .string()
+              .optional()
+              .describe("Optional sub-text shown below the label."),
+          })
+        )
+        .min(2)
+        .max(6)
+        .describe("The options to present. Min 2, max 6."),
+      allow_multiple: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe("Whether the user can select multiple options."),
+      max_select: z
+        .number()
+        .optional()
+        .describe("Max selections when allow_multiple is true."),
+    }),
+    execute: async ({ id, question, options, allow_multiple, max_select }) => {
+      emitCard(emit, {
+        type: "option-selector",
+        id: `dyn-${id}`,
+        question,
+        options,
+        multiSelect: allow_multiple ?? false,
+        maxSelect: max_select,
+      });
+      return { awaiting_user_input: true, field: `dynamic:${id}` };
+    },
+  });
+
+  const request_input = tool({
+    description:
+      "Show a text input card to collect freeform text from the user for ANY ad-hoc question. Use this instead of asking the user to type in the chat. Do NOT use this for standard data collection fields — use the specific request_* tools for those.",
+    inputSchema: z.object({
+      id: z
+        .string()
+        .describe(
+          "A unique kebab-case identifier for this input, e.g. 'describe-ideal-client', 'biggest-fear'. Must NOT match any standard field name."
+        ),
+      question: z.string().describe("The question to display above the input."),
+      placeholder: z
+        .string()
+        .optional()
+        .default("")
+        .describe("Placeholder text inside the input field."),
+      hint: z
+        .string()
+        .optional()
+        .describe("Optional hint text shown below the question."),
+      multiline: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe("Whether to show a multi-line textarea instead of a single-line input."),
+    }),
+    execute: async ({ id, question, placeholder, hint, multiline }) => {
+      emitCard(emit, {
+        type: "text-input",
+        id: `dyn-${id}`,
+        question,
+        placeholder: placeholder ?? "",
+        hint,
+        multiline: multiline ?? false,
+      });
+      return { awaiting_user_input: true, field: `dynamic:${id}` };
+    },
+  });
+
+  // -------------------------------------------------------------------------
   // SAVE TOOLS
   // Silent DB writes. No visual output.
   // -------------------------------------------------------------------------
@@ -955,6 +1046,8 @@ export function createChatTools(
     request_delivery_model,
     request_pricing_direction,
     request_location,
+    present_choices,
+    request_input,
     save_collected_answers,
     interpret_freeform_response,
     run_niche_analysis,
