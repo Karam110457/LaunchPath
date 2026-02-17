@@ -43,7 +43,7 @@ export function ChatContainer({
   }, [messages, isTyping]);
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-white">
+    <div className="flex flex-col h-[100dvh] overflow-hidden bg-white">
       {/* Minimal header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 bg-white z-10 flex-shrink-0">
         <div className="flex items-center gap-2">

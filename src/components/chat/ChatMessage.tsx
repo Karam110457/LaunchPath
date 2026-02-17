@@ -47,11 +47,16 @@ export function ChatMessage({ message, onCardComplete }: ChatMessageProps) {
   }
 
   if (message.type === "text") {
-    if (!message.content && !message.isStreaming) return null;
+    // Strip AI meta-text like [card], [card shown: ...], [tool_call ...], etc.
+    const cleaned = message.content
+      .replace(/\[card[^\]]*\]/gi, "")
+      .replace(/\[tool[^\]]*\]/gi, "")
+      .trim();
+    if (!cleaned && !message.isStreaming) return null;
     return (
       <div className="px-4">
         <div className="text-sm text-zinc-800 leading-relaxed max-w-[600px]">
-          <StreamingText content={message.content} isStreaming={message.isStreaming} />
+          <StreamingText content={cleaned} isStreaming={message.isStreaming} />
         </div>
       </div>
     );

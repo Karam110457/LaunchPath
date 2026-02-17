@@ -254,10 +254,24 @@ export function useChatStream({
 
   /**
    * Send a message to the agent. Opens SSE and streams the response.
+   * @param addBubble — set to false when handleCardResponse already added the user bubble
    */
   const sendMessage = useCallback(
-    (text: string) => {
+    (text: string, addBubble = true) => {
       if (isStreaming) return;
+
+      // Show the user message in the chat (unless it's a system signal or card already added it)
+      if (addBubble && text !== "[CONVERSATION_START]") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: generateId(),
+            role: "user" as const,
+            content: text,
+            timestamp: now(),
+          },
+        ]);
+      }
 
       setIsStreaming(true);
       setIsTyping(true);
@@ -364,8 +378,8 @@ export function useChatStream({
       };
       setMessages((prev) => [...prev, userMsg]);
 
-      // Send structured message to agent
-      sendMessage(structuredMessage);
+      // Send structured message to agent (bubble already added above)
+      sendMessage(structuredMessage, false);
     },
     [sendMessage]
   );

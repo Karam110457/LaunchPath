@@ -7,5 +7,5 @@ export default async function FlowsLayout({
 }) {
   await requireAuth();
 
-  return <div className="min-h-screen bg-background">{children}</div>;
+  return <div className="h-[100dvh] overflow-hidden bg-white">{children}</div>;
 }
