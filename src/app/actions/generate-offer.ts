@@ -1,26 +1,23 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { buildOfferContext } from "@/lib/ai/offer-prompt";
-import { offerDetailsOutputSchema } from "@/lib/ai/schemas";
 import { mastra } from "@/mastra";
 import { logger } from "@/lib/security/logger";
+import type { AssembledOffer } from "@/lib/ai/schemas";
 
-interface OfferDetailsResult {
-  transformation_from: string | null;
-  transformation_to: string | null;
-  system_description: string | null;
-  guarantee: string | null;
+interface OfferResult {
+  offer: AssembledOffer | null;
   error: string | null;
 }
 
 /**
- * Generate offer details (transformation copy + guarantee) using the Mastra offer agent.
- * Pricing is NOT generated here — it's calculated client-side from profile data.
+ * Generate a complete offer using the offer-generation Mastra workflow.
+ * Runs transformation, guarantee, and pricing agents in parallel,
+ * then assembles and validates the result.
  */
 export async function generateOfferDetails(
   systemId: string
-): Promise<OfferDetailsResult> {
+): Promise<OfferResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -28,13 +25,7 @@ export async function generateOfferDetails(
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return {
-      transformation_from: null,
-      transformation_to: null,
-      system_description: null,
-      guarantee: null,
-      error: "Not authenticated.",
-    };
+    return { offer: null, error: "Not authenticated." };
   }
 
   const [systemResult, profileResult] = await Promise.all([
@@ -52,22 +43,10 @@ export async function generateOfferDetails(
   ]);
 
   if (systemResult.error || !systemResult.data) {
-    return {
-      transformation_from: null,
-      transformation_to: null,
-      system_description: null,
-      guarantee: null,
-      error: "System not found.",
-    };
+    return { offer: null, error: "System not found." };
   }
   if (profileResult.error || !profileResult.data) {
-    return {
-      transformation_from: null,
-      transformation_to: null,
-      system_description: null,
-      guarantee: null,
-      error: "Profile not found.",
-    };
+    return { offer: null, error: "Profile not found." };
   }
 
   const system = systemResult.data;
@@ -87,54 +66,71 @@ export async function generateOfferDetails(
 
   if (!chosenRec) {
     return {
-      transformation_from: null,
-      transformation_to: null,
-      system_description: null,
-      guarantee: null,
+      offer: null,
       error: "No niche selected. Go back and choose a recommendation.",
     };
   }
 
-  const userContext = buildOfferContext(
-    chosenRec,
-    {
-      time_availability: profile.time_availability,
-      revenue_goal: profile.revenue_goal,
-      blockers: profile.blockers ?? [],
-    },
-    {
-      delivery_model: system.delivery_model,
-      pricing_direction: system.pricing_direction,
-      location_city: system.location_city,
+  // Check for pre-generated offer (from fire-and-forget in chooseRecommendation)
+  if (system.offer && typeof system.offer === "object") {
+    const existing = system.offer as Record<string, unknown>;
+    if (existing.transformation_from && existing.guarantee_text) {
+      logger.info("Using pre-generated offer", { systemId, userId: user.id });
+      return { offer: existing as unknown as AssembledOffer, error: null };
     }
-  );
+  }
 
   try {
-    const agent = mastra.getAgent("offer");
-    const result = await agent.generate(userContext, {
-      structuredOutput: { schema: offerDetailsOutputSchema },
+    const workflow = mastra.getWorkflow("offer-generation");
+    const run = await workflow.createRun();
+    const result = await run.start({
+      inputData: {
+        chosenRecommendation: chosenRec,
+        profile: {
+          time_availability: profile.time_availability,
+          revenue_goal: profile.revenue_goal,
+          blockers: profile.blockers ?? [],
+        },
+        answers: {
+          delivery_model: system.delivery_model,
+          pricing_direction: system.pricing_direction,
+          location_city: system.location_city,
+        },
+      },
     });
 
-    const parsed = result.object;
+    if (result.status !== "success") {
+      logger.error("Offer workflow failed", {
+        systemId,
+        userId: user.id,
+        status: result.status,
+      });
+      return { offer: null, error: "Offer generation failed. Please try again." };
+    }
 
-    logger.info("Offer details generated", { systemId, userId: user.id });
+    const offer = result.result;
 
-    return {
-      transformation_from: parsed.transformation_from,
-      transformation_to: parsed.transformation_to,
-      system_description: parsed.system_description,
-      guarantee: parsed.guarantee,
-      error: null,
-    };
+    // Save the assembled offer to the database
+    const { error: updateError } = await supabase
+      .from("user_systems")
+      .update({ offer: offer as unknown as Record<string, unknown> })
+      .eq("id", systemId)
+      .eq("user_id", user.id);
+
+    if (updateError) {
+      logger.error("Failed to save offer", {
+        systemId,
+        userId: user.id,
+        code: updateError.code,
+      });
+    }
+
+    logger.info("Offer generated via workflow", { systemId, userId: user.id });
+
+    return { offer, error: null };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     logger.error("Offer generation failed", { systemId, error: msg });
-    return {
-      transformation_from: null,
-      transformation_to: null,
-      system_description: null,
-      guarantee: null,
-      error: "Offer generation failed. Please try again.",
-    };
+    return { offer: null, error: "Offer generation failed. Please try again." };
   }
 }

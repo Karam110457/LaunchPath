@@ -12,13 +12,18 @@ import {
   AlertCircle,
   ArrowRight,
   Sparkles,
+  Shield,
 } from "lucide-react";
 import type { AgentConfig } from "@/lib/ai/agents/types";
 import type { DemoResult } from "@/lib/ai/agents/types";
+import type { DemoConfig } from "@/lib/ai/schemas";
 
 interface DemoPageProps {
   systemId: string;
-  agent: AgentConfig;
+  /** AI-generated demo config (preferred) */
+  demoConfig?: DemoConfig | null;
+  /** Legacy registry agent (fallback) */
+  agent?: AgentConfig | null;
   businessName: string;
   solution: string;
   segment: string;
@@ -27,6 +32,7 @@ interface DemoPageProps {
 
 export function DemoPage({
   systemId,
+  demoConfig,
   agent,
   businessName,
   solution,
@@ -38,12 +44,36 @@ export function DemoPage({
   const [result, setResult] = useState<DemoResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Resolve display values from demoConfig or agent
+  const heroHeadline = demoConfig?.hero_headline ?? agent?.name ?? businessName;
+  const heroSubheadline =
+    demoConfig?.hero_subheadline ?? agent?.description ?? solution;
+  const ctaText = demoConfig?.cta_button_text ?? "Get Your Analysis";
+  const transformationHeadline = demoConfig?.transformation_headline;
+  const showGuarantee = demoConfig?.show_guarantee ?? false;
+  const guaranteeText = demoConfig?.guarantee_text;
+  const showPricing = demoConfig?.show_pricing ?? false;
+  const pricingText = demoConfig?.pricing_text;
+
+  // Resolve form fields from demoConfig or agent
+  const formFields = demoConfig
+    ? demoConfig.form_fields.map((f) => ({
+        key: f.name,
+        label: f.label,
+        type: f.type,
+        placeholder: f.placeholder,
+        required: f.required,
+        options: f.options?.map((opt) => ({ value: opt, label: opt })),
+        helpText: f.helpText,
+      }))
+    : agent?.formFields ?? [];
+
   function updateField(key: string, value: string) {
     setFormData((prev) => ({ ...prev, [key]: value }));
   }
 
   function isFormValid(): boolean {
-    return agent.formFields
+    return formFields
       .filter((f) => f.required)
       .every((f) => formData[f.key]?.trim());
   }
@@ -100,12 +130,21 @@ export function DemoPage({
             AI-Powered Analysis
           </div>
           <h1 className="text-2xl sm:text-3xl font-serif font-light italic tracking-tight">
-            {agent.name}
+            {heroHeadline}
           </h1>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            {agent.description}
+            {heroSubheadline}
           </p>
         </div>
+
+        {/* Transformation headline */}
+        {transformationHeadline && (
+          <div className="text-center">
+            <p className="text-base font-medium text-primary/80 italic">
+              {transformationHeadline}
+            </p>
+          </div>
+        )}
 
         {/* Context */}
         <Card>
@@ -123,6 +162,28 @@ export function DemoPage({
           </CardContent>
         </Card>
 
+        {/* Guarantee badge */}
+        {showGuarantee && guaranteeText && (
+          <div className="flex items-start gap-3 bg-green-500/5 border border-green-500/20 rounded-lg p-4">
+            <Shield className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-green-700">
+                Our Guarantee
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {guaranteeText}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Pricing info */}
+        {showPricing && pricingText && (
+          <div className="text-center bg-muted/50 rounded-lg p-4">
+            <p className="text-sm text-muted-foreground">{pricingText}</p>
+          </div>
+        )}
+
         {/* Result display */}
         {result ? (
           <DemoResultCard result={result} onReset={() => setResult(null)} />
@@ -131,7 +192,7 @@ export function DemoPage({
           <form onSubmit={handleSubmit} className="space-y-6">
             <Card>
               <CardContent className="pt-6 space-y-4">
-                {agent.formFields.map((field) => (
+                {formFields.map((field) => (
                   <div key={field.key} className="space-y-2">
                     <Label
                       htmlFor={field.key}
@@ -175,6 +236,11 @@ export function DemoPage({
                         placeholder={field.placeholder}
                       />
                     )}
+                    {"helpText" in field && field.helpText && (
+                      <p className="text-xs text-muted-foreground">
+                        {field.helpText}
+                      </p>
+                    )}
                   </div>
                 ))}
               </CardContent>
@@ -199,7 +265,7 @@ export function DemoPage({
                 </>
               ) : (
                 <>
-                  Get Your Analysis
+                  {ctaText}
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </>
               )}

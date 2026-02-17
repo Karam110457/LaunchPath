@@ -1176,29 +1176,35 @@ function OfferBuilderStep({
     if (hasLoaded.current || offerAiLoaded) return;
     hasLoaded.current = true;
 
-    const pricing = calculatePricing(
-      profile.revenue_goal,
-      answers.pricing_direction ?? null
-    );
-
+    // Set initial data from context while AI loads
     setOfferData((prev) => ({
       ...prev,
       segment: chosenRec?.target_segment.description ?? "",
-      pricing_setup: pricing.setup,
-      pricing_monthly: pricing.monthly,
       delivery_model: answers.delivery_model ?? "build_once",
     }));
 
     generateOfferDetails(systemId).then((result) => {
       if (result.error) {
         setOfferError(result.error);
-      } else {
+      } else if (result.offer) {
         setOfferData((prev) => ({
           ...prev,
-          transformation_from: result.transformation_from ?? "",
-          transformation_to: result.transformation_to ?? "",
-          system_description: result.system_description ?? "",
-          guarantee: result.guarantee ?? "",
+          transformation_from: result.offer!.transformation_from ?? "",
+          transformation_to: result.offer!.transformation_to ?? "",
+          system_description: result.offer!.system_description ?? "",
+          guarantee: result.offer!.guarantee_text ?? "",
+          pricing_setup: result.offer!.pricing_setup,
+          pricing_monthly: result.offer!.pricing_monthly,
+          segment: result.offer!.segment ?? prev.segment,
+          delivery_model: result.offer!.delivery_model ?? prev.delivery_model,
+          // Extended fields
+          guarantee_type: result.offer!.guarantee_type,
+          guarantee_confidence: result.offer!.guarantee_confidence,
+          pricing_rationale: result.offer!.pricing_rationale,
+          pricing_comparables: result.offer!.pricing_comparables,
+          revenue_projection: result.offer!.revenue_projection,
+          validation_status: result.offer!.validation_status,
+          validation_notes: result.offer!.validation_notes,
         }));
         setOfferAiLoaded(true);
       }

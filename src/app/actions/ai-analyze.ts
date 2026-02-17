@@ -152,6 +152,8 @@ export async function runNicheAnalysis(
 
 /**
  * Save the user's chosen recommendation to the system.
+ * Also triggers a fire-and-forget pre-generation of the offer workflow
+ * so the offer is ready by the time the user reaches Step 8.
  */
 export async function chooseRecommendation(
   systemId: string,
@@ -184,5 +186,90 @@ export async function chooseRecommendation(
     return { error: "Failed to save selection." };
   }
 
+  // Fire-and-forget: pre-generate offer while user reviews niche details.
+  // By the time they reach Step 8, the offer may already be in the DB.
+  preGenerateOffer(systemId, user.id).catch((err) => {
+    logger.warn("Offer pre-generation failed (non-fatal)", {
+      systemId,
+      error: err instanceof Error ? err.message : "Unknown error",
+    });
+  });
+
   return { error: null };
+}
+
+/**
+ * Pre-generate the offer in the background.
+ * Fetches the data needed, runs the offer workflow, and saves the result.
+ */
+async function preGenerateOffer(
+  systemId: string,
+  userId: string
+): Promise<void> {
+  const { createClient: createServiceClient } = await import(
+    "@/lib/supabase/server"
+  );
+  const supabase = await createServiceClient();
+
+  const [systemResult, profileResult] = await Promise.all([
+    supabase
+      .from("user_systems")
+      .select("*")
+      .eq("id", systemId)
+      .eq("user_id", userId)
+      .single(),
+    supabase
+      .from("user_profiles")
+      .select("*")
+      .eq("id", userId)
+      .single(),
+  ]);
+
+  if (systemResult.error || !systemResult.data) return;
+  if (profileResult.error || !profileResult.data) return;
+
+  const system = systemResult.data;
+  const profile = profileResult.data;
+  const chosenRec = system.chosen_recommendation as {
+    niche: string;
+    bottleneck: string;
+    your_solution: string;
+    target_segment: { description: string; why: string };
+    revenue_potential: {
+      per_client: string;
+      target_clients: number;
+      monthly_total: string;
+    };
+    strategic_insight: string;
+  } | null;
+
+  if (!chosenRec) return;
+
+  const workflow = mastra.getWorkflow("offer-generation");
+  const run = await workflow.createRun();
+  const result = await run.start({
+    inputData: {
+      chosenRecommendation: chosenRec,
+      profile: {
+        time_availability: profile.time_availability,
+        revenue_goal: profile.revenue_goal,
+        blockers: profile.blockers ?? [],
+      },
+      answers: {
+        delivery_model: system.delivery_model,
+        pricing_direction: system.pricing_direction,
+        location_city: system.location_city,
+      },
+    },
+  });
+
+  if (result.status === "success") {
+    await supabase
+      .from("user_systems")
+      .update({ offer: result.result as unknown as Record<string, unknown> })
+      .eq("id", systemId)
+      .eq("user_id", userId);
+
+    logger.info("Offer pre-generated", { systemId, userId });
+  }
 }

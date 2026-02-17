@@ -30,6 +30,14 @@ export interface Offer {
   pricing_monthly: number;
   guarantee: string;
   delivery_model: string;
+  // Extended fields from AI generation (optional for backward compatibility)
+  guarantee_type?: "time_bound" | "outcome_based" | "risk_reversal";
+  guarantee_confidence?: string;
+  pricing_rationale?: string;
+  pricing_comparables?: { service: string; price_range: string }[];
+  revenue_projection?: { clients_needed: number; monthly_revenue: string };
+  validation_status?: "passed" | "needs_review" | "failed";
+  validation_notes?: string[];
 }
 
 export const INTENT_OPTIONS = [
