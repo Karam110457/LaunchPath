@@ -30,6 +30,7 @@ function now() {
 interface UseChatStreamOptions {
   systemId: string;
   initialHistory: ConversationMessage[];
+  initialDisplayMessages?: ChatMessage[];
 }
 
 interface UseChatStreamReturn {
@@ -166,12 +167,28 @@ function restoreMessages(history: ConversationMessage[]): ChatMessage[] {
   return result;
 }
 
+/** Save display messages to the server so they survive refresh */
+async function saveDisplayMessages(systemId: string, messages: ChatMessage[]) {
+  try {
+    await fetch(`/api/chat/${systemId}/display`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ displayMessages: messages }),
+    });
+  } catch {
+    // Non-critical — ignore
+  }
+}
+
 export function useChatStream({
   systemId,
   initialHistory,
+  initialDisplayMessages,
 }: UseChatStreamOptions): UseChatStreamReturn {
   const [messages, setMessages] = useState<ChatMessage[]>(() =>
-    restoreMessages(initialHistory)
+    initialDisplayMessages && initialDisplayMessages.length > 0
+      ? initialDisplayMessages
+      : restoreMessages(initialHistory)
   );
   const [isStreaming, setIsStreaming] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -440,6 +457,12 @@ export function useChatStream({
                       timestamp: now(),
                     },
                   ];
+
+                  // Save display messages (cards included) so they survive refresh
+                  setMessages((current) => {
+                    void saveDisplayMessages(systemId, current);
+                    return current;
+                  });
                 }
 
                 processEvent(event);
@@ -523,19 +546,25 @@ export function useChatStream({
   );
 
   /**
-   * Start over — clears conversation history and resets system state.
+   * Start over — clears conversation history, resets system state, returns to landing screen.
    */
   const startOver = useCallback(() => {
-    void fetch(`/api/chat/${systemId}/reset`, { method: "POST" }).then(() => {
+    void Promise.all([
+      fetch(`/api/chat/${systemId}/reset`, { method: "POST" }),
+      fetch(`/api/chat/${systemId}/display`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayMessages: [] }),
+      }),
+    ]).then(() => {
       historyRef.current = [];
       setMessages([]);
       setIsStreaming(false);
       setIsTyping(false);
       streamingMessageIdRef.current = null;
-      // Trigger fresh greeting
-      setTimeout(() => sendMessage("[CONVERSATION_START]"), 100);
+      // Landing screen shows automatically when messages is empty
     });
-  }, [systemId, sendMessage]);
+  }, [systemId]);
 
   return {
     messages,

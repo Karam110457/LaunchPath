@@ -6,21 +6,7 @@ export default async function StartPage() {
   const user = await requireAuth();
   const supabase = await createClient();
 
-  // Resume an existing in-progress system if one exists
-  const { data: existingSystem } = await supabase
-    .from("user_systems")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("status", "in_progress")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
-
-  if (existingSystem) {
-    redirect(`/start/${existingSystem.id}`);
-  }
-
-  // Create a new system
+  // Always create a new system — users can have multiple concurrent systems
   const { data: newSystem, error } = await supabase
     .from("user_systems")
     .insert({ user_id: user.id })

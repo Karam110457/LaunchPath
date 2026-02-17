@@ -8,7 +8,7 @@
  * - Chat: scrollable message list + floating glassy InputBar
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { RotateCcw, Bot, Rocket, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ChatMessage as ChatMessageType } from "@/lib/chat/types";
@@ -39,7 +39,8 @@ export function ChatContainer({
   onStartOver,
 }: ChatContainerProps) {
   const listRef = useRef<HTMLDivElement>(null);
-  const [landingInput, setLandingInput] = useState("");
+  const [landingFocused, setLandingFocused] = useState(false);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Landing mode: no messages and nothing streaming/typing yet
   const isLanding = messages.length === 0 && !isStreaming && !isTyping && !isThinking;
@@ -52,14 +53,17 @@ export function ChatContainer({
   }, [messages, isTyping, isThinking, thinkingText]);
 
   // ── Landing screen ──────────────────────────────────────────────────────────
-  if (isLanding) {
-    function handleLandingSubmit() {
-      const trimmed = landingInput.trim();
-      if (!trimmed) return;
-      onSendMessage(trimmed);
-      setLandingInput("");
-    }
+  const handleLandingFocus = useCallback(() => {
+    if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    setLandingFocused(true);
+  }, []);
 
+  const handleLandingBlur = useCallback(() => {
+    // Short delay so clicking the preset button registers before hiding
+    blurTimeoutRef.current = setTimeout(() => setLandingFocused(false), 150);
+  }, []);
+
+  if (isLanding) {
     return (
       <div className="flex flex-col h-full overflow-hidden bg-background">
         {/* Minimal header */}
@@ -79,62 +83,50 @@ export function ChatContainer({
             What business do you want to build?
           </h1>
           <p className="text-sm text-muted-foreground text-center max-w-sm mb-10">
-            Start with a guided AI session, or describe your idea below.
+            Click below to start your guided AI session.
           </p>
 
-          {/* Input + preset panel */}
+          {/* Input trigger + preset panel */}
           <div className="w-full max-w-xl space-y-1.5">
-            {/* Text input */}
-            <div className={cn(
-              "flex items-center gap-3 rounded-2xl px-4 py-3",
-              "bg-card/80 backdrop-blur-md",
-              "border border-border/60",
-              "shadow-xl shadow-black/30",
-              "transition-all duration-200",
-              "focus-within:border-primary/50"
-            )}>
+            {/* Click-to-reveal input — read-only, acts as a trigger */}
+            <div
+              onClick={handleLandingFocus}
+              className={cn(
+                "flex items-center gap-3 rounded-2xl px-4 py-3 cursor-text",
+                "bg-card/80 backdrop-blur-md",
+                "border transition-all duration-200",
+                landingFocused ? "border-primary/50 shadow-xl shadow-black/30" : "border-border/60 shadow-lg shadow-black/20",
+              )}
+            >
               <input
-                autoFocus
-                value={landingInput}
-                onChange={(e) => setLandingInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleLandingSubmit();
-                }}
-                placeholder="Describe your business idea…"
-                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/60 outline-none"
+                readOnly
+                onFocus={handleLandingFocus}
+                onBlur={handleLandingBlur}
+                placeholder="Click to get started…"
+                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/60 outline-none cursor-text"
               />
-              <button
-                onClick={handleLandingSubmit}
-                disabled={!landingInput.trim()}
-                className={cn(
-                  "flex size-8 shrink-0 items-center justify-center rounded-xl transition-all duration-200",
-                  landingInput.trim()
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/30"
-                    : "bg-muted/60 text-muted-foreground cursor-not-allowed"
-                )}
-              >
-                <ArrowRight className="size-4" />
-              </button>
             </div>
 
-            {/* Preset options */}
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <button
-                onClick={() => onSendMessage("[CONVERSATION_START]")}
-                className="flex w-full items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-colors text-left group"
-              >
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">
-                  <Rocket className="size-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground">Start Business</p>
-                  <p className="text-xs text-muted-foreground">
-                    Guided AI session to build your offer and launch system
-                  </p>
-                </div>
-                <ArrowRight className="size-4 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
-              </button>
-            </div>
+            {/* Preset options — only visible when input is focused */}
+            {landingFocused && (
+              <div className="rounded-xl border border-border bg-card overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+                <button
+                  onClick={() => onSendMessage("[CONVERSATION_START]")}
+                  className="flex w-full items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-colors text-left group"
+                >
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">
+                    <Rocket className="size-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground">Start Business</p>
+                    <p className="text-xs text-muted-foreground">
+                      Guided AI session to build your offer and launch system
+                    </p>
+                  </div>
+                  <ArrowRight className="size-4 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -163,7 +155,7 @@ export function ChatContainer({
       {/* Message list — pb-36 so last message clears the floating input */}
       <div
         ref={listRef}
-        className="flex-1 overflow-y-auto py-6 space-y-4 pb-36"
+        className="flex-1 overflow-y-auto py-3 space-y-2 pb-36"
         aria-label="Conversation"
       >
         {messages.map((message) => (

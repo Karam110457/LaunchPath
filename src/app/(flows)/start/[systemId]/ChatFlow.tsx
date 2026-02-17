@@ -29,10 +29,15 @@ export function ChatFlow({ system, profile: _profile }: ChatFlowProps) {
     ? (system.conversation_history as unknown as Parameters<typeof useChatStream>[0]["initialHistory"])
     : [];
 
+  const initialDisplayMessages = Array.isArray(system.messages)
+    ? (system.messages as unknown as ChatMessage[])
+    : undefined;
+
   const { messages, isStreaming, isTyping, isThinking, thinkingText, sendMessage, handleCardResponse, startOver } =
     useChatStream({
       systemId: system.id,
       initialHistory,
+      initialDisplayMessages,
     });
 
   // For completed systems, reconstruct the system-ready card if it's not already in messages
