@@ -42,10 +42,6 @@ export function ChatContainer({
 }: ChatContainerProps) {
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive or content streams in.
-  // Use scrollTo on the list container — scrollIntoView cascades to the
-  // window and pushes the viewport past the fixed container, causing a
-  // white gap below the input bar while the agent is streaming.
   useEffect(() => {
     const el = listRef.current;
     if (el) {
@@ -54,16 +50,16 @@ export function ChatContainer({
   }, [messages, isTyping, isThinking, thinkingText]);
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-white">
+    <div className="flex flex-col h-full overflow-hidden bg-background">
       {/* Minimal header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 bg-white z-10 flex-shrink-0">
+      <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background z-10 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-zinc-900 tracking-tight">LaunchPath</span>
+          <span className="text-sm font-semibold text-foreground tracking-tight">LaunchPath</span>
         </div>
         <button
           onClick={onStartOver}
           disabled={isStreaming}
-          className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Start a new business"
         >
           <RotateCcw className="w-3.5 h-3.5" />
@@ -79,7 +75,7 @@ export function ChatContainer({
       >
         {messages.length === 0 && (
           <div className="px-4 py-12 text-center">
-            <p className="text-sm text-zinc-400">Starting your conversation…</p>
+            <p className="text-sm text-muted-foreground">Starting your conversation…</p>
           </div>
         )}
 
@@ -91,12 +87,12 @@ export function ChatContainer({
           />
         ))}
 
-        {/* Thinking indicator — shows agent's reasoning */}
+        {/* Thinking indicator */}
         {(isThinking || thinkingText) && isStreaming && (
           <ThinkingBubble thinkingText={thinkingText} isThinking={isThinking} />
         )}
 
-        {/* Typing indicator — shows before first token */}
+        {/* Typing indicator */}
         {isTyping && !isThinking && (
           <div className="px-4">
             <TypingIndicator />

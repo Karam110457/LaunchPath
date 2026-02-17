@@ -36,8 +36,8 @@ export function ChatMessage({ message, onCardComplete }: ChatMessageProps) {
           className={cn(
             "max-w-[80%] rounded-2xl rounded-tr-sm px-4 py-2.5",
             message.isCardResponse
-              ? "bg-zinc-100 text-zinc-600 text-sm"
-              : "bg-zinc-900 text-white text-sm"
+              ? "bg-muted text-muted-foreground text-sm"
+              : "bg-primary text-primary-foreground text-sm"
           )}
         >
           {message.content}
@@ -59,7 +59,7 @@ export function ChatMessage({ message, onCardComplete }: ChatMessageProps) {
     if (!cleaned && !message.isStreaming) return null;
     return (
       <div className="px-4">
-        <div className="text-sm text-zinc-800 leading-relaxed max-w-[600px]">
+        <div className="text-sm text-foreground leading-relaxed max-w-[600px]">
           <StreamingText content={cleaned} isStreaming={message.isStreaming} />
         </div>
       </div>

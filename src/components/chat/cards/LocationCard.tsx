@@ -45,7 +45,7 @@ export default function LocationCard({
     <div className="max-w-[600px] w-full space-y-5">
       {/* City input */}
       <div className="space-y-2">
-        <Label className="text-sm font-semibold text-zinc-800">
+        <Label className="text-sm font-semibold text-foreground">
           Where are you based?
         </Label>
         <Input
@@ -53,7 +53,7 @@ export default function LocationCard({
           placeholder="e.g. Manchester, UK"
           value={city}
           onChange={(e) => setCity(e.target.value)}
-          className="h-11 rounded-xl border-zinc-200 text-sm focus-visible:ring-indigo-500"
+          className="h-11 rounded-xl border-border bg-card text-foreground text-sm focus-visible:ring-primary"
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSubmit();
           }}
@@ -62,7 +62,7 @@ export default function LocationCard({
 
       {/* Target location selector */}
       <div className="space-y-2">
-        <Label className="text-sm font-semibold text-zinc-800">
+        <Label className="text-sm font-semibold text-foreground">
           Where do you want to find clients?
         </Label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -77,13 +77,13 @@ export default function LocationCard({
                   "flex flex-col items-start gap-0.5 rounded-xl border-2 px-4 py-3 text-left transition-all duration-150",
                   "min-h-[44px] cursor-pointer",
                   isSelected
-                    ? "border-indigo-500 bg-indigo-50 text-indigo-900"
-                    : "border-zinc-200 bg-white text-zinc-800 hover:border-zinc-300 hover:bg-zinc-50"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-card text-foreground hover:border-primary/30 hover:bg-muted"
                 )}
               >
                 <span className="text-sm font-semibold">{option.label}</span>
                 {option.description && (
-                  <span className="text-xs text-zinc-500">{option.description}</span>
+                  <span className="text-xs text-muted-foreground">{option.description}</span>
                 )}
               </button>
             );
@@ -95,7 +95,7 @@ export default function LocationCard({
       <Button
         onClick={handleSubmit}
         disabled={!canSubmit}
-        className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold"
+        className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold"
       >
         Continue
       </Button>

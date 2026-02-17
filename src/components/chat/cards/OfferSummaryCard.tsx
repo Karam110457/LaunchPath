@@ -17,13 +17,13 @@ export default function OfferSummaryCard({ card, onComplete }: OfferSummaryCardP
   }
 
   return (
-    <div className="max-w-[600px] w-full rounded-2xl border border-zinc-200 bg-white overflow-hidden shadow-sm">
+    <div className="max-w-[600px] w-full rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
       {/* Header */}
-      <div className="bg-gradient-to-br from-zinc-900 to-zinc-700 px-5 py-4">
-        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+      <div className="bg-gradient-to-br from-primary to-emerald-700 px-5 py-4">
+        <p className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1">
           Your Complete Offer
         </p>
-        <h3 className="text-base font-bold text-white leading-snug">
+        <h3 className="text-base font-bold text-white leading-snug font-serif italic">
           {offer.segment}
         </h3>
       </div>
@@ -34,14 +34,14 @@ export default function OfferSummaryCard({ card, onComplete }: OfferSummaryCardP
         <div>
           <SectionLabel>Transformation</SectionLabel>
           <div className="flex items-start gap-2 mt-1.5">
-            <div className="flex-1 rounded-lg bg-red-50 border border-red-100 px-3 py-2">
+            <div className="flex-1 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2">
               <p className="text-xs font-semibold text-red-400 mb-0.5">From</p>
-              <p className="text-sm text-red-800 leading-snug">{offer.transformation_from}</p>
+              <p className="text-sm text-red-300 leading-snug">{offer.transformation_from}</p>
             </div>
-            <ArrowRight className="size-4 text-zinc-300 shrink-0 mt-3" />
-            <div className="flex-1 rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2">
-              <p className="text-xs font-semibold text-emerald-500 mb-0.5">To</p>
-              <p className="text-sm text-emerald-800 leading-snug">{offer.transformation_to}</p>
+            <ArrowRight className="size-4 text-muted-foreground shrink-0 mt-3" />
+            <div className="flex-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
+              <p className="text-xs font-semibold text-emerald-400 mb-0.5">To</p>
+              <p className="text-sm text-emerald-300 leading-snug">{offer.transformation_to}</p>
             </div>
           </div>
         </div>
@@ -49,7 +49,7 @@ export default function OfferSummaryCard({ card, onComplete }: OfferSummaryCardP
         {/* System */}
         <div>
           <SectionLabel>What you deliver</SectionLabel>
-          <p className="text-sm text-zinc-700 leading-relaxed mt-1.5">
+          <p className="text-sm text-foreground leading-relaxed mt-1.5">
             {offer.system_description}
           </p>
         </div>
@@ -66,8 +66,8 @@ export default function OfferSummaryCard({ card, onComplete }: OfferSummaryCardP
         {/* Guarantee */}
         <div>
           <SectionLabel>Guarantee</SectionLabel>
-          <div className="mt-1.5 rounded-lg bg-amber-50 border border-amber-100 px-3 py-2">
-            <p className="text-sm text-amber-800">
+          <div className="mt-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2">
+            <p className="text-sm text-amber-300">
               {offer.guarantee_text || "No guarantee set"}
             </p>
           </div>
@@ -76,7 +76,7 @@ export default function OfferSummaryCard({ card, onComplete }: OfferSummaryCardP
         {/* CTA */}
         <Button
           onClick={handleBuild}
-          className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-base mt-2"
+          className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-bold text-base mt-2"
         >
           Build My System →
         </Button>
@@ -87,7 +87,7 @@ export default function OfferSummaryCard({ card, onComplete }: OfferSummaryCardP
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">
+    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
       {children}
     </p>
   );
@@ -95,9 +95,9 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function PriceChip({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-zinc-50 border border-zinc-200 px-3 py-2 text-center flex-1">
-      <p className="text-sm font-bold text-zinc-800">{value}</p>
-      <p className="text-xs text-zinc-400 mt-0.5">{label}</p>
+    <div className="rounded-lg bg-muted border border-border px-3 py-2 text-center flex-1">
+      <p className="text-sm font-bold text-foreground">{value}</p>
+      <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
     </div>
   );
 }

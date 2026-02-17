@@ -30,7 +30,7 @@ export default function SystemReadyCard({ card, onComplete }: SystemReadyCardPro
       <div className="flex flex-col items-center gap-3 py-2">
         <div
           className={cn(
-            "flex size-16 items-center justify-center rounded-full bg-emerald-500 shadow-lg shadow-emerald-200 transition-all duration-500",
+            "flex size-16 items-center justify-center rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/20 transition-all duration-500",
             checkmarkVisible
               ? "scale-100 opacity-100"
               : "scale-0 opacity-0"
@@ -60,10 +60,10 @@ export default function SystemReadyCard({ card, onComplete }: SystemReadyCardPro
             />
           </svg>
         </div>
-        <h2 className="text-xl font-bold text-zinc-900 text-center">
+        <h2 className="text-xl font-bold text-foreground text-center font-serif italic">
           Your System Is Ready!
         </h2>
-        <p className="text-sm text-zinc-500 text-center max-w-xs">
+        <p className="text-sm text-muted-foreground text-center max-w-xs">
           Your AI-powered demo page is live. Share it with prospects to instantly
           qualify leads.
         </p>
@@ -74,13 +74,13 @@ export default function SystemReadyCard({ card, onComplete }: SystemReadyCardPro
         href={card.demoUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-3 rounded-xl border-2 border-indigo-200 bg-indigo-50 px-4 py-3.5 hover:bg-indigo-100 transition-colors group"
+        className="flex items-center gap-3 rounded-xl border-2 border-primary/30 bg-primary/10 px-4 py-3.5 hover:bg-primary/15 transition-colors group"
       >
-        <Lock className="size-4 text-indigo-400 shrink-0" />
-        <span className="flex-1 text-sm font-medium text-indigo-700 break-all">
+        <Lock className="size-4 text-primary/60 shrink-0" />
+        <span className="flex-1 text-sm font-medium text-primary break-all">
           {card.demoUrl}
         </span>
-        <ExternalLink className="size-4 text-indigo-400 shrink-0 group-hover:text-indigo-600 transition-colors" />
+        <ExternalLink className="size-4 text-primary/60 shrink-0 group-hover:text-primary transition-colors" />
       </a>
 
       {/* Offer highlights */}
@@ -97,8 +97,8 @@ export default function SystemReadyCard({ card, onComplete }: SystemReadyCardPro
       </div>
 
       {/* What to do now */}
-      <div className="rounded-xl border border-zinc-200 bg-white p-4 space-y-3">
-        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
+      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           What to do now
         </p>
         <ol className="space-y-2.5">
@@ -108,10 +108,10 @@ export default function SystemReadyCard({ card, onComplete }: SystemReadyCardPro
             "Check your dashboard for submissions — track qualified leads as they come in.",
           ].map((step, i) => (
             <li key={i} className="flex gap-3 items-start">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-600 mt-0.5">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary mt-0.5">
                 {i + 1}
               </span>
-              <p className="text-sm text-zinc-700 leading-snug">{step}</p>
+              <p className="text-sm text-foreground leading-snug">{step}</p>
             </li>
           ))}
         </ol>
@@ -120,7 +120,7 @@ export default function SystemReadyCard({ card, onComplete }: SystemReadyCardPro
       {/* Dashboard button */}
       <Button
         onClick={() => router.push("/dashboard")}
-        className="w-full h-12 bg-zinc-900 hover:bg-zinc-700 text-white rounded-xl font-semibold text-base gap-2"
+        className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold text-base gap-2"
       >
         <LayoutDashboard className="size-4" />
         Go to Dashboard
@@ -131,9 +131,9 @@ export default function SystemReadyCard({ card, onComplete }: SystemReadyCardPro
 
 function HighlightChip({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-zinc-50 border border-zinc-200 px-3 py-1.5">
-      <span className="text-xs text-zinc-400">{label}: </span>
-      <span className="text-xs font-semibold text-zinc-700">{value}</span>
+    <div className="rounded-lg bg-muted border border-border px-3 py-1.5">
+      <span className="text-xs text-muted-foreground">{label}: </span>
+      <span className="text-xs font-semibold text-foreground">{value}</span>
     </div>
   );
 }

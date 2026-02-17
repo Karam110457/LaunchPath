@@ -56,11 +56,11 @@ export default function TextInputCard({
   return (
     <div className="max-w-[600px] w-full space-y-3">
       {/* Question header */}
-      <p className="text-sm font-semibold text-zinc-800">{card.question}</p>
+      <p className="text-sm font-semibold text-foreground font-serif italic">{card.question}</p>
 
       {/* Hint */}
       {card.hint && (
-        <p className="text-xs text-zinc-400">{card.hint}</p>
+        <p className="text-xs text-muted-foreground">{card.hint}</p>
       )}
 
       {/* Input */}
@@ -73,7 +73,7 @@ export default function TextInputCard({
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
           className={cn(
-            "resize-none rounded-xl border-zinc-200 text-sm focus-visible:ring-indigo-500",
+            "resize-none rounded-xl border-border bg-card text-foreground text-sm focus-visible:ring-primary",
             "min-h-[44px]"
           )}
         />
@@ -86,7 +86,7 @@ export default function TextInputCard({
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
           className={cn(
-            "rounded-xl border-zinc-200 text-sm focus-visible:ring-indigo-500",
+            "rounded-xl border-border bg-card text-foreground text-sm focus-visible:ring-primary",
             "h-11"
           )}
         />
@@ -95,7 +95,7 @@ export default function TextInputCard({
       {/* Submit */}
       <div className="flex justify-end gap-2">
         {card.multiline && (
-          <span className="self-center text-xs text-zinc-400">
+          <span className="self-center text-xs text-muted-foreground">
             Cmd+Enter to submit
           </span>
         )}
@@ -103,7 +103,7 @@ export default function TextInputCard({
           size="sm"
           onClick={handleSubmit}
           disabled={isEmpty}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           Submit
         </Button>

@@ -62,7 +62,7 @@ export default function OptionSelectorCard({
   return (
     <div className="max-w-[600px] w-full space-y-3">
       {/* Question header */}
-      <p className="text-sm font-semibold text-zinc-800">{card.question}</p>
+      <p className="text-sm font-semibold text-foreground font-serif italic">{card.question}</p>
 
       {/* Options grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -77,8 +77,8 @@ export default function OptionSelectorCard({
                 "relative flex flex-col items-start gap-0.5 rounded-xl border-2 px-4 py-3 text-left transition-all duration-150",
                 "min-h-[44px] cursor-pointer",
                 isSelected
-                  ? "border-indigo-500 bg-indigo-50 text-indigo-900"
-                  : "border-zinc-200 bg-white text-zinc-800 hover:border-zinc-300 hover:bg-zinc-50"
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-card text-foreground hover:border-primary/30 hover:bg-muted"
               )}
             >
               {/* Multi-select checkmark */}
@@ -87,16 +87,16 @@ export default function OptionSelectorCard({
                   className={cn(
                     "absolute right-3 top-3 flex size-4 items-center justify-center rounded-full border-2 transition-colors",
                     isSelected
-                      ? "border-indigo-500 bg-indigo-500"
-                      : "border-zinc-300 bg-white"
+                      ? "border-primary bg-primary"
+                      : "border-border bg-card"
                   )}
                 >
                   {isSelected && <Check className="size-2.5 text-white" strokeWidth={3} />}
                 </span>
               )}
-              <span className="text-sm font-semibold pr-6">{option.label}</span>
+              <span className="text-sm font-semibold pr-6 font-serif italic">{option.label}</span>
               {option.description && (
-                <span className="text-xs text-zinc-500">{option.description}</span>
+                <span className="text-xs text-muted-foreground">{option.description}</span>
               )}
             </button>
           );
@@ -106,7 +106,7 @@ export default function OptionSelectorCard({
       {/* Multi-select submit */}
       {isMulti && (
         <div className="flex items-center gap-3 pt-1">
-          <span className="text-xs text-zinc-400">
+          <span className="text-xs text-muted-foreground">
             {selected.length} selected
             {maxSelect < card.options.length && ` (max ${maxSelect})`}
           </span>
@@ -114,7 +114,7 @@ export default function OptionSelectorCard({
             size="sm"
             onClick={handleSubmit}
             disabled={selected.length === 0}
-            className="ml-auto bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="ml-auto bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             Submit
           </Button>

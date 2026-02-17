@@ -59,9 +59,9 @@ export default function EditableContentCard({
     <div className="max-w-[600px] w-full space-y-4">
       {/* Header */}
       <div>
-        <h3 className="text-sm font-bold text-zinc-800">{card.title}</h3>
+        <h3 className="text-sm font-bold text-foreground font-serif italic">{card.title}</h3>
         {card.subtitle && (
-          <p className="text-xs text-zinc-500 mt-0.5">{card.subtitle}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{card.subtitle}</p>
         )}
       </div>
 
@@ -86,7 +86,7 @@ export default function EditableContentCard({
       <Button
         onClick={handleConfirm}
         disabled={editingField !== null}
-        className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-base"
+        className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold text-base"
       >
         {card.confirmLabel ?? "Looks good →"}
       </Button>
@@ -126,20 +126,20 @@ function FieldRow({
   }
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
       {/* Field header */}
       <div className="px-3 pt-3 pb-1 flex items-start justify-between gap-2">
         <div>
-          <p className="text-xs font-semibold text-zinc-700">{field.label}</p>
+          <p className="text-xs font-semibold text-foreground">{field.label}</p>
           {field.hint && (
-            <p className="text-xs text-zinc-400 mt-0.5">{field.hint}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{field.hint}</p>
           )}
         </div>
         {!isEditing && (
           <button
             type="button"
             onClick={onStartEdit}
-            className="shrink-0 flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors min-h-[32px]"
+            className="shrink-0 flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors min-h-[32px]"
           >
             <Pencil className="size-3" />
             Edit
@@ -158,12 +158,12 @@ function FieldRow({
                 value={draftValue}
                 onChange={(e) => onDraftChange(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="resize-none rounded-lg border-zinc-200 text-sm focus-visible:ring-indigo-500"
+                className="resize-none rounded-lg border-border bg-muted text-foreground text-sm focus-visible:ring-primary"
               />
             ) : (
               <div className="flex items-center gap-1">
                 {field.prefix && (
-                  <span className="text-sm font-semibold text-zinc-500">
+                  <span className="text-sm font-semibold text-muted-foreground">
                     {field.prefix}
                   </span>
                 )}
@@ -173,7 +173,7 @@ function FieldRow({
                   value={draftValue}
                   onChange={(e) => onDraftChange(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="h-9 rounded-lg border-zinc-200 text-sm focus-visible:ring-indigo-500"
+                  className="h-9 rounded-lg border-border bg-muted text-foreground text-sm focus-visible:ring-primary"
                 />
               </div>
             )}
@@ -181,7 +181,7 @@ function FieldRow({
               <button
                 type="button"
                 onClick={onCancelEdit}
-                className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs text-zinc-500 hover:bg-zinc-100 transition-colors"
+                className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted transition-colors"
               >
                 <X className="size-3" />
                 Cancel
@@ -189,7 +189,7 @@ function FieldRow({
               <button
                 type="button"
                 onClick={onConfirmEdit}
-                className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
               >
                 <Check className="size-3" />
                 Save
@@ -197,15 +197,15 @@ function FieldRow({
             </div>
           </div>
         ) : (
-          <div className="rounded-lg bg-zinc-50 border border-zinc-100 px-3 py-2 min-h-[36px]">
-            <p className="text-sm text-zinc-800 break-words">
+          <div className="rounded-lg bg-muted border border-border px-3 py-2 min-h-[36px]">
+            <p className="text-sm text-foreground break-words">
               {field.prefix && (
-                <span className="font-semibold text-zinc-500 mr-0.5">
+                <span className="font-semibold text-muted-foreground mr-0.5">
                   {field.prefix}
                 </span>
               )}
               {currentValue || (
-                <span className="text-zinc-400 italic">Not set</span>
+                <span className="text-muted-foreground italic">Not set</span>
               )}
             </p>
           </div>

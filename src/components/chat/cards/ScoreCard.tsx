@@ -61,7 +61,7 @@ export default function ScoreCard({
       {/* Secondary recommendations */}
       {secondaries.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide px-1">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">
             Other options
           </p>
           {secondaries.map((rec, i) => (
@@ -92,16 +92,16 @@ function PrimaryCard({
   onChoose: () => void;
 }) {
   return (
-    <div className="rounded-2xl border-2 border-indigo-200 bg-white overflow-hidden shadow-sm">
+    <div className="rounded-2xl border-2 border-primary/30 bg-card overflow-hidden shadow-sm">
       {/* Header */}
-      <div className="bg-gradient-to-br from-indigo-600 to-violet-600 px-5 py-4">
+      <div className="bg-gradient-to-br from-primary to-emerald-700 px-5 py-4">
         <div className="flex items-start justify-between gap-2">
           <div className="space-y-1">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-semibold text-white">
               <Star className="size-3" />
               #1 Recommended
             </span>
-            <h3 className="text-lg font-bold text-white leading-tight">{rec.niche}</h3>
+            <h3 className="text-lg font-bold text-white leading-tight font-serif italic">{rec.niche}</h3>
           </div>
           <ScoreBadge score={rec.score} large />
         </div>
@@ -114,7 +114,7 @@ function PrimaryCard({
 
         {/* Who you help */}
         <InfoSection
-          icon={<Users className="size-4 text-indigo-400" />}
+          icon={<Users className="size-4 text-primary" />}
           label="Who you help"
           text={rec.target_segment.description}
         />
@@ -137,20 +137,20 @@ function PrimaryCard({
         <RevenueSection revenue={rec.revenue_potential} />
 
         {/* Strategic insight */}
-        <p className="text-sm italic text-zinc-500 border-l-2 border-zinc-200 pl-3">
+        <p className="text-sm italic text-muted-foreground border-l-2 border-border pl-3">
           {rec.strategic_insight}
         </p>
 
         {/* Why for you */}
-        <div className="rounded-xl bg-indigo-50 border border-indigo-100 px-4 py-3">
-          <p className="text-xs font-semibold text-indigo-600 mb-1">Why this fits you</p>
-          <p className="text-sm text-indigo-900">{rec.why_for_you}</p>
+        <div className="rounded-xl bg-primary/10 border border-primary/20 px-4 py-3">
+          <p className="text-xs font-semibold text-primary mb-1">Why this fits you</p>
+          <p className="text-sm text-foreground">{rec.why_for_you}</p>
         </div>
 
         {/* CTA */}
         <Button
           onClick={onChoose}
-          className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-base"
+          className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold text-base"
         >
           Choose This Niche →
         </Button>
@@ -177,33 +177,33 @@ function SecondaryCard({
   onChoose: () => void;
 }) {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
       {/* Accordion header */}
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-zinc-50 transition-colors min-h-[56px]"
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted transition-colors min-h-[56px]"
       >
         <div className="flex items-center gap-3">
-          <span className="text-xs font-bold text-zinc-400">#{rank}</span>
-          <span className="text-sm font-semibold text-zinc-800">{rec.niche}</span>
+          <span className="text-xs font-bold text-muted-foreground">#{rank}</span>
+          <span className="text-sm font-semibold text-foreground font-serif italic">{rec.niche}</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <ScoreBadge score={rec.score} />
           {isExpanded ? (
-            <ChevronUp className="size-4 text-zinc-400" />
+            <ChevronUp className="size-4 text-muted-foreground" />
           ) : (
-            <ChevronDown className="size-4 text-zinc-400" />
+            <ChevronDown className="size-4 text-muted-foreground" />
           )}
         </div>
       </button>
 
       {/* Expanded body */}
       {isExpanded && (
-        <div className="border-t border-zinc-100 p-4 space-y-4">
+        <div className="border-t border-border p-4 space-y-4">
           <ScoreBarsSection scores={rec.segment_scores} />
           <InfoSection
-            icon={<Users className="size-4 text-indigo-400" />}
+            icon={<Users className="size-4 text-primary" />}
             label="Who you help"
             text={rec.target_segment.description}
           />
@@ -218,14 +218,14 @@ function SecondaryCard({
             text={rec.your_solution}
           />
           <RevenueSection revenue={rec.revenue_potential} />
-          <div className="rounded-xl bg-indigo-50 border border-indigo-100 px-4 py-3">
-            <p className="text-xs font-semibold text-indigo-600 mb-1">Why this fits you</p>
-            <p className="text-sm text-indigo-900">{rec.why_for_you}</p>
+          <div className="rounded-xl bg-primary/10 border border-primary/20 px-4 py-3">
+            <p className="text-xs font-semibold text-primary mb-1">Why this fits you</p>
+            <p className="text-sm text-foreground">{rec.why_for_you}</p>
           </div>
           <Button
             onClick={onChoose}
             variant="outline"
-            className="w-full h-11 border-indigo-300 text-indigo-700 hover:bg-indigo-50 rounded-xl font-semibold"
+            className="w-full h-11 border-primary/30 text-primary hover:bg-primary/10 rounded-xl font-semibold"
           >
             Choose This Niche →
           </Button>
@@ -242,10 +242,10 @@ function SecondaryCard({
 function ScoreBadge({ score, large = false }: { score: number; large?: boolean }) {
   const color =
     score >= 80
-      ? "bg-emerald-100 text-emerald-700"
+      ? "bg-emerald-500/20 text-emerald-400"
       : score >= 60
-      ? "bg-amber-100 text-amber-700"
-      : "bg-zinc-100 text-zinc-600";
+      ? "bg-amber-500/20 text-amber-400"
+      : "bg-muted text-muted-foreground";
 
   return (
     <span
@@ -267,7 +267,7 @@ function ScoreBarsSection({
 }) {
   return (
     <div className="space-y-2.5">
-      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
         Score breakdown
       </p>
       {SCORE_BARS.map(({ key, label, icon: Icon }) => (
@@ -314,22 +314,22 @@ function ScoreBar({
     pct >= 80
       ? "bg-emerald-400"
       : pct >= 60
-      ? "bg-indigo-400"
+      ? "bg-primary"
       : pct >= 40
       ? "bg-amber-400"
-      : "bg-zinc-300";
+      : "bg-muted-foreground";
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-zinc-400 shrink-0">{icon}</span>
-      <span className="w-32 text-xs text-zinc-600 shrink-0 truncate">{label}</span>
-      <div className="flex-1 h-2 rounded-full bg-zinc-100 overflow-hidden">
+      <span className="text-muted-foreground shrink-0">{icon}</span>
+      <span className="w-32 text-xs text-muted-foreground shrink-0 truncate">{label}</span>
+      <div className="flex-1 h-2 rounded-full bg-border overflow-hidden">
         <div
           className={cn("h-full rounded-full transition-all duration-700 ease-out", barColor)}
           style={{ width: `${width}%` }}
         />
       </div>
-      <span className="text-xs font-semibold text-zinc-600 w-9 text-right tabular-nums shrink-0">
+      <span className="text-xs font-semibold text-foreground w-9 text-right tabular-nums shrink-0">
         {value}/{max}
       </span>
     </div>
@@ -349,9 +349,9 @@ function InfoSection({
     <div className="space-y-1">
       <div className="flex items-center gap-1.5">
         {icon}
-        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">{label}</p>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</p>
       </div>
-      <p className="text-sm text-zinc-700 leading-relaxed">{text}</p>
+      <p className="text-sm text-foreground leading-relaxed">{text}</p>
     </div>
   );
 }
@@ -363,7 +363,7 @@ function RevenueSection({
 }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
         Revenue potential
       </p>
       <div className="flex flex-wrap gap-2">
@@ -389,14 +389,14 @@ function StatChip({
       className={cn(
         "rounded-lg px-3 py-2 text-center",
         highlight
-          ? "bg-emerald-50 border border-emerald-200"
-          : "bg-zinc-50 border border-zinc-200"
+          ? "bg-emerald-500/10 border border-emerald-500/20"
+          : "bg-muted border border-border"
       )}
     >
-      <p className={cn("text-xs font-semibold", highlight ? "text-emerald-700" : "text-zinc-700")}>
+      <p className={cn("text-xs font-semibold", highlight ? "text-emerald-400" : "text-foreground")}>
         {value}
       </p>
-      <p className="text-xs text-zinc-400 mt-0.5">{label}</p>
+      <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
     </div>
   );
 }

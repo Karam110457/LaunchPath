@@ -33,19 +33,19 @@ export function ThinkingBubble({ thinkingText, isThinking }: ThinkingBubbleProps
           onClick={() => setIsExpanded(!isExpanded)}
           className={cn(
             "flex items-center gap-2 text-xs transition-colors rounded-lg px-3 py-2",
-            "bg-zinc-50 hover:bg-zinc-100 text-zinc-500",
+            "bg-card hover:bg-muted text-muted-foreground",
             isThinking && "animate-pulse"
           )}
         >
-          <Brain className="w-3.5 h-3.5 text-zinc-400" />
+          <Brain className="w-3.5 h-3.5 text-muted-foreground" />
           <span className="font-medium">
             {isThinking ? "Thinking..." : "Thought process"}
           </span>
           {isThinking && (
             <span className="flex gap-0.5 ml-1">
-              <span className="w-1 h-1 rounded-full bg-zinc-400 animate-bounce [animation-delay:0ms]" />
-              <span className="w-1 h-1 rounded-full bg-zinc-400 animate-bounce [animation-delay:150ms]" />
-              <span className="w-1 h-1 rounded-full bg-zinc-400 animate-bounce [animation-delay:300ms]" />
+              <span className="w-1 h-1 rounded-full bg-muted-foreground animate-bounce [animation-delay:0ms]" />
+              <span className="w-1 h-1 rounded-full bg-muted-foreground animate-bounce [animation-delay:150ms]" />
+              <span className="w-1 h-1 rounded-full bg-muted-foreground animate-bounce [animation-delay:300ms]" />
             </span>
           )}
           <ChevronDown
@@ -59,9 +59,9 @@ export function ThinkingBubble({ thinkingText, isThinking }: ThinkingBubbleProps
         {isExpanded && thinkingText && (
           <div
             ref={textRef}
-            className="mt-1 px-3 py-2 bg-zinc-50 rounded-lg border border-zinc-100 max-h-[200px] overflow-y-auto"
+            className="mt-1 px-3 py-2 bg-muted rounded-lg border border-border max-h-[200px] overflow-y-auto"
           >
-            <p className="text-[11px] leading-relaxed text-zinc-400 whitespace-pre-wrap font-mono">
+            <p className="text-[11px] leading-relaxed text-muted-foreground whitespace-pre-wrap font-mono">
               {thinkingText}
             </p>
           </div>

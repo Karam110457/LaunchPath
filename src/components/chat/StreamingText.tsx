@@ -38,14 +38,14 @@ export function StreamingText({ content, isStreaming }: StreamingTextProps) {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-indigo-600 underline hover:text-indigo-800"
+              className="text-primary underline hover:text-primary/80"
             >
               {children}
             </a>
           ),
           // Code
           code: ({ children }) => (
-            <code className="bg-zinc-100 px-1 py-0.5 rounded text-sm">
+            <code className="bg-muted px-1 py-0.5 rounded text-sm">
               {children}
             </code>
           ),
