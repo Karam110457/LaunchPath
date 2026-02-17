@@ -372,14 +372,18 @@ export function useChatStream({
     (text: string, addBubble = true) => {
       if (isStreaming) return;
 
-      // Show the user message in the chat (unless it's a system signal or card already added it)
-      if (addBubble && text !== "[CONVERSATION_START]") {
+      // Show the user message in the chat (unless a card already added it).
+      // [CONVERSATION_START] is a system trigger — show "Start Business →" as the visible label.
+      const displayText =
+        text === "[CONVERSATION_START]" ? "Start Business →" : text;
+
+      if (addBubble) {
         setMessages((prev) => [
           ...prev,
           {
             id: generateId(),
             role: "user" as const,
-            content: text,
+            content: displayText,
             timestamp: now(),
           },
         ]);
