@@ -111,11 +111,10 @@ export async function POST(
         stopWhen: stepCountIs(20),
         providerOptions: {
           anthropic: {
-            // Small thinking budget — just enough for tool-selection reasoning.
-            // A large budget causes Claude to externalise all depth into the invisible
-            // thinking block, leaving terse plain-text output. We want the substance
-            // in the actual response text, not hidden reasoning.
-            thinking: { type: "enabled", budgetTokens: 1500 },
+            // Thinking disabled — enabling it (even at a small budget) causes Claude
+            // to offload reasoning into the invisible thinking block, producing terse
+            // plain-text output. We want all substance in the visible response text.
+            thinking: { type: "disabled" },
           },
         },
         async onFinish({ response }) {
