@@ -43,6 +43,13 @@ const OUTREACH_LABELS: Record<string, string> = {
   love_sales: "loves sales and outreach",
 };
 
+const TECHNICAL_LABELS: Record<string, string> = {
+  use_apps: "uses apps but not a tech person",
+  used_tools: "has used no-code tools before",
+  built_basic: "has built basic things (Zapier, simple sites)",
+  can_code: "can code or is technically confident",
+};
+
 const BLOCKER_LABELS: Record<string, string> = {
   no_offer: "doesn't have a clear offer",
   cant_find_clients: "struggles to find prospects",
@@ -112,6 +119,7 @@ Situation: ${SITUATION_LABELS[profile.current_situation ?? ""] ?? profile.curren
 Time available: ${TIME_LABELS[profile.time_availability ?? ""] ?? profile.time_availability ?? "unknown"}
 Revenue goal: ${REVENUE_LABELS[profile.revenue_goal ?? ""] ?? profile.revenue_goal ?? "unknown"}
 Sales comfort: ${OUTREACH_LABELS[profile.outreach_comfort ?? ""] ?? profile.outreach_comfort ?? "unknown"}
+Technical comfort: ${TECHNICAL_LABELS[profile.technical_comfort ?? ""] ?? profile.technical_comfort ?? "unknown"}
 Blockers: ${blockerDescriptions || "none specified"}
 
 Use this data actively. Reference it naturally — not by reciting it back, but by letting it shape what you say.

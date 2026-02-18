@@ -164,6 +164,7 @@ export function ChatContainer({
               key={message.id}
               message={message}
               onCardComplete={onCardComplete}
+              isStreaming={isStreaming}
             />
           ))}
 

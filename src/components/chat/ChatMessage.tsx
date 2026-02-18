@@ -26,9 +26,10 @@ import SystemReadyCard from "./cards/SystemReadyCard";
 interface ChatMessageProps {
   message: ChatMessageType;
   onCardComplete: (cardId: string, displayText: string, structuredMessage: string) => void;
+  isStreaming?: boolean;
 }
 
-export function ChatMessage({ message, onCardComplete }: ChatMessageProps) {
+export function ChatMessage({ message, onCardComplete, isStreaming }: ChatMessageProps) {
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
@@ -71,8 +72,13 @@ export function ChatMessage({ message, onCardComplete }: ChatMessageProps) {
     onCardComplete(card.id, displayText, structuredMessage);
   };
 
+  // Block interactions on incomplete cards while the agent is still streaming.
+  // Without this, clicking a card mid-stream sends a response before the agent
+  // has finished its turn, causing the next exchange to be processed out of order.
+  const cardBlocked = isStreaming && !completed;
+
   return (
-    <div>
+    <div className={cardBlocked ? "pointer-events-none select-none opacity-60" : ""}>
       {(() => {
         switch (card.type) {
           case "option-selector":
