@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { RotateCcw, Bot, Rocket, ArrowRight } from "lucide-react";
+import { RotateCcw, Rocket, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ChatMessage as ChatMessageType } from "@/lib/chat/types";
 import { ChatMessage } from "./ChatMessage";
@@ -65,25 +65,44 @@ export function ChatContainer({
 
   if (isLanding) {
     return (
-      <div className="flex flex-col h-full overflow-hidden bg-background">
+      <div className="flex flex-col h-full overflow-hidden bg-background relative">
+        {/* Ambient radial glow — barely perceptible, blooms from centre */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          aria-hidden
+          style={{
+            background: "radial-gradient(ellipse 80% 60% at 50% 55%, oklch(0.60 0.16 165 / 0.05) 0%, transparent 70%)",
+            animation: "ambient-breathe 5s ease-in-out infinite",
+          }}
+        />
+
         {/* Minimal header */}
-        <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background z-10 flex-shrink-0">
+        <header className="relative flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur-sm z-10 flex-shrink-0">
           <span className="text-sm font-semibold text-foreground tracking-tight">Start your business</span>
         </header>
 
         {/* Centered hero */}
-        <div className="flex-1 flex flex-col items-center justify-center px-4 pb-16">
-          {/* Bot icon */}
-          <div className="flex size-16 items-center justify-center rounded-full bg-primary/15 border border-primary/30 shadow-lg shadow-primary/10 mb-6">
-            <Bot className="size-7 text-primary" />
-          </div>
-
-          {/* Heading */}
-          <h1 className="text-3xl font-bold text-foreground text-center mb-2 font-serif italic">
-            What business do you want to build?
+        <div className="relative flex-1 flex flex-col items-center justify-center px-4 pb-16">
+          {/* Heading — word-by-word reveal at display scale */}
+          <h1 className="text-4xl sm:text-5xl font-bold text-foreground text-center mb-3 font-serif italic leading-tight max-w-sm">
+            {["What", "business", "do", "you", "want", "to", "build?"].map((word, i) => (
+              <span
+                key={word + i}
+                className="inline-block"
+                style={{
+                  marginRight: "0.22em",
+                  animation: `heading-word-enter 450ms cubic-bezier(0.34, 1.56, 0.64, 1) ${i * 65}ms both`,
+                }}
+              >
+                {word}
+              </span>
+            ))}
           </h1>
-          <p className="text-sm text-muted-foreground text-center max-w-sm mb-10">
-            Click below to start your guided AI session.
+          <p
+            className="text-sm text-muted-foreground text-center max-w-sm mb-10"
+            style={{ animation: "heading-word-enter 400ms ease 500ms both" }}
+          >
+            Answer a few questions and we&apos;ll build your AI-powered offer and launch system.
           </p>
 
           {/* Input trigger + preset panel */}
@@ -102,7 +121,7 @@ export function ChatContainer({
                 readOnly
                 onFocus={handleLandingFocus}
                 onBlur={handleLandingBlur}
-                placeholder="Click to get started…"
+                placeholder="Tell me about yourself…"
                 className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/60 outline-none cursor-text"
               />
             </div>

@@ -30,16 +30,28 @@ export default function OfferSummaryCard({ card, onComplete }: OfferSummaryCardP
 
       {/* Body */}
       <div className="p-5 space-y-4">
-        {/* Transformation */}
+        {/* Transformation — sequential reveal: FROM → arrow → TO */}
         <div>
           <SectionLabel>Transformation</SectionLabel>
           <div className="flex items-start gap-2 mt-1.5">
-            <div className="flex-1 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2">
+            {/* BEFORE — enters first */}
+            <div
+              className="flex-1 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 animate-in fade-in slide-in-from-left-2 duration-300"
+              style={{ animationDelay: "0ms", animationFillMode: "both" }}
+            >
               <p className="text-xs font-semibold text-red-400 mb-0.5">From</p>
               <p className="text-sm text-red-300 leading-snug">{offer.transformation_from}</p>
             </div>
-            <ArrowRight className="size-4 text-muted-foreground shrink-0 mt-3" />
-            <div className="flex-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
+            {/* Arrow — materialises after FROM */}
+            <ArrowRight
+              className="size-4 text-muted-foreground shrink-0 mt-3 animate-in fade-in zoom-in-50 duration-300"
+              style={{ animationDelay: "250ms", animationFillMode: "both" }}
+            />
+            {/* AFTER — enters last with a soft glow */}
+            <div
+              className="flex-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 animate-in fade-in slide-in-from-right-2 duration-300"
+              style={{ animationDelay: "420ms", animationFillMode: "both" }}
+            >
               <p className="text-xs font-semibold text-emerald-400 mb-0.5">To</p>
               <p className="text-sm text-emerald-300 leading-snug">{offer.transformation_to}</p>
             </div>

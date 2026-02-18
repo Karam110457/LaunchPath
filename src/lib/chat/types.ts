@@ -123,6 +123,7 @@ export type ChatMessage =
       type: "card";
       card: CardData;
       completed: boolean;
+      completedSummary?: string;
       timestamp: string;
     };
 

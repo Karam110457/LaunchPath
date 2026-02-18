@@ -176,10 +176,50 @@
   50%      { opacity: 0.5; }
 }
 
-/* Thinking glow pulse: soft border glow while reasoning */
+/* Thinking glow pulse: visible border glow while reasoning */
 @keyframes thinking-glow {
   0%, 100% { box-shadow: 0 0 0 0 oklch(0.60 0.16 165 / 0.0); }
-  50% { box-shadow: 0 0 0 2px oklch(0.60 0.16 165 / 0.2), 0 0 16px 0 oklch(0.60 0.16 165 / 0.1); }
+  50% { box-shadow: 0 0 0 3px oklch(0.60 0.16 165 / 0.25), 0 0 20px 2px oklch(0.60 0.16 165 / 0.12); }
+}
+
+/* Word materialise: blur-to-sharp resolve for TypingIndicator phrases */
+@keyframes word-materialise {
+  from { opacity: 0; filter: blur(4px); transform: scale(0.95) translateY(2px); }
+  to   { opacity: 1; filter: blur(0);   transform: scale(1)    translateY(0);   }
+}
+
+/* Score badge pulse: single pulse for #1 Recommended badge on entry */
+@keyframes badge-pulse-once {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.08); }
+  65%  { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+
+/* Step done bounce: icon scale pop when a progress step completes */
+@keyframes step-done-bounce {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.25); }
+  70%  { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+
+/* Confetti fly: particle burst for system-ready celebration */
+@keyframes confetti-fly {
+  0%   { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+  100% { transform: translate(var(--cp-dx, 0px), var(--cp-dy, -80px)) rotate(var(--cp-rot, 180deg)) scale(0.4); opacity: 0; }
+}
+
+/* Ambient breathe: very slow background radial pulse for landing */
+@keyframes ambient-breathe {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.7; }
+}
+
+/* Heading word enter: for word-by-word landing reveal */
+@keyframes heading-word-enter {
+  from { opacity: 0; transform: translateY(8px); filter: blur(3px); }
+  to   { opacity: 1; transform: translateY(0);   filter: blur(0);   }
 }
 
 /*

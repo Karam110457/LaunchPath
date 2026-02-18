@@ -16,11 +16,17 @@ interface InputBarProps {
 
 export function InputBar({ onSend, disabled = false }: InputBarProps) {
   const [value, setValue] = useState("");
+  const [justSent, setJustSent] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const sentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSend = () => {
     const trimmed = value.trim();
     if (!trimmed || disabled) return;
+    // Brief visual feedback before the streaming state kicks in
+    setJustSent(true);
+    if (sentTimerRef.current) clearTimeout(sentTimerRef.current);
+    sentTimerRef.current = setTimeout(() => setJustSent(false), 500);
     onSend(trimmed);
     setValue("");
     if (textareaRef.current) {
@@ -53,7 +59,7 @@ export function InputBar({ onSend, disabled = false }: InputBarProps) {
           "shadow-xl shadow-black/30",
           "transition-all duration-200",
           "focus-within:border-primary/50 focus-within:shadow-primary/5",
-          disabled && "opacity-60"
+          (disabled || justSent) && "opacity-60"
         )}
       >
         <textarea
@@ -77,6 +83,7 @@ export function InputBar({ onSend, disabled = false }: InputBarProps) {
               ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/30"
               : "bg-muted/60 text-muted-foreground cursor-not-allowed"
           )}
+          style={justSent ? { transform: "scale(1.1)", opacity: 0.6 } : undefined}
         >
           <Send className="w-3.5 h-3.5" />
         </button>

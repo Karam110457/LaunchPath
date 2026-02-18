@@ -52,6 +52,12 @@ export function ThinkingBubble({ thinkingText, isThinking }: ThinkingBubbleProps
 
   const displayTime = finalSeconds !== null ? finalSeconds : elapsedSeconds;
 
+  // Time-progressive label: escalates to signal depth, not brokenness
+  const thinkingPhrase =
+    elapsedSeconds >= 15 ? "Working through this…"
+    : elapsedSeconds >= 5 ? "Going deeper…"
+    : "Thinking…";
+
   return (
     <div>
       {/* Pill button */}
@@ -93,12 +99,12 @@ export function ThinkingBubble({ thinkingText, isThinking }: ThinkingBubbleProps
           )}
         </span>
 
-        {/* Label */}
+        {/* Label — escalates language as thinking time grows */}
         <span className="font-medium tracking-tight">
           {isThinking
             ? elapsedSeconds > 0
-              ? `Thinking… ${elapsedSeconds}s`
-              : "Thinking…"
+              ? `${thinkingPhrase} ${elapsedSeconds}s`
+              : thinkingPhrase
             : displayTime !== null && displayTime > 0
               ? `Reasoned for ${displayTime}s`
               : "Thought process"}

@@ -420,6 +420,8 @@ export function useChatStream({
           let buffer = "";
 
           let receivedDone = false;
+          // Track when text-done fired so we can pause before showing a card
+          let lastTextDoneAt = 0;
 
           while (true) {
             const { value, done } = await reader.read();
@@ -440,6 +442,22 @@ export function useChatStream({
                 // Accumulate text for history fallback
                 if (event.type === "text-delta") {
                   accumulatedText += event.delta;
+                }
+
+                // Record when text streaming ends
+                if (event.type === "text-done") {
+                  lastTextDoneAt = Date.now();
+                }
+
+                // 400ms pause between AI text finishing and a card appearing —
+                // the gap between "form spitting out a field" and "mentor thinking,
+                // then asking". Only delay if text was streamed before the card.
+                if (event.type === "card" && lastTextDoneAt > 0) {
+                  const elapsed = Date.now() - lastTextDoneAt;
+                  const remaining = 400 - elapsed;
+                  if (remaining > 0) {
+                    await new Promise<void>((r) => setTimeout(r, remaining));
+                  }
                 }
 
                 if (event.type === "done") {
@@ -519,7 +537,7 @@ export function useChatStream({
    */
   const handleCardResponse = useCallback(
     (cardId: string, displayText: string, structuredMessage: string) => {
-      // Mark the card as completed
+      // Mark the card as completed and store the summary for the collapsed view
       setMessages((prev) =>
         prev.map((msg) => {
           if (
@@ -527,7 +545,7 @@ export function useChatStream({
             msg.type === "card" &&
             msg.card.id === cardId
           ) {
-            return { ...msg, completed: true };
+            return { ...msg, completed: true, completedSummary: displayText };
           }
           return msg;
         })

@@ -66,7 +66,7 @@ export function ChatMessage({ message, onCardComplete, isStreaming }: ChatMessag
   }
 
   // Card message
-  const { card, completed } = message;
+  const { card, completed, completedSummary } = message;
 
   const handleComplete = (displayText: string, structuredMessage: string) => {
     onCardComplete(card.id, displayText, structuredMessage);
@@ -78,7 +78,17 @@ export function ChatMessage({ message, onCardComplete, isStreaming }: ChatMessag
   const cardBlocked = isStreaming && !completed;
 
   return (
-    <div className={cardBlocked ? "pointer-events-none select-none opacity-60" : ""}>
+    // Cards slide up from below with a spring overshoot — they arrive with intention.
+    <div
+      className={cn(
+        "animate-in fade-in slide-in-from-bottom-4 duration-300",
+        cardBlocked && "pointer-events-none select-none opacity-60"
+      )}
+      style={{
+        animationTimingFunction: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        animationFillMode: "both",
+      }}
+    >
       {(() => {
         switch (card.type) {
           case "option-selector":
@@ -112,6 +122,7 @@ export function ChatMessage({ message, onCardComplete, isStreaming }: ChatMessag
               <ScoreCard
                 card={card}
                 completed={completed}
+                completedSummary={completedSummary}
                 onComplete={handleComplete}
               />
             );

@@ -41,12 +41,11 @@ function shuffle<T>(arr: T[]): T[] {
 const SHUFFLED = shuffle(PHRASES);
 
 // Animation applied to each word span:
-// 1. word-enter (250ms, one-shot): fades in from opacity 0 → 1
-// 2. word-breathe (2.2s, 250ms delay, infinite): gentle opacity pulse 1 → 0.55 → 1
-// The delay on word-breathe means it doesn't touch opacity during word-enter's run.
-// Once word-breathe starts it wins (later in animation list = higher precedence).
+// 1. word-materialise (300ms, one-shot): resolves from blur+scale into sharp focus
+// 2. word-breathe (2.2s, 300ms delay, infinite): gentle opacity pulse 1 → 0.55 → 1
+// The delay on word-breathe means it doesn't touch opacity during word-materialise's run.
 const WORD_ANIMATION =
-  "word-enter 250ms ease forwards, word-breathe 2.2s 250ms ease-in-out infinite";
+  "word-materialise 300ms cubic-bezier(0.34, 1.56, 0.64, 1) both, word-breathe 2.2s 300ms ease-in-out infinite";
 
 export function TypingIndicator() {
   const [index, setIndex] = useState(0);
@@ -79,7 +78,7 @@ export function TypingIndicator() {
         className="text-sm font-medium text-primary/90"
         style={
           hiding
-            ? { opacity: 0, transition: "opacity 210ms ease", animation: "none" }
+            ? { opacity: 0, filter: "blur(3px)", transform: "scale(0.96)", transition: "opacity 200ms ease, filter 200ms ease, transform 200ms ease", animation: "none" }
             : { animation: WORD_ANIMATION }
         }
       >
