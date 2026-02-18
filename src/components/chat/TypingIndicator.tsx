@@ -2,23 +2,89 @@
 
 /**
  * TypingIndicator — shown between message send and first token arrival.
- * Three dots with a smooth wave animation in primary/accent color.
+ *
+ * Rotates through a shuffled list of quirky in-progress phrases. Each word
+ * fades in with a short enter animation then breathes with an infinite pulse.
+ * On word change, the current word fades out, the index updates, the span
+ * remounts (key={index}) which resets both CSS animations cleanly.
  */
 
+import { useState, useEffect } from "react";
+
+const PHRASES = [
+  "Thinking...",
+  "Cooking...",
+  "Sussing...",
+  "Scheming...",
+  "Mapping...",
+  "Brewing...",
+  "Plotting...",
+  "Crunching...",
+  "On it...",
+  "Mulling...",
+  "Digging in...",
+  "Connecting dots...",
+  "Figuring...",
+  "Strategising...",
+];
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Shuffle once per session so the order feels fresh each time
+const SHUFFLED = shuffle(PHRASES);
+
+// Animation applied to each word span:
+// 1. word-enter (250ms, one-shot): fades in from opacity 0 → 1
+// 2. word-breathe (2.2s, 250ms delay, infinite): gentle opacity pulse 1 → 0.55 → 1
+// The delay on word-breathe means it doesn't touch opacity during word-enter's run.
+// Once word-breathe starts it wins (later in animation list = higher precedence).
+const WORD_ANIMATION =
+  "word-enter 250ms ease forwards, word-breathe 2.2s 250ms ease-in-out infinite";
+
 export function TypingIndicator() {
+  const [index, setIndex] = useState(0);
+  const [hiding, setHiding] = useState(false);
+
+  useEffect(() => {
+    let pendingTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const interval = setInterval(() => {
+      // Fade out current word
+      setHiding(true);
+      // After fade-out completes, swap word and fade in
+      pendingTimeout = setTimeout(() => {
+        setIndex((i) => (i + 1) % SHUFFLED.length);
+        setHiding(false);
+      }, 210);
+    }, 2400);
+
+    return () => {
+      clearInterval(interval);
+      if (pendingTimeout) clearTimeout(pendingTimeout);
+    };
+  }, []);
+
   return (
-    <div className="flex items-center gap-1.5 py-2" aria-label="Agent is thinking…">
+    <div className="py-1" aria-label="Agent is thinking…">
       <span className="sr-only">Agent is thinking…</span>
-      {[0, 160, 320].map((delay) => (
-        <span
-          key={delay}
-          className="block w-2 h-2 rounded-full bg-primary/60"
-          style={{
-            animation: "dot-wave 1.3s ease-in-out infinite",
-            animationDelay: `${delay}ms`,
-          }}
-        />
-      ))}
+      <span
+        key={index}
+        className="text-sm font-medium text-primary/90"
+        style={
+          hiding
+            ? { opacity: 0, transition: "opacity 210ms ease", animation: "none" }
+            : { animation: WORD_ANIMATION }
+        }
+      >
+        {SHUFFLED[index]}
+      </span>
     </div>
   );
 }

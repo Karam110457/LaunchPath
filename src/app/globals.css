@@ -164,6 +164,18 @@
   to { transform: rotate(360deg); }
 }
 
+/* Word enter: one-shot fade-in for rotating typing indicator phrases */
+@keyframes word-enter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Word breathe: infinite gentle pulse after word-enter completes */
+@keyframes word-breathe {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+
 /* Thinking glow pulse: soft border glow while reasoning */
 @keyframes thinking-glow {
   0%, 100% { box-shadow: 0 0 0 0 oklch(0.60 0.16 165 / 0.0); }
