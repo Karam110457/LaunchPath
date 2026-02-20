@@ -180,8 +180,11 @@ export async function POST(
         },
       });
 
-      // Process the stream — emit text deltas + thinking events to the SSE
+      // Process the stream — emit text deltas + thinking events to the SSE.
+      // We track whether text was being streamed so we can emit text-done
+      // before a tool call (which may emit a card via the closure).
       let wasThinking = false;
+      let wasStreamingText = false;
       for await (const chunk of result.fullStream) {
         if (chunk.type === "reasoning-delta") {
           if (!wasThinking) {
@@ -198,9 +201,21 @@ export async function POST(
             wasThinking = false;
             emit({ type: "thinking-done" });
           }
+          wasStreamingText = true;
           emit({ type: "text-delta", delta: chunk.text });
+        } else {
+          // Any non-text chunk after text (tool-call, step-finish, etc.)
+          // means text output has ended for this step.
+          if (wasStreamingText) {
+            wasStreamingText = false;
+            emit({ type: "text-done" });
+          }
         }
         // tool calls are handled within the tool execute functions (emit via closure)
+      }
+      // If text was the last thing streamed, close it before onFinish
+      if (wasStreamingText) {
+        emit({ type: "text-done" });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";

@@ -422,6 +422,7 @@ export function useChatStream({
           let receivedDone = false;
           // Track when text-done fired so we can pause before showing a card
           let lastTextDoneAt = 0;
+          const streamStartedAt = Date.now();
 
           while (true) {
             const { value, done } = await reader.read();
@@ -449,14 +450,24 @@ export function useChatStream({
                   lastTextDoneAt = Date.now();
                 }
 
-                // 400ms pause between AI text finishing and a card appearing —
-                // the gap between "form spitting out a field" and "mentor thinking,
-                // then asking". Only delay if text was streamed before the card.
-                if (event.type === "card" && lastTextDoneAt > 0) {
-                  const elapsed = Date.now() - lastTextDoneAt;
-                  const remaining = 400 - elapsed;
-                  if (remaining > 0) {
-                    await new Promise<void>((r) => setTimeout(r, remaining));
+                // Ensure cards always appear AFTER text, with a natural pause.
+                // Two scenarios:
+                //   1. Text was streamed first → 400ms gap after text-done
+                //   2. No text (tool called immediately) → 600ms from stream start
+                //      so the typing indicator has time to show
+                if (event.type === "card") {
+                  if (lastTextDoneAt > 0) {
+                    const elapsed = Date.now() - lastTextDoneAt;
+                    const remaining = 400 - elapsed;
+                    if (remaining > 0) {
+                      await new Promise<void>((r) => setTimeout(r, remaining));
+                    }
+                  } else {
+                    const elapsed = Date.now() - streamStartedAt;
+                    const remaining = 600 - elapsed;
+                    if (remaining > 0) {
+                      await new Promise<void>((r) => setTimeout(r, remaining));
+                    }
                   }
                 }
 
