@@ -48,15 +48,17 @@ interface UseChatStreamReturn {
   startOver: () => void;
 }
 
-/** Strip tool markers and meta-text from assistant display text */
+/** Strip tool markers and meta-text from assistant display text.
+ *  Uses [\s\S] instead of [^\]] so markers split across lines are caught
+ *  (e.g. "[tools:show_offer_review\n\n]"). */
 function stripToolMarkers(text: string): string {
   return text
-    .replace(/\[tools?:[^\]]*\]/gi, "")
-    .replace(/\[card[^\]]*\]/gi, "")
-    .replace(/\[tool_?call[^\]]*\]/gi, "")
-    .replace(/\[tool[^\]]*\]/gi, "")
-    .replace(/\[awaiting[^\]]*\]/gi, "")
-    .replace(/\[waiting[^\]]*\]/gi, "")
+    .replace(/\[tools?:[\s\S]*?\]/gi, "")
+    .replace(/\[card[\s\S]*?\]/gi, "")
+    .replace(/\[tool_?call[\s\S]*?\]/gi, "")
+    .replace(/\[tool[\s\S]*?\]/gi, "")
+    .replace(/\[awaiting[\s\S]*?\]/gi, "")
+    .replace(/\[waiting[\s\S]*?\]/gi, "")
     .trim();
 }
 
@@ -281,26 +283,36 @@ export function useChatStream({
         }
 
         case "text-done": {
-          setMessages((prev) =>
-            prev.map((msg) => {
-              if (msg.id === streamingMessageIdRef.current && msg.role === "assistant" && msg.type === "text") {
-                return { ...msg, isStreaming: false };
-              }
-              return msg;
-            })
-          );
+          // Finalize the streaming message — strip any tool markers that leaked
+          // into the model output and remove the message entirely if empty.
+          setMessages((prev) => {
+            const sid = streamingMessageIdRef.current;
+            return prev
+              .map((msg) => {
+                if (msg.id === sid && msg.role === "assistant" && msg.type === "text") {
+                  const cleaned = stripToolMarkers(msg.content);
+                  return { ...msg, content: cleaned, isStreaming: false };
+                }
+                return msg;
+              })
+              .filter((msg) => !(msg.id === sid && msg.role === "assistant" && msg.type === "text" && !msg.content));
+          });
           streamingMessageIdRef.current = null;
           break;
         }
 
         case "card": {
           if (streamingMessageIdRef.current) {
+            // Finalize any in-progress text — strip markers, drop if empty
+            const sid = streamingMessageIdRef.current;
             setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === streamingMessageIdRef.current && msg.role === "assistant" && msg.type === "text"
-                  ? { ...msg, isStreaming: false }
-                  : msg
-              )
+              prev
+                .map((msg) =>
+                  msg.id === sid && msg.role === "assistant" && msg.type === "text"
+                    ? { ...msg, content: stripToolMarkers(msg.content), isStreaming: false }
+                    : msg
+                )
+                .filter((msg) => !(msg.id === sid && msg.role === "assistant" && msg.type === "text" && !msg.content))
             );
             streamingMessageIdRef.current = null;
           }
@@ -326,12 +338,15 @@ export function useChatStream({
 
         case "done": {
           if (streamingMessageIdRef.current) {
+            const sid = streamingMessageIdRef.current;
             setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === streamingMessageIdRef.current && msg.role === "assistant" && msg.type === "text"
-                  ? { ...msg, isStreaming: false }
-                  : msg
-              )
+              prev
+                .map((msg) =>
+                  msg.id === sid && msg.role === "assistant" && msg.type === "text"
+                    ? { ...msg, content: stripToolMarkers(msg.content), isStreaming: false }
+                    : msg
+                )
+                .filter((msg) => !(msg.id === sid && msg.role === "assistant" && msg.type === "text" && !msg.content))
             );
             streamingMessageIdRef.current = null;
           }
