@@ -5,15 +5,11 @@
 
 import type { AgentConfig } from "./types";
 
-const DEMO_OUTPUT_SCHEMA = `Return ONLY valid JSON matching this structure:
-{
-  "priority": "HIGH" | "MEDIUM" | "LOW",
-  "score": number (0-100),
-  "estimated_value": "string — monetary value estimate",
-  "fit_analysis": { "key": "value" — 3-5 key assessment dimensions },
-  "insights": ["string — 3-5 specific observations about this lead/request"],
-  "next_steps": ["string — 2-3 recommended actions"]
-}`;
+const DEMO_QUALITY_RULES = `## Quality Rules
+- Provide 3-5 specific observations in insights, not generic statements.
+- next_steps must be actionable — things the business can do immediately.
+- estimated_value should be a realistic monetary figure for this specific request.
+- fit_analysis dimensions should be relevant to this niche (e.g., urgency, budget fit, job scope).`;
 
 export const NICHE_AGENTS: Record<string, AgentConfig> = {
   roofing: {
@@ -34,7 +30,7 @@ export const NICHE_AGENTS: Record<string, AgentConfig> = {
 - MEDIUM (50-79): Decent job or moderate urgency
 - LOW (0-49): Small repair, no urgency, or outside area
 
-${DEMO_OUTPUT_SCHEMA}`,
+${DEMO_QUALITY_RULES}`,
     formFields: [
       { key: "name", label: "Your name", type: "text", placeholder: "John Smith", required: true },
       { key: "company", label: "Company name", type: "text", placeholder: "Smith's Roofing Co", required: false },
@@ -76,7 +72,7 @@ ${DEMO_OUTPUT_SCHEMA}`,
 - Commercial: £150-500+ per clean depending on size
 - Recurring discount: 10-15% for monthly service
 
-${DEMO_OUTPUT_SCHEMA}`,
+${DEMO_QUALITY_RULES}`,
     formFields: [
       { key: "name", label: "Your name", type: "text", placeholder: "Jane Smith", required: true },
       { key: "property_type", label: "Property type", type: "select", required: true, options: [
@@ -126,7 +122,7 @@ ${DEMO_OUTPUT_SCHEMA}`,
 - MEDIUM: Reduced efficiency, intermittent issues, system 10-15 years old
 - LOW: Routine maintenance, minor noise, just exploring options
 
-${DEMO_OUTPUT_SCHEMA}`,
+${DEMO_QUALITY_RULES}`,
     formFields: [
       { key: "name", label: "Your name", type: "text", placeholder: "John Smith", required: true },
       { key: "system_age", label: "How old is your HVAC system?", type: "select", required: true, options: [
@@ -177,7 +173,7 @@ ${DEMO_OUTPUT_SCHEMA}`,
 - One-off jobs = MEDIUM unless large scope
 - "Just a quote" with no timeline = LOW
 
-${DEMO_OUTPUT_SCHEMA}`,
+${DEMO_QUALITY_RULES}`,
     formFields: [
       { key: "name", label: "Your name", type: "text", placeholder: "Jane Smith", required: true },
       { key: "yard_size_sqft", label: "Yard size (sq ft)", type: "number", placeholder: "5000", required: true },
@@ -225,7 +221,7 @@ ${DEMO_OUTPUT_SCHEMA}`,
 - Pipe replacement: $500-5,000+
 - Toilet/faucet install: $150-400
 
-${DEMO_OUTPUT_SCHEMA}`,
+${DEMO_QUALITY_RULES}`,
     formFields: [
       { key: "name", label: "Your name", type: "text", placeholder: "John Smith", required: true },
       { key: "issue_type", label: "What's the issue?", type: "select", required: true, options: [
@@ -276,7 +272,7 @@ ${DEMO_OUTPUT_SCHEMA}`,
 - Bed bug treatment: $300-1,500 per room
 - Rodent removal: $200-600
 
-${DEMO_OUTPUT_SCHEMA}`,
+${DEMO_QUALITY_RULES}`,
     formFields: [
       { key: "name", label: "Your name", type: "text", placeholder: "Jane Smith", required: true },
       { key: "pest_type", label: "What type of pest?", type: "select", required: true, options: [
@@ -329,7 +325,7 @@ ${DEMO_OUTPUT_SCHEMA}`,
 - Insured patients = higher conversion rate, predictable revenue
 - Uninsured = higher ticket but lower conversion
 
-${DEMO_OUTPUT_SCHEMA}`,
+${DEMO_QUALITY_RULES}`,
     formFields: [
       { key: "name", label: "Your name", type: "text", placeholder: "John Smith", required: true },
       { key: "has_insurance", label: "Do you have dental insurance?", type: "select", required: true, options: [
@@ -380,7 +376,7 @@ ${DEMO_OUTPUT_SCHEMA}`,
 - Budget-to-market alignment
 - Specificity of preferences (more specific = more serious)
 
-${DEMO_OUTPUT_SCHEMA}`,
+${DEMO_QUALITY_RULES}`,
     formFields: [
       { key: "name", label: "Your name", type: "text", placeholder: "Jane Smith", required: true },
       { key: "budget_range", label: "Budget range", type: "select", required: true, options: [
@@ -436,7 +432,7 @@ ${DEMO_OUTPUT_SCHEMA}`,
 - MEDIUM: Performance issue, scheduled maintenance overdue, minor concern
 - LOW: Routine maintenance, cosmetic, just getting a quote
 
-${DEMO_OUTPUT_SCHEMA}`,
+${DEMO_QUALITY_RULES}`,
     formFields: [
       { key: "name", label: "Your name", type: "text", placeholder: "John Smith", required: true },
       { key: "vehicle_year", label: "Vehicle year", type: "number", placeholder: "2020", required: true },
@@ -480,7 +476,7 @@ ${DEMO_OUTPUT_SCHEMA}`,
 - Multiple pools in same area = higher efficiency = can offer better pricing
 - Remote locations = travel cost consideration
 
-${DEMO_OUTPUT_SCHEMA}`,
+${DEMO_QUALITY_RULES}`,
     formFields: [
       { key: "name", label: "Your name", type: "text", placeholder: "Jane Smith", required: true },
       { key: "pool_size", label: "Pool size", type: "select", required: true, options: [
@@ -535,7 +531,7 @@ export function buildFallbackAgent(niche: string, solution?: string): AgentConfi
 - MEDIUM (50-79): Genuine interest but some factors are unclear or moderate
 - LOW (0-49): Low urgency, unclear need, or poor budget fit
 
-${DEMO_OUTPUT_SCHEMA}`,
+${DEMO_QUALITY_RULES}`,
     formFields: [
       { key: "name", label: "Your name", type: "text", placeholder: "Jane Smith", required: true },
       { key: "company", label: "Company / organisation", type: "text", placeholder: "Your company name", required: false },

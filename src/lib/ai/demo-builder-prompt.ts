@@ -64,31 +64,12 @@ The scoring prompt will be the system prompt for an AI agent receiving form subm
 - Be specific enough that the AI produces consistent, calibrated scores
 - Include at least one numeric threshold (e.g., "revenue above £X = HIGH signal")
 
-## Output Rules
+## Quality Rules
 
-1. Return ONLY valid JSON matching the schema.
-2. Form fields must have correct types and all required properties.
-3. Scoring prompt must reference every form field name you defined.
-4. CTA button text should be action-oriented (not "Submit").
-5. niche_slug should be lowercase, hyphen-separated (e.g., "hvac-lead-qualifier").
-
-## Output Schema
-
-{
-  "agent_name": "string — short name for the AI agent (e.g., 'HVAC Service Qualifier')",
-  "agent_description": "string — one-line description of what it does",
-  "hero_headline": "string — bold headline derived from transformation_to (max 12 words, no AI)",
-  "hero_subheadline": "string — who it's for + how it works (1-2 sentences)",
-  "cta_button_text": "string — action-oriented button text",
-  "show_guarantee": boolean,
-  "guarantee_text": "string (optional) — guarantee copy to show on page",
-  "show_pricing": boolean,
-  "pricing_text": "string (optional) — pricing copy to show on page",
-  "transformation_headline": "string — 'From X to Y' one-liner pulled from the offer",
-  "form_fields": [{ "name": "string", "label": "string", "type": "text|number|select|textarea", "placeholder": "string", "required": boolean, "options": ["string"] (for select), "helpText": "string" (optional) }],
-  "scoring_prompt": "string — complete system prompt for the scoring AI agent",
-  "niche_slug": "string — lowercase hyphenated slug"
-}`;
+1. Form fields must have correct types and all required properties.
+2. Scoring prompt must reference every form field name you defined.
+3. CTA button text should be action-oriented (not "Submit").
+4. niche_slug should be lowercase, hyphen-separated (e.g., "hvac-lead-qualifier").`;
 
 /**
  * Build user context for the demo builder call.

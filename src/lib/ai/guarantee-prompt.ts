@@ -20,21 +20,12 @@ Given a chosen niche and user profile, generate a guarantee that:
 - **outcome_based**: "We guarantee X outcome" — Use when results are measurable (e.g., "Guaranteed minimum 20 qualified leads in your first month"). Use when the AI system's automated outputs are reliably measurable.
 - **risk_reversal**: "Try it risk-free: X" — Use when the niche is skeptical about AI or new technology (e.g., "Full refund within 30 days if you don't see value"). Good default for first-time sellers.
 
-## Output Rules
+## Quality Rules
 
-1. Return ONLY valid JSON matching the schema.
-2. The guarantee must be specific to the niche — no generic "satisfaction guaranteed" language.
-3. The guarantee must be achievable by an AI system, not manual effort.
-4. confidence_notes should explain WHY this guarantee is realistic (1-2 sentences).
-5. Keep language professional and direct. No hype.
-
-## Output Schema
-
-{
-  "guarantee_text": "string — the full guarantee statement",
-  "guarantee_type": "time_bound | outcome_based | risk_reversal",
-  "confidence_notes": "string — why this guarantee is achievable"
-}`;
+1. The guarantee must be specific to the niche — no generic "satisfaction guaranteed" language.
+2. The guarantee must be achievable by an AI system, not manual effort.
+3. confidence_notes should explain WHY this guarantee is realistic (1-2 sentences).
+4. Keep language professional and direct. No hype.`;
 
 /**
  * Build user context for the guarantee generation call.

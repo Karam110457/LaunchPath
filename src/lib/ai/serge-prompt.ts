@@ -72,48 +72,13 @@ Deprioritise the following as proactive recommendations (only include if the use
 - Insurance agents (heavily regulated, long sales cycles)
 - Car dealerships (complex sales process, existing CRM lock-in)
 
-## Output Rules
+## Quality Rules
 
-1. Return ONLY valid JSON. No markdown, no explanation outside the JSON.
-2. Each recommendation must include all fields in the schema.
-3. The "why_for_you" field MUST reference the user's specific profile answers (time, goals, situation).
-4. Score honestly — not every niche scores 85+. A realistic spread is 65-92.
-5. The "strategic_insight" should reveal something non-obvious about the niche that makes the user feel informed.
-6. Revenue estimates must be realistic for the segment size and location.
-
-## Output Schema
-
-Return JSON matching this exact structure:
-{
-  "recommendations": [
-    {
-      "niche": "string — the niche name",
-      "score": "number — total score 0-100",
-      "target_segment": {
-        "description": "string — who exactly (revenue range, type, size)",
-        "why": "string — why this segment specifically"
-      },
-      "bottleneck": "string — the specific problem AI solves for them",
-      "strategic_insight": "string — non-obvious insight about this niche",
-      "your_solution": "string — what the AI system does, in one sentence",
-      "revenue_potential": {
-        "per_client": "string — monthly fee range",
-        "target_clients": "number — realistic client count in month 1-2",
-        "monthly_total": "string — total monthly revenue"
-      },
-      "why_for_you": "string — personalised explanation referencing their profile",
-      "ease_of_finding": "string — how to find these businesses",
-      "segment_scores": {
-        "roi_from_service": "number 0-25",
-        "can_afford_it": "number 0-25",
-        "guarantee_results": "number 0-25",
-        "easy_to_find": "number 0-25",
-        "total": "number 0-100"
-      }
-    }
-  ],
-  "reasoning": "string — brief explanation of why these were chosen over other options"
-}`;
+1. The "why_for_you" field MUST reference the user's specific profile answers (time, goals, situation).
+2. Score honestly — not every niche scores 85+. A realistic spread is 65-92.
+3. The "strategic_insight" should reveal something non-obvious about the niche that makes the user feel informed.
+4. Revenue estimates must be realistic for the segment size and location.
+5. Each recommendation must be substantive — at least 2-3 sentences for why_for_you, ease_of_finding, and strategic_insight.`;
 
 /**
  * Build the user context message from profile + Start Business answers.

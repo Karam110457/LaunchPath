@@ -40,22 +40,11 @@ These are ranges, not fixed prices. The niche's revenue_potential.per_client fro
 
 Always price in GBP (£). The user and their market are UK-based unless otherwise specified.
 
-## Output Rules
+## Quality Rules
 
-1. Return ONLY valid JSON matching the schema.
-2. Comparable services must be realistic for the niche (not made up).
-3. Revenue projection must use correct math.
-4. Keep rationale concise and jargon-free.
-
-## Output Schema
-
-{
-  "pricing_setup": number,
-  "pricing_monthly": number,
-  "rationale": "string — why this pricing works (2-3 sentences)",
-  "comparable_services": [{ "service": "string", "price_range": "string" }],
-  "revenue_projection": { "clients_needed": number, "monthly_revenue": "string" }
-}`;
+1. Comparable services must be realistic for the niche (not made up).
+2. Revenue projection must use correct math.
+3. Keep rationale concise and jargon-free.`;
 
 /**
  * Build user context for the pricing generation call.

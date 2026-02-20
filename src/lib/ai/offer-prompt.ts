@@ -27,20 +27,11 @@ Given a chosen niche recommendation and the user's profile, generate:
 - Use the STRATEGIC INSIGHT to inform the framing — this tells you what angle makes this niche compelling.
 - The transformation should feel like a before/after story that a prospect in THIS specific niche would immediately recognise as their situation.
 
-## Output Rules
+## Quality Rules
 
-1. Return ONLY valid JSON. No markdown, no explanation outside the JSON.
-2. transformation_from and transformation_to must each be at least 30 characters.
-3. The transformation should feel like a before/after story, not a feature list.
-4. Keep language professional but approachable. No hype. No generic business buzzwords.
-
-## Output Schema
-
-{
-  "transformation_from": "string — the current painful state (2-3 sentences)",
-  "transformation_to": "string — the desired outcome state (2-3 sentences)",
-  "system_description": "string — what the AI system does (one sentence)"
-}`;
+1. transformation_from and transformation_to must each be at least 30 characters.
+2. The transformation should feel like a before/after story, not a feature list.
+3. Keep language professional but approachable. No hype. No generic business buzzwords.`;
 
 /**
  * Build user context for the offer generation call.
