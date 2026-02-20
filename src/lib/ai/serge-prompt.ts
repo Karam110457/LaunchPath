@@ -38,6 +38,19 @@ How easy is it to find and contact these businesses?
 - 10-14: Requires effort (conferences, referrals, paid lists)
 - 0-9: Hard to identify or reach
 
+## Bottleneck Constraint
+
+ONLY recommend niches where the primary bottleneck is solvable by a demo page + AI agent. Valid bottlenecks:
+- Lead qualification (filtering inbound enquiries by fit/urgency)
+- Lead generation (capturing and qualifying new prospects)
+- Appointment booking (automated scheduling from enquiries)
+- Quote generation (instant estimates from form data)
+- Client intake (structured onboarding and data collection)
+- FAQ automation (answering common prospect questions 24/7)
+- Lead reactivation (re-engaging past enquiries that went cold)
+
+If a niche's real bottleneck is something else (brand awareness, supply chain, hiring, compliance), do NOT recommend it regardless of how well it scores.
+
 ## Niche Knowledge Base
 
 You know these proven niches deeply:
@@ -46,24 +59,24 @@ You know these proven niches deeply:
 
 **Health & Wellness:** Dental practices, physiotherapy, chiropractic, med spas, veterinary clinics, optometry, mental health practices, dermatology
 
-**Professional Services:** Real estate agents, law firms, accounting firms, insurance agents, financial advisors, mortgage brokers, recruitment agencies
+**Professional Services:** Real estate agents, law firms, accounting firms, financial advisors, mortgage brokers, recruitment agencies
 
-**Automotive:** Auto repair shops, detailing, dealerships, tyre shops, body shops, oil change centres
+**Automotive:** Auto repair shops, detailing, tyre shops, body shops, oil change centres
 
-**Food & Hospitality:** Restaurants, catering, cafes, event venues, food trucks, bakeries
+**Food & Hospitality:** Catering, event venues, bakeries
 
-For each niche you recommend, you understand:
-- The specific bottleneck AI can solve (lead qualification, appointment setting, quote generation, etc.)
-- Typical revenue range of the target segment
-- What the AI system would actually do (form → agent → output)
-- Why the demo sells itself
-- How to find prospects (Google Maps, Yelp, LinkedIn, directories)
+## Soft Sub-Niche Filter
+
+Deprioritise the following as proactive recommendations (only include if the user explicitly mentions them or their industry interests strongly align):
+- Restaurants (thin margins, high churn, owner resistance to tech)
+- Insurance agents (heavily regulated, long sales cycles)
+- Car dealerships (complex sales process, existing CRM lock-in)
 
 ## Output Rules
 
 1. Return ONLY valid JSON. No markdown, no explanation outside the JSON.
 2. Each recommendation must include all fields in the schema.
-3. The "why_for_you" field MUST reference the user's specific profile answers (time, comfort, goals, blockers).
+3. The "why_for_you" field MUST reference the user's specific profile answers (time, goals, situation).
 4. Score honestly — not every niche scores 85+. A realistic spread is 65-92.
 5. The "strategic_insight" should reveal something non-obvious about the niche that makes the user feel informed.
 6. Revenue estimates must be realistic for the segment size and location.
@@ -108,25 +121,16 @@ Return JSON matching this exact structure:
 export function buildUserContext(
   profile: {
     time_availability: string | null;
-    outreach_comfort: string | null;
-    technical_comfort: string | null;
     revenue_goal: string | null;
     current_situation: string | null;
-    blockers: string[];
   },
   answers: {
-    intent: string | null;
     direction_path: string | null;
     industry_interests: string[];
     own_idea: string | null;
     tried_niche: string | null;
     what_went_wrong: string | null;
-    current_niche: string | null;
-    current_clients: number | null;
-    current_pricing: string | null;
     growth_direction: string | null;
-    delivery_model: string | null;
-    pricing_direction: string | null;
     location_city: string | null;
     location_target: string | null;
   },
@@ -135,15 +139,11 @@ export function buildUserContext(
   const lines: string[] = [];
 
   lines.push("## User Profile");
-  lines.push(`- Time availability: ${profile.time_availability ?? "not specified"}`);
-  lines.push(`- Outreach comfort: ${profile.outreach_comfort ?? "not specified"}`);
-  lines.push(`- Technical comfort: ${profile.technical_comfort ?? "not specified"}`);
-  lines.push(`- Revenue goal: ${profile.revenue_goal ?? "not specified"}`);
   lines.push(`- Current situation: ${profile.current_situation ?? "not specified"}`);
-  lines.push(`- Blockers: ${profile.blockers.length > 0 ? profile.blockers.join(", ") : "none specified"}`);
+  lines.push(`- Time availability: ${profile.time_availability ?? "not specified"}`);
+  lines.push(`- Revenue goal: ${profile.revenue_goal ?? "not specified"}`);
 
   lines.push("\n## Start Business Answers");
-  lines.push(`- Intent: ${answers.intent ?? "not specified"}`);
   lines.push(`- Direction path: ${answers.direction_path ?? "not specified"}`);
 
   if (answers.industry_interests.length > 0) {
@@ -158,23 +158,8 @@ export function buildUserContext(
   if (answers.what_went_wrong) {
     lines.push(`- What went wrong: ${answers.what_went_wrong}`);
   }
-  if (answers.current_niche) {
-    lines.push(`- Current niche: "${answers.current_niche}"`);
-  }
-  if (answers.current_clients != null) {
-    lines.push(`- Current clients: ${answers.current_clients}`);
-  }
-  if (answers.current_pricing) {
-    lines.push(`- Current pricing: ${answers.current_pricing}`);
-  }
   if (answers.growth_direction) {
     lines.push(`- Growth direction: ${answers.growth_direction}`);
-  }
-  if (answers.delivery_model) {
-    lines.push(`- Preferred delivery model: ${answers.delivery_model}`);
-  }
-  if (answers.pricing_direction) {
-    lines.push(`- Pricing direction: ${answers.pricing_direction}`);
   }
   if (answers.location_city) {
     lines.push(`- Location: ${answers.location_city}`);
@@ -186,28 +171,14 @@ export function buildUserContext(
   lines.push(`\n## Instructions`);
   lines.push(`Return exactly ${recommendationCount} recommendation(s).`);
 
-  if (answers.direction_path === "stuck" && answers.growth_direction === "fix") {
-    lines.push(`This user tried "${answers.tried_niche}" but got stuck. Diagnose what likely went wrong and rebuild the approach for the SAME niche. Frame it as "here's what was missing and how to fix it."`);
+  // Fix path: user tried a niche and wants to make it work
+  if (answers.direction_path === "stuck" && answers.growth_direction === "fix" && answers.tried_niche) {
+    lines.push(`\nThe user previously attempted "${answers.tried_niche}" and reported their biggest challenge was "${answers.what_went_wrong ?? "not specified"}". Do NOT treat this as a blank-slate analysis. Your first recommendation MUST be a revised approach to "${answers.tried_niche}" — specifically addressing what went wrong. Explain what needs to change in their targeting, positioning, or offer. If the niche is genuinely unviable, say so directly and explain why, then offer alternatives. Do not silently replace their niche with something else.`);
   }
 
-  if (answers.direction_path === "has_clients" && answers.growth_direction === "more_clients") {
-    lines.push(`This user already has clients in "${answers.current_niche}". Focus on optimising their current niche — better targeting, better positioning, better pricing. Don't suggest a different niche.`);
-  }
-
-  if (answers.direction_path === "has_clients" && answers.growth_direction === "new_service") {
-    lines.push(`This user has clients in "${answers.current_niche}". Recommend adjacent AI services they could offer to their EXISTING clients.`);
-  }
-
-  if (profile.blockers.includes("keep_switching")) {
-    lines.push(`IMPORTANT: This user keeps switching between ideas. Be extra directive. Frame your recommendation with commitment language: "This is your best path based on the data. Trust the process."`);
-  }
-
-  if (profile.blockers.includes("scared_delivery")) {
-    lines.push(`This user is scared they can't deliver. Emphasise in why_for_you that the AI system runs automatically — they're not doing the work themselves.`);
-  }
-
-  if (profile.blockers.includes("cant_find_clients")) {
-    lines.push(`This user has struggled to find clients before. Emphasise ease_of_finding with specific, actionable steps (not vague advice).`);
+  // Pivot path: user tried a niche and wants to move on
+  if (answers.direction_path === "stuck" && answers.growth_direction === "pivot" && answers.tried_niche) {
+    lines.push(`\nThe user previously tried "${answers.tried_niche}" and has decided to move on. Use this context to avoid recommending similar niches or approaches that would trigger the same failure pattern (they reported: "${answers.what_went_wrong ?? "not specified"}").`);
   }
 
   return lines.join("\n");

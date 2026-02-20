@@ -4,12 +4,10 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FlowShell } from "@/components/flows/FlowShell";
 import { OptionCard } from "@/components/flows/OptionCard";
-import { MultiOptionCard } from "@/components/flows/MultiOptionCard";
 import { Button } from "@/components/ui/button";
 import {
   ONBOARDING_STEPS,
   type OnboardingAnswers,
-  type Blocker,
 } from "@/types/onboarding";
 import { submitOnboarding } from "@/app/actions/onboarding";
 import { ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
@@ -27,22 +25,15 @@ export function OnboardingFlow({ existingProfile }: OnboardingFlowProps) {
 
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Partial<OnboardingAnswers>>({
+    current_situation:
+      (existingProfile?.current_situation as OnboardingAnswers["current_situation"]) ??
+      undefined,
     time_availability:
       (existingProfile?.time_availability as OnboardingAnswers["time_availability"]) ??
-      undefined,
-    outreach_comfort:
-      (existingProfile?.outreach_comfort as OnboardingAnswers["outreach_comfort"]) ??
-      undefined,
-    technical_comfort:
-      (existingProfile?.technical_comfort as OnboardingAnswers["technical_comfort"]) ??
       undefined,
     revenue_goal:
       (existingProfile?.revenue_goal as OnboardingAnswers["revenue_goal"]) ??
       undefined,
-    current_situation:
-      (existingProfile?.current_situation as OnboardingAnswers["current_situation"]) ??
-      undefined,
-    blockers: (existingProfile?.blockers as Blocker[]) ?? [],
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -53,20 +44,7 @@ export function OnboardingFlow({ existingProfile }: OnboardingFlowProps) {
     setAnswers((prev) => ({ ...prev, [currentStepConfig.field]: value }));
   }
 
-  function handleMultiToggle(value: string) {
-    setAnswers((prev) => {
-      const current = (prev.blockers ?? []) as Blocker[];
-      const next = current.includes(value as Blocker)
-        ? current.filter((v) => v !== value)
-        : [...current, value as Blocker];
-      return { ...prev, blockers: next };
-    });
-  }
-
   function canProceed(): boolean {
-    if (currentStepConfig.type === "multi") {
-      return (answers.blockers ?? []).length > 0;
-    }
     return !!answers[currentStepConfig.field];
   }
 
@@ -105,39 +83,22 @@ export function OnboardingFlow({ existingProfile }: OnboardingFlowProps) {
           <h2 className="text-xl sm:text-2xl font-serif font-light italic tracking-tight">
             {currentStepConfig.question}
           </h2>
-          {currentStepConfig.type === "multi" && (
-            <p className="text-sm text-muted-foreground">
-              Select all that apply
-            </p>
-          )}
         </div>
 
         {/* Options */}
         <div className="space-y-3">
-          {currentStepConfig.type === "single"
-            ? currentStepConfig.options.map((opt) => (
-                <OptionCard
-                  key={opt.value}
-                  value={opt.value}
-                  label={opt.label}
-                  description={
-                    "description" in opt ? (opt.description as string) : undefined
-                  }
-                  selected={answers[currentStepConfig.field] === opt.value}
-                  onSelect={handleSingleSelect}
-                />
-              ))
-            : currentStepConfig.options.map((opt) => (
-                <MultiOptionCard
-                  key={opt.value}
-                  value={opt.value}
-                  label={opt.label}
-                  selected={(answers.blockers ?? []).includes(
-                    opt.value as Blocker
-                  )}
-                  onToggle={handleMultiToggle}
-                />
-              ))}
+          {currentStepConfig.options.map((opt) => (
+            <OptionCard
+              key={opt.value}
+              value={opt.value}
+              label={opt.label}
+              description={
+                "description" in opt ? (opt.description as string) : undefined
+              }
+              selected={answers[currentStepConfig.field] === opt.value}
+              onSelect={handleSingleSelect}
+            />
+          ))}
         </div>
 
         {/* Error */}

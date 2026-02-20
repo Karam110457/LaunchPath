@@ -45,11 +45,8 @@ const offerWorkflowInputSchema = z.object({
   profile: z.object({
     time_availability: z.string().nullable(),
     revenue_goal: z.string().nullable(),
-    blockers: z.array(z.string()),
   }),
   answers: z.object({
-    delivery_model: z.string().nullable(),
-    pricing_direction: z.string().nullable(),
     location_city: z.string().nullable(),
   }),
 });
@@ -67,10 +64,7 @@ const sharedContextSchema = z.object({
   segment: z.string(),
   strategic_insight: z.string(),
   revenue_per_client: z.string(),
-  delivery_model: z.string(),
-  pricing_direction: z.string().nullable(),
   revenue_goal: z.string().nullable(),
-  blockers: z.array(z.string()),
 });
 
 const prepareOutputSchema = z.object({
@@ -79,7 +73,6 @@ const prepareOutputSchema = z.object({
   pricingPrompt: z.string(),
   sharedContext: sharedContextSchema,
   segment: z.string(),
-  delivery_model: z.string(),
 });
 
 const preparePrompts = createStep({
@@ -99,23 +92,11 @@ const preparePrompts = createStep({
     const offerPrompt = buildOfferContext(chosenRecommendation, profile, answers);
     const guaranteePrompt = buildGuaranteeContext(
       chosenRecommendation,
-      profile,
-      {
-        delivery_model: answers.delivery_model,
-        pricing_direction: answers.pricing_direction,
-      }
+      profile
     );
     const pricingPrompt = buildPricingContext(
       chosenRecommendation,
-      {
-        revenue_goal: profile.revenue_goal,
-        time_availability: profile.time_availability,
-        blockers: profile.blockers,
-      },
-      {
-        delivery_model: answers.delivery_model,
-        pricing_direction: answers.pricing_direction,
-      }
+      profile
     );
 
     const sharedContext = {
@@ -125,10 +106,7 @@ const preparePrompts = createStep({
       segment: chosenRecommendation.target_segment.description,
       strategic_insight: chosenRecommendation.strategic_insight,
       revenue_per_client: chosenRecommendation.revenue_potential.per_client,
-      delivery_model: answers.delivery_model ?? "not specified",
-      pricing_direction: answers.pricing_direction,
       revenue_goal: profile.revenue_goal,
-      blockers: profile.blockers,
     };
 
     return {
@@ -137,7 +115,6 @@ const preparePrompts = createStep({
       pricingPrompt,
       sharedContext,
       segment: chosenRecommendation.target_segment.description,
-      delivery_model: answers.delivery_model ?? "not specified",
     };
   },
 });
@@ -270,7 +247,7 @@ const assembleOffer = createStep({
       pricing_rationale: pricing.rationale,
       pricing_comparables: pricing.comparable_services,
       revenue_projection: pricing.revenue_projection,
-      delivery_model: initData.answers.delivery_model ?? "not specified",
+      delivery_model: "build_once",
       validation_status: "passed" as const,
       validation_notes: [],
     };

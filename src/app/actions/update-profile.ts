@@ -25,12 +25,9 @@ export async function updateProfile(
   const { error } = await supabase
     .from("user_profiles")
     .update({
-      time_availability: parsed.data.time_availability,
-      outreach_comfort: parsed.data.outreach_comfort,
-      technical_comfort: parsed.data.technical_comfort,
-      revenue_goal: parsed.data.revenue_goal,
       current_situation: parsed.data.current_situation,
-      blockers: parsed.data.blockers,
+      time_availability: parsed.data.time_availability,
+      revenue_goal: parsed.data.revenue_goal,
     })
     .eq("id", user.id);
 

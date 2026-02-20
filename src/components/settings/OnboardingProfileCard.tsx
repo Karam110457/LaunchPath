@@ -11,17 +11,12 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { OptionCard } from "@/components/flows/OptionCard";
-import { MultiOptionCard } from "@/components/flows/MultiOptionCard";
 import {
   TIME_AVAILABILITY_OPTIONS,
-  OUTREACH_COMFORT_OPTIONS,
-  TECHNICAL_COMFORT_OPTIONS,
   REVENUE_GOAL_OPTIONS,
   CURRENT_SITUATION_OPTIONS,
-  BLOCKER_OPTIONS,
   ONBOARDING_STEPS,
   type OnboardingAnswers,
-  type Blocker,
 } from "@/types/onboarding";
 import { updateProfile } from "@/app/actions/update-profile";
 import type { Tables } from "@/types/database";
@@ -45,39 +40,26 @@ export function OnboardingProfileCard({ profile }: OnboardingProfileCardProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Partial<OnboardingAnswers>>({
-    time_availability:
-      (profile.time_availability as OnboardingAnswers["time_availability"]) ?? undefined,
-    outreach_comfort:
-      (profile.outreach_comfort as OnboardingAnswers["outreach_comfort"]) ?? undefined,
-    technical_comfort:
-      (profile.technical_comfort as OnboardingAnswers["technical_comfort"]) ?? undefined,
-    revenue_goal:
-      (profile.revenue_goal as OnboardingAnswers["revenue_goal"]) ?? undefined,
     current_situation:
       (profile.current_situation as OnboardingAnswers["current_situation"]) ?? undefined,
-    blockers: (profile.blockers as Blocker[]) ?? [],
+    time_availability:
+      (profile.time_availability as OnboardingAnswers["time_availability"]) ?? undefined,
+    revenue_goal:
+      (profile.revenue_goal as OnboardingAnswers["revenue_goal"]) ?? undefined,
   });
 
   const summaryItems = [
+    {
+      label: "Current situation",
+      value: getLabel(CURRENT_SITUATION_OPTIONS, profile.current_situation),
+    },
     {
       label: "Time availability",
       value: getLabel(TIME_AVAILABILITY_OPTIONS, profile.time_availability),
     },
     {
-      label: "Outreach comfort",
-      value: getLabel(OUTREACH_COMFORT_OPTIONS, profile.outreach_comfort),
-    },
-    {
-      label: "Technical comfort",
-      value: getLabel(TECHNICAL_COMFORT_OPTIONS, profile.technical_comfort),
-    },
-    {
       label: "Revenue goal",
       value: getLabel(REVENUE_GOAL_OPTIONS, profile.revenue_goal),
-    },
-    {
-      label: "Current situation",
-      value: getLabel(CURRENT_SITUATION_OPTIONS, profile.current_situation),
     },
   ];
 
@@ -119,40 +101,22 @@ export function OnboardingProfileCard({ profile }: OnboardingProfileCardProps) {
             <div key={step.id} className="space-y-2">
               <h4 className="text-sm font-medium">{step.question}</h4>
               <div className="space-y-2">
-                {step.type === "single"
-                  ? step.options.map((opt) => (
-                      <OptionCard
-                        key={opt.value}
-                        value={opt.value}
-                        label={opt.label}
-                        description={
-                          "description" in opt
-                            ? (opt.description as string)
-                            : undefined
-                        }
-                        selected={answers[step.field] === opt.value}
-                        onSelect={(v) =>
-                          setAnswers((prev) => ({ ...prev, [step.field]: v }))
-                        }
-                      />
-                    ))
-                  : step.options.map((opt) => (
-                      <MultiOptionCard
-                        key={opt.value}
-                        value={opt.value}
-                        label={opt.label}
-                        selected={(answers.blockers ?? []).includes(
-                          opt.value as Blocker
-                        )}
-                        onToggle={(v) => {
-                          const current = (answers.blockers ?? []) as Blocker[];
-                          const next = current.includes(v as Blocker)
-                            ? current.filter((x) => x !== v)
-                            : [...current, v as Blocker];
-                          setAnswers((prev) => ({ ...prev, blockers: next }));
-                        }}
-                      />
-                    ))}
+                {step.options.map((opt) => (
+                  <OptionCard
+                    key={opt.value}
+                    value={opt.value}
+                    label={opt.label}
+                    description={
+                      "description" in opt
+                        ? (opt.description as string)
+                        : undefined
+                    }
+                    selected={answers[step.field] === opt.value}
+                    onSelect={(v) =>
+                      setAnswers((prev) => ({ ...prev, [step.field]: v }))
+                    }
+                  />
+                ))}
               </div>
             </div>
           ))}
@@ -207,21 +171,6 @@ export function OnboardingProfileCard({ profile }: OnboardingProfileCardProps) {
             <span className="text-sm font-medium text-right">{item.value}</span>
           </div>
         ))}
-        <div className="py-2">
-          <span className="text-sm text-muted-foreground block mb-2">
-            Blockers
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {(profile.blockers ?? []).map((b) => (
-              <span
-                key={b}
-                className="inline-flex text-xs px-2.5 py-1 rounded-full bg-muted border border-border/50"
-              >
-                {BLOCKER_OPTIONS.find((o) => o.value === b)?.label ?? b}
-              </span>
-            ))}
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

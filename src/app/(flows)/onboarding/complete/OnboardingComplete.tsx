@@ -7,11 +7,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import {
   TIME_AVAILABILITY_OPTIONS,
-  OUTREACH_COMFORT_OPTIONS,
-  TECHNICAL_COMFORT_OPTIONS,
   REVENUE_GOAL_OPTIONS,
   CURRENT_SITUATION_OPTIONS,
-  BLOCKER_OPTIONS,
 } from "@/types/onboarding";
 import type { Tables } from "@/types/database";
 
@@ -27,44 +24,28 @@ function getLabel(
   return options.find((o) => o.value === value)?.label ?? value;
 }
 
-function getBlockerLabels(blockers: string[]): string[] {
-  return blockers.map(
-    (b) => BLOCKER_OPTIONS.find((o) => o.value === b)?.label ?? b
-  );
-}
-
 export function OnboardingComplete({ profile }: OnboardingCompleteProps) {
   const router = useRouter();
 
   const summaryItems = [
     {
+      label: "Current situation",
+      value: getLabel(CURRENT_SITUATION_OPTIONS, profile.current_situation),
+    },
+    {
       label: "Time availability",
       value: getLabel(TIME_AVAILABILITY_OPTIONS, profile.time_availability),
-    },
-    {
-      label: "Outreach comfort",
-      value: getLabel(OUTREACH_COMFORT_OPTIONS, profile.outreach_comfort),
-    },
-    {
-      label: "Technical comfort",
-      value: getLabel(TECHNICAL_COMFORT_OPTIONS, profile.technical_comfort),
     },
     {
       label: "Revenue goal",
       value: getLabel(REVENUE_GOAL_OPTIONS, profile.revenue_goal),
     },
-    {
-      label: "Current situation",
-      value: getLabel(CURRENT_SITUATION_OPTIONS, profile.current_situation),
-    },
   ];
-
-  const blockerLabels = getBlockerLabels(profile.blockers ?? []);
 
   return (
     <FlowShell
-      currentStep={6}
-      totalSteps={6}
+      currentStep={3}
+      totalSteps={3}
       showProgress={false}
     >
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -93,22 +74,6 @@ export function OnboardingComplete({ profile }: OnboardingCompleteProps) {
                 </span>
               </div>
             ))}
-
-            <div className="py-2">
-              <span className="text-sm text-muted-foreground block mb-2">
-                What&apos;s held you back
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {blockerLabels.map((label) => (
-                  <span
-                    key={label}
-                    className="inline-flex text-xs px-2.5 py-1 rounded-full bg-muted border border-border/50"
-                  >
-                    {label}
-                  </span>
-                ))}
-              </div>
-            </div>
           </CardContent>
         </Card>
 

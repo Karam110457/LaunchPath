@@ -47,11 +47,8 @@ export async function preGenerateOfferForChat(
       profile: {
         time_availability: profile.time_availability,
         revenue_goal: profile.revenue_goal,
-        blockers: profile.blockers ?? [],
       },
       answers: {
-        delivery_model: system.delivery_model,
-        pricing_direction: system.pricing_direction,
         location_city: system.location_city,
       },
     },

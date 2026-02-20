@@ -9,7 +9,7 @@ export const PRICING_SYSTEM_PROMPT = `You are LaunchPath's pricing strategist. Y
 
 ## Your Job
 
-Given a niche, delivery model, revenue goal, and target segment, calculate:
+Given a niche, revenue goal, and target segment, calculate:
 1. **Setup fee** — One-time fee to build/deploy the AI system
 2. **Monthly fee** — Recurring fee for ongoing AI service
 3. **Rationale** — Why this pricing makes sense (2-3 sentences)
@@ -22,9 +22,19 @@ Given a niche, delivery model, revenue goal, and target segment, calculate:
 - Setup fee covers the work to configure and deploy. Range: GBP 200-3,000 depending on complexity.
 - Monthly fee covers ongoing AI operation + support. Range: GBP 200-3,000/month depending on niche and value.
 - The target segment must be able to afford this. If their revenue is £50k/year, a £2,000/month service is too expensive.
-- Pricing must make the user's revenue goal achievable. If they want £5,000/month and the monthly fee is £500, they need 10 clients.
-- Done-for-you commands higher prices than build-once/self-serve.
-- Higher-revenue niches (dental, real estate) can afford more than lower-revenue niches (window cleaning, pest control).
+- Pricing must make the user's revenue goal achievable with a realistic number of clients (2-5 in month 1-2).
+- The delivery model is always build-once: deploy the AI system once, charge monthly for operation + support.
+- Higher-revenue niches (dental, real estate) support higher monthly fees; lower-revenue niches (window cleaning, pest control) need to stay competitive.
+
+## Revenue Goal Pricing Ranges
+
+Use the user's revenue goal as the target and the niche data as the anchor. Position within these ranges:
+- 500_1k goal: target £400-500/month per client, ~2 clients
+- 1k_3k goal: target £500-800/month per client, ~3 clients
+- 3k_5k goal: target £800-1,500/month per client, ~3-4 clients
+- 5k_10k_plus goal: target £1,500-2,500/month per client, ~3-5 clients
+
+These are ranges, not fixed prices. The niche's revenue_potential.per_client from Serge is your anchor — adjust within the range based on the niche's ability to pay and the value delivered.
 
 ## Currency
 
@@ -67,11 +77,6 @@ export function buildPricingContext(
   profile: {
     revenue_goal: string | null;
     time_availability: string | null;
-    blockers: string[];
-  },
-  answers: {
-    delivery_model: string | null;
-    pricing_direction: string | null;
   }
 ): string {
   const lines: string[] = [];
@@ -85,46 +90,21 @@ export function buildPricingContext(
   lines.push(`- Strategic insight: ${chosenRecommendation.strategic_insight}`);
 
   lines.push("\n## Revenue Context");
-  lines.push(`- AI estimated per_client revenue: ${chosenRecommendation.revenue_potential.per_client}`);
-  lines.push(`- AI estimated target_clients: ${chosenRecommendation.revenue_potential.target_clients}`);
-  lines.push(`- AI estimated monthly_total: ${chosenRecommendation.revenue_potential.monthly_total}`);
+  lines.push(`- Niche estimated per_client revenue: ${chosenRecommendation.revenue_potential.per_client}`);
+  lines.push(`- Niche estimated target_clients: ${chosenRecommendation.revenue_potential.target_clients}`);
+  lines.push(`- Niche estimated monthly_total: ${chosenRecommendation.revenue_potential.monthly_total}`);
 
-  lines.push("\n## User Preferences");
+  lines.push("\n## User Profile");
   lines.push(`- Revenue goal: ${profile.revenue_goal ?? "not specified"}`);
   lines.push(`- Time availability: ${profile.time_availability ?? "not specified"}`);
-  lines.push(`- Delivery model: ${answers.delivery_model ?? "not specified"}`);
-  lines.push(`- Pricing direction: ${answers.pricing_direction ?? "not specified"}`);
+  lines.push(`- Delivery model: build_once`);
+
+  lines.push("\n## Pricing Instructions");
+  lines.push(`The user's revenue goal is ${profile.revenue_goal ?? "not specified"}. The niche data suggests ${chosenRecommendation.revenue_potential.per_client} per client is realistic for ${chosenRecommendation.niche}. Price accordingly — higher-value niches (roofing, dental) support higher monthly fees; lower-value niches (window cleaning, detailing) need to stay competitive.`);
+  lines.push("Use the revenue goal as the target and the niche revenue_potential as the anchor. Position the price so the user can realistically reach their goal with 2-5 clients.");
 
   lines.push("\n## Cross-Agent Alignment");
   lines.push("The offer transformation being written in parallel will describe a vivid before/after story. Your pricing rationale must reflect the value of that transformation — price the OUTCOME, not the tool.");
-  if (profile.blockers.includes("scared_delivery")) {
-    lines.push("The user is worried about delivery. Do not set prices so high that they feel pressure to over-deliver manually. Price for what the AI system can confidently deliver automatically.");
-  }
-  if (profile.blockers.includes("cant_find_clients")) {
-    lines.push("The user struggles to find clients. Price at a level that allows them to offer a trial or pilot to their first client without financial risk to the prospect.");
-  }
-
-  if (answers.pricing_direction === "fewer_high_ticket") {
-    lines.push(
-      "\nUser prefers FEWER clients paying MORE. Price towards the higher end of the range."
-    );
-  } else if (answers.pricing_direction === "more_mid_ticket") {
-    lines.push(
-      "\nUser prefers MORE clients paying LESS. Price towards the lower-mid range to maximise client count."
-    );
-  } else if (answers.pricing_direction === "monthly_retainer") {
-    lines.push(
-      "\nUser wants a monthly retainer model (£1,000-3,000/month per client)."
-    );
-  } else if (answers.pricing_direction === "base_plus_percentage") {
-    lines.push(
-      "\nUser wants a lower base fee + percentage of growth. Set a moderate monthly base and note that a revenue share component can be added."
-    );
-  } else if (answers.pricing_direction === "volume_play") {
-    lines.push(
-      "\nUser wants a volume play — many clients at £300-500/month. Price at the lower end."
-    );
-  }
 
   return lines.join("\n");
 }

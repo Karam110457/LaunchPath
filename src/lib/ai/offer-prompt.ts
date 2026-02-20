@@ -62,11 +62,8 @@ export function buildOfferContext(
   profile: {
     time_availability: string | null;
     revenue_goal: string | null;
-    blockers: string[];
   },
   answers: {
-    delivery_model: string | null;
-    pricing_direction: string | null;
     location_city: string | null;
   }
 ): string {
@@ -84,27 +81,8 @@ export function buildOfferContext(
   lines.push("\n## User Context");
   lines.push(`- Revenue goal: ${profile.revenue_goal ?? "not specified"}`);
   lines.push(`- Time: ${profile.time_availability ?? "not specified"}`);
-  lines.push(`- Delivery model: ${answers.delivery_model ?? "not specified"}`);
-  lines.push(`- Pricing direction: ${answers.pricing_direction ?? "not specified"}`);
+  lines.push(`- Delivery model: build_once`);
   lines.push(`- Location: ${answers.location_city ?? "not specified"}`);
-
-  if (profile.blockers.includes("scared_delivery")) {
-    lines.push(
-      "\nIMPORTANT: Emphasise that the AI SYSTEM delivers the results, not the person manually. This user is worried about being able to deliver."
-    );
-  }
-
-  if (profile.blockers.includes("cant_find_clients")) {
-    lines.push(
-      "\nIMPORTANT: Emphasise lead generation and client acquisition outcomes. This user's main blocker is finding clients."
-    );
-  }
-
-  if (profile.blockers.includes("keep_switching")) {
-    lines.push(
-      "\nIMPORTANT: This user tends to switch between ideas. Frame the transformation with strong commitment language — make it clear why THIS specific niche is the one to commit to."
-    );
-  }
 
   lines.push("\n## Cross-Agent Alignment");
   lines.push("A guarantee and pricing are being generated in parallel to form the complete offer. Your transformation copy must support both:");

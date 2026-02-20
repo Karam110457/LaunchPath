@@ -14,14 +14,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Tables } from "@/types/database";
 import type { ServerEvent, CardData, ProgressStep } from "@/lib/chat/types";
 import {
-  INTENT_OPTIONS,
   INDUSTRY_OPTIONS,
   WHAT_WENT_WRONG_OPTIONS,
-  DELIVERY_MODEL_SIMPLE_OPTIONS,
-  DELIVERY_MODEL_FULL_OPTIONS,
-  PRICING_STANDARD_OPTIONS,
-  PRICING_EXPANDED_OPTIONS,
-  GROWTH_DIRECTION_OPTIONS,
 } from "@/types/start-business";
 import { mastra } from "@/mastra";
 import { buildUserContext } from "@/lib/ai/serge-prompt";
@@ -56,20 +50,6 @@ export function createChatTools(
   // These emit a card to the frontend and return "awaiting_user_input".
   // The SSE stream ends after these — the user responds in the next request.
   // -------------------------------------------------------------------------
-
-  const request_intent_selection = tool({
-    description: "Show an option card asking the user what their goal is for this system.",
-    inputSchema: z.object({}),
-    execute: async () => {
-      emitCard(emit, {
-        type: "option-selector",
-        id: "intent",
-        question: "What's the goal for this system?",
-        options: INTENT_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
-      });
-      return { awaiting_user_input: true, field: "intent" };
-    },
-  });
 
   const request_industry_interests = tool({
     description:
@@ -190,94 +170,6 @@ export function createChatTools(
     },
   });
 
-  const request_current_business = tool({
-    description: "Ask about the user's current client setup — niche, client count, and pricing.",
-    inputSchema: z.object({}),
-    execute: async () => {
-      emitCard(emit, {
-        type: "text-input",
-        id: "current_business",
-        question: "Tell me about your current setup.",
-        placeholder: "e.g. I work with dental practices, have 2 clients, charging £800/month each",
-        hint: "Include your niche, how many clients you have, and what you charge.",
-        multiline: true,
-      });
-      return { awaiting_user_input: true, field: "current_business" };
-    },
-  });
-
-  const request_growth_direction = tool({
-    description: "Ask the user what they want to do with their business.",
-    inputSchema: z.object({}),
-    execute: async () => {
-      emitCard(emit, {
-        type: "option-selector",
-        id: "growth_direction",
-        question: "What do you want to do?",
-        options: GROWTH_DIRECTION_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
-      });
-      return { awaiting_user_input: true, field: "growth_direction" };
-    },
-  });
-
-  const request_delivery_model = tool({
-    description:
-      "Ask the user how they want to deliver their service. Pass mode='simple' for users with limited time (5-15h/week), or mode='full' for users with more time.",
-    inputSchema: z.object({
-      mode: z.enum(["simple", "full"]),
-    }),
-    execute: async ({ mode }) => {
-      const options =
-        mode === "simple"
-          ? DELIVERY_MODEL_SIMPLE_OPTIONS.map((o) => ({
-              value: o.value,
-              label: o.label,
-              description: o.description,
-            }))
-          : DELIVERY_MODEL_FULL_OPTIONS.map((o) => ({
-              value: o.value,
-              label: o.label,
-              description: o.description,
-            }));
-
-      emitCard(emit, {
-        type: "option-selector",
-        id: "delivery_model",
-        question:
-          mode === "simple"
-            ? "With your available time, would you rather:"
-            : "How do you want to deliver your service?",
-        options,
-      });
-      return { awaiting_user_input: true, field: "delivery_model" };
-    },
-  });
-
-  const request_pricing_direction = tool({
-    description:
-      "Ask the user about their pricing approach. Pass mode='standard' for £3-5k goal, 'expanded' for £5k+ goal.",
-    inputSchema: z.object({
-      mode: z.enum(["standard", "expanded"]),
-    }),
-    execute: async ({ mode }) => {
-      const options =
-        mode === "standard"
-          ? PRICING_STANDARD_OPTIONS.map((o) => ({ value: o.value, label: o.label }))
-          : PRICING_EXPANDED_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
-
-      emitCard(emit, {
-        type: "option-selector",
-        id: "pricing_direction",
-        question:
-          mode === "standard"
-            ? "For pricing, do you lean toward:"
-            : "How do you want to structure your pricing?",
-        options,
-      });
-      return { awaiting_user_input: true, field: "pricing_direction" };
-    },
-  });
-
   const request_location = tool({
     description: "Ask the user where they're based and where they want to find clients.",
     inputSchema: z.object({}),
@@ -393,7 +285,7 @@ export function createChatTools(
       updates: z
         .record(z.string(), z.unknown())
         .describe(
-          "Key-value pairs to update. Valid keys: intent, direction_path, industry_interests, own_idea, tried_niche, what_went_wrong, growth_direction, current_niche, current_clients, current_pricing, delivery_model, pricing_direction, location_city, location_target"
+          "Key-value pairs to update. Valid keys: direction_path, industry_interests, own_idea, tried_niche, what_went_wrong, growth_direction, location_city, location_target"
         ),
     }),
     execute: async ({ updates }) => {
@@ -420,7 +312,7 @@ export function createChatTools(
     inputSchema: z.object({
       expected_field: z
         .string()
-        .describe("The field name you were trying to collect (e.g. 'intent', 'delivery_model')"),
+        .describe("The field name you were trying to collect (e.g. 'industry_interests', 'what_went_wrong')"),
       user_text: z.string().describe("Exactly what the user typed"),
       valid_values: z
         .array(z.string())
@@ -488,31 +380,22 @@ export function createChatTools(
       const latestSystem = systemResult.data;
       const latestProfile = profileResult.data;
 
-      const keepsSwitching = (latestProfile.blockers ?? []).includes("keep_switching");
-      const recommendationCount = keepsSwitching ? 1 : 3;
+      // Always return 3 recommendations — top one shown prominently
+      const recommendationCount = 3;
 
       const userContext = buildUserContext(
         {
           time_availability: latestProfile.time_availability,
-          outreach_comfort: latestProfile.outreach_comfort,
-          technical_comfort: latestProfile.technical_comfort,
           revenue_goal: latestProfile.revenue_goal,
           current_situation: latestProfile.current_situation,
-          blockers: latestProfile.blockers ?? [],
         },
         {
-          intent: latestSystem.intent,
           direction_path: latestSystem.direction_path,
           industry_interests: latestSystem.industry_interests ?? [],
           own_idea: latestSystem.own_idea,
           tried_niche: latestSystem.tried_niche,
           what_went_wrong: latestSystem.what_went_wrong,
-          current_niche: latestSystem.current_niche,
-          current_clients: latestSystem.current_clients,
-          current_pricing: latestSystem.current_pricing,
           growth_direction: latestSystem.growth_direction,
-          delivery_model: latestSystem.delivery_model,
-          pricing_direction: latestSystem.pricing_direction,
           location_city: latestSystem.location_city,
           location_target: latestSystem.location_target,
         },
@@ -648,7 +531,7 @@ export function createChatTools(
       // Check for pre-generated offer first
       const { data: freshSystem } = await supabase
         .from("user_systems")
-        .select("offer, chosen_recommendation, delivery_model, pricing_direction, location_city")
+        .select("offer, chosen_recommendation, location_city")
         .eq("id", systemId)
         .single();
 
@@ -708,11 +591,8 @@ export function createChatTools(
             profile: {
               time_availability: profile.time_availability,
               revenue_goal: profile.revenue_goal,
-              blockers: profile.blockers ?? [],
             },
             answers: {
-              delivery_model: freshSystem?.delivery_model,
-              pricing_direction: freshSystem?.pricing_direction,
               location_city: freshSystem?.location_city,
             },
           },
@@ -967,7 +847,7 @@ export function createChatTools(
               pricing_setup: Number(offer.pricing_setup ?? 0),
               pricing_monthly: Number(offer.pricing_monthly ?? 0),
               pricing_rationale: offer.pricing_rationale ?? "",
-              delivery_model: offer.delivery_model ?? "not specified",
+              delivery_model: offer.delivery_model ?? "build_once",
             },
           },
         });
@@ -1027,17 +907,12 @@ export function createChatTools(
   });
 
   return {
-    request_intent_selection,
     request_industry_interests,
     request_own_idea,
     request_own_idea_text,
     request_tried_niche,
     request_what_went_wrong,
     request_fix_or_pivot,
-    request_current_business,
-    request_growth_direction,
-    request_delivery_model,
-    request_pricing_direction,
     request_location,
     present_choices,
     request_input,

@@ -56,33 +56,23 @@ export async function runNicheAnalysis(
   const system = systemResult.data;
   const profile = profileResult.data;
 
-  // Determine recommendation count based on profile
-  const keepsSwitching = (profile.blockers ?? []).includes("keep_switching");
-  const recommendationCount = keepsSwitching ? 1 : 3;
+  // Always return 3 recommendations
+  const recommendationCount = 3;
 
   // Build user context from profile + system answers
   const userContext = buildUserContext(
     {
       time_availability: profile.time_availability,
-      outreach_comfort: profile.outreach_comfort,
-      technical_comfort: profile.technical_comfort,
       revenue_goal: profile.revenue_goal,
       current_situation: profile.current_situation,
-      blockers: profile.blockers ?? [],
     },
     {
-      intent: system.intent,
       direction_path: system.direction_path,
       industry_interests: system.industry_interests ?? [],
       own_idea: system.own_idea,
       tried_niche: system.tried_niche,
       what_went_wrong: system.what_went_wrong,
-      current_niche: system.current_niche,
-      current_clients: system.current_clients,
-      current_pricing: system.current_pricing,
       growth_direction: system.growth_direction,
-      delivery_model: system.delivery_model,
-      pricing_direction: system.pricing_direction,
       location_city: system.location_city,
       location_target: system.location_target,
     },
@@ -253,11 +243,8 @@ async function preGenerateOffer(
       profile: {
         time_availability: profile.time_availability,
         revenue_goal: profile.revenue_goal,
-        blockers: profile.blockers ?? [],
       },
       answers: {
-        delivery_model: system.delivery_model,
-        pricing_direction: system.pricing_direction,
         location_city: system.location_city,
       },
     },

@@ -35,15 +35,9 @@ import type {
   Offer,
 } from "@/types/start-business";
 import {
-  INTENT_OPTIONS,
   INDUSTRY_OPTIONS,
   WHAT_WENT_WRONG_OPTIONS,
-  DELIVERY_MODEL_SIMPLE_OPTIONS,
-  DELIVERY_MODEL_FULL_OPTIONS,
-  PRICING_STANDARD_OPTIONS,
-  PRICING_EXPANDED_OPTIONS,
   LOCATION_TARGET_OPTIONS,
-  GROWTH_DIRECTION_OPTIONS,
 } from "@/types/start-business";
 
 type Profile = Tables<"user_profiles">;
@@ -62,13 +56,10 @@ interface StepDef {
 
 function getDirectionPath(profile: Profile): DirectionPath {
   const situation = profile.current_situation;
-  if (situation === "complete_beginner" || situation === "consumed_content") {
-    return "beginner";
-  }
-  if (situation === "tried_no_clients") {
+  if (situation === "tried_before") {
     return "stuck";
   }
-  return "has_clients";
+  return "beginner";
 }
 
 function computeSteps(
@@ -78,14 +69,12 @@ function computeSteps(
   const steps: StepDef[] = [];
   const directionPath = getDirectionPath(profile);
 
-  // Step 1: Intent (always)
-  steps.push({ id: "intent", label: "Goal" });
-
-  // Step 2: Direction Finding (branches on profile)
+  // Direction Finding (branches on profile)
   if (directionPath === "beginner") {
     steps.push({ id: "industry_interests", label: "Industries" });
     steps.push({ id: "own_idea", label: "Your idea" });
-  } else if (directionPath === "stuck") {
+  } else {
+    // stuck (tried_before)
     steps.push({ id: "tried_niche", label: "What you tried" });
     steps.push({ id: "what_went_wrong", label: "What happened" });
     steps.push({ id: "fix_or_pivot", label: "Direction" });
@@ -93,33 +82,12 @@ function computeSteps(
     if (answers.growth_direction === "pivot") {
       steps.push({ id: "industry_interests", label: "Industries" });
     }
-  } else {
-    // has_clients
-    steps.push({ id: "current_business", label: "Your business" });
-    steps.push({ id: "growth_direction", label: "Growth" });
-    // If they chose new niche, add industry interests
-    if (answers.growth_direction === "new_niche") {
-      steps.push({ id: "industry_interests", label: "Industries" });
-    }
   }
 
-  // Step 3: Delivery Model (conditional on time)
-  if (profile.time_availability !== "under_5") {
-    steps.push({ id: "delivery_model", label: "Delivery" });
-  }
-
-  // Step 4: Pricing Direction (conditional on revenue goal)
-  if (
-    profile.revenue_goal === "3k_5k" ||
-    profile.revenue_goal === "5k_10k_plus"
-  ) {
-    steps.push({ id: "pricing_direction", label: "Pricing" });
-  }
-
-  // Step 5: Location (always)
+  // Location (always)
   steps.push({ id: "location", label: "Location" });
 
-  // Steps 6-10: AI Analysis through System Ready (mocked)
+  // AI Analysis through System Ready
   steps.push({ id: "ai_analysis", label: "Analysis" });
   steps.push({ id: "results", label: "Results" });
   steps.push({ id: "offer_builder", label: "Your offer" });
@@ -135,18 +103,12 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
 
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<Partial<StartBusinessAnswers>>({
-    intent: system.intent as StartBusinessAnswers["intent"] ?? null,
     direction_path: getDirectionPath(profile),
     industry_interests: system.industry_interests ?? [],
     own_idea: system.own_idea ?? null,
     tried_niche: system.tried_niche ?? null,
     what_went_wrong: system.what_went_wrong ?? null,
-    current_niche: system.current_niche ?? null,
-    current_clients: system.current_clients ?? null,
-    current_pricing: system.current_pricing ?? null,
     growth_direction: system.growth_direction ?? null,
-    delivery_model: system.delivery_model ?? null,
-    pricing_direction: system.pricing_direction ?? null,
     location_city: system.location_city ?? null,
     location_target: system.location_target ?? null,
   });
@@ -169,7 +131,7 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
     pricing_setup: 0,
     pricing_monthly: 0,
     guarantee: "",
-    delivery_model: answers.delivery_model ?? "build_once",
+    delivery_model: "build_once",
   });
   const [offerAiLoaded, setOfferAiLoaded] = useState(false);
   const [offerError, setOfferError] = useState<string | null>(null);
@@ -194,18 +156,12 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
         await saveStartBusinessProgress({
           system_id: system.id,
           current_step: nextStepIndex + 1,
-          intent: answers.intent,
           direction_path: answers.direction_path,
           industry_interests: answers.industry_interests,
           own_idea: answers.own_idea,
           tried_niche: answers.tried_niche,
           what_went_wrong: answers.what_went_wrong,
-          current_niche: answers.current_niche,
-          current_clients: answers.current_clients,
-          current_pricing: answers.current_pricing,
           growth_direction: answers.growth_direction,
-          delivery_model: answers.delivery_model,
-          pricing_direction: answers.pricing_direction,
           location_city: answers.location_city,
           location_target: answers.location_target,
         });
@@ -239,8 +195,6 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
     if (!currentStep) return false;
 
     switch (currentStep.id) {
-      case "intent":
-        return !!answers.intent;
       case "industry_interests":
         return (answers.industry_interests ?? []).length > 0;
       case "own_idea":
@@ -251,18 +205,10 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
         return !!answers.what_went_wrong;
       case "fix_or_pivot":
         return !!answers.growth_direction;
-      case "current_business":
-        return !!answers.current_niche;
-      case "growth_direction":
-        return !!answers.growth_direction;
-      case "delivery_model":
-        return !!answers.delivery_model;
-      case "pricing_direction":
-        return !!answers.pricing_direction;
       case "location":
         return !!answers.location_target;
       default:
-        return true; // Mock steps always allow proceeding
+        return true;
     }
   }
 
@@ -271,25 +217,6 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
     if (!currentStep) return null;
 
     switch (currentStep.id) {
-      case "intent":
-        return (
-          <StepContent
-            question="What's the goal for this system?"
-          >
-            <div className="space-y-3">
-              {INTENT_OPTIONS.map((opt) => (
-                <OptionCard
-                  key={opt.value}
-                  value={opt.value}
-                  label={opt.label}
-                  selected={answers.intent === opt.value}
-                  onSelect={(v) => updateAnswer("intent", v as StartBusinessAnswers["intent"])}
-                />
-              ))}
-            </div>
-          </StepContent>
-        );
-
       case "industry_interests":
         return (
           <StepContent
@@ -415,128 +342,6 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
           </StepContent>
         );
 
-      case "current_business":
-        return (
-          <StepContent
-            question="Tell me about your current setup."
-          >
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">
-                  What niche are you in?
-                </Label>
-                <Input
-                  placeholder="e.g., Real estate agents"
-                  value={answers.current_niche ?? ""}
-                  onChange={(e) => updateAnswer("current_niche", e.target.value || null)}
-                  maxLength={200}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">
-                  How many clients do you have?
-                </Label>
-                <div className="flex gap-2">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <Button
-                      key={n}
-                      type="button"
-                      variant={answers.current_clients === n ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => updateAnswer("current_clients", n)}
-                    >
-                      {n === 5 ? "5+" : n}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">
-                  What do you charge per month?
-                </Label>
-                <Input
-                  placeholder="e.g., £800/month"
-                  value={answers.current_pricing ?? ""}
-                  onChange={(e) => updateAnswer("current_pricing", e.target.value || null)}
-                  maxLength={200}
-                />
-              </div>
-            </div>
-          </StepContent>
-        );
-
-      case "growth_direction":
-        return (
-          <StepContent
-            question="What do you want to do?"
-          >
-            <div className="space-y-3">
-              {GROWTH_DIRECTION_OPTIONS.map((opt) => (
-                <OptionCard
-                  key={opt.value}
-                  value={opt.value}
-                  label={opt.label}
-                  selected={answers.growth_direction === opt.value}
-                  onSelect={(v) => updateAnswer("growth_direction", v)}
-                />
-              ))}
-            </div>
-          </StepContent>
-        );
-
-      case "delivery_model": {
-        const isSimple = profile.time_availability === "5_to_15";
-        const options = isSimple
-          ? DELIVERY_MODEL_SIMPLE_OPTIONS
-          : DELIVERY_MODEL_FULL_OPTIONS;
-        const question = isSimple
-          ? "With your time, would you rather:"
-          : "How do you want to deliver your service?";
-
-        return (
-          <StepContent question={question}>
-            <div className="space-y-3">
-              {options.map((opt) => (
-                <OptionCard
-                  key={opt.value}
-                  value={opt.value}
-                  label={opt.label}
-                  description={opt.description}
-                  selected={answers.delivery_model === opt.value}
-                  onSelect={(v) => updateAnswer("delivery_model", v)}
-                />
-              ))}
-            </div>
-          </StepContent>
-        );
-      }
-
-      case "pricing_direction": {
-        const isExpanded = profile.revenue_goal === "5k_10k_plus";
-        const options = isExpanded
-          ? PRICING_EXPANDED_OPTIONS
-          : PRICING_STANDARD_OPTIONS;
-        const question = isExpanded
-          ? "How do you want to structure your pricing?"
-          : "For pricing, do you lean toward:";
-
-        return (
-          <StepContent question={question}>
-            <div className="space-y-3">
-              {options.map((opt) => (
-                <OptionCard
-                  key={opt.value}
-                  value={opt.value}
-                  label={opt.label}
-                  selected={answers.pricing_direction === opt.value}
-                  onSelect={(v) => updateAnswer("pricing_direction", v)}
-                />
-              ))}
-            </div>
-          </StepContent>
-        );
-      }
-
       case "location":
         return (
           <StepContent
@@ -623,7 +428,6 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
           <ResultsStep
             recommendations={aiRecommendations}
             reasoning={aiReasoning}
-            profile={profile}
             onChoose={(rec) => {
               startTransition(async () => {
                 const result = await chooseRecommendation(system.id, rec);
@@ -1020,13 +824,11 @@ function RecommendationCard({
 function ResultsStep({
   recommendations,
   reasoning,
-  profile,
   onChoose,
   isPending,
 }: {
   recommendations: AIRecommendation[] | null;
   reasoning: string | null;
-  profile: Profile;
   onChoose: (rec: AIRecommendation) => void;
   isPending: boolean;
 }) {
@@ -1041,29 +843,16 @@ function ResultsStep({
     );
   }
 
-  const isOnlyOne = recommendations.length === 1;
-  const keepsSwitching = (profile.blockers ?? []).includes("keep_switching");
-
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <h2 className="text-xl sm:text-2xl font-serif font-light italic tracking-tight">
-          {isOnlyOne
-            ? "Your best path forward"
-            : `Your top ${recommendations.length} opportunities`}
+          Your top {recommendations.length} opportunities
         </h2>
-        {keepsSwitching && isOnlyOne && (
-          <p className="text-sm text-muted-foreground">
-            Based on your profile, we&apos;ve narrowed it to one clear recommendation.
-            Trust the process — this is your best path based on the data.
-          </p>
-        )}
-        {!isOnlyOne && (
-          <p className="text-sm text-muted-foreground">
-            Each scored against ROI, affordability, deliverability, and reach.
-            Pick the one that resonates most.
-          </p>
-        )}
+        <p className="text-sm text-muted-foreground">
+          Each scored against ROI, affordability, deliverability, and reach.
+          Pick the one that resonates most.
+        </p>
       </div>
 
       <div className="space-y-4">
@@ -1072,7 +861,7 @@ function ResultsStep({
             key={rec.niche}
             rec={rec}
             rank={i + 1}
-            isOnly={isOnlyOne}
+            isOnly={false}
             onChoose={() => onChoose(rec)}
             isPending={isPending}
           />
@@ -1169,7 +958,6 @@ function OfferBuilderStep({
   isPending: boolean;
 }) {
   const hasLoaded = useRef(false);
-  const blockers = profile.blockers ?? [];
 
   // Auto-load AI content + calculate pricing on mount
   useEffect(() => {
@@ -1180,7 +968,7 @@ function OfferBuilderStep({
     setOfferData((prev) => ({
       ...prev,
       segment: chosenRec?.target_segment.description ?? "",
-      delivery_model: answers.delivery_model ?? "build_once",
+      delivery_model: "build_once",
     }));
 
     generateOfferDetails(systemId).then((result) => {
@@ -1268,18 +1056,6 @@ function OfferBuilderStep({
           <h2 className="text-xl sm:text-2xl font-serif font-light italic tracking-tight">
             The transformation you deliver
           </h2>
-          {blockers.includes("no_offer") && (
-            <p className="text-sm text-primary bg-primary/5 rounded-lg px-3 py-2">
-              You&apos;re not selling AI — you&apos;re selling a transformation.
-              The tech is just how you deliver it.
-            </p>
-          )}
-          {blockers.includes("cant_build") && (
-            <p className="text-sm text-primary bg-primary/5 rounded-lg px-3 py-2">
-              We build everything for you. You focus on selling and managing
-              client relationships.
-            </p>
-          )}
           {!offerAiLoaded && !offerError ? (
             <div className="flex items-center gap-3 text-sm text-muted-foreground py-8 justify-center">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -1410,18 +1186,6 @@ function OfferBuilderStep({
           <p className="text-sm text-muted-foreground">
             A strong guarantee eliminates risk for your prospect. Edit or skip.
           </p>
-          {blockers.includes("scared_delivery") && (
-            <p className="text-sm text-primary bg-primary/5 rounded-lg px-3 py-2">
-              The AI runs automatically — you&apos;re not doing the work. The
-              system handles delivery.
-            </p>
-          )}
-          {blockers.includes("cant_find_clients") && (
-            <p className="text-sm text-primary bg-primary/5 rounded-lg px-3 py-2">
-              A prospect list is coming in the next step. Finding leads
-              won&apos;t be a problem.
-            </p>
-          )}
           {!offerAiLoaded && !offerError ? (
             <div className="flex items-center gap-3 text-sm text-muted-foreground py-4 justify-center">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -1454,17 +1218,6 @@ function OfferBuilderStep({
           <h2 className="text-xl sm:text-2xl font-serif font-light italic tracking-tight">
             Your complete offer
           </h2>
-          {blockers.includes("cant_build") && (
-            <p className="text-sm text-primary bg-primary/5 rounded-lg px-3 py-2">
-              Remember: we build the entire system. You focus on the business.
-            </p>
-          )}
-          {blockers.includes("keep_switching") && (
-            <p className="text-sm text-primary bg-primary/5 rounded-lg px-3 py-2">
-              This is your best path. Trust the process — the data picked this
-              for a reason.
-            </p>
-          )}
           <Card>
             <CardContent className="pt-6 space-y-3 text-sm">
               <OfferSummaryRow label="Segment" value={offerData.segment} />
