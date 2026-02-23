@@ -13,6 +13,11 @@ interface StreamingTextProps {
 }
 
 export function StreamingText({ content, isStreaming: _isStreaming }: StreamingTextProps) {
+  // Fix orphaned punctuation — the model sometimes streams the final punctuation
+  // mark as a separate token after a paragraph break (e.g. "What do you think\n\n?").
+  // Merge it back into the preceding paragraph.
+  const cleaned = content.replace(/\n\n([.?!,;:…]{1,3})\s*$/, "$1");
+
   return (
     <div className="break-words space-y-0.5">
       <ReactMarkdown
@@ -93,7 +98,7 @@ export function StreamingText({ content, isStreaming: _isStreaming }: StreamingT
           ),
         }}
       >
-        {content}
+        {cleaned}
       </ReactMarkdown>
     </div>
   );
