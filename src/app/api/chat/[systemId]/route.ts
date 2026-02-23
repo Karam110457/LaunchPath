@@ -141,21 +141,11 @@ export async function POST(
             .filter(Boolean)
             .join("\n");
 
-          // Collect tool call names so the agent has context on next turn
-          const toolNames = response.messages
-            .filter((m) => m.role === "assistant")
-            .flatMap((m) => {
-              if (!Array.isArray(m.content)) return [];
-              return m.content
-                .filter((p) => p.type === "tool-call")
-                .map((p) => (p as { type: "tool-call"; toolName: string }).toolName);
-            });
-
-          const toolSuffix = toolNames.length > 0
-            ? `\n[tools:${toolNames.join(",")}]`
-            : "";
-
-          const fullContent = (assistantText + toolSuffix).trim() || "[tools:unknown]";
+          // Don't append tool names to conversation history — the model sees
+          // [tools:...] in prior turns and mimics it as literal text output.
+          // Session state (describeCollectedState) already tells the model what
+          // data has been collected, which is all the context it needs.
+          const fullContent = assistantText.trim() || "[card]";
 
           const newAssistantMessage: ConversationMessage = {
             role: "assistant",
