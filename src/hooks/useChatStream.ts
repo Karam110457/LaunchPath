@@ -39,7 +39,6 @@ interface UseChatStreamReturn {
   isTyping: boolean;
   isThinking: boolean;
   thinkingText: string;
-  cardsReady: boolean;
   sendMessage: (text: string, addBubble?: boolean) => void;
   handleCardResponse: (
     cardId: string,
@@ -197,26 +196,12 @@ export function useChatStream({
   const [isTyping, setIsTyping] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingText, setThinkingText] = useState("");
-  const [cardsReady, setCardsReady] = useState(false);
 
   // Ref for the conversation history (persisted form) — updated after each exchange
   const historyRef = useRef<ConversationMessage[]>(initialHistory);
 
   // Ref to the current streaming message id (so we can append deltas to it)
   const streamingMessageIdRef = useRef<string | null>(null);
-
-  // Ref-mirror of isStreaming — closures in useCallback capture stale state,
-  // but refs always reflect the latest value.
-  const isStreamingRef = useRef(false);
-
-  // Queued card response — if the user clicks a card while the SDK is still
-  // finishing its housekeeping round-trip, we queue the response here and
-  // fire it once the stream completes.
-  const pendingResponseRef = useRef<{ structuredMessage: string } | null>(null);
-
-  // Stable ref to sendMessage so the pending-response timeout can call
-  // the latest version without a circular useCallback dependency.
-  const sendMessageRef = useRef<((text: string, addBubble?: boolean) => void) | null>(null);
 
   /**
    * Update a progress card's step status in the messages array.
@@ -343,12 +328,6 @@ export function useChatStream({
               timestamp: now(),
             },
           ]);
-
-          // Interactive cards are ready for user input immediately.
-          // Progress-tracker is passive (no user interaction), so skip it.
-          if (event.card.type !== "progress-tracker") {
-            setCardsReady(true);
-          }
           break;
         }
 
@@ -372,7 +351,6 @@ export function useChatStream({
             streamingMessageIdRef.current = null;
           }
           setIsStreaming(false);
-          isStreamingRef.current = false;
           setIsTyping(false);
           setIsThinking(false);
           break;
@@ -380,7 +358,6 @@ export function useChatStream({
 
         case "error": {
           setIsStreaming(false);
-          isStreamingRef.current = false;
           setIsTyping(false);
           setIsThinking(false);
           streamingMessageIdRef.current = null;
@@ -408,7 +385,7 @@ export function useChatStream({
    */
   const sendMessage = useCallback(
     (text: string, addBubble = true) => {
-      if (isStreamingRef.current) return;
+      if (isStreaming) return;
 
       // Show the user message in the chat (unless a card already added it).
       // [CONVERSATION_START] is a system trigger — show "Start Business →" as the visible label.
@@ -428,12 +405,9 @@ export function useChatStream({
       }
 
       setIsStreaming(true);
-      isStreamingRef.current = true;
       setIsTyping(true);
       setIsThinking(false);
       setThinkingText("");
-      setCardsReady(false);
-      pendingResponseRef.current = null;
       streamingMessageIdRef.current = null;
 
       void (async () => {
@@ -453,7 +427,6 @@ export function useChatStream({
           if (!response.ok || !response.body) {
             setIsTyping(false);
             setIsStreaming(false);
-            isStreamingRef.current = false;
             return;
           }
 
@@ -569,37 +542,20 @@ export function useChatStream({
               streamingMessageIdRef.current = null;
             }
             setIsStreaming(false);
-            isStreamingRef.current = false;
             setIsTyping(false);
             setIsThinking(false);
-          }
-
-          // Fire pending card response — the user clicked a card while the SDK
-          // was still doing its housekeeping round-trip after the tool returned.
-          // Now that the stream is done, we can send their response.
-          const pending = pendingResponseRef.current;
-          if (pending) {
-            pendingResponseRef.current = null;
-            // Give React one tick to flush isStreaming=false before re-entering sendMessage
-            setTimeout(() => {
-              sendMessageRef.current?.(pending.structuredMessage, false);
-            }, 50);
           }
         } catch (err) {
           console.error("Chat stream error:", err);
           setIsStreaming(false);
-          isStreamingRef.current = false;
           setIsTyping(false);
           setIsThinking(false);
           streamingMessageIdRef.current = null;
         }
       })();
     },
-    [systemId, processEvent]
+    [systemId, isStreaming, processEvent]
   );
-
-  // Keep sendMessageRef pointed at the latest sendMessage
-  sendMessageRef.current = sendMessage;
 
   /**
    * Handle a card interaction (option selected, form submitted, etc.)
@@ -631,19 +587,10 @@ export function useChatStream({
       };
       setMessages((prev) => [...prev, userMsg]);
 
-      // If the SDK is still finishing its housekeeping round-trip (feeding
-      // the tool result back to Claude), queue the response. It will fire
-      // automatically once the current stream's `done` event arrives.
-      if (isStreamingRef.current) {
-        pendingResponseRef.current = { structuredMessage };
-        setIsTyping(true); // show typing indicator while queued
-        return;
-      }
-
       // Send structured message to agent (bubble already added above)
-      sendMessageRef.current?.(structuredMessage, false);
+      sendMessage(structuredMessage, false);
     },
-    []
+    [sendMessage]
   );
 
   /**
@@ -673,7 +620,6 @@ export function useChatStream({
     isTyping,
     isThinking,
     thinkingText,
-    cardsReady,
     sendMessage,
     handleCardResponse,
     startOver,

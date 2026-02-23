@@ -20,7 +20,6 @@ import { InputBar } from "./InputBar";
 interface ChatContainerProps {
   messages: ChatMessageType[];
   isStreaming: boolean;
-  cardsReady: boolean;
   isTyping: boolean;
   isThinking: boolean;
   thinkingText: string;
@@ -32,7 +31,6 @@ interface ChatContainerProps {
 export function ChatContainer({
   messages,
   isStreaming,
-  cardsReady,
   isTyping,
   isThinking,
   thinkingText,
@@ -185,7 +183,7 @@ export function ChatContainer({
               key={message.id}
               message={message}
               onCardComplete={onCardComplete}
-              isStreaming={isStreaming && !cardsReady}
+              isStreaming={isStreaming}
             />
           ))}
 

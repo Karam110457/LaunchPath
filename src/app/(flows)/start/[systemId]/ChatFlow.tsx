@@ -33,7 +33,7 @@ export function ChatFlow({ system, profile: _profile }: ChatFlowProps) {
     ? (system.messages as unknown as ChatMessage[])
     : undefined;
 
-  const { messages, isStreaming, isTyping, isThinking, thinkingText, cardsReady, sendMessage, handleCardResponse, startOver } =
+  const { messages, isStreaming, isTyping, isThinking, thinkingText, sendMessage, handleCardResponse, startOver } =
     useChatStream({
       systemId: system.id,
       initialHistory,
@@ -81,7 +81,6 @@ export function ChatFlow({ system, profile: _profile }: ChatFlowProps) {
     <ChatContainer
       messages={displayMessages}
       isStreaming={isStreaming}
-      cardsReady={cardsReady}
       isTyping={isTyping}
       isThinking={isThinking}
       thinkingText={thinkingText}
