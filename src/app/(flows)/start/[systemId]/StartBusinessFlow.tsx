@@ -35,7 +35,7 @@ import type {
   Offer,
 } from "@/types/start-business";
 import {
-  INDUSTRY_OPTIONS,
+  CLIENT_PREFERENCE_OPTIONS,
   WHAT_WENT_WRONG_OPTIONS,
   LOCATION_TARGET_OPTIONS,
 } from "@/types/start-business";
@@ -71,7 +71,7 @@ function computeSteps(
 
   // Direction Finding (branches on profile)
   if (directionPath === "beginner") {
-    steps.push({ id: "industry_interests", label: "Industries" });
+    steps.push({ id: "client_preferences", label: "Preferences" });
     steps.push({ id: "own_idea", label: "Your idea" });
   } else {
     // stuck (tried_before)
@@ -80,7 +80,7 @@ function computeSteps(
     steps.push({ id: "fix_or_pivot", label: "Direction" });
     // If they chose to pivot, add industry interests
     if (answers.growth_direction === "pivot") {
-      steps.push({ id: "industry_interests", label: "Industries" });
+      steps.push({ id: "client_preferences", label: "Preferences" });
     }
   }
 
@@ -104,7 +104,7 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<Partial<StartBusinessAnswers>>({
     direction_path: getDirectionPath(profile),
-    industry_interests: system.industry_interests ?? [],
+    client_preferences: system.client_preferences ?? [],
     own_idea: system.own_idea ?? null,
     tried_niche: system.tried_niche ?? null,
     what_went_wrong: system.what_went_wrong ?? null,
@@ -157,7 +157,7 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
           system_id: system.id,
           current_step: nextStepIndex + 1,
           direction_path: answers.direction_path,
-          industry_interests: answers.industry_interests,
+          client_preferences: answers.client_preferences,
           own_idea: answers.own_idea,
           tried_niche: answers.tried_niche,
           what_went_wrong: answers.what_went_wrong,
@@ -195,8 +195,8 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
     if (!currentStep) return false;
 
     switch (currentStep.id) {
-      case "industry_interests":
-        return (answers.industry_interests ?? []).length > 0;
+      case "client_preferences":
+        return (answers.client_preferences ?? []).length > 0;
       case "own_idea":
         return true; // Can skip with "find me" option
       case "tried_niche":
@@ -217,28 +217,28 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
     if (!currentStep) return null;
 
     switch (currentStep.id) {
-      case "industry_interests":
+      case "client_preferences":
         return (
           <StepContent
-            question="Any of these interest you? Pick up to 2."
-            subtitle="This helps narrow down your best opportunities."
+            question="What kind of business owners would you enjoy working with? Pick up to 2."
+            subtitle="This helps us find the right niche for your style."
           >
             <div className="space-y-3">
-              {INDUSTRY_OPTIONS.map((opt) => (
+              {CLIENT_PREFERENCE_OPTIONS.map((opt) => (
                 <MultiOptionCard
                   key={opt.value}
                   value={opt.value}
                   label={`${opt.label} — ${opt.description}`}
-                  selected={(answers.industry_interests ?? []).includes(opt.value)}
+                  selected={(answers.client_preferences ?? []).includes(opt.value)}
                   onToggle={(v) => {
-                    const current = answers.industry_interests ?? [];
+                    const current = answers.client_preferences ?? [];
                     if (current.includes(v)) {
                       updateAnswer(
-                        "industry_interests",
+                        "client_preferences",
                         current.filter((x) => x !== v)
                       );
                     } else if (current.length < 2) {
-                      updateAnswer("industry_interests", [...current, v]);
+                      updateAnswer("client_preferences", [...current, v]);
                     }
                   }}
                 />

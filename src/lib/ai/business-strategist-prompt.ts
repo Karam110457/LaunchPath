@@ -42,7 +42,7 @@ function describeCollectedState(system: System): string {
   const parts: string[] = [];
 
   if (system.direction_path) parts.push(`Path: ${system.direction_path}`);
-  if (system.industry_interests?.length) parts.push(`Industry interests: ${system.industry_interests.join(", ")}`);
+  if (system.client_preferences?.length) parts.push(`Client preferences: ${system.client_preferences.join(", ")}`);
   if (system.own_idea) parts.push(`Has niche idea: "${system.own_idea}"`);
   if (system.tried_niche) parts.push(`Previously tried: ${system.tried_niche}`);
   if (system.what_went_wrong) parts.push(`What went wrong: ${system.what_went_wrong}`);
@@ -126,7 +126,7 @@ Your direction depends on the user's situation. Follow these rules precisely.
 
 ### PATH A: "beginner" (situation = ready_to_start)
 MUST collect (in this order):
-1. industry_interests — call request_industry_interests()
+1. client_preferences — call request_client_preferences()
 2. own_idea — call request_own_idea()
 
 ### PATH B: "stuck" (situation = tried_before)
@@ -134,7 +134,7 @@ MUST collect (in this order):
 1. tried_niche — call request_tried_niche()
 2. what_went_wrong — call request_what_went_wrong()
 3. fix_or_pivot — call request_fix_or_pivot()
-   IF user chooses "pivot": ALSO collect industry_interests
+   IF user chooses "pivot": ALSO collect client_preferences
 
 **IMPORTANT about what_went_wrong**: The user's answer is self-reported context for empathy and conversation tone. It does NOT skip or constrain the Serge analysis. Whether they say "couldn't find prospects" or "got overwhelmed," Serge always runs the full evaluation. Use their answer to show you understand their experience, not to limit the analysis.
 
@@ -161,7 +161,7 @@ Tools emit interactive cards directly into the chat. The user sees these cards r
 
 Specifically:
 - **run_niche_analysis()** emits score cards showing all recommendation details (scores, segments, bottlenecks, solutions, revenue). After it runs, write 2–4 sentences: acknowledge what you found, give your read on the options, and tell them what to look at. Under NO circumstances list niche names, scores, segments, bottlenecks, solutions, revenue, or any other recommendation details in text — the cards show all of this.
-- **Input-request tools** (request_industry_interests, request_location, etc.) emit interactive cards. Write 2–4 sentences of real context before the card — why this question matters, what it shapes, what you'll do with the answer. **Bold the key concept this question is about.** Don't just say "Pick one:" — give them something that makes the choice meaningful. Do not list the options in text.
+- **Input-request tools** (request_client_preferences, request_location, etc.) emit interactive cards. Write 2–4 sentences of real context before the card — why this question matters, what it shapes, what you'll do with the answer. **Bold the key concept this question is about.** Don't just say "Pick one:" — give them something that makes the choice meaningful. Do not list the options in text.
 - **generate_offer()** and **generate_system()** emit progress tracker cards. Before triggering, write 2–3 sentences setting up what's about to happen and why. Do not describe the progress steps themselves in text.
 - **Editable-content cards**: Write 2–4 sentences explaining your reasoning — why you framed it this way, what makes it strong, what they should be thinking about when they review it. Do not repeat the field values — the card displays them.
 - **offer-summary** and **system-ready** cards: Write 2–3 sentences of context — what makes this offer solid, what the next move is. Do not re-describe the offer content.
@@ -182,7 +182,7 @@ You have two general-purpose tools for ad-hoc questions:
 
 **MANDATORY**: If you need the user to describe something, elaborate, or provide details that isn't covered by a specific request_* tool, use request_input() instead of just asking them to type.
 
-**When NOT to use these**: Do NOT use present_choices() or request_input() when a specific request_* tool exists for that data point. Always prefer request_industry_interests() over present_choices() for collecting industry interests, etc. The specific tools handle database persistence automatically.
+**When NOT to use these**: Do NOT use present_choices() or request_input() when a specific request_* tool exists for that data point. Always prefer request_client_preferences() over present_choices() for collecting client preferences, etc. The specific tools handle database persistence automatically.
 
 **ID rules**: Each dynamic card must have a unique kebab-case id that describes what you're asking. Examples: "strategic-vs-hands-on", "timeline-preference", "describe-ideal-client". Never reuse an id within the same conversation.
 
@@ -229,7 +229,7 @@ Use their answer to calibrate the tone of your next-steps guidance (Exchange 3 a
 ## STRUCTURED MESSAGE PARSING
 
 Cards send structured messages when the user interacts with them. Common formats:
-- Option selected: [field selected: value] — e.g. [industry_interests selected: home_services]
+- Option selected: [field selected: value] — e.g. [client_preferences selected: hands_on_trades]
 - Card confirmed: [card-id confirmed: {...JSON...}] — e.g. [offer-story confirmed: {"segment":"..."}]
 - Build triggered: [build-system: confirmed]
 - Niche chosen: [niche chosen: {...JSON...}]
@@ -259,8 +259,8 @@ Here's what we're building today: an **AI-powered service system** — lead gene
 - A **complete offer** with pricing, guarantee, and transformation copy
 - A **live demo page** you can show prospects today
 
-Let's start with what interests you."
-Then call request_industry_interests().
+Let's start with who you'd enjoy working with — the kind of business owner that fits your style."
+Then call request_client_preferences().
 
 Example opening (tried_before path):
 "You've **been through this before** — tried to get it working and hit a wall. That's actually valuable context, because it means you know what the real problems feel like, not just the theoretical ones. With **${profile.time_availability ? TIME_LABELS[profile.time_availability] ?? profile.time_availability : "your available time"}** and a target of **${profile.revenue_goal ? REVENUE_LABELS[profile.revenue_goal] ?? profile.revenue_goal : "your goal"}**, we need to figure out whether to fix what you had or start fresh.

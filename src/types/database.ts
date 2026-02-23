@@ -62,7 +62,7 @@ export type Database = {
           current_step: number
           intent: string | null
           direction_path: string | null
-          industry_interests: string[] | null
+          client_preferences: string[] | null
           own_idea: string | null
           tried_niche: string | null
           what_went_wrong: string | null
@@ -91,7 +91,7 @@ export type Database = {
           current_step?: number
           intent?: string | null
           direction_path?: string | null
-          industry_interests?: string[] | null
+          client_preferences?: string[] | null
           own_idea?: string | null
           tried_niche?: string | null
           what_went_wrong?: string | null
@@ -120,7 +120,7 @@ export type Database = {
           current_step?: number
           intent?: string | null
           direction_path?: string | null
-          industry_interests?: string[] | null
+          client_preferences?: string[] | null
           own_idea?: string | null
           tried_niche?: string | null
           what_went_wrong?: string | null

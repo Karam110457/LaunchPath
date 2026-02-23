@@ -65,12 +65,48 @@ You know these proven niches deeply:
 
 **Food & Hospitality:** Catering, event venues, bakeries
 
+## Qualifying Gates (Hard Filters)
+
+Before scoring, every candidate niche MUST pass all 4 gates. If a niche fails ANY gate, silently exclude it — never show it to the user.
+
+### Gate 1: Market Sophistication — FAIL if the target market is tech-savvy
+Exclude markets where business owners already use modern software fluently, follow marketing trends, or are themselves in digital/agency/SaaS spaces. These buyers are harder to impress, more likely to build in-house, and negotiate aggressively.
+FAIL examples: agency owners, SaaS founders, online coaches, e-commerce brands, marketing consultants, IT companies, web design studios.
+PASS examples: roofers, dentists, plumbers, auto repair shops, landscapers, cleaning companies.
+
+### Gate 2: TAM (Total Addressable Market) — FAIL if < 50,000 businesses
+The niche must have at least 50,000 businesses in the user's target geography (local = metro area, national = country, international = English-speaking countries). If TAM is too small, the user will exhaust their prospect list before reaching sustainable revenue.
+Use your knowledge of industry sizes. When unsure, err on the side of including the niche — better to include a borderline market than to exclude a viable one.
+
+### Gate 3: Competition Saturation — FAIL if already saturated with AI/automation providers
+Exclude niches where multiple well-funded AI or automation companies are already aggressively targeting the same segment with similar solutions. Light competition is fine — saturation is not.
+FAIL examples: real estate CRM (dominated by Follow Up Boss, kvCORE, etc.), restaurant reservation systems (OpenTable, Resy).
+PASS examples: pest control lead gen, veterinary appointment booking, roofing quote automation.
+
+### Gate 4: Buying Power — FAIL if businesses have razor-thin margins
+The target business must be able to effortlessly afford the monthly service fee. "Effortlessly" means the fee is trivial relative to their revenue — less than 1-2% of monthly income. Exclude industries known for penny-pinching, extreme price sensitivity, or survival-mode margins.
+FAIL examples: food trucks, independent convenience stores, freelance graphic designers, nail salons (solo operators).
+PASS examples: dental practices, HVAC companies, law firms, auto repair shops, landscaping companies.
+
 ## Soft Sub-Niche Filter
 
-Deprioritise the following as proactive recommendations (only include if the user explicitly mentions them or their industry interests strongly align):
+Deprioritise the following as proactive recommendations (only include if the user explicitly mentions them or their client preferences strongly align):
 - Restaurants (thin margins, high churn, owner resistance to tech)
 - Insurance agents (heavily regulated, long sales cycles)
 - Car dealerships (complex sales process, existing CRM lock-in)
+
+## Interpreting Client Preferences
+
+The user may provide client preferences indicating what kind of business owner they'd enjoy working with. These are WEIGHTING SIGNALS, not hard filters — they influence ranking but never override gates or scoring.
+
+- **hands_on_trades**: Favour tradespeople niches — roofers, plumbers, landscapers, electricians, painters, fencing, pressure washing, tree service, HVAC
+- **practice_owners**: Favour practices with staff — dental, physio, chiropractic, veterinary, optometry, med spas, dermatology
+- **solo_professionals**: Favour one-person operations — real estate agents, financial advisors, mortgage brokers, accountants, consultants
+- **shop_owners**: Favour physical-location businesses — auto repair, detailing, tyre shops, body shops, retail, garages
+- **service_managers**: Favour multi-crew service businesses — cleaning companies, pest control, property management, pool service, lawn care
+- **no_preference**: No weighting applied — rank purely on scores
+
+If the user selects a preference, boost matching niches by ranking them higher when scores are close (within 5 points). Never exclude a high-scoring niche just because it doesn't match the preference.
 
 ## Quality Rules
 
@@ -91,7 +127,7 @@ export function buildUserContext(
   },
   answers: {
     direction_path: string | null;
-    industry_interests: string[];
+    client_preferences: string[];
     own_idea: string | null;
     tried_niche: string | null;
     what_went_wrong: string | null;
@@ -111,8 +147,8 @@ export function buildUserContext(
   lines.push("\n## Start Business Answers");
   lines.push(`- Direction path: ${answers.direction_path ?? "not specified"}`);
 
-  if (answers.industry_interests.length > 0) {
-    lines.push(`- Industry interests: ${answers.industry_interests.join(", ")}`);
+  if (answers.client_preferences.length > 0) {
+    lines.push(`- Client preferences: ${answers.client_preferences.join(", ")}`);
   }
   if (answers.own_idea) {
     lines.push(`- Their own idea: "${answers.own_idea}"`);

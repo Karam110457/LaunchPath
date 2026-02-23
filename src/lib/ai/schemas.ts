@@ -31,6 +31,7 @@ export const aiRecommendationSchema = z.object({
 export const nicheAnalysisOutputSchema = z.object({
   recommendations: z.array(aiRecommendationSchema).min(1).max(3),
   reasoning: z.string(),
+  qualification_notes: z.string().optional(),
 });
 
 export type NicheAnalysisOutput = z.infer<typeof nicheAnalysisOutputSchema>;

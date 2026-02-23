@@ -14,7 +14,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Tables } from "@/types/database";
 import type { ServerEvent, CardData, ProgressStep } from "@/lib/chat/types";
 import {
-  INDUSTRY_OPTIONS,
+  CLIENT_PREFERENCE_OPTIONS,
   WHAT_WENT_WRONG_OPTIONS,
 } from "@/types/start-business";
 import { mastra } from "@/mastra";
@@ -51,16 +51,16 @@ export function createChatTools(
   // The SSE stream ends after these — the user responds in the next request.
   // -------------------------------------------------------------------------
 
-  const request_industry_interests = tool({
+  const request_client_preferences = tool({
     description:
-      "Show a multi-select card asking the user which industries interest them. Max 2 selections.",
+      "Show a multi-select card asking the user what kind of business owners they'd enjoy working with. Max 2 selections.",
     inputSchema: z.object({}),
     execute: async () => {
       emitCard(emit, {
         type: "option-selector",
-        id: "industry_interests",
-        question: "Any of these interest you? Pick up to 2.",
-        options: INDUSTRY_OPTIONS.map((o) => ({
+        id: "client_preferences",
+        question: "What kind of business owners would you enjoy working with? Pick up to 2.",
+        options: CLIENT_PREFERENCE_OPTIONS.map((o) => ({
           value: o.value,
           label: o.label,
           description: o.description,
@@ -68,7 +68,7 @@ export function createChatTools(
         multiSelect: true,
         maxSelect: 2,
       });
-      return { awaiting_user_input: true, field: "industry_interests" };
+      return { awaiting_user_input: true, field: "client_preferences" };
     },
   });
 
@@ -285,7 +285,7 @@ export function createChatTools(
       updates: z
         .record(z.string(), z.unknown())
         .describe(
-          "Key-value pairs to update. Valid keys: direction_path, industry_interests, own_idea, tried_niche, what_went_wrong, growth_direction, location_city, location_target"
+          "Key-value pairs to update. Valid keys: direction_path, client_preferences, own_idea, tried_niche, what_went_wrong, growth_direction, location_city, location_target"
         ),
     }),
     execute: async ({ updates }) => {
@@ -312,7 +312,7 @@ export function createChatTools(
     inputSchema: z.object({
       expected_field: z
         .string()
-        .describe("The field name you were trying to collect (e.g. 'industry_interests', 'what_went_wrong')"),
+        .describe("The field name you were trying to collect (e.g. 'client_preferences', 'what_went_wrong')"),
       user_text: z.string().describe("Exactly what the user typed"),
       valid_values: z
         .array(z.string())
@@ -391,7 +391,7 @@ export function createChatTools(
         },
         {
           direction_path: latestSystem.direction_path,
-          industry_interests: latestSystem.industry_interests ?? [],
+          client_preferences: latestSystem.client_preferences ?? [],
           own_idea: latestSystem.own_idea,
           tried_niche: latestSystem.tried_niche,
           what_went_wrong: latestSystem.what_went_wrong,
@@ -907,7 +907,7 @@ export function createChatTools(
   });
 
   return {
-    request_industry_interests,
+    request_client_preferences,
     request_own_idea,
     request_own_idea_text,
     request_tried_niche,

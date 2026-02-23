@@ -68,7 +68,7 @@ export async function runNicheAnalysis(
     },
     {
       direction_path: system.direction_path,
-      industry_interests: system.industry_interests ?? [],
+      client_preferences: system.client_preferences ?? [],
       own_idea: system.own_idea,
       tried_niche: system.tried_niche,
       what_went_wrong: system.what_went_wrong,

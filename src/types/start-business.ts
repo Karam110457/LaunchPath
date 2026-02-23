@@ -3,7 +3,7 @@ export type SystemStatus = "in_progress" | "complete" | "archived";
 
 export interface StartBusinessAnswers {
   direction_path: DirectionPath | null;
-  industry_interests: string[];
+  client_preferences: string[];
   own_idea: string | null;
   tried_niche: string | null;
   what_went_wrong: string | null;
@@ -33,13 +33,13 @@ export interface Offer {
   validation_notes?: string[];
 }
 
-export const INDUSTRY_OPTIONS = [
-  { value: "home_services", label: "Home services", description: "Roofing, cleaning, plumbing, HVAC, landscaping, pest control, pool" },
-  { value: "health_wellness", label: "Health & wellness", description: "Dental, physio, chiropractic, med spa" },
-  { value: "professional_services", label: "Professional services", description: "Real estate, legal, accounting, insurance" },
-  { value: "automotive", label: "Automotive", description: "Repair shops, detailing, dealerships" },
-  { value: "food_hospitality", label: "Food & hospitality", description: "Restaurants, catering, cafes, events" },
-  { value: "no_preference", label: "I genuinely have no preference", description: "Surprise me" },
+export const CLIENT_PREFERENCE_OPTIONS = [
+  { value: "hands_on_trades", label: "Hands-on tradespeople", description: "Roofers, plumbers, landscapers — people who work with their hands" },
+  { value: "practice_owners", label: "Practice owners with staff", description: "Dentists, physios, vets — professionals running a team" },
+  { value: "solo_professionals", label: "Solo professionals", description: "Agents, advisors, consultants — one-person operations" },
+  { value: "shop_owners", label: "Local shop or garage owners", description: "Auto repair, detailing, retail — foot traffic businesses" },
+  { value: "service_managers", label: "Service business managers", description: "Cleaning companies, pest control, property management" },
+  { value: "no_preference", label: "Open to anything", description: "Best opportunity wins" },
 ] as const;
 
 export const WHAT_WENT_WRONG_OPTIONS = [
