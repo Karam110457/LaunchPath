@@ -16,6 +16,7 @@ import {
   findAgentSlug,
   getAgentForNiche,
 } from "@/lib/ai/agents/registry";
+import { withRateLimitRetry } from "@/lib/ai/rate-limit-retry";
 
 // -- Workflow input schema --
 
@@ -106,9 +107,11 @@ const generateDemoConfig = createStep({
     );
 
     const agent = mastra.getAgent("demo-builder");
-    const result = await agent.generate(context, {
-      structuredOutput: { schema: demoConfigSchema },
-    });
+    const result = await withRateLimitRetry(() =>
+      agent.generate(context, {
+        structuredOutput: { schema: demoConfigSchema },
+      })
+    );
 
     await writer?.write({
       type: "step-progress",

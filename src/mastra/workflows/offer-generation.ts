@@ -23,6 +23,7 @@ import {
   aiPricingOutputSchema,
   assembledOfferSchema,
 } from "@/lib/ai/schemas";
+import { withRateLimitRetry } from "@/lib/ai/rate-limit-retry";
 
 // -- Workflow input schema --
 
@@ -137,9 +138,11 @@ const generateTransformation = createStep({
     });
 
     const agent = mastra.getAgent("offer");
-    const result = await agent.generate(inputData.offerPrompt, {
-      structuredOutput: { schema: offerTransformationOutputSchema },
-    });
+    const result = await withRateLimitRetry(() =>
+      agent.generate(inputData.offerPrompt, {
+        structuredOutput: { schema: offerTransformationOutputSchema },
+      })
+    );
 
     await writer?.write({
       type: "step-progress",
@@ -167,9 +170,11 @@ const generateGuarantee = createStep({
     });
 
     const agent = mastra.getAgent("guarantee");
-    const result = await agent.generate(inputData.guaranteePrompt, {
-      structuredOutput: { schema: guaranteeOutputSchema },
-    });
+    const result = await withRateLimitRetry(() =>
+      agent.generate(inputData.guaranteePrompt, {
+        structuredOutput: { schema: guaranteeOutputSchema },
+      })
+    );
 
     await writer?.write({
       type: "step-progress",
@@ -197,9 +202,11 @@ const generatePricing = createStep({
     });
 
     const agent = mastra.getAgent("pricing");
-    const result = await agent.generate(inputData.pricingPrompt, {
-      structuredOutput: { schema: aiPricingOutputSchema },
-    });
+    const result = await withRateLimitRetry(() =>
+      agent.generate(inputData.pricingPrompt, {
+        structuredOutput: { schema: aiPricingOutputSchema },
+      })
+    );
 
     await writer?.write({
       type: "step-progress",
