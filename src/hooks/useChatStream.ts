@@ -169,16 +169,25 @@ function restoreMessages(history: ConversationMessage[]): ChatMessage[] {
   return result;
 }
 
-/** Save display messages to the server so they survive refresh */
+/** Save display messages to the server so they survive refresh. Retries once on failure. */
 async function saveDisplayMessages(systemId: string, messages: ChatMessage[]) {
-  try {
-    await fetch(`/api/chat/${systemId}/display`, {
+  const attempt = () =>
+    fetch(`/api/chat/${systemId}/display`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ displayMessages: messages }),
     });
+
+  try {
+    const res = await attempt();
+    if (!res.ok) throw new Error("non-ok");
   } catch {
-    // Non-critical — ignore
+    // Retry once after 2 seconds
+    setTimeout(() => {
+      attempt().catch(() => {
+        // Give up silently — non-critical
+      });
+    }, 2000);
   }
 }
 

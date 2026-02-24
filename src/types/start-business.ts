@@ -21,7 +21,7 @@ export interface Offer {
   system_description: string;
   pricing_setup: number;
   pricing_monthly: number;
-  guarantee: string;
+  guarantee_text: string;
   delivery_model: string;
   // Extended fields from AI generation (optional for backward compatibility)
   guarantee_type?: "time_bound" | "outcome_based" | "risk_reversal";

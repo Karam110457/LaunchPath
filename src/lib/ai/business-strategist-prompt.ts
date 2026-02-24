@@ -41,9 +41,11 @@ const SITUATION_LABELS: Record<string, string> = {
 function describeCollectedState(system: System): string {
   const parts: string[] = [];
 
+  const isSentinel = (v: string) => v.startsWith("__") && v.endsWith("__");
+
   if (system.direction_path) parts.push(`Path: ${system.direction_path}`);
   if (system.client_preferences?.length) parts.push(`Client preferences: ${system.client_preferences.join(", ")}`);
-  if (system.own_idea) parts.push(`Has niche idea: "${system.own_idea}"`);
+  if (system.own_idea && !isSentinel(system.own_idea)) parts.push(`Has niche idea: "${system.own_idea}"`);
   if (system.tried_niche) parts.push(`Previously tried: ${system.tried_niche}`);
   if (system.what_went_wrong) parts.push(`What went wrong: ${system.what_went_wrong}`);
   if (system.growth_direction) parts.push(`Growth direction: ${system.growth_direction}`);
@@ -128,6 +130,8 @@ Your direction depends on the user's situation. Follow these rules precisely.
 MUST collect (in this order):
 1. client_preferences — call request_client_preferences()
 2. own_idea — call request_own_idea()
+   - If user selects "I have an idea" (__has_idea__): immediately call request_own_idea_text() to collect their actual idea, then save the typed text as own_idea
+   - If user selects "Find me the best opportunity" (__find_for_me__): save as-is and move on — do NOT call request_own_idea_text()
 
 ### PATH B: "stuck" (situation = tried_before)
 MUST collect (in this order):
@@ -232,7 +236,12 @@ Cards send structured messages when the user interacts with them. Common formats
 - Option selected: [field selected: value] — e.g. [client_preferences selected: hands_on_trades]
 - Card confirmed: [card-id confirmed: {...JSON...}] — e.g. [offer-story confirmed: {"segment":"..."}]
 - Build triggered: [build-system: confirmed]
-- Niche chosen: [niche chosen: {...JSON...}]
+- Niche chosen: [niche-choice: {...JSON...}]
+
+- Location: [location: city="London", target="local"] — save as location_city and location_target
+- Text input: [field-id: "user's text"] — e.g. [tried_niche: "HVAC companies"], [own_idea_text: "AI lead gen for HVAC"]
+- Dynamic choices: [dyn-{id} selected: {value}] — conversational context, do NOT save to DB
+- Dynamic text: [dyn-{id}: "text"] — conversational context, do NOT save to DB
 
 When you receive these, parse and act on them. Before moving to the next step, acknowledge what they chose and why it shapes what comes next (2–3 sentences). **Bold the key term or value they selected.** This creates momentum and shows the conversation is adapting to their actual answers. Do NOT re-describe what the user selected verbatim. Do NOT ask "are you sure?".
 

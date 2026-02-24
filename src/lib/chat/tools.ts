@@ -67,6 +67,7 @@ export function createChatTools(
         })),
         multiSelect: true,
         maxSelect: 2,
+        exclusiveValues: ["no_preference"],
       });
       return { awaiting_user_input: true, field: "client_preferences" };
     },
@@ -151,7 +152,7 @@ export function createChatTools(
     execute: async ({ tried_niche }) => {
       emitCard(emit, {
         type: "option-selector",
-        id: "fix_or_pivot",
+        id: "growth_direction",
         question: `Do you want to fix your approach in ${tried_niche || "that niche"}, or try something completely different?`,
         options: [
           {
@@ -278,6 +279,17 @@ export function createChatTools(
   // Silent DB writes. No visual output.
   // -------------------------------------------------------------------------
 
+  const VALID_SAVE_FIELDS = new Set([
+    "direction_path",
+    "client_preferences",
+    "own_idea",
+    "tried_niche",
+    "what_went_wrong",
+    "growth_direction",
+    "location_city",
+    "location_target",
+  ]);
+
   const save_collected_answers = tool({
     description:
       "Save one or more field values to the system record. Call this immediately after the user provides data, before asking the next question.",
@@ -290,10 +302,20 @@ export function createChatTools(
     }),
     execute: async ({ updates }) => {
       try {
+        // Filter to only valid fields
+        const filtered = Object.fromEntries(
+          Object.entries(updates).filter(([key]) => VALID_SAVE_FIELDS.has(key))
+        );
+
+        if (Object.keys(filtered).length === 0) {
+          return { saved: false, error: "No valid fields provided." };
+        }
+
         await supabase
           .from("user_systems")
-          .update(updates as Record<string, unknown>)
-          .eq("id", systemId);
+          .update(filtered as Record<string, unknown>)
+          .eq("id", systemId)
+          .eq("user_id", profile.id);
         return { saved: true };
       } catch (err) {
         logger.error("Failed to save chat answers", { systemId, error: String(err) });

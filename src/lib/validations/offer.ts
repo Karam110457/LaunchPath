@@ -10,7 +10,7 @@ export const offerSchema = z.object({
   system_description: z.string().min(1),
   pricing_setup: z.number().min(0),
   pricing_monthly: z.number().min(0),
-  guarantee: z.string(), // Can be empty if skipped
+  guarantee_text: z.string(), // Can be empty if skipped
   delivery_model: z.string().min(1),
 });
 

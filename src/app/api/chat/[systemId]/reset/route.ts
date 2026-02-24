@@ -24,7 +24,25 @@ export async function POST(
 
   await supabase
     .from("user_systems")
-    .update({ conversation_history: [] })
+    .update({
+      conversation_history: [],
+      messages: null,
+      direction_path: null,
+      client_preferences: [],
+      own_idea: null,
+      tried_niche: null,
+      what_went_wrong: null,
+      growth_direction: null,
+      location_city: null,
+      location_target: null,
+      ai_recommendations: null,
+      chosen_recommendation: null,
+      offer: null,
+      demo_config: null,
+      demo_url: null,
+      current_step: 1,
+      status: "in_progress",
+    } as Record<string, unknown>)
     .eq("id", systemId)
     .eq("user_id", user.id);
 

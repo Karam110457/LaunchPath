@@ -28,6 +28,7 @@ export default function OptionSelectorCard({
 
   const isMulti = card.multiSelect === true;
   const maxSelect = card.maxSelect ?? card.options.length;
+  const exclusiveValues = card.exclusiveValues ?? [];
 
   function toggleOption(value: string) {
     if (!isMulti) {
@@ -39,12 +40,23 @@ export default function OptionSelectorCard({
       return;
     }
 
+    const isExclusive = exclusiveValues.includes(value);
+
     setSelected((prev) => {
+      // Toggling off — always allowed
       if (prev.includes(value)) {
         return prev.filter((v) => v !== value);
       }
-      if (prev.length >= maxSelect) return prev;
-      return [...prev, value];
+
+      // Selecting an exclusive value → deselect everything else
+      if (isExclusive) {
+        return [value];
+      }
+
+      // Selecting a non-exclusive value → remove any exclusive values first
+      const withoutExclusive = prev.filter((v) => !exclusiveValues.includes(v));
+      if (withoutExclusive.length >= maxSelect) return prev;
+      return [...withoutExclusive, value];
     });
   }
 

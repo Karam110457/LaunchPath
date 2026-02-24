@@ -130,7 +130,7 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
     system_description: "",
     pricing_setup: 0,
     pricing_monthly: 0,
-    guarantee: "",
+    guarantee_text: "",
     delivery_model: "build_once",
   });
   const [offerAiLoaded, setOfferAiLoaded] = useState(false);
@@ -206,7 +206,7 @@ export function StartBusinessFlow({ system, profile }: StartBusinessFlowProps) {
       case "fix_or_pivot":
         return !!answers.growth_direction;
       case "location":
-        return !!answers.location_target;
+        return !!answers.location_city && !!answers.location_target;
       default:
         return true;
     }
@@ -981,7 +981,7 @@ function OfferBuilderStep({
           transformation_from: result.offer!.transformation_from ?? "",
           transformation_to: result.offer!.transformation_to ?? "",
           system_description: result.offer!.system_description ?? "",
-          guarantee: result.offer!.guarantee_text ?? "",
+          guarantee_text: result.offer!.guarantee_text ?? "",
           pricing_setup: result.offer!.pricing_setup,
           pricing_monthly: result.offer!.pricing_monthly,
           segment: result.offer!.segment ?? prev.segment,
@@ -1131,7 +1131,7 @@ function OfferBuilderStep({
             Your pricing
           </h2>
           <p className="text-sm text-muted-foreground">
-            Pre-calculated from your revenue goal. Adjust if needed.
+            AI-generated based on your niche and market. Adjust if needed.
           </p>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -1195,15 +1195,15 @@ function OfferBuilderStep({
           ) : (
             <div className="space-y-3">
               <Textarea
-                value={offerData.guarantee ?? ""}
-                onChange={(e) => updateField("guarantee", e.target.value)}
+                value={offerData.guarantee_text ?? ""}
+                onChange={(e) => updateField("guarantee_text", e.target.value)}
                 rows={3}
                 placeholder="e.g., 10 qualified leads in 30 days or your money back"
               />
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => updateField("guarantee", "")}
+                onClick={() => updateField("guarantee_text", "")}
                 className="text-xs text-muted-foreground"
               >
                 Skip guarantee for now
@@ -1242,10 +1242,10 @@ function OfferBuilderStep({
                     : `£${offerData.pricing_monthly}/month`
                 }
               />
-              {offerData.guarantee ? (
+              {offerData.guarantee_text ? (
                 <OfferSummaryRow
                   label="Guarantee"
-                  value={offerData.guarantee}
+                  value={offerData.guarantee_text}
                   isLast
                 />
               ) : (
@@ -1467,10 +1467,10 @@ function SystemReadyStep({
                     ? `£${offerData.pricing_setup} setup + £${offerData.pricing_monthly}/mo`
                     : `£${offerData.pricing_monthly}/mo`}
                 </p>
-                {offerData.guarantee && (
+                {offerData.guarantee_text && (
                   <p>
                     <span className="text-muted-foreground">Guarantee:</span>{" "}
-                    {offerData.guarantee}
+                    {offerData.guarantee_text}
                   </p>
                 )}
               </div>

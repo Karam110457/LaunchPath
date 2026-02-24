@@ -38,6 +38,7 @@ export type CardData =
       options: CardOption[];
       multiSelect?: boolean;
       maxSelect?: number;
+      exclusiveValues?: string[];
     }
   | {
       type: "text-input";
