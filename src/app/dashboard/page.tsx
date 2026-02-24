@@ -83,10 +83,10 @@ export default async function DashboardPage() {
                         href={
                           system.status === "in_progress"
                             ? `/start/${system.id}`
-                            : `/dashboard`
+                            : `/dashboard/demos`
                         }
                       >
-                        {system.status === "in_progress" ? "Continue" : "View"}
+                        {system.status === "in_progress" ? "Continue" : "View Demos"}
                         <ArrowRight className="h-4 w-4 ml-1" />
                       </Link>
                     </Button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef } from "react";
-import { Copy, Check, ExternalLink, LayoutDashboard } from "lucide-react";
+import { Copy, Check, ExternalLink, Pencil, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -273,17 +273,28 @@ export default function SystemReadyCard({ card }: SystemReadyCardProps) {
         <HighlightChip label="Monthly" value={`£${card.offer.pricing_monthly.toLocaleString()}/mo`} />
       </div>
 
-      {/* Dashboard CTA */}
+      {/* Action CTAs */}
       <div
-        className="animate-in fade-in slide-in-from-bottom-2 duration-300"
+        className="flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300"
         style={{ animationDelay: "1100ms", animationFillMode: "both" }}
       >
         <Button
-          onClick={() => router.push("/dashboard")}
-          className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold text-base gap-2"
+          variant="outline"
+          onClick={() => {
+            const id = card.demoUrl.split("/demo/")[1]?.split(/[?#]/)[0];
+            if (id) router.push(`/builder/${id}`);
+          }}
+          className="flex-1 h-12 rounded-xl font-semibold text-base gap-2"
         >
-          <LayoutDashboard className="size-4" />
-          Go to Dashboard
+          <Pencil className="size-4" />
+          Customize
+        </Button>
+        <Button
+          onClick={() => router.push("/dashboard/demos")}
+          className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold text-base gap-2"
+        >
+          <Megaphone className="size-4" />
+          View Demos
         </Button>
       </div>
     </div>
