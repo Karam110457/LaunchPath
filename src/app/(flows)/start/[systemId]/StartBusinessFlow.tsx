@@ -880,7 +880,8 @@ function ResultsStep({
   );
 }
 
-// --- Pricing calculation (deterministic from profile) ---
+// --- LEGACY: Pricing calculation (deterministic from profile) ---
+// The chat flow uses the AI pricing agent in the offer workflow instead.
 function calculatePricing(
   revenueGoal: string | null,
   pricingDirection: string | null

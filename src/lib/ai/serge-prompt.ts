@@ -59,11 +59,11 @@ You know these proven niches deeply:
 
 **Health & Wellness:** Dental practices, physiotherapy, chiropractic, med spas, veterinary clinics, optometry, mental health practices, dermatology
 
-**Professional Services:** Real estate agents, law firms, accounting firms, financial advisors, mortgage brokers, recruitment agencies
+**Professional Services:** Law firms, accounting firms, financial advisors, mortgage brokers
 
 **Automotive:** Auto repair shops, detailing, tyre shops, body shops, oil change centres
 
-**Food & Hospitality:** Catering, event venues, bakeries
+**Events & Catering:** Catering companies, event venues
 
 ## Qualifying Gates (Hard Filters)
 
@@ -75,7 +75,7 @@ FAIL examples: agency owners, SaaS founders, online coaches, e-commerce brands, 
 PASS examples: roofers, dentists, plumbers, auto repair shops, landscapers, cleaning companies.
 
 ### Gate 2: TAM (Total Addressable Market) — FAIL if < 50,000 businesses
-The niche must have at least 50,000 businesses in the user's target geography (local = metro area, national = country, international = English-speaking countries). If TAM is too small, the user will exhaust their prospect list before reaching sustainable revenue.
+The niche must have at least 50,000 businesses in the user's target geography (local = metro area, national = country, international = English-speaking countries). If TAM is too small, the user will exhaust their prospect list before reaching sustainable revenue. If the user's target geography is "open to any geography" or unspecified, evaluate TAM at the national level as a reasonable default.
 Use your knowledge of industry sizes. When unsure, err on the side of including the niche — better to include a borderline market than to exclude a viable one.
 
 ### Gate 3: Competition Saturation — FAIL if already saturated with AI/automation providers
@@ -91,9 +91,7 @@ PASS examples: dental practices, HVAC companies, law firms, auto repair shops, l
 ## Soft Sub-Niche Filter
 
 Deprioritise the following as proactive recommendations (only include if the user explicitly mentions them or their client preferences strongly align):
-- Restaurants (thin margins, high churn, owner resistance to tech)
-- Insurance agents (heavily regulated, long sales cycles)
-- Car dealerships (complex sales process, existing CRM lock-in)
+- Insurance agents (borderline Gate 1 — not clearly tech-savvy but heavily regulated with long sales cycles and established agency management systems; not a hard gate fail but a risky first niche)
 
 ## Interpreting Client Preferences
 
@@ -101,7 +99,7 @@ The user may provide client preferences indicating what kind of business owner t
 
 - **hands_on_trades**: Favour tradespeople niches — roofers, plumbers, landscapers, electricians, painters, fencing, pressure washing, tree service, HVAC
 - **practice_owners**: Favour practices with staff — dental, physio, chiropractic, veterinary, optometry, med spas, dermatology
-- **solo_professionals**: Favour one-person operations — real estate agents, financial advisors, mortgage brokers, accountants, consultants
+- **solo_professionals**: Favour one-person operations — financial advisors, mortgage brokers, accountants, bookkeepers
 - **shop_owners**: Favour physical-location businesses — auto repair, detailing, tyre shops, body shops, retail, garages
 - **service_managers**: Favour multi-crew service businesses — cleaning companies, pest control, property management, pool service, lawn care
 - **no_preference**: No weighting applied — rank purely on scores
@@ -139,25 +137,49 @@ export function buildUserContext(
 ): string {
   const lines: string[] = [];
 
+  // -- Helpers & label lookups for human-readable context --
+  const isSentinel = (v: string | null | undefined): boolean =>
+    v != null && v.startsWith("__") && v.endsWith("__");
+
+  const DIRECTION_PATH_LABELS: Record<string, string> = {
+    beginner: "new to this — ready to start their first AI service business",
+    stuck: "tried before and got stuck — has experience but hit walls",
+  };
+
+  const WHAT_WENT_WRONG_LABELS: Record<string, string> = {
+    cant_find_prospects: "Couldn't find anyone to sell to",
+    cant_close: "Had no clear offer or pricing",
+    cant_deliver: "Didn't know how to build the tech",
+    overwhelmed: "Got overwhelmed and stopped",
+  };
+
+  const LOCATION_TARGET_LABELS: Record<string, string> = {
+    local: "local area (within 50 miles)",
+    national: "nationwide (their country)",
+    international: "international (English-speaking countries)",
+    anywhere: "open to any geography",
+  };
+
   lines.push("## User Profile");
   lines.push(`- Current situation: ${profile.current_situation ?? "not specified"}`);
   lines.push(`- Time availability: ${profile.time_availability ?? "not specified"}`);
   lines.push(`- Revenue goal: ${profile.revenue_goal ?? "not specified"}`);
 
   lines.push("\n## Start Business Answers");
-  lines.push(`- Direction path: ${answers.direction_path ?? "not specified"}`);
+  lines.push(`- Direction path: ${DIRECTION_PATH_LABELS[answers.direction_path ?? ""] ?? answers.direction_path ?? "not specified"}`);
 
   if (answers.client_preferences.length > 0) {
     lines.push(`- Client preferences: ${answers.client_preferences.join(", ")}`);
   }
-  if (answers.own_idea) {
+  if (answers.own_idea && !isSentinel(answers.own_idea)) {
     lines.push(`- Their own idea: "${answers.own_idea}"`);
   }
   if (answers.tried_niche) {
     lines.push(`- Previously tried niche: "${answers.tried_niche}"`);
   }
   if (answers.what_went_wrong) {
-    lines.push(`- What went wrong: ${answers.what_went_wrong}`);
+    const label = WHAT_WENT_WRONG_LABELS[answers.what_went_wrong] ?? answers.what_went_wrong;
+    lines.push(`- What went wrong: ${label}`);
   }
   if (answers.growth_direction) {
     lines.push(`- Growth direction: ${answers.growth_direction}`);
@@ -166,7 +188,7 @@ export function buildUserContext(
     lines.push(`- Location: ${answers.location_city}`);
   }
   if (answers.location_target) {
-    lines.push(`- Target area: ${answers.location_target}`);
+    lines.push(`- Target area: ${LOCATION_TARGET_LABELS[answers.location_target] ?? answers.location_target}`);
   }
 
   lines.push(`\n## Instructions`);
@@ -180,6 +202,11 @@ export function buildUserContext(
   // Pivot path: user tried a niche and wants to move on
   if (answers.direction_path === "stuck" && answers.growth_direction === "pivot" && answers.tried_niche) {
     lines.push(`\nThe user previously tried "${answers.tried_niche}" and has decided to move on. Use this context to avoid recommending similar niches or approaches that would trigger the same failure pattern (they reported: "${answers.what_went_wrong ?? "not specified"}").`);
+  }
+
+  // Beginner with own idea: evaluate it through the full framework
+  if (answers.direction_path === "beginner" && answers.own_idea && !isSentinel(answers.own_idea)) {
+    lines.push(`\nThe user has a specific idea: "${answers.own_idea}". Your first recommendation MUST evaluate this idea through the full framework (gates + scoring). If it passes, include it as recommendation #1 with honest scoring. If it fails a gate, explain which gate it fails and why, then offer 3 alternatives. Do not silently ignore their idea.`);
   }
 
   return lines.join("\n");
