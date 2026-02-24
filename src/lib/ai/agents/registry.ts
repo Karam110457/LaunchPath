@@ -20,7 +20,7 @@ export const NICHE_AGENTS: Record<string, AgentConfig> = {
     systemPrompt: `You are a roofing lead qualification AI. You analyse incoming enquiries for roofing companies and determine lead quality, estimated job value, and priority.
 
 ## How to Score
-- Job value: residential re-roofs ($8,000-$35,000), commercial ($20,000-$100,000+), repairs ($500-$5,000)
+- Job value: residential re-roofs (£5,000-£15,000), commercial (£10,000-£50,000+), repairs (£300-£3,000)
 - Urgency: "ASAP" or active leak = HIGH; "this month" = MEDIUM; "next few months" = LOW
 - Size matters: larger sqft = higher value
 - Location: in-service-area = bonus; outside = penalty
@@ -34,7 +34,7 @@ ${DEMO_QUALITY_RULES}`,
     formFields: [
       { key: "name", label: "Your name", type: "text", placeholder: "John Smith", required: true },
       { key: "company", label: "Company name", type: "text", placeholder: "Smith's Roofing Co", required: false },
-      { key: "location", label: "Job location", type: "text", placeholder: "e.g., Tampa, FL", required: true },
+      { key: "location", label: "Job location", type: "text", placeholder: "e.g., Birmingham", required: true },
       { key: "job_type", label: "Type of work needed", type: "select", required: true, options: [
         { value: "residential_reroof", label: "Residential re-roof" },
         { value: "commercial_reroof", label: "Commercial re-roof" },
@@ -112,7 +112,7 @@ ${DEMO_QUALITY_RULES}`,
     systemPrompt: `You are an HVAC service qualification AI. You analyse service requests for HVAC companies and determine urgency, cost estimates, and whether repair or replacement is likely needed.
 
 ## How to Score
-- System age: >15 years = likely replacement ($5,000-$15,000); <10 years = likely repair ($200-$2,000)
+- System age: >15 years = likely replacement (£3,000-£10,000); <10 years = likely repair (£150-£1,500)
 - Issue type: no heat/AC in extreme weather = emergency; strange noises = moderate; routine maintenance = low
 - Property size: larger properties = bigger systems = higher value
 - Urgency: emergency calls = premium pricing opportunity
@@ -148,7 +148,7 @@ ${DEMO_QUALITY_RULES}`,
         { value: "planning", label: "Just planning ahead" },
       ]},
       { key: "property_size_sqft", label: "Property size (sq ft)", type: "number", placeholder: "1800", required: true },
-      { key: "location", label: "Location", type: "text", placeholder: "e.g., Dallas, TX", required: true },
+      { key: "location", label: "Location", type: "text", placeholder: "e.g., Manchester", required: true },
       { key: "details", label: "Describe the problem", type: "textarea", placeholder: "e.g., Furnace making clicking sound, heat comes on intermittently...", required: false },
     ],
   },
@@ -161,11 +161,11 @@ ${DEMO_QUALITY_RULES}`,
     systemPrompt: `You are a landscaping quote generation AI. You analyse service requests for landscaping companies and generate accurate pricing estimates.
 
 ## Pricing Guidelines
-- Lawn mowing: $30-80/visit for residential, $100-500+ for commercial
-- Full maintenance (mow + edge + blow): $50-150/visit residential
-- Landscape design: $500-5,000+ depending on scope
-- Monthly contracts: $150-500/month residential, $500-2,000+ commercial
-- Seasonal cleanup: $200-600
+- Lawn mowing: £25-60/visit for residential, £80-400+ for commercial
+- Full maintenance (mow + edge + blow): £40-120/visit residential
+- Landscape design: £400-4,000+ depending on scope
+- Monthly contracts: £120-400/month residential, £400-1,500+ commercial
+- Seasonal cleanup: £150-500
 
 ## How to Score
 - Recurring service = highest lifetime value (HIGH priority)
@@ -176,7 +176,7 @@ ${DEMO_QUALITY_RULES}`,
 ${DEMO_QUALITY_RULES}`,
     formFields: [
       { key: "name", label: "Your name", type: "text", placeholder: "Jane Smith", required: true },
-      { key: "yard_size_sqft", label: "Yard size (sq ft)", type: "number", placeholder: "5000", required: true },
+      { key: "garden_size_sqft", label: "Garden size (sq ft)", type: "number", placeholder: "5000", required: true },
       { key: "service_type", label: "What do you need?", type: "select", required: true, options: [
         { value: "mowing", label: "Lawn mowing" },
         { value: "full_maintenance", label: "Full maintenance (mow, edge, trim)" },
@@ -196,7 +196,7 @@ ${DEMO_QUALITY_RULES}`,
         { value: "commercial", label: "Commercial" },
         { value: "hoa", label: "HOA / Community" },
       ]},
-      { key: "location", label: "Location", type: "text", placeholder: "e.g., Austin, TX", required: true },
+      { key: "location", label: "Location", type: "text", placeholder: "e.g., Bristol", required: true },
       { key: "notes", label: "Additional details", type: "textarea", placeholder: "e.g., Backyard has a slope, need hedge trimming too...", required: false },
     ],
   },
@@ -214,12 +214,12 @@ ${DEMO_QUALITY_RULES}`,
 - ROUTINE (LOW 0-49): Fixture upgrade, routine maintenance, cosmetic issues
 
 ## Cost Guidelines
-- Emergency call-out: $150-300 (after hours: $250-500)
-- Drain cleaning: $100-300
-- Leak repair: $150-500
-- Water heater repair: $200-800; replacement: $1,000-3,000
-- Pipe replacement: $500-5,000+
-- Toilet/faucet install: $150-400
+- Emergency call-out: £100-200 (after hours: £180-350)
+- Drain cleaning: £80-250
+- Leak repair: £100-350
+- Water heater repair: £150-600; replacement: £800-2,500
+- Pipe replacement: £400-4,000+
+- Toilet/faucet install: £100-300
 
 ${DEMO_QUALITY_RULES}`,
     formFields: [
@@ -248,7 +248,7 @@ ${DEMO_QUALITY_RULES}`,
         { value: "residential", label: "Residential" },
         { value: "commercial", label: "Commercial" },
       ]},
-      { key: "location", label: "Location", type: "text", placeholder: "e.g., Phoenix, AZ", required: true },
+      { key: "location", label: "Location", type: "text", placeholder: "e.g., Leeds", required: true },
       { key: "details", label: "Describe the issue", type: "textarea", placeholder: "e.g., Kitchen sink leaking under the cabinet, water pooling on floor...", required: true },
     ],
   },
@@ -266,11 +266,11 @@ ${DEMO_QUALITY_RULES}`,
 - LOW: Preventive treatment, minor ant issue, spider control
 
 ## Cost Guidelines
-- Initial treatment: $150-400 residential, $300-1,000+ commercial
-- Monthly prevention plan: $40-70/month residential
-- Termite treatment: $500-2,500+
-- Bed bug treatment: $300-1,500 per room
-- Rodent removal: $200-600
+- Initial treatment: £100-300 residential, £200-800+ commercial
+- Monthly prevention plan: £30-50/month residential
+- Termite treatment: £400-2,000+
+- Bed bug treatment: £250-1,200 per room
+- Rodent removal: £150-500
 
 ${DEMO_QUALITY_RULES}`,
     formFields: [
@@ -297,7 +297,7 @@ ${DEMO_QUALITY_RULES}`,
         { value: "commercial", label: "Commercial" },
         { value: "rental", label: "Rental property" },
       ]},
-      { key: "location", label: "Location", type: "text", placeholder: "e.g., Miami, FL", required: true },
+      { key: "location", label: "Location", type: "text", placeholder: "e.g., London", required: true },
       { key: "notes", label: "Additional details", type: "textarea", placeholder: "e.g., Seeing ants in the kitchen near the sink area...", required: false },
     ],
   },
@@ -315,11 +315,11 @@ ${DEMO_QUALITY_RULES}`,
 - LOW: Price-shopping, no insurance + no urgency, just browsing
 
 ## Value Guidelines
-- New patient exam + cleaning: $150-300 (insurance covers 80-100%)
-- Cosmetic (veneers, whitening): $500-3,000+
-- Emergency visit: $200-500
-- Crown/bridge: $800-3,000
-- Implant: $3,000-6,000
+- New patient exam + cleaning: £100-250 (insurance covers 80-100%)
+- Cosmetic (veneers, whitening): £400-2,500+
+- Emergency visit: £150-400
+- Crown/bridge: £600-2,500
+- Implant: £2,500-5,000
 
 ## Insurance Impact
 - Insured patients = higher conversion rate, predictable revenue
@@ -353,7 +353,7 @@ ${DEMO_QUALITY_RULES}`,
         { value: "new", label: "New patient" },
         { value: "existing", label: "Existing patient" },
       ]},
-      { key: "phone", label: "Phone number", type: "text", placeholder: "(555) 123-4567", required: false },
+      { key: "phone", label: "Phone number", type: "text", placeholder: "07700 900000", required: false },
       { key: "notes", label: "Anything else we should know?", type: "textarea", placeholder: "e.g., Anxious about dental visits, prefer morning appointments...", required: false },
     ],
   },
@@ -380,13 +380,13 @@ ${DEMO_QUALITY_RULES}`,
     formFields: [
       { key: "name", label: "Your name", type: "text", placeholder: "Jane Smith", required: true },
       { key: "budget_range", label: "Budget range", type: "select", required: true, options: [
-        { value: "under_200k", label: "Under $200,000" },
-        { value: "200k_400k", label: "$200,000 - $400,000" },
-        { value: "400k_700k", label: "$400,000 - $700,000" },
-        { value: "700k_1m", label: "$700,000 - $1,000,000" },
-        { value: "over_1m", label: "Over $1,000,000" },
+        { value: "under_150k", label: "Under £150,000" },
+        { value: "150k_300k", label: "£150,000 - £300,000" },
+        { value: "300k_500k", label: "£300,000 - £500,000" },
+        { value: "500k_750k", label: "£500,000 - £750,000" },
+        { value: "over_750k", label: "Over £750,000" },
       ]},
-      { key: "preferred_location", label: "Preferred area", type: "text", placeholder: "e.g., North Austin, near good schools", required: true },
+      { key: "preferred_location", label: "Preferred area", type: "text", placeholder: "e.g., Surrey, near good schools", required: true },
       { key: "timeline", label: "When are you looking to buy?", type: "select", required: true, options: [
         { value: "asap", label: "Within 30 days" },
         { value: "1_3_months", label: "1-3 months" },
@@ -418,14 +418,14 @@ ${DEMO_QUALITY_RULES}`,
     systemPrompt: `You are an auto repair quote estimation AI. You analyse vehicle repair requests for auto repair shops and provide cost estimates, timelines, and service priority.
 
 ## Cost Guidelines
-- Oil change: $30-75 (synthetic: $65-125)
-- Brake pads: $150-350 per axle
-- Battery replacement: $100-250
-- Tire rotation/balance: $50-100
-- Engine diagnostics: $80-150
-- Transmission repair: $1,500-4,000
-- Major engine work: $2,000-7,000+
-- AC repair: $200-1,000
+- Oil change: £25-60 (synthetic: £50-100)
+- Brake pads: £120-280 per axle
+- Battery replacement: £80-200
+- Tire rotation/balance: £40-80
+- Engine diagnostics: £60-120
+- Transmission repair: £1,200-3,500
+- Major engine work: £1,500-6,000+
+- AC repair: £150-800
 
 ## Priority Rules
 - HIGH: Safety issue (brakes, steering, tires), warning lights, vehicle not running
@@ -449,7 +449,7 @@ ${DEMO_QUALITY_RULES}`,
         { value: "other", label: "Other" },
       ]},
       { key: "details", label: "Describe the problem", type: "textarea", placeholder: "e.g., Brakes squeaking when stopping, gets louder in the morning...", required: true },
-      { key: "location", label: "Your location", type: "text", placeholder: "e.g., Houston, TX", required: false },
+      { key: "location", label: "Your location", type: "text", placeholder: "e.g., Sheffield", required: false },
     ],
   },
 
@@ -461,11 +461,11 @@ ${DEMO_QUALITY_RULES}`,
     systemPrompt: `You are a pool service qualification AI. You analyse service requests for pool companies and determine service needs, pricing, and route efficiency.
 
 ## Pricing Guidelines
-- Weekly maintenance: $100-200/month residential, $200-500+ commercial
-- One-time cleaning: $150-300
-- Opening/closing (seasonal): $200-400 each
-- Equipment repair: $200-1,500
-- Replastering/renovation: $5,000-15,000+
+- Weekly maintenance: £80-150/month residential, £150-400+ commercial
+- One-time cleaning: £120-250
+- Opening/closing (seasonal): £150-350 each
+- Equipment repair: £150-1,200
+- Replastering/renovation: £4,000-12,000+
 
 ## Priority Rules
 - HIGH: Recurring weekly service (highest lifetime value), pool equipment failure
@@ -503,7 +503,7 @@ ${DEMO_QUALITY_RULES}`,
         { value: "commercial", label: "Commercial" },
         { value: "hoa", label: "HOA / Community" },
       ]},
-      { key: "location", label: "Location", type: "text", placeholder: "e.g., Scottsdale, AZ", required: true },
+      { key: "location", label: "Location", type: "text", placeholder: "e.g., Bournemouth", required: true },
       { key: "notes", label: "Anything else?", type: "textarea", placeholder: "e.g., Hot tub also needs service, pool heater not working...", required: false },
     ],
   },
@@ -543,13 +543,13 @@ ${DEMO_QUALITY_RULES}`,
         { value: "just_exploring", label: "Just exploring options" },
       ]},
       { key: "budget", label: "Approximate budget", type: "select", required: false, options: [
-        { value: "under_500", label: "Under $500" },
-        { value: "500_2000", label: "$500 – $2,000" },
-        { value: "2000_5000", label: "$2,000 – $5,000" },
-        { value: "5000_plus", label: "$5,000+" },
+        { value: "under_400", label: "Under £400" },
+        { value: "400_1500", label: "£400 – £1,500" },
+        { value: "1500_4000", label: "£1,500 – £4,000" },
+        { value: "4000_plus", label: "£4,000+" },
         { value: "not_sure", label: "Not sure yet" },
       ]},
-      { key: "location", label: "Location", type: "text", placeholder: "e.g., Austin, TX", required: false },
+      { key: "location", label: "Location", type: "text", placeholder: "e.g., London", required: false },
       { key: "notes", label: "Anything else?", type: "textarea", placeholder: "Any other details that would help us understand your needs...", required: false },
     ],
   };

@@ -43,7 +43,7 @@ export function DemoResults({
       <div className="rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm p-6 space-y-6">
         {/* Score — animates from 0 immediately */}
         <div className="text-center space-y-2">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em]">
             Your Score
           </p>
           <div className="flex items-baseline justify-center gap-1">
@@ -71,7 +71,7 @@ export function DemoResults({
             </span>
             {result.estimated_value && (
               <div className="text-right">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">
                   Est. Value
                 </p>
                 <p className="text-lg font-semibold text-foreground">
@@ -85,7 +85,7 @@ export function DemoResults({
         {/* Key Insights — staggered reveal */}
         {phase >= 2 && result.insights.length > 0 && (
           <div className="animate-in fade-in duration-300">
-            <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-3">
+            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mb-3">
               Key Insights
             </h4>
             <ul className="space-y-2">
@@ -111,7 +111,7 @@ export function DemoResults({
         {/* Detailed Analysis */}
         {phase >= 3 && Object.keys(result.fit_analysis).length > 0 && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-400">
-            <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-3">
+            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mb-3">
               Detailed Analysis
             </h4>
             <div className="space-y-2">
@@ -135,7 +135,7 @@ export function DemoResults({
         {/* Recommended Next Steps — numbered with stagger */}
         {phase >= 4 && result.next_steps.length > 0 && (
           <div className="animate-in fade-in duration-300">
-            <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-3">
+            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mb-3">
               Recommended Next Steps
             </h4>
             <ol className="space-y-2.5">
@@ -166,7 +166,12 @@ export function DemoResults({
         <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-400">
           {postResultCta && (
             <Button
-              className="w-full h-14 text-base font-semibold rounded-xl shadow-lg shadow-primary/20"
+              className="w-full h-14 text-base font-semibold rounded-xl"
+              style={{
+                backgroundColor: "var(--demo-cta)",
+                boxShadow:
+                  "0 10px 15px -3px color-mix(in oklch, var(--demo-cta) 25%, transparent)",
+              }}
               onClick={() => {
                 if (postResultCta.url) window.open(postResultCta.url, "_blank");
               }}

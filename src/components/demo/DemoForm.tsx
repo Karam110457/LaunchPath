@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Loader2, ArrowRight, AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { ScrollReveal } from "./ScrollReveal";
 
 interface FormFieldDef {
@@ -27,6 +28,7 @@ interface DemoFormProps {
   isFormValid: boolean;
   ctaText: string;
   error: string | null;
+  headlineStyle?: "serif-italic" | "sans-bold";
 }
 
 export function DemoForm({
@@ -38,16 +40,24 @@ export function DemoForm({
   isFormValid,
   ctaText,
   error,
+  headlineStyle = "serif-italic",
 }: DemoFormProps) {
   return (
     <ScrollReveal className="max-w-xl mx-auto px-4">
       <div className="space-y-6">
         {/* Section heading */}
         <div className="text-center space-y-2">
-          <p className="text-[10px] font-bold text-primary/60 uppercase tracking-[0.2em]">
+          <p className="text-xs font-bold text-primary/80 uppercase tracking-[0.2em]">
             Free Analysis
           </p>
-          <h2 className="text-xl sm:text-2xl font-serif font-light italic text-foreground">
+          <h2
+            className={cn(
+              "text-xl sm:text-2xl text-foreground",
+              headlineStyle === "sans-bold"
+                ? "font-sans font-bold"
+                : "font-serif font-light italic"
+            )}
+          >
             Get Your Personalized Assessment
           </h2>
           <p className="text-sm text-muted-foreground">
@@ -110,7 +120,7 @@ export function DemoForm({
                 )}
 
                 {field.helpText && (
-                  <p className="text-xs text-muted-foreground/70">
+                  <p className="text-xs text-muted-foreground">
                     {field.helpText}
                   </p>
                 )}
@@ -127,7 +137,12 @@ export function DemoForm({
 
           <Button
             type="submit"
-            className="w-full h-14 text-base font-semibold rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300"
+            className="w-full h-14 text-base font-semibold rounded-xl transition-all duration-300"
+            style={{
+              backgroundColor: "var(--demo-cta)",
+              boxShadow:
+                "0 10px 15px -3px color-mix(in oklch, var(--demo-cta) 25%, transparent)",
+            }}
             disabled={isSubmitting || !isFormValid}
             aria-busy={isSubmitting}
           >

@@ -5,7 +5,7 @@
 
 import { tool } from "ai";
 import { z } from "zod";
-import type { DemoConfig, FormField } from "@/lib/ai/schemas";
+import type { DemoConfig, DemoTheme, FormField } from "@/lib/ai/schemas";
 
 export type BuilderEvent =
   | { type: "text-delta"; delta: string }
@@ -208,6 +208,47 @@ export function createBuilderTools(
     },
   });
 
+  const update_theme = tool({
+    description:
+      "Update the page's visual theme: accent color, CTA button color, and/or headline style.",
+    inputSchema: z.object({
+      accent_color: z
+        .enum(["emerald", "blue", "violet", "amber", "rose", "cyan"])
+        .optional()
+        .describe("Page accent color (badges, icons, trust block)"),
+      cta_color: z
+        .enum(["orange", "emerald", "blue", "rose", "amber"])
+        .optional()
+        .describe("CTA button color — warm colors (orange, amber, rose) convert best"),
+      headline_style: z
+        .enum(["serif-italic", "sans-bold"])
+        .optional()
+        .describe("Headline typography: serif-italic (premium) or sans-bold (direct)"),
+    }),
+    execute: async (params) => {
+      const config = getCurrentConfig();
+      const currentTheme: DemoTheme = config.theme ?? {
+        accent_color: "emerald",
+        cta_color: "orange",
+        headline_style: "serif-italic",
+      };
+
+      const newTheme: DemoTheme = {
+        ...currentTheme,
+        ...Object.fromEntries(
+          Object.entries(params).filter(([, v]) => v !== undefined)
+        ),
+      };
+
+      emit({ type: "config-patch", patch: { theme: newTheme } });
+      return {
+        updated: Object.keys(params).filter(
+          (k) => params[k as keyof typeof params] !== undefined
+        ),
+      };
+    },
+  });
+
   return {
     update_hero,
     update_cta,
@@ -216,5 +257,6 @@ export function createBuilderTools(
     add_form_field,
     remove_form_field,
     update_form_field,
+    update_theme,
   };
 }

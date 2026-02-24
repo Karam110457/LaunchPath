@@ -48,6 +48,7 @@ const offerWorkflowInputSchema = z.object({
   }),
   answers: z.object({
     location_city: z.string().nullable(),
+    location_target: z.string().nullable(),
   }),
 });
 
@@ -92,11 +93,13 @@ const preparePrompts = createStep({
     const offerPrompt = buildOfferContext(chosenRecommendation, profile, answers);
     const guaranteePrompt = buildGuaranteeContext(
       chosenRecommendation,
-      profile
+      profile,
+      answers
     );
     const pricingPrompt = buildPricingContext(
       chosenRecommendation,
-      profile
+      profile,
+      answers
     );
 
     const sharedContext = {

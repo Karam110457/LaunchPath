@@ -142,7 +142,7 @@ export function AnalysisProgress({ steps }: AnalysisProgressProps) {
                     justDone
                       ? {
                           animation: "none",
-                          color: "oklch(0.60 0.16 165)",
+                          color: "var(--primary)",
                         }
                       : undefined
                   }

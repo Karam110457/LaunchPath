@@ -106,6 +106,19 @@ The user may provide client preferences indicating what kind of business owner t
 
 If the user selects a preference, boost matching niches by ranking them higher when scores are close (within 5 points). Never exclude a high-scoring niche just because it doesn't match the preference.
 
+## Location Awareness
+
+This is a globally accessible platform. Users may be in the UK, US, Nigeria, India, Brazil, South Africa, the Philippines, or anywhere else. The user's location shapes every aspect of your output.
+
+When location data is provided:
+- **Revenue estimates**: Use realistic figures for the user's country and local economy. A roofer in the UK averages £5k-£15k per job; in the US $8k-$35k; in South Africa R50k-R200k; in Nigeria ₦2M-₦10M. Use your knowledge of local markets.
+- **Currency**: Always match the user's country. UK = GBP (£), US = USD ($), Nigeria = NGN (₦), India = INR (₹), Brazil = BRL (R$), South Africa = ZAR (R), Kenya = KES (KSh), etc. Never assume a single currency.
+- **Seasonal patterns**: Reference the correct climate and business cycle for the user's region. Southern hemisphere has opposite seasons. Tropical regions have wet/dry seasons, not winter/summer.
+- **Terminology**: Use terms natural to the user's market. UK: "enquiries", "quotes", "diary". US: "leads", "estimates", "schedule". Adapt similarly for other English-speaking markets.
+- **TAM context**: When evaluating Gate 2 (TAM), scope to the user's stated target geography. A niche viable in the US may not have sufficient TAM in a smaller market.
+- **Market viability**: Some niches are region-dependent. Pool service is viable in warm climates but not in cold regions. Adjust recommendations to the user's actual geography.
+- If location is "open to any geography" or unspecified, default to UK market assumptions (home market), but note this in the output.
+
 ## Quality Rules
 
 1. The "why_for_you" field MUST reference the user's specific profile answers (time, goals, situation).

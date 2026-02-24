@@ -1,6 +1,7 @@
 "use client";
 
 import { Sparkles, ArrowRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface DemoHeroProps {
   agentName: string;
@@ -9,6 +10,7 @@ interface DemoHeroProps {
   transformationHeadline?: string;
   transformationFrom?: string;
   transformationTo?: string;
+  headlineStyle?: "serif-italic" | "sans-bold";
 }
 
 export function DemoHero({
@@ -18,18 +20,19 @@ export function DemoHero({
   transformationHeadline,
   transformationFrom,
   transformationTo,
+  headlineStyle = "serif-italic",
 }: DemoHeroProps) {
   const words = heroHeadline.split(" ");
 
   return (
     <div className="relative text-center pt-20 sm:pt-28 pb-8 px-4">
-      {/* Ambient radial glow — blooms from upper center */}
+      {/* Ambient radial glow — blooms from upper center, uses theme accent */}
       <div
         className="pointer-events-none absolute inset-0"
         aria-hidden
         style={{
           background:
-            "radial-gradient(ellipse 80% 55% at 50% 35%, oklch(0.60 0.16 165 / 0.07) 0%, transparent 70%)",
+            "radial-gradient(ellipse 80% 55% at 50% 35%, color-mix(in oklch, var(--primary) 7%, transparent) 0%, transparent 70%)",
           animation: "ambient-breathe 5s ease-in-out infinite",
         }}
       />
@@ -45,7 +48,14 @@ export function DemoHero({
         </div>
 
         {/* Headline — word-by-word reveal */}
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-serif font-light italic tracking-tight leading-[1.1]">
+        <h1
+          className={cn(
+            "text-4xl sm:text-5xl md:text-6xl tracking-tight leading-[1.1]",
+            headlineStyle === "sans-bold"
+              ? "font-sans font-bold"
+              : "font-serif font-light italic"
+          )}
+        >
           {words.map((word, i) => (
             <span
               key={`${word}-${i}`}
@@ -70,13 +80,13 @@ export function DemoHero({
 
         {/* Transformation display */}
         {transformationFrom && transformationTo ? (
-          /* Red → Emerald pill treatment */
+          /* Red → Accent pill treatment */
           <div className="flex items-center justify-center gap-3 pt-4 flex-wrap">
             <div
               className="rounded-xl bg-red-500/8 border border-red-500/15 px-4 py-2.5 max-w-[260px] animate-in fade-in slide-in-from-left-3 duration-500"
               style={{ animationDelay: "700ms", animationFillMode: "both" }}
             >
-              <p className="text-[10px] font-bold text-red-400/80 uppercase tracking-wider mb-0.5">
+              <p className="text-xs font-bold text-red-400/80 uppercase tracking-wider mb-0.5">
                 From
               </p>
               <p className="text-sm text-red-300/90 leading-snug">
@@ -88,13 +98,13 @@ export function DemoHero({
               style={{ animationDelay: "950ms", animationFillMode: "both" }}
             />
             <div
-              className="rounded-xl bg-emerald-500/8 border border-emerald-500/15 px-4 py-2.5 max-w-[260px] animate-in fade-in slide-in-from-right-3 duration-500"
+              className="rounded-xl bg-primary/8 border border-primary/15 px-4 py-2.5 max-w-[260px] animate-in fade-in slide-in-from-right-3 duration-500"
               style={{ animationDelay: "1100ms", animationFillMode: "both" }}
             >
-              <p className="text-[10px] font-bold text-emerald-400/80 uppercase tracking-wider mb-0.5">
+              <p className="text-xs font-bold text-primary/80 uppercase tracking-wider mb-0.5">
                 To
               </p>
-              <p className="text-sm text-emerald-300/90 leading-snug">
+              <p className="text-sm text-primary/90 leading-snug">
                 {transformationTo}
               </p>
             </div>

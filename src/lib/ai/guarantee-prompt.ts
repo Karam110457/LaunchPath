@@ -47,6 +47,10 @@ export function buildGuaranteeContext(
   profile: {
     time_availability: string | null;
     revenue_goal: string | null;
+  },
+  answers: {
+    location_city: string | null;
+    location_target: string | null;
   }
 ): string {
   const lines: string[] = [];
@@ -67,6 +71,11 @@ export function buildGuaranteeContext(
   lines.push("\n## Cross-Agent Alignment");
   lines.push("The pricing being set in parallel reflects value delivered, not effort. Your guarantee must be achievable at a premium price point — it should justify the investment, not undermine it.");
   lines.push("Guarantee should relate to system setup speed or automated output quality — the user deploys it once and the AI runs autonomously from there.");
+
+  lines.push("\n## Market Context");
+  lines.push(`- Location: ${answers.location_city ?? "not specified"}`);
+  lines.push(`- Target area: ${answers.location_target ?? "not specified"}`);
+  lines.push("- Tailor the guarantee language to this market. Use local currency, terminology, and realistic timelines for this region.");
 
   return lines.join("\n");
 }

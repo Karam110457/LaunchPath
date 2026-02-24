@@ -50,6 +50,10 @@ const demoBuilderInputSchema = z.object({
     pricing_rationale: z.string().optional().default(""),
     delivery_model: z.string().optional().default("not specified"),
   }),
+  answers: z.object({
+    location_city: z.string().nullable(),
+    location_target: z.string().nullable(),
+  }).optional().default({ location_city: null, location_target: null }),
 });
 
 // -- Step 1: Generate demo page config --
@@ -97,7 +101,8 @@ const generateDemoConfig = createStep({
     const context = buildDemoBuilderContext(
       chosenRecommendation,
       offer,
-      registryExample
+      registryExample,
+      inputData.answers
     );
 
     const agent = mastra.getAgent("demo-builder");

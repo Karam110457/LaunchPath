@@ -61,6 +61,7 @@ export function DemoPageContent({
   const guaranteeText = demoConfig?.guarantee_text;
   const showPricing = demoConfig?.show_pricing ?? false;
   const pricingText = demoConfig?.pricing_text;
+  const headlineStyle = demoConfig?.theme?.headline_style ?? "serif-italic";
 
   // Resolve form fields from demoConfig or agent
   const formFields = demoConfig
@@ -102,7 +103,7 @@ export function DemoPageContent({
   const showForm = !showResults && !showAnalysis;
 
   return (
-    <div className="space-y-16 sm:space-y-24 pb-16">
+    <div className="space-y-12 sm:space-y-16 pb-16">
       <DemoHero
         agentName={agentName}
         heroHeadline={heroHeadline}
@@ -110,6 +111,7 @@ export function DemoPageContent({
         transformationHeadline={transformationHeadline}
         transformationFrom={transformationFrom}
         transformationTo={transformationTo}
+        headlineStyle={headlineStyle}
       />
 
       <DemoValueProps benefits={demoConfig?.benefits} />
@@ -142,6 +144,7 @@ export function DemoPageContent({
           isFormValid={isFormValid()}
           ctaText={ctaText}
           error={error}
+          headlineStyle={headlineStyle}
         />
       )}
 

@@ -39,7 +39,7 @@ export async function POST(
 
   const { data: system, error: fetchError } = await supabase
     .from("user_systems")
-    .select("id, chosen_recommendation, offer")
+    .select("id, chosen_recommendation, offer, location_city, location_target")
     .eq("id", systemId)
     .eq("user_id", user.id)
     .single();
@@ -98,6 +98,10 @@ export async function POST(
               pricing_monthly: offer.pricing_monthly ?? 0,
               pricing_rationale: offer.pricing_rationale ?? "",
               delivery_model: offer.delivery_model ?? "not specified",
+            },
+            answers: {
+              location_city: (system as Record<string, unknown>).location_city as string | null,
+              location_target: (system as Record<string, unknown>).location_target as string | null,
             },
           },
         });

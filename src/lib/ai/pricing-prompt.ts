@@ -38,7 +38,11 @@ These are ranges, not fixed prices. The niche's revenue_potential.per_client fro
 
 ## Currency
 
-Always price in GBP (£). The user and their market are UK-based unless otherwise specified.
+Price in the currency appropriate to the user's location. This is a global platform — users may be in any country:
+- UK → GBP (£), US → USD ($), Nigeria → NGN (₦), India → INR (₹), South Africa → ZAR (R), Brazil → BRL (R$), Kenya → KES (KSh), etc.
+- Use your knowledge of the user's country to select the correct currency symbol and code.
+- Adjust price RANGES to be realistic for the local economy — do not simply convert UK prices to another currency. A service priced at £500/month in the UK might be ₦150,000/month in Nigeria or ₹25,000/month in India, reflecting local purchasing power.
+- If no location is specified, default to GBP (£).
 
 ## Quality Rules
 
@@ -66,6 +70,10 @@ export function buildPricingContext(
   profile: {
     revenue_goal: string | null;
     time_availability: string | null;
+  },
+  answers: {
+    location_city: string | null;
+    location_target: string | null;
   }
 ): string {
   const lines: string[] = [];
@@ -91,6 +99,11 @@ export function buildPricingContext(
   lines.push("\n## Pricing Instructions");
   lines.push(`The user's revenue goal is ${profile.revenue_goal ?? "not specified"}. The niche data suggests ${chosenRecommendation.revenue_potential.per_client} per client is realistic for ${chosenRecommendation.niche}. Price accordingly — higher-value niches (roofing, dental) support higher monthly fees; lower-value niches (window cleaning, detailing) need to stay competitive.`);
   lines.push("Use the revenue goal as the target and the niche revenue_potential as the anchor. Position the price so the user can realistically reach their goal with 2-5 clients.");
+
+  lines.push("\n## Market Context");
+  lines.push(`- Location: ${answers.location_city ?? "not specified"}`);
+  lines.push(`- Target area: ${answers.location_target ?? "not specified"}`);
+  lines.push("- Price in the local currency for this location. Adjust price ranges to realistic local market rates — do not just convert GBP, use purchasing-power-appropriate pricing.");
 
   lines.push("\n## Cross-Agent Alignment");
   lines.push("The offer transformation being written in parallel will describe a vivid before/after story. Your pricing rationale must reflect the value of that transformation — price the OUTCOME, not the tool.");

@@ -147,6 +147,20 @@ export const postResultCtaSchema = z.object({
 
 export type PostResultCta = z.infer<typeof postResultCtaSchema>;
 
+export const demoThemeSchema = z.object({
+  accent_color: z
+    .enum(["emerald", "blue", "violet", "amber", "rose", "cyan"])
+    .default("emerald"),
+  cta_color: z
+    .enum(["orange", "emerald", "blue", "rose", "amber"])
+    .default("orange"),
+  headline_style: z
+    .enum(["serif-italic", "sans-bold"])
+    .default("serif-italic"),
+});
+
+export type DemoTheme = z.infer<typeof demoThemeSchema>;
+
 export const demoConfigSchema = z.object({
   // Page copy
   agent_name: z.string(),
@@ -167,6 +181,9 @@ export const demoConfigSchema = z.object({
 
   // Post-result call-to-action
   post_result_cta: postResultCtaSchema.optional(),
+
+  // Visual theme (per-niche accent, CTA color, headline style)
+  theme: demoThemeSchema.optional(),
 
   // Form
   form_fields: z.array(formFieldSchema).min(3).max(10),

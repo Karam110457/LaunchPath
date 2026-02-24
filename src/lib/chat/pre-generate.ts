@@ -50,6 +50,7 @@ export async function preGenerateOfferForChat(
       },
       answers: {
         location_city: system.location_city,
+        location_target: system.location_target,
       },
     },
   });

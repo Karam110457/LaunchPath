@@ -80,6 +80,24 @@ The scoring prompt will be the system prompt for an AI agent receiving form subm
 - Be specific enough that the AI produces consistent, calibrated scores
 - Include at least one numeric threshold (e.g., "revenue above £X = HIGH signal")
 
+## Theme Selection
+
+Select a visual theme that matches the niche personality. The theme controls the page's accent color, CTA button color, and headline typography.
+
+- **accent_color**: The page's primary accent used for badges, icons, and trust elements.
+  - "emerald" — default, tech/SaaS
+  - "blue" — finance, healthcare, professional services
+  - "violet" — creative agencies, luxury, design
+  - "amber" — construction, trades, home services
+  - "rose" — wellness, beauty, personal care
+  - "cyan" — general professional services
+
+- **cta_color**: The CTA button color. ALWAYS default to "orange" unless there's a strong niche reason not to. Warm colors (orange, amber, rose) convert best on dark backgrounds. Options: "orange", "emerald", "blue", "rose", "amber".
+
+- **headline_style**: Typography for headlines.
+  - "sans-bold" — direct, punchy, works for trades, construction, direct-response niches
+  - "serif-italic" — premium, refined, works for luxury, professional, creative niches
+
 ## Quality Rules
 
 1. Form fields must have correct types and all required properties.
@@ -121,6 +139,10 @@ export function buildDemoBuilderContext(
     formFields: { name: string; label: string; type: string; placeholder: string; required: boolean; options?: string[] }[];
     systemPrompt: string;
     agentName: string;
+  },
+  answers?: {
+    location_city: string | null;
+    location_target: string | null;
   }
 ): string {
   const lines: string[] = [];
@@ -155,12 +177,22 @@ export function buildDemoBuilderContext(
   lines.push("\n## Form Field Reminder");
   lines.push("Target 3-5 fields. Every field must be used in the scoring_prompt. Remove any field you cannot score against.");
 
+  lines.push("\n## Theme Reminder");
+  lines.push("Select a theme that matches this niche. Pick an accent_color appropriate for " + chosenRecommendation.niche + ". Default cta_color to 'orange'. Choose headline_style based on niche tone (sans-bold for trades/direct, serif-italic for premium/creative).");
+
   if (registryExample) {
     lines.push("\n## Reference Agent (adapt for this specific offer — do not copy wholesale)");
     lines.push(`- Agent name: ${registryExample.agentName}`);
     lines.push(`- Form fields used: ${JSON.stringify(registryExample.formFields)}`);
     lines.push(`- Scoring approach (first 400 chars): ${registryExample.systemPrompt.slice(0, 400)}...`);
     lines.push("Note: adapt the form fields and scoring logic to match THIS offer's transformation and guarantee. Do not copy the reference verbatim.");
+  }
+
+  if (answers) {
+    lines.push("\n## Market Context");
+    lines.push(`- Location: ${answers.location_city ?? "not specified"}`);
+    lines.push(`- Target area: ${answers.location_target ?? "not specified"}`);
+    lines.push("- All form field placeholders, pricing references, and location examples must match this market. Use local currency, city names, and terminology. Adapt for ANY country — the user may be anywhere in the world.");
   }
 
   return lines.join("\n");

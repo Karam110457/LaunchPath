@@ -553,7 +553,7 @@ export function createChatTools(
       // Check for pre-generated offer first
       const { data: freshSystem } = await supabase
         .from("user_systems")
-        .select("offer, chosen_recommendation, location_city")
+        .select("offer, chosen_recommendation, location_city, location_target")
         .eq("id", systemId)
         .single();
 
@@ -616,6 +616,7 @@ export function createChatTools(
             },
             answers: {
               location_city: freshSystem?.location_city,
+              location_target: freshSystem?.location_target,
             },
           },
         });
@@ -807,7 +808,7 @@ export function createChatTools(
     execute: async () => {
       const { data: freshSystem } = await supabase
         .from("user_systems")
-        .select("offer, chosen_recommendation")
+        .select("offer, chosen_recommendation, location_city, location_target")
         .eq("id", systemId)
         .single();
 
@@ -870,6 +871,10 @@ export function createChatTools(
               pricing_monthly: Number(offer.pricing_monthly ?? 0),
               pricing_rationale: offer.pricing_rationale ?? "",
               delivery_model: offer.delivery_model ?? "build_once",
+            },
+            answers: {
+              location_city: freshSystem?.location_city as string | null,
+              location_target: freshSystem?.location_target as string | null,
             },
           },
         });

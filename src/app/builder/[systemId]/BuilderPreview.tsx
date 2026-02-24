@@ -2,6 +2,7 @@
 
 import { DemoPageContent } from "@/components/demo/DemoPageContent";
 import type { DemoConfig } from "@/lib/ai/schemas";
+import { getDemoThemeVars } from "@/lib/demo-theme";
 
 interface BuilderPreviewProps {
   systemId: string;
@@ -23,7 +24,10 @@ export function BuilderPreview({
   solution,
 }: BuilderPreviewProps) {
   return (
-    <div className="h-full overflow-y-auto bg-background">
+    <div
+      className="h-full overflow-y-auto bg-background"
+      style={getDemoThemeVars(demoConfig.theme)}
+    >
       <DemoPageContent
         systemId={systemId}
         demoConfig={demoConfig}
