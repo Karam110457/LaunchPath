@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { findAgentSlug, getAgentForNiche, buildFallbackAgent } from "@/lib/ai/agents/registry";
+import {
+  findAgentSlug,
+  getAgentForNiche,
+  buildFallbackAgent,
+} from "@/lib/ai/agents/registry";
 import { DemoPage } from "./DemoPage";
 import type { DemoConfig } from "@/lib/ai/schemas";
 
@@ -55,6 +59,8 @@ export default async function DemoPageRoute({ params }: DemoPageProps) {
         solution={chosenRec.your_solution}
         segment={offer?.segment ?? chosenRec.target_segment.description}
         systemDescription={offer?.system_description}
+        transformationFrom={offer?.transformation_from}
+        transformationTo={offer?.transformation_to}
       />
     );
   }
@@ -77,6 +83,8 @@ export default async function DemoPageRoute({ params }: DemoPageProps) {
       solution={chosenRec.your_solution}
       segment={offer?.segment ?? chosenRec.target_segment.description}
       systemDescription={offer?.system_description}
+      transformationFrom={offer?.transformation_from}
+      transformationTo={offer?.transformation_to}
     />
   );
 }

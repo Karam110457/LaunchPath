@@ -132,6 +132,21 @@ export const formFieldSchema = z.object({
 
 export type FormField = z.infer<typeof formFieldSchema>;
 
+export const benefitSchema = z.object({
+  icon: z.enum(["chart", "clock", "target", "shield", "zap", "users"]),
+  title: z.string(),
+  description: z.string(),
+});
+
+export type Benefit = z.infer<typeof benefitSchema>;
+
+export const postResultCtaSchema = z.object({
+  text: z.string(),
+  url: z.string().optional(),
+});
+
+export type PostResultCta = z.infer<typeof postResultCtaSchema>;
+
 export const demoConfigSchema = z.object({
   // Page copy
   agent_name: z.string(),
@@ -146,6 +161,12 @@ export const demoConfigSchema = z.object({
   show_pricing: z.boolean(),
   pricing_text: z.string().optional(),
   transformation_headline: z.string(),
+
+  // Value proposition (AI-generated benefit bullets)
+  benefits: z.array(benefitSchema).optional(),
+
+  // Post-result call-to-action
+  post_result_cta: postResultCtaSchema.optional(),
 
   // Form
   form_fields: z.array(formFieldSchema).min(3).max(10),

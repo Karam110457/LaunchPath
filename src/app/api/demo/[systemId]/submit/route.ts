@@ -11,7 +11,7 @@ import { logger } from "@/lib/security/logger";
  * POST /api/demo/[systemId]/submit
  * Public endpoint — no auth required. Rate limited: 10 req/min per IP.
  * Processes a demo form submission through the niche-specific Mastra agent.
- * Returns a streaming text response.
+ * Returns an SSE stream with staged progress events and the final result.
  */
 export async function POST(
   request: Request,
@@ -60,50 +60,90 @@ export async function POST(
 
   // Look up Mastra agent (falls back to dynamic agent for custom niches)
   const agentSlug = findAgentSlug(chosenRec.niche);
-  const { agent } = getDemoAgent(agentSlug, chosenRec.niche, chosenRec.your_solution);
+  const { agent } = getDemoAgent(
+    agentSlug,
+    chosenRec.niche,
+    chosenRec.your_solution
+  );
 
-  try {
-    const userMessage = `Analyse this submission and return your assessment as JSON.\n\nForm data:\n${JSON.stringify(data.form_data, null, 2)}`;
+  const encoder = new TextEncoder();
 
-    const stream = await agent.stream(userMessage, {
-      structuredOutput: { schema: demoResultSchema },
-    });
+  const sseStream = new ReadableStream({
+    async start(controller) {
+      const write = (payload: object) => {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify(payload)}\n\n`)
+        );
+      };
 
-    // Save to DB when structured output is ready (fire-and-forget)
-    stream.object
-      .then(async (result) => {
-        const { error: insertError } = await supabase
+      const delay = (ms: number) =>
+        new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+      try {
+        // Stage 1: Reading data
+        write({ type: "step-active", stepId: "reading" });
+        await delay(400);
+        write({ type: "step-done", stepId: "reading" });
+
+        // Stage 2: Scoring — start AI call
+        write({ type: "step-active", stepId: "scoring" });
+
+        const userMessage = `Analyse this submission and return your assessment as JSON.\n\nForm data:\n${JSON.stringify(data.form_data, null, 2)}`;
+
+        const aiStream = await agent.stream(userMessage, {
+          structuredOutput: { schema: demoResultSchema },
+        });
+
+        // Wait for the structured output to resolve
+        const result = await aiStream.object;
+
+        write({ type: "step-done", stepId: "scoring" });
+
+        // Stage 3: Generating insights
+        write({ type: "step-active", stepId: "insights" });
+        await delay(500);
+        write({ type: "step-done", stepId: "insights" });
+
+        // Stage 4: Preparing report
+        write({ type: "step-active", stepId: "report" });
+        await delay(400);
+        write({ type: "step-done", stepId: "report" });
+
+        // Complete with result
+        write({ type: "complete", result });
+
+        // Fire-and-forget save to DB
+        supabase
           .from("demo_submissions")
           .insert({
             system_id: systemId,
             form_data: data.form_data,
             result,
             ip_address: ip,
+          })
+          .then(({ error: insertError }) => {
+            if (insertError) {
+              logger.error("Failed to save demo submission", {
+                systemId,
+                code: insertError.code,
+              });
+            }
           });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        logger.error("Demo AI call failed", { systemId, error: msg });
+        write({ type: "error", error: "Analysis failed. Please try again." });
+      }
 
-        if (insertError) {
-          logger.error("Failed to save demo submission", {
-            systemId,
-            code: insertError.code,
-          });
-        }
-      })
-      .catch((err) => {
-        logger.error("Demo structured output failed", {
-          systemId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
+      controller.close();
+    },
+  });
 
-    return new Response(stream.textStream as ReadableStream, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Cache-Control": "no-cache",
-      },
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    logger.error("Demo AI call failed", { systemId, error: msg });
-    return jsonErrorResponse("Analysis failed. Please try again.", 500);
-  }
+  return new Response(sseStream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
 }

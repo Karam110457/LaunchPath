@@ -19,10 +19,11 @@ A demo page is a public-facing landing page where the user's prospects can:
 Given the user's offer (transformation, guarantee, pricing) and their niche recommendation, generate a complete demo page config:
 
 1. **Hero copy** — Headline and subheadline derived directly from the offer's transformation
-2. **Form fields** — 3-5 fields optimised for conversion that collect the right qualifying data
-3. **Scoring prompt** — A system prompt for the AI agent that will score form submissions
-4. **Offer integration** — Whether/how to display the guarantee and pricing on the page
-5. **CTA text** — Button text that drives action
+2. **Benefits** — Exactly 3 niche-specific value propositions shown between hero and form
+3. **Form fields** — 3-5 fields optimised for conversion that collect the right qualifying data
+4. **Scoring prompt** — A system prompt for the AI agent that will score form submissions
+5. **Offer integration** — Whether/how to display the guarantee and pricing on the page
+6. **CTA text** — Button text that drives action
 
 ## CRITICAL: Hero Copy Must Derive From the Offer Transformation
 
@@ -42,6 +43,21 @@ Select the formula that best fits this niche and transformation:
 - **before_after**: "[Stop/End X]. [Start/Get Y automatically]." — e.g., "Stop missing calls. Start booking jobs automatically."
 - **for_who_benefit**: "For [specific segment who want] [specific outcome]" — e.g., "For HVAC owners who want a full calendar without buying ads"
 - **problem_solved**: "The [specific problem] that [costs them something] — solved." — e.g., "The missed-call problem that kills roofing businesses — solved."
+
+## Benefits (Value Propositions)
+
+Generate exactly 3 benefits that bridge the hero → form. These appear as a 3-column grid between the headline and the form.
+
+Each benefit has:
+- **icon**: one of "chart", "clock", "target", "shield", "zap", "users" — pick the one that best represents the benefit
+- **title**: 2-4 words, specific to this niche (NOT generic like "Instant Analysis")
+- **description**: 1 sentence explaining the value in the prospect's language
+
+Rules:
+- Benefits must be specific to the niche and bottleneck — never use generic filler
+- Each benefit should answer "why should I fill out this form?"
+- Use the transformation and solution context to craft benefits that speak to the prospect's pain
+- Example for roofing: { icon: "zap", title: "Instant Lead Scoring", description: "Know which enquiries are worth your time before you pick up the phone." }
 
 ## Form Field Conversion Rules (MANDATORY)
 
@@ -132,6 +148,9 @@ export function buildDemoBuilderContext(
   lines.push(`- Why: ${chosenRecommendation.target_segment.why}`);
   lines.push(`- Strategic insight: ${chosenRecommendation.strategic_insight}`);
   lines.push(`- Revenue potential: ${chosenRecommendation.revenue_potential.per_client} per client, targeting ${chosenRecommendation.revenue_potential.target_clients} clients for ${chosenRecommendation.revenue_potential.monthly_total}/month`);
+
+  lines.push("\n## Benefits Reminder");
+  lines.push("Generate exactly 3 niche-specific benefits. Each must speak to this prospect's pain: " + chosenRecommendation.bottleneck);
 
   lines.push("\n## Form Field Reminder");
   lines.push("Target 3-5 fields. Every field must be used in the scoring_prompt. Remove any field you cannot score against.");
