@@ -334,8 +334,8 @@ export default function DemoTemplate({ config }: { config?: DemoConfig }) {
                     <div className="text-center md:text-left mb-12 md:mb-16 max-w-2xl">
                         <FadeIn>
                             {/* 4. Bold Benefit-Driven Headline (Instead of "How it works") */}
-                            <h2 className="text-[1.75rem] md:text-[2.5rem] font-extrabold tracking-tight text-[#0F172A] mb-4 leading-tight">Turn missed calls into booked jobs automatically.</h2>
-                            <p className="text-slate-600 md:text-lg font-medium">Your business doesn't stop, so neither should your reception. Here is exactly what the AI achieves for you.</p>
+                            <h2 className="text-[1.75rem] md:text-[2.5rem] font-extrabold tracking-tight text-[#0F172A] mb-4 leading-tight">Three things it handles while you're on the job.</h2>
+                            <p className="text-slate-600 md:text-lg font-medium">Your business doesn't stop, so neither should your reception. Here is exactly what the system achieves for you in the background.</p>
                         </FadeIn>
                     </div>
 
@@ -346,8 +346,14 @@ export default function DemoTemplate({ config }: { config?: DemoConfig }) {
                                     <PlayCircle className="w-6 h-6" />
                                 </div>
                                 {/* Formatting for scanning: Bold core value */}
-                                <h3 className="text-lg md:text-xl font-bold text-slate-900 mb-3"><span className="text-[var(--primary)] border-b-2 border-[var(--primary)]/30">Sub-second</span> Engagement</h3>
-                                <p className="text-slate-600 font-medium text-[14px] md:text-[15px] leading-relaxed">When a prospect texts you, the AI replies instantly. It hooks them into a conversation <strong className="text-slate-900">before they have time to message your competitors.</strong></p>
+                                <h3 className="text-lg md:text-xl font-bold text-slate-900 mb-3"><span className="text-[var(--primary)] text-bold">Sub-second</span> Engagement</h3>
+
+                                <p className="font-bold text-slate-900 text-[15px] mb-2 leading-snug">Hook prospects before they call your competitors.</p>
+                                <p className="text-slate-600 font-medium text-[14px] leading-relaxed mb-6">When a prospect texts you, the AI replies instantly. It starts a polite conversation the moment their text hits your number.</p>
+
+                                <div className="mt-auto bg-slate-50 border border-slate-100 rounded-lg p-3 text-[13px] font-bold text-slate-700 flex items-center gap-2">
+                                    <Zap className="w-4 h-4 text-blue-500 fill-blue-500" /> Average response time: 0.8 seconds
+                                </div>
                             </div>
                         </FadeIn>
 
@@ -356,8 +362,14 @@ export default function DemoTemplate({ config }: { config?: DemoConfig }) {
                                 <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center mb-6 border border-amber-100">
                                     <ShieldCheck className="w-6 h-6" />
                                 </div>
-                                <h3 className="text-lg md:text-xl font-bold text-slate-900 mb-3"><span className="text-[var(--primary)] border-b-2 border-[var(--primary)]/30">Ruthless</span> Qualification</h3>
-                                <p className="text-slate-600 font-medium text-[14px] md:text-[15px] leading-relaxed">It asks the budget, timeline, and scope questions you require. If they aren't a fit, it politely disqualifies them. <strong className="text-slate-900">You only talk to perfect leads.</strong></p>
+                                <h3 className="text-lg md:text-xl font-bold text-slate-900 mb-3"><span className="text-[var(--primary)] text-bold">Ruthless</span> Qualification</h3>
+
+                                <p className="font-bold text-slate-900 text-[15px] mb-2 leading-snug">Stop wasting time on dead-end tire kickers.</p>
+                                <p className="text-slate-600 font-medium text-[14px] leading-relaxed mb-6">It asks the budget, timeline, and scope questions you require. If they aren't a fit, it politely turns them away so you only talk to perfect leads.</p>
+
+                                <div className="mt-auto bg-slate-50 border border-slate-100 rounded-lg p-3 text-[13px] font-bold text-slate-700 flex items-center gap-2">
+                                    <ShieldCheck className="w-4 h-4 text-amber-500 fill-amber-500" /> Only 1 in 4 leads makes it to your calendar
+                                </div>
                             </div>
                         </FadeIn>
 
@@ -366,8 +378,14 @@ export default function DemoTemplate({ config }: { config?: DemoConfig }) {
                                 <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-6 border border-emerald-100">
                                     <Clock className="w-6 h-6" />
                                 </div>
-                                <h3 className="text-lg md:text-xl font-bold text-slate-900 mb-3">Direct Calendar <span className="text-[var(--primary)] border-b-2 border-[var(--primary)]/30">Booking</span></h3>
-                                <p className="text-slate-600 font-medium text-[14px] md:text-[15px] leading-relaxed">Once qualified, the AI presents available slots directly from your Google calendar and locks in the meeting seamlessly. <strong className="text-slate-900">Zero back-and-forth.</strong></p>
+                                <h3 className="text-lg md:text-xl font-bold text-slate-900 mb-3">Direct Calendar <span className="text-[var(--primary)] text-bold">Booking</span></h3>
+
+                                <p className="font-bold text-slate-900 text-[15px] mb-2 leading-snug">Wake up to qualified jobs ready on your schedule.</p>
+                                <p className="text-slate-600 font-medium text-[14px] leading-relaxed mb-6">Once perfectly qualified, the AI presents available slots directly from your Google calendar and locks in the meeting seamlessly.</p>
+
+                                <div className="mt-auto bg-slate-50 border border-slate-100 rounded-lg p-3 text-[13px] font-bold text-slate-700 flex items-center gap-2">
+                                    <Clock className="w-4 h-4 text-emerald-500 fill-emerald-500" /> 100% automated. Zero back-and-forth.
+                                </div>
                             </div>
                         </FadeIn>
                     </div>
