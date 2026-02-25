@@ -55,7 +55,6 @@ export interface DemoConfig {
 }
 
 export default function DemoTemplate({ config }: { config?: DemoConfig }) {
-    const [openFaq, setOpenFaq] = useState<number | null>(0);
     const [isConsentChecked, setIsConsentChecked] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
@@ -431,39 +430,30 @@ export default function DemoTemplate({ config }: { config?: DemoConfig }) {
             <section className="w-full py-12 md:py-16 px-5 max-w-4xl mx-auto mb-10 md:mb-16">
                 <div className="mb-10 md:mb-12 text-center md:text-left">
                     <FadeIn>
-                        <h2 className="text-[1.75rem] md:text-4xl font-extrabold text-[#0F172A] tracking-tight mb-2 md:mb-3">Clear up any doubts.</h2>
+                        <h2 className="text-[1.75rem] md:text-4xl font-extrabold text-[#0F172A] tracking-tight mb-2 md:mb-3">What local business owners ask before trying it.</h2>
                         <p className="text-slate-600 font-medium md:text-lg">We know you might be skeptical. Read these first.</p>
                     </FadeIn>
                 </div>
 
                 <div className="space-y-4">
-                    {faqs.map((faq, idx) => (
-                        <FadeIn key={idx} delay={50 * idx} direction="up">
-                            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all">
-                                <button
-                                    className="w-full px-5 py-4 md:px-6 md:py-5 flex items-center justify-between text-left focus:outline-none"
-                                    onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                                >
-                                    <span className={`font-bold text-[15px] md:text-[17px] pr-4 ${openFaq === idx ? 'text-[var(--primary)]' : 'text-slate-800'}`}>
+                    {faqs.map((faq, idx) => {
+                        const isPricing = idx === faqs.length - 1;
+                        return (
+                            <FadeIn key={idx} delay={50 * idx} direction="up">
+                                <div className={`rounded-2xl border p-6 md:p-8 shadow-sm transition-all ${isPricing
+                                        ? "bg-[var(--primary)]/5 border-[var(--primary)]/30"
+                                        : "bg-white border-slate-200 hover:shadow-md"
+                                    }`}>
+                                    <h3 className={`font-bold text-[17px] md:text-[19px] mb-3 ${isPricing ? 'text-[var(--primary)]' : 'text-slate-900'}`}>
                                         {faq.question}
-                                    </span>
-                                    <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${openFaq === idx ? 'bg-[var(--primary)]/10 text-[var(--primary)]' : 'bg-slate-50 text-slate-400'}`}>
-                                        <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${openFaq === idx ? "rotate-180" : ""}`} />
+                                    </h3>
+                                    <div className="text-slate-600 font-medium text-[15px] leading-relaxed">
+                                        <p>{faq.answer}</p>
                                     </div>
-                                </button>
-                                <div
-                                    className={`px-5 md:px-6 text-slate-600 font-medium text-[14px] md:text-[15px] leading-relaxed transition-all duration-300`}
-                                    style={{
-                                        maxHeight: openFaq === idx ? "150px" : "0",
-                                        paddingBottom: openFaq === idx ? "20px" : "0",
-                                        opacity: openFaq === idx ? 1 : 0
-                                    }}
-                                >
-                                    <p>{faq.answer}</p>
                                 </div>
-                            </div>
-                        </FadeIn>
-                    ))}
+                            </FadeIn>
+                        );
+                    })}
                 </div>
             </section>
 
