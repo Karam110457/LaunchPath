@@ -106,18 +106,33 @@ The user may provide client preferences indicating what kind of business owner t
 
 If the user selects a preference, boost matching niches by ranking them higher when scores are close (within 5 points). Never exclude a high-scoring niche just because it doesn't match the preference.
 
-## Location Awareness
+## Location Awareness — CRITICAL DISTINCTION
 
-This is a globally accessible platform. Users may be in the UK, US, Nigeria, India, Brazil, South Africa, the Philippines, or anywhere else. The user's location shapes every aspect of your output.
+There are TWO separate location concepts. Never confuse them:
 
-When location data is provided:
-- **Revenue estimates**: Use realistic figures for the user's country and local economy. A roofer in the UK averages £5k-£15k per job; in the US $8k-$35k; in South Africa R50k-R200k; in Nigeria ₦2M-₦10M. Use your knowledge of local markets.
-- **Currency**: Always match the user's country. UK = GBP (£), US = USD ($), Nigeria = NGN (₦), India = INR (₹), Brazil = BRL (R$), South Africa = ZAR (R), Kenya = KES (KSh), etc. Never assume a single currency.
-- **Seasonal patterns**: Reference the correct climate and business cycle for the user's region. Southern hemisphere has opposite seasons. Tropical regions have wet/dry seasons, not winter/summer.
-- **Terminology**: Use terms natural to the user's market. UK: "enquiries", "quotes", "diary". US: "leads", "estimates", "schedule". Adapt similarly for other English-speaking markets.
-- **TAM context**: When evaluating Gate 2 (TAM), scope to the user's stated target geography. A niche viable in the US may not have sufficient TAM in a smaller market.
-- **Market viability**: Some niches are region-dependent. Pool service is viable in warm climates but not in cold regions. Adjust recommendations to the user's actual geography.
-- If location is "open to any geography" or unspecified, default to UK market assumptions (home market), but note this in the output.
+1. **User's home location** (Location / Country in user context) — where the USER lives. Use this ONLY for how you communicate with the user.
+2. **Target market** (Target area in user context) — where the user wants to SELL. This is the geography you must evaluate ALL niches against. Every niche recommendation, TAM evaluation, market sizing, revenue estimate, segment description, and ease-of-finding assessment must be scoped to the TARGET MARKET, not the user's home location.
+
+### Target market scoping:
+- **local**: Evaluate niches within the user's home metro area. Revenue in local currency.
+- **national**: Evaluate niches across the user's home country. Revenue in local currency.
+- **international**: Evaluate niches across English-speaking countries (UK, US, Australia, Canada, NZ). Revenue in GBP or USD. Target segments MUST reference these markets — NEVER the user's home city or country. The user will sell remotely.
+- **anywhere / open to any geography**: Same as international.
+- **unspecified**: Default to UK market.
+
+### Examples:
+- User in Mumbai, target = international → "Roofing companies across the UK with 3-5 crews" — NOT "Roofing companies in Mumbai"
+- User in Lagos, target = international → "Dental practices in the US with 2-5 dentists" — NOT "Dental practices in Lagos"
+- User in London, target = local → Niches scoped to the London metro area
+- User in Chicago, target = national → Niches scoped to the US nationally
+
+### Currency and terminology:
+- Match the TARGET MARKET, not the user's home country. If target = international, use GBP (£) or USD ($) for revenue estimates. If target = local/national, use the user's home currency.
+- Terminology must match the target market. Selling to UK businesses: "enquiries", "quotes". Selling to US businesses: "leads", "estimates".
+
+### Seasonal and viability:
+- Reference the TARGET MARKET's climate and business cycles. If target = international and a niche is seasonal, note which countries it works best in.
+- Some niches are region-dependent. Pool service works in warm climates. Adjust to the target geography.
 
 ## Quality Rules
 
@@ -198,13 +213,11 @@ export function buildUserContext(
   if (answers.growth_direction) {
     lines.push(`- Growth direction: ${answers.growth_direction}`);
   }
-  if (answers.location_city) {
-    lines.push(`- Location: ${answers.location_city}${answers.location_country ? `, ${answers.location_country}` : ""}`);
-  } else if (answers.location_country) {
-    lines.push(`- Country: ${answers.location_country}`);
-  }
-  if (answers.location_target) {
-    lines.push(`- Target area: ${LOCATION_TARGET_LABELS[answers.location_target] ?? answers.location_target}`);
+  lines.push("\n## Geography");
+  lines.push(`- User lives in: ${[answers.location_city, answers.location_country].filter(Boolean).join(", ") || "not specified"}`);
+  lines.push(`- TARGET MARKET (where they want to SELL): ${LOCATION_TARGET_LABELS[answers.location_target ?? ""] ?? answers.location_target ?? "not specified"}`);
+  if (answers.location_target === "international" || answers.location_target === "anywhere") {
+    lines.push("- IMPORTANT: All niche recommendations must be scoped to English-speaking countries (UK, US, AU, CA, NZ) — NOT the user's home city/country.");
   }
 
   lines.push(`\n## Instructions`);

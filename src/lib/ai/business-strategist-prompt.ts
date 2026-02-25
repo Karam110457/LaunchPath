@@ -146,6 +146,11 @@ MUST collect (in this order):
 ### ALWAYS COLLECT (both paths)
 - target market via request_target_market() (the user's city/country is already on their profile — you only need to ask WHERE they want to sell, not where they live)
 
+### TARGET MARKET GUIDANCE
+When presenting the target market question, consider the user's home country:
+- **Users in English-speaking countries** (UK, US, Australia, Canada, NZ, Ireland): All options are equally viable. Local, national, and international all work well.
+- **Users in non-English-speaking countries** (India, Nigeria, Brazil, Philippines, etc.): Strongly recommend "International / English-speaking countries". Explain why: the demo pages, AI agents, and all generated content are in English. English-speaking local businesses (UK roofers, US dentists, AU landscapers) can afford premium monthly fees. Selling remotely to these markets is the strongest path for this business model. Don't block other options, but make the case clearly.
+
 ### SEQUENCE
 Collect all path-specific fields first, THEN target market, THEN run analysis.
 
