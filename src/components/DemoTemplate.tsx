@@ -139,19 +139,19 @@ export default function DemoTemplate({ config }: { config?: DemoConfig }) {
 
                 {/* ROW 1 LEFT: HEADLINE (Always visible first) */}
                 <div className="flex flex-col justify-start lg:pr-4">
-                    {/* 5. True Verifiable Social Proof High Up (Lesson 1 & 5) */}
+                    {/* 5. Borrowed Social Proof / Industry Stat (For new agencies) */}
                     <FadeIn>
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="flex -space-x-2">
-                                <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Michael" alt="Michael" className="w-8 h-8 rounded-full border-2 border-white bg-slate-100" />
-                                <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Sarah" alt="Sarah" className="w-8 h-8 rounded-full border-2 border-white bg-slate-100" />
-                                <img src="https://api.dicebear.com/7.x/notionists/svg?seed=David" alt="David" className="w-8 h-8 rounded-full border-2 border-white bg-slate-100" />
+                            <div className="flex -space-x-2 opacity-80">
+                                <div className="w-8 h-8 rounded-full border-2 border-white bg-blue-100 flex items-center justify-center text-blue-600 shadow-sm"><Zap className="w-4 h-4 fill-current" /></div>
+                                <div className="w-8 h-8 rounded-full border-2 border-white bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm"><Clock className="w-4 h-4" /></div>
+                                <div className="w-8 h-8 rounded-full border-2 border-white bg-indigo-100 flex items-center justify-center text-indigo-600 shadow-sm"><ShieldCheck className="w-4 h-4" /></div>
                             </div>
                             <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
                                 <div className="flex gap-0.5">
                                     {[1, 2, 3, 4, 5].map(i => <Star key={i} className="w-3.5 h-3.5 text-amber-500 fill-current" />)}
                                 </div>
-                                <span className="text-[13px] md:text-sm">Trusted by <strong className="text-slate-900">400+ Local Businesses</strong></span>
+                                <span className="text-[13px] md:text-sm">Instant response increases bookings by <strong className="text-slate-900">up to 391%*</strong></span>
                             </div>
                         </div>
                     </FadeIn>
@@ -374,7 +374,7 @@ export default function DemoTemplate({ config }: { config?: DemoConfig }) {
                 </div>
             </section>
 
-            {/* --- REAL SOCIAL PROOF SECTION (Lesson 5) --- */}
+            {/* --- INDUSTRY STAT PROOF SECTION (Lesson 5 Alternative for New Agencies) --- */}
             <section className="w-full py-16 md:py-20 bg-white">
                 <div className="max-w-6xl mx-auto px-5">
                     <FadeIn>
@@ -386,19 +386,21 @@ export default function DemoTemplate({ config }: { config?: DemoConfig }) {
                                 <div className="flex items-center gap-1 mb-3 md:mb-4">
                                     {[1, 2, 3, 4, 5].map(i => <Star key={i} className="w-4 md:w-5 h-4 md:h-5 text-amber-500 fill-current" />)}
                                 </div>
-                                <h2 className="text-[1.35rem] md:text-3xl font-bold text-white tracking-tight mb-2">Real results.</h2>
-                                <p className="text-slate-400 font-medium text-[14px] md:text-base">Our AI has successfully handled over <strong className="text-white">100,000+ local lead conversations</strong> across the country.</p>
+                                <h2 className="text-[1.35rem] md:text-3xl font-bold text-white tracking-tight mb-2">The data doesn't lie.</h2>
+                                <p className="text-slate-400 font-medium text-[14px] md:text-base">Why Fortune 500 companies rely on <strong className="text-white">sub-second AI response</strong> architecture.</p>
                             </div>
 
                             <div className="w-full md:w-2/3 border-t md:border-t-0 md:border-l border-slate-700 pt-8 md:pt-0 md:pl-10">
                                 <p className="text-base md:text-xl text-slate-200 font-medium italic leading-relaxed mb-6">
-                                    "Before LaunchPath, I was losing at least 3-4 roofing quotes a week because I couldn't answer the phone while on a ladder. Now, the AI texts them instantly, qualifies the job scope, and books the roof inspection for me. My close rate jumped 40%."
+                                    "Industry data shows that 78% of customers buy from the company that responds to their inquiry first. By deploying a conversational AI that responds in under 5 minutes, businesses see a <strong className="text-[var(--primary)] font-bold">391% increase</strong> in conversion rates from lead to booked appointment."
                                 </p>
                                 <div className="flex items-center gap-4">
-                                    <img src="https://api.dicebear.com/7.x/notionists/svg?seed=MarcusT" alt="Marcus T" className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-slate-700 bg-slate-800" />
+                                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-slate-700 bg-slate-800 flex flex-col items-center justify-center shrink-0">
+                                        <span className="text-white font-black text-xs md:text-sm tracking-tighter">HBR</span>
+                                    </div>
                                     <div>
-                                        <p className="text-white font-bold text-[15px] md:text-base">Marcus Thompson</p>
-                                        <p className="text-slate-400 text-[12px] md:text-sm font-medium">Owner, Apex Roofing Solutions <span className="hidden sm:inline">· Verified GMB</span></p>
+                                        <p className="text-white font-bold text-[15px] md:text-base mb-0.5">Lead Response Management Study</p>
+                                        <p className="text-slate-400 text-[12px] md:text-sm font-medium">As featured in Harvard Business Review</p>
                                     </div>
                                 </div>
                             </div>
