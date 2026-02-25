@@ -11,10 +11,10 @@ export const TIME_AVAILABILITY_OPTIONS = [
 ] as const;
 
 export const REVENUE_GOAL_OPTIONS = [
-  { value: "500_1k", label: "£500–1,000", description: "First meaningful win" },
-  { value: "1k_3k", label: "£1,000–3,000", description: "Real side income" },
-  { value: "3k_5k", label: "£3,000–5,000", description: "Replace my salary" },
-  { value: "5k_10k_plus", label: "£5,000–10,000+", description: "Build a real business" },
+  { value: "500_1k", label: "First meaningful win", description: "Enough to prove the model works" },
+  { value: "1k_3k", label: "Real side income", description: "Consistent monthly revenue" },
+  { value: "3k_5k", label: "Replace my salary", description: "Full-time income level" },
+  { value: "5k_10k_plus", label: "Build a real business", description: "Scaling beyond yourself" },
 ] as const;
 
 export type CurrentSituation = (typeof CURRENT_SITUATION_OPTIONS)[number]["value"];
@@ -22,6 +22,8 @@ export type TimeAvailability = (typeof TIME_AVAILABILITY_OPTIONS)[number]["value
 export type RevenueGoal = (typeof REVENUE_GOAL_OPTIONS)[number]["value"];
 
 export interface OnboardingAnswers {
+  location_city: string;
+  location_country: string;
   current_situation: CurrentSituation;
   time_availability: TimeAvailability;
   revenue_goal: RevenueGoal;
@@ -31,27 +33,33 @@ export interface OnboardingStepConfig {
   id: number;
   field: keyof OnboardingAnswers;
   question: string;
-  type: "single";
-  options: readonly { readonly value: string; readonly label: string; readonly description?: string }[];
+  type: "single" | "location";
+  options?: readonly { readonly value: string; readonly label: string; readonly description?: string }[];
 }
 
 export const ONBOARDING_STEPS: OnboardingStepConfig[] = [
   {
     id: 1,
+    field: "location_city",
+    question: "Where are you based?",
+    type: "location",
+  },
+  {
+    id: 2,
     field: "current_situation",
     question: "Where are you right now?",
     type: "single",
     options: CURRENT_SITUATION_OPTIONS,
   },
   {
-    id: 2,
+    id: 3,
     field: "time_availability",
     question: "How many hours per week can you realistically put into this?",
     type: "single",
     options: TIME_AVAILABILITY_OPTIONS,
   },
   {
-    id: 3,
+    id: 4,
     field: "revenue_goal",
     question: "What's your monthly income target from this?",
     type: "single",

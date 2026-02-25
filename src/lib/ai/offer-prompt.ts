@@ -57,6 +57,7 @@ export function buildOfferContext(
   answers: {
     location_city: string | null;
     location_target: string | null;
+    location_country: string | null;
   }
 ): string {
   const lines: string[] = [];
@@ -78,6 +79,7 @@ export function buildOfferContext(
 
   lines.push("\n## Market Context");
   lines.push(`- Location: ${answers.location_city ?? "not specified"}`);
+  lines.push(`- Country: ${answers.location_country ?? "not specified"}`);
   lines.push(`- Target area: ${answers.location_target ?? "not specified"}`);
   lines.push("- Write copy that fits this market. Use the local currency, terminology, seasonal patterns, and cultural references appropriate to the user's location. Adapt for ANY country — not just UK/US. If unspecified, default to UK.");
 

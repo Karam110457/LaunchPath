@@ -21,6 +21,7 @@ import { mastra } from "@/mastra";
 import { buildUserContext } from "@/lib/ai/serge-prompt";
 import { nicheAnalysisOutputSchema, assembledOfferSchema } from "@/lib/ai/schemas";
 import { logger } from "@/lib/security/logger";
+import { getCurrencySymbol } from "@/lib/utils/currency";
 
 type Profile = Tables<"user_profiles">;
 type System = Tables<"user_systems">;
@@ -171,15 +172,15 @@ export function createChatTools(
     },
   });
 
-  const request_location = tool({
-    description: "Ask the user where they're based and where they want to find clients.",
+  const request_target_market = tool({
+    description: "Ask the user where they want to find clients (target market scope). The user's city/country is already known from their profile.",
     inputSchema: z.object({}),
     execute: async () => {
       emitCard(emit, {
-        type: "location",
-        id: "location",
+        type: "target-market",
+        id: "target-market",
       });
-      return { awaiting_user_input: true, field: "location" };
+      return { awaiting_user_input: true, field: "target_market" };
     },
   });
 
@@ -286,7 +287,6 @@ export function createChatTools(
     "tried_niche",
     "what_went_wrong",
     "growth_direction",
-    "location_city",
     "location_target",
   ]);
 
@@ -297,7 +297,7 @@ export function createChatTools(
       updates: z
         .record(z.string(), z.unknown())
         .describe(
-          "Key-value pairs to update. Valid keys: direction_path, client_preferences, own_idea, tried_niche, what_went_wrong, growth_direction, location_city, location_target"
+          "Key-value pairs to update. Valid keys: direction_path, client_preferences, own_idea, tried_niche, what_went_wrong, growth_direction, location_target"
         ),
     }),
     execute: async ({ updates }) => {
@@ -418,7 +418,8 @@ export function createChatTools(
           tried_niche: latestSystem.tried_niche,
           what_went_wrong: latestSystem.what_went_wrong,
           growth_direction: latestSystem.growth_direction,
-          location_city: latestSystem.location_city,
+          location_city: latestProfile.location_city ?? latestSystem.location_city,
+          location_country: latestProfile.location_country,
           location_target: latestSystem.location_target,
         },
         recommendationCount
@@ -615,7 +616,8 @@ export function createChatTools(
               revenue_goal: profile.revenue_goal,
             },
             answers: {
-              location_city: freshSystem?.location_city,
+              location_city: profile.location_city ?? freshSystem?.location_city,
+              location_country: profile.location_country,
               location_target: freshSystem?.location_target,
             },
           },
@@ -764,8 +766,8 @@ export function createChatTools(
         title: "The Commitment",
         subtitle: "Your pricing and guarantee",
         fields: [
-          { name: "pricing_setup", label: "Setup Fee", value: String(offer.pricing_setup ?? "0"), type: "number", prefix: "£" },
-          { name: "pricing_monthly", label: "Monthly Fee", value: String(offer.pricing_monthly ?? "0"), type: "number", prefix: "£" },
+          { name: "pricing_setup", label: "Setup Fee", value: String(offer.pricing_setup ?? "0"), type: "number", prefix: getCurrencySymbol(profile.location_country) },
+          { name: "pricing_monthly", label: "Monthly Fee", value: String(offer.pricing_monthly ?? "0"), type: "number", prefix: getCurrencySymbol(profile.location_country) },
           { name: "guarantee_text", label: "Guarantee", value: String(offer.guarantee_text ?? ""), type: "textarea" },
         ],
         confirmLabel: "Confirm pricing",
@@ -795,6 +797,7 @@ export function createChatTools(
         type: "offer-summary",
         id: "offer-review",
         offer: parsed.data,
+        currencySymbol: getCurrencySymbol(profile.location_country),
       });
 
       return { displayed: true, section: "review" };
@@ -873,7 +876,8 @@ export function createChatTools(
               delivery_model: offer.delivery_model ?? "build_once",
             },
             answers: {
-              location_city: freshSystem?.location_city as string | null,
+              location_city: profile.location_city ?? (freshSystem?.location_city as string | null),
+              location_country: profile.location_country,
               location_target: freshSystem?.location_target as string | null,
             },
           },
@@ -923,6 +927,7 @@ export function createChatTools(
           id: "system-ready",
           demoUrl,
           offer: fullOffer.success ? fullOffer.data : (freshSystem?.offer as never),
+          currencySymbol: getCurrencySymbol(profile.location_country),
         });
 
         return { demoUrl };
@@ -940,7 +945,7 @@ export function createChatTools(
     request_tried_niche,
     request_what_went_wrong,
     request_fix_or_pivot,
-    request_location,
+    request_target_market,
     present_choices,
     request_input,
     save_collected_answers,

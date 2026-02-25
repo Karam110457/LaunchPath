@@ -15,6 +15,8 @@ export type Database = {
       user_profiles: {
         Row: {
           id: string
+          location_city: string | null
+          location_country: string | null
           time_availability: string | null
           outreach_comfort: string | null
           technical_comfort: string | null
@@ -28,6 +30,8 @@ export type Database = {
         }
         Insert: {
           id: string
+          location_city?: string | null
+          location_country?: string | null
           time_availability?: string | null
           outreach_comfort?: string | null
           technical_comfort?: string | null
@@ -41,6 +45,8 @@ export type Database = {
         }
         Update: {
           id?: string
+          location_city?: string | null
+          location_country?: string | null
           time_availability?: string | null
           outreach_comfort?: string | null
           technical_comfort?: string | null

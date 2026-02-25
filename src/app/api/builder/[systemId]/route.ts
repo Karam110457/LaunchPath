@@ -1,21 +1,21 @@
 /**
- * Builder chat API route — Demo page customization assistant.
+ * Builder chat API route — Code-generating page builder assistant.
  * POST /api/builder/[systemId]
  *
- * Accepts a user message + current DemoConfig.
- * Returns SSE with text deltas and config-patch events from tools.
+ * Accepts a user message + current page code.
+ * Returns SSE with text deltas and code-update events from tools.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { streamText, stepCountIs } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { createClient } from "@/lib/supabase/server";
-import { buildBuilderAssistantPrompt } from "@/lib/ai/builder-assistant-prompt";
+import { buildBuilderCodePrompt } from "@/lib/ai/builder-code-prompt";
 import {
-  createBuilderTools,
-  type BuilderEvent,
-} from "@/lib/chat/builder-tools";
-import { demoConfigSchema, type DemoConfig } from "@/lib/ai/schemas";
+  createBuilderCodeTools,
+  type BuilderCodeEvent,
+} from "@/lib/chat/builder-code-tools";
+import type { DemoConfig } from "@/lib/ai/schemas";
 import { logger } from "@/lib/security/logger";
 
 export async function POST(
@@ -34,10 +34,10 @@ export async function POST(
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  // Verify ownership
+  // Verify ownership and load demo_config (needed for system prompt context)
   const { data: system } = await supabase
     .from("user_systems")
-    .select("id, user_id")
+    .select("id, user_id, demo_config")
     .eq("id", systemId)
     .eq("user_id", user.id)
     .single();
@@ -48,11 +48,11 @@ export async function POST(
 
   const body = (await request.json()) as {
     message: string;
-    currentConfig: DemoConfig;
+    currentCode: string;
     history?: { role: "user" | "assistant"; content: string }[];
   };
 
-  const { message, currentConfig, history = [] } = body;
+  const { message, currentCode, history = [] } = body;
 
   if (!message || typeof message !== "string") {
     return NextResponse.json(
@@ -61,23 +61,29 @@ export async function POST(
     );
   }
 
-  // Validate the config shape
-  const parsed = demoConfigSchema.safeParse(currentConfig);
-  if (!parsed.success) {
+  if (!currentCode || typeof currentCode !== "string") {
     return NextResponse.json(
-      { error: "Invalid config" },
+      { error: "currentCode is required" },
       { status: 400 }
     );
   }
 
-  // Mutable reference so tools always see the latest config
-  let liveConfig = { ...parsed.data };
+  const demoConfig = system.demo_config as DemoConfig | null;
+  if (!demoConfig) {
+    return NextResponse.json(
+      { error: "Demo config not found" },
+      { status: 400 }
+    );
+  }
+
+  // Mutable reference so tools always see the latest code
+  let liveCode = currentCode;
 
   const encoder = new TextEncoder();
   const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
   const writer = writable.getWriter();
 
-  const emit = (event: BuilderEvent) => {
+  const emit = (event: BuilderCodeEvent) => {
     try {
       writer.write(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
     } catch {
@@ -85,17 +91,16 @@ export async function POST(
     }
   };
 
-  // Apply patches to liveConfig so subsequent tool calls in the same turn see updates
-  const originalEmit = emit;
-  const patchingEmit = (event: BuilderEvent) => {
-    if (event.type === "config-patch" && event.patch) {
-      liveConfig = { ...liveConfig, ...event.patch };
+  // Track code updates so subsequent tool calls see the latest
+  const trackingEmit = (event: BuilderCodeEvent) => {
+    if (event.type === "code-update") {
+      liveCode = event.code;
     }
-    originalEmit(event);
+    emit(event);
   };
 
-  const systemPrompt = buildBuilderAssistantPrompt(liveConfig);
-  const tools = createBuilderTools(patchingEmit, () => liveConfig);
+  const systemPrompt = buildBuilderCodePrompt(demoConfig, liveCode);
+  const tools = createBuilderCodeTools(trackingEmit, () => liveCode);
 
   // Build messages
   const aiMessages = [

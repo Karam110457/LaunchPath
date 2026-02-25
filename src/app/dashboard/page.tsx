@@ -12,17 +12,26 @@ import {
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Plus, ArrowRight, Rocket } from "lucide-react";
+import { getCurrencySymbol } from "@/lib/utils/currency";
 
 export default async function DashboardPage() {
   const user = await requireAuth();
   const supabase = await createClient();
 
-  const { data: systems } = await supabase
-    .from("user_systems")
-    .select("id, status, intent, offer, demo_url, created_at, current_step")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+  const [{ data: systems }, { data: userProfile }] = await Promise.all([
+    supabase
+      .from("user_systems")
+      .select("id, status, intent, offer, demo_url, created_at, current_step")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("user_profiles")
+      .select("location_country")
+      .eq("id", user.id)
+      .single(),
+  ]);
 
+  const currencySymbol = getCurrencySymbol(userProfile?.location_country ?? null);
   const hasSystems = systems && systems.length > 0;
 
   return (
@@ -75,7 +84,7 @@ export default async function DashboardPage() {
                   <div className="flex items-center justify-between">
                     {offer?.pricing_monthly && (
                       <span className="text-sm font-mono text-muted-foreground">
-                        £{offer.pricing_monthly}/mo
+                        {currencySymbol}{offer.pricing_monthly}/mo
                       </span>
                     )}
                     <Button variant="ghost" size="sm" asChild>

@@ -23,10 +23,10 @@ const TIME_LABELS: Record<string, string> = {
 };
 
 const REVENUE_LABELS: Record<string, string> = {
-  "500_1k": "£500–1,000/month",
-  "1k_3k": "£1,000–3,000/month",
-  "3k_5k": "£3,000–5,000/month",
-  "5k_10k_plus": "£5,000–10,000+/month",
+  "500_1k": "first meaningful win (roughly £500–1,000/month in UK terms — adapt to user's currency)",
+  "1k_3k": "real side income (roughly £1,000–3,000/month in UK terms — adapt to user's currency)",
+  "3k_5k": "replace my salary (roughly £3,000–5,000/month in UK terms — adapt to user's currency)",
+  "5k_10k_plus": "build a real business (roughly £5,000–10,000+/month in UK terms — adapt to user's currency)",
 };
 
 const SITUATION_LABELS: Record<string, string> = {
@@ -89,11 +89,12 @@ When explaining what they're building, frame it naturally: "You're going to buil
 
 ## THE USER'S PROFILE
 
+Location: ${profile.location_city ?? "not specified"}, ${profile.location_country ?? "not specified"}
 Situation: ${SITUATION_LABELS[profile.current_situation ?? ""] ?? profile.current_situation ?? "unknown"}
 Time available: ${TIME_LABELS[profile.time_availability ?? ""] ?? profile.time_availability ?? "unknown"}
 Revenue goal: ${REVENUE_LABELS[profile.revenue_goal ?? ""] ?? profile.revenue_goal ?? "unknown"}
 
-Use this data actively. Reference it naturally — not by reciting it back, but by letting it shape what you say.
+Use this data actively. Reference it naturally — not by reciting it back, but by letting it shape what you say. The user's location determines currency, terminology, and market context. Use the currency appropriate to their country (GBP for UK, USD for US, NGN for Nigeria, INR for India, etc.). Never assume GBP — always match the user's country.
 
 ---
 
@@ -143,10 +144,10 @@ MUST collect (in this order):
 **IMPORTANT about what_went_wrong**: The user's answer is self-reported context for empathy and conversation tone. It does NOT skip or constrain the Serge analysis. Whether they say "couldn't find prospects" or "got overwhelmed," Serge always runs the full evaluation. Use their answer to show you understand their experience, not to limit the analysis.
 
 ### ALWAYS COLLECT (both paths)
-- location via request_location()
+- target market via request_target_market() (the user's city/country is already on their profile — you only need to ask WHERE they want to sell, not where they live)
 
 ### SEQUENCE
-Collect all path-specific fields first, THEN location, THEN run analysis.
+Collect all path-specific fields first, THEN target market, THEN run analysis.
 
 ---
 
@@ -238,7 +239,7 @@ Cards send structured messages when the user interacts with them. Common formats
 - Build triggered: [build-system: confirmed]
 - Niche chosen: [niche-choice: {...JSON...}]
 
-- Location: [location: city="London", target="local"] — save as location_city and location_target
+- Target market: [target-market: target="local"] — save as location_target
 - Text input: [field-id: "user's text"] — e.g. [tried_niche: "HVAC companies"], [own_idea_text: "AI lead gen for HVAC"]
 - Dynamic choices: [dyn-{id} selected: {value}] — conversational context, do NOT save to DB
 - Dynamic text: [dyn-{id}: "text"] — conversational context, do NOT save to DB

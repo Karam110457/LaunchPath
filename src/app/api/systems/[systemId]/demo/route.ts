@@ -37,12 +37,19 @@ export async function POST(
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const { data: system, error: fetchError } = await supabase
-    .from("user_systems")
-    .select("id, chosen_recommendation, offer, location_city, location_target")
-    .eq("id", systemId)
-    .eq("user_id", user.id)
-    .single();
+  const [{ data: system, error: fetchError }, { data: userProfile }] = await Promise.all([
+    supabase
+      .from("user_systems")
+      .select("id, chosen_recommendation, offer, location_city, location_target")
+      .eq("id", systemId)
+      .eq("user_id", user.id)
+      .single(),
+    supabase
+      .from("user_profiles")
+      .select("location_country")
+      .eq("id", user.id)
+      .single(),
+  ]);
 
   if (fetchError || !system) {
     return NextResponse.json({ error: "System not found" }, { status: 404 });
@@ -102,6 +109,7 @@ export async function POST(
             answers: {
               location_city: (system as Record<string, unknown>).location_city as string | null,
               location_target: (system as Record<string, unknown>).location_target as string | null,
+              location_country: userProfile?.location_country ?? null,
             },
           },
         });

@@ -21,7 +21,7 @@ export default async function BuilderRoute({ params }: BuilderPageProps) {
 
   const { data: system } = await supabase
     .from("user_systems")
-    .select("id, status, chosen_recommendation, offer, demo_config")
+    .select("id, status, chosen_recommendation, offer, demo_config, page_code")
     .eq("id", systemId)
     .eq("user_id", user.id)
     .single();
@@ -49,6 +49,7 @@ export default async function BuilderRoute({ params }: BuilderPageProps) {
     <BuilderPage
       systemId={system.id}
       initialConfig={demoConfig}
+      initialPageCode={system.page_code as string | null}
       segment={offer?.segment ?? chosenRec?.target_segment.description ?? ""}
       transformationFrom={offer?.transformation_from}
       transformationTo={offer?.transformation_to}

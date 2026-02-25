@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { DemoConfig } from "@/lib/ai/schemas";
+import { configToCode } from "@/lib/builder/config-to-code";
 import { useBuilderStream } from "@/hooks/useBuilderStream";
 import { BuilderChat } from "./BuilderChat";
 import { BuilderPreview } from "./BuilderPreview";
@@ -18,6 +19,7 @@ import { BuilderPreview } from "./BuilderPreview";
 interface BuilderPageProps {
   systemId: string;
   initialConfig: DemoConfig;
+  initialPageCode?: string | null;
   segment: string;
   transformationFrom?: string;
   transformationTo?: string;
@@ -28,34 +30,45 @@ interface BuilderPageProps {
 export function BuilderPage({
   systemId,
   initialConfig,
+  initialPageCode,
   segment,
   transformationFrom,
   transformationTo,
-  businessName,
-  solution,
 }: BuilderPageProps) {
-  const [draftConfig, setDraftConfig] = useState<DemoConfig>(initialConfig);
+  // DemoConfig is read-only — drives InteractiveDemo scope (form fields, scoring)
+  const demoConfig = initialConfig;
+
+  // Code state — initialized from saved page_code or generated from config
+  const [draftCode, setDraftCode] = useState<string>(() => {
+    if (initialPageCode) return initialPageCode;
+    return configToCode(initialConfig, {
+      segment,
+      transformationFrom,
+      transformationTo,
+    });
+  });
+
   const [isDirty, setIsDirty] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishSuccess, setPublishSuccess] = useState(false);
   const [mobileTab, setMobileTab] = useState<"chat" | "preview">("chat");
 
-  // Ref so the stream hook always has the latest config
-  const configRef = useRef<DemoConfig>(draftConfig);
+  // Ref so the stream hook always has the latest code
+  const codeRef = useRef<string>(draftCode);
   useEffect(() => {
-    configRef.current = draftConfig;
-  }, [draftConfig]);
+    codeRef.current = draftCode;
+  }, [draftCode]);
 
-  const handleConfigPatch = useCallback((patch: Partial<DemoConfig>) => {
-    setDraftConfig((prev) => ({ ...prev, ...patch }));
+  const handleCodeUpdate = useCallback((code: string) => {
+    setDraftCode(code);
     setIsDirty(true);
     setPublishSuccess(false);
   }, []);
 
   const { messages, isStreaming, sendMessage } = useBuilderStream(
     systemId,
-    configRef as React.RefObject<DemoConfig | null>,
-    handleConfigPatch
+    codeRef as React.RefObject<string | null>,
+    handleCodeUpdate
   );
 
   async function handlePublish() {
@@ -64,7 +77,7 @@ export function BuilderPage({
       const res = await fetch(`/api/builder/${systemId}/publish`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ config: draftConfig }),
+        body: JSON.stringify({ code: draftCode }),
       });
 
       if (!res.ok) {
@@ -76,7 +89,6 @@ export function BuilderPage({
       setPublishSuccess(true);
       setTimeout(() => setPublishSuccess(false), 3000);
     } catch (err) {
-      // Could show a toast here
       console.error("Publish failed:", err);
     } finally {
       setIsPublishing(false);
@@ -86,22 +98,10 @@ export function BuilderPage({
   const previewProps = useMemo(
     () => ({
       systemId,
-      demoConfig: draftConfig,
-      businessName,
-      solution,
-      segment,
-      transformationFrom,
-      transformationTo,
+      demoConfig,
+      code: draftCode,
     }),
-    [
-      systemId,
-      draftConfig,
-      businessName,
-      solution,
-      segment,
-      transformationFrom,
-      transformationTo,
-    ]
+    [systemId, demoConfig, draftCode]
   );
 
   return (

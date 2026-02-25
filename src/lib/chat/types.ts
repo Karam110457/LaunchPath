@@ -49,7 +49,7 @@ export type CardData =
       multiline?: boolean;
     }
   | {
-      type: "location";
+      type: "target-market";
       id: string;
     }
   | {
@@ -75,12 +75,14 @@ export type CardData =
       type: "offer-summary";
       id: string;
       offer: AssembledOffer;
+      currencySymbol?: string;
     }
   | {
       type: "system-ready";
       id: string;
       demoUrl: string;
       offer: AssembledOffer;
+      currencySymbol?: string;
     };
 
 // ---------------------------------------------------------------------------

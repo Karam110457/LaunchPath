@@ -132,6 +132,7 @@ export async function POST(
             answers: {
               location_city: system.location_city,
               location_target: system.location_target,
+              location_country: profile.location_country,
             },
           },
         });

@@ -1,11 +1,11 @@
 /**
  * POST /api/builder/[systemId]/publish
- * Authenticated endpoint. Persists a DemoConfig to the database.
+ * Authenticated endpoint. Persists page code to the database.
+ * Keeps demo_config untouched (still drives form fields, scoring prompt).
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { demoConfigSchema } from "@/lib/ai/schemas";
 import { logger } from "@/lib/security/logger";
 
 export async function POST(
@@ -25,23 +25,37 @@ export async function POST(
   }
 
   const body = await request.json();
-  const parsed = demoConfigSchema.safeParse(body.config);
+  const code = body.code;
 
-  if (!parsed.success) {
+  if (!code || typeof code !== "string") {
     return NextResponse.json(
-      { error: "Invalid config", details: parsed.error.flatten() },
+      { error: "Code is required" },
+      { status: 400 }
+    );
+  }
+
+  if (!code.includes("function DemoPage")) {
+    return NextResponse.json(
+      { error: 'Code must define a "function DemoPage()" component' },
+      { status: 400 }
+    );
+  }
+
+  if (!code.includes("InteractiveDemo")) {
+    return NextResponse.json(
+      { error: "Code must include <InteractiveDemo />" },
       { status: 400 }
     );
   }
 
   const { error: updateError } = await supabase
     .from("user_systems")
-    .update({ demo_config: parsed.data })
+    .update({ page_code: code })
     .eq("id", systemId)
     .eq("user_id", user.id);
 
   if (updateError) {
-    logger.error("Failed to publish demo config", {
+    logger.error("Failed to publish page code", {
       systemId,
       userId: user.id,
       code: updateError.code,

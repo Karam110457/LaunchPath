@@ -51,6 +51,7 @@ export function buildGuaranteeContext(
   answers: {
     location_city: string | null;
     location_target: string | null;
+    location_country: string | null;
   }
 ): string {
   const lines: string[] = [];
@@ -74,6 +75,7 @@ export function buildGuaranteeContext(
 
   lines.push("\n## Market Context");
   lines.push(`- Location: ${answers.location_city ?? "not specified"}`);
+  lines.push(`- Country: ${answers.location_country ?? "not specified"}`);
   lines.push(`- Target area: ${answers.location_target ?? "not specified"}`);
   lines.push("- Tailor the guarantee language to this market. Use local currency, terminology, and realistic timelines for this region.");
 

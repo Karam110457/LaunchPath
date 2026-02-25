@@ -54,7 +54,8 @@ const demoBuilderInputSchema = z.object({
   answers: z.object({
     location_city: z.string().nullable(),
     location_target: z.string().nullable(),
-  }).optional().default({ location_city: null, location_target: null }),
+    location_country: z.string().nullable(),
+  }).optional().default({ location_city: null, location_target: null, location_country: null }),
 });
 
 // -- Step 1: Generate demo page config --

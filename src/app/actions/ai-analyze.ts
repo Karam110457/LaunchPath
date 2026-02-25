@@ -75,6 +75,7 @@ export async function runNicheAnalysis(
       growth_direction: system.growth_direction,
       location_city: system.location_city,
       location_target: system.location_target,
+      location_country: profile.location_country,
     },
     recommendationCount
   );
@@ -247,6 +248,7 @@ async function preGenerateOffer(
       answers: {
         location_city: system.location_city,
         location_target: system.location_target ?? null,
+        location_country: profile.location_country,
       },
     },
   });

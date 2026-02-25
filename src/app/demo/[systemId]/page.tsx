@@ -6,6 +6,7 @@ import {
   buildFallbackAgent,
 } from "@/lib/ai/agents/registry";
 import { DemoPage } from "./DemoPage";
+import { DemoPageCode } from "./DemoPageCode";
 import type { DemoConfig } from "@/lib/ai/schemas";
 
 interface DemoPageProps {
@@ -18,7 +19,7 @@ export default async function DemoPageRoute({ params }: DemoPageProps) {
 
   const { data: system } = await supabase
     .from("user_systems")
-    .select("id, status, chosen_recommendation, offer, demo_url, demo_config")
+    .select("id, status, chosen_recommendation, offer, demo_url, demo_config, page_code")
     .eq("id", systemId)
     .eq("status", "complete")
     .single();
@@ -47,9 +48,21 @@ export default async function DemoPageRoute({ params }: DemoPageProps) {
     pricing_monthly?: number;
   } | null;
 
-  // Use AI-generated demo_config if available; fall back to registry agent
   const demoConfig = system.demo_config as DemoConfig | null;
+  const pageCode = system.page_code as string | null;
 
+  // Priority 1: Code-based rendering (builder agent output)
+  if (pageCode && demoConfig) {
+    return (
+      <DemoPageCode
+        systemId={system.id}
+        demoConfig={demoConfig}
+        pageCode={pageCode}
+      />
+    );
+  }
+
+  // Priority 2: Config-based rendering (automated workflow output)
   if (demoConfig) {
     return (
       <DemoPage
@@ -65,7 +78,7 @@ export default async function DemoPageRoute({ params }: DemoPageProps) {
     );
   }
 
-  // Fallback to registry agent
+  // Priority 3: Legacy registry agent fallback
   const agentSlug = findAgentSlug(chosenRec.niche);
   const agent = agentSlug
     ? getAgentForNiche(agentSlug)

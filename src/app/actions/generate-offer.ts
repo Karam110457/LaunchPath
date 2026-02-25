@@ -93,6 +93,7 @@ export async function generateOfferDetails(
         answers: {
           location_city: system.location_city,
           location_target: system.location_target ?? null,
+          location_country: profile.location_country,
         },
       },
     });

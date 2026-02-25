@@ -269,8 +269,8 @@ export default function SystemReadyCard({ card }: SystemReadyCardProps) {
         style={{ animationDelay: "950ms", animationFillMode: "both" }}
       >
         <HighlightChip label="Segment" value={card.offer.segment} />
-        <HighlightChip label="Setup" value={`£${card.offer.pricing_setup.toLocaleString()}`} />
-        <HighlightChip label="Monthly" value={`£${card.offer.pricing_monthly.toLocaleString()}/mo`} />
+        <HighlightChip label="Setup" value={`${card.currencySymbol ?? "£"}${card.offer.pricing_setup.toLocaleString()}`} />
+        <HighlightChip label="Monthly" value={`${card.currencySymbol ?? "£"}${card.offer.pricing_monthly.toLocaleString()}/mo`} />
       </div>
 
       {/* Action CTAs */}

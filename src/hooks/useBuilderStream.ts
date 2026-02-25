@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import type { DemoConfig } from "@/lib/ai/schemas";
-import type { BuilderEvent } from "@/lib/chat/builder-tools";
+import type { BuilderCodeEvent } from "@/lib/chat/builder-code-tools";
 
 interface BuilderMessage {
   id: string;
@@ -22,8 +21,8 @@ function generateId() {
 
 export function useBuilderStream(
   systemId: string,
-  configRef: React.RefObject<DemoConfig | null>,
-  onConfigPatch: (patch: Partial<DemoConfig>) => void
+  codeRef: React.RefObject<string | null>,
+  onCodeUpdate: (code: string) => void
 ): UseBuilderStreamReturn {
   const [messages, setMessages] = useState<BuilderMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -56,15 +55,15 @@ export function useBuilderStream(
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
       setIsStreaming(true);
 
-      const currentConfig = configRef.current;
-      if (!currentConfig) return;
+      const currentCode = codeRef.current;
+      if (!currentCode) return;
 
       fetch(`/api/builder/${systemId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: text,
-          currentConfig,
+          currentCode,
           history: historyRef.current,
         }),
         signal: controller.signal,
@@ -97,7 +96,7 @@ export function useBuilderStream(
               if (!dataLine) continue;
 
               try {
-                const event = JSON.parse(dataLine.slice(6)) as BuilderEvent;
+                const event = JSON.parse(dataLine.slice(6)) as BuilderCodeEvent;
 
                 if (event.type === "text-delta") {
                   fullText += event.delta;
@@ -108,8 +107,8 @@ export function useBuilderStream(
                         : m
                     )
                   );
-                } else if (event.type === "config-patch") {
-                  onConfigPatch(event.patch);
+                } else if (event.type === "code-update") {
+                  onCodeUpdate(event.code);
                 } else if (event.type === "error") {
                   fullText += `\n\n_Error: ${event.message}_`;
                   setMessages((prev) =>
@@ -149,7 +148,7 @@ export function useBuilderStream(
           setIsStreaming(false);
         });
     },
-    [systemId, configRef, onConfigPatch, isStreaming]
+    [systemId, codeRef, onCodeUpdate, isStreaming]
   );
 
   return { messages, isStreaming, sendMessage };

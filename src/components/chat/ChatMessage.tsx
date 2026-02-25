@@ -16,7 +16,8 @@ import { cn } from "@/lib/utils";
 // Card components (imported lazily so the main chat bundle stays lean)
 import OptionSelectorCard from "./cards/OptionSelectorCard";
 import TextInputCard from "./cards/TextInputCard";
-import LocationCard from "./cards/LocationCard";
+import TargetMarketCard from "./cards/TargetMarketCard";
+import CollapsedCard from "./cards/CollapsedCard";
 import ProgressTrackerCard from "./cards/ProgressTrackerCard";
 import ScoreCard from "./cards/ScoreCard";
 import EditableContentCard from "./cards/EditableContentCard";
@@ -107,14 +108,17 @@ export function ChatMessage({ message, onCardComplete, isStreaming }: ChatMessag
                 onComplete={handleComplete}
               />
             );
-          case "location":
+          case "target-market":
             return (
-              <LocationCard
+              <TargetMarketCard
                 card={card}
                 completed={completed}
                 onComplete={handleComplete}
               />
             );
+          // Backward compat: old conversation history may have "location" cards
+          case "location" as string:
+            return <CollapsedCard summary={completedSummary ?? "Location set"} />;
           case "progress-tracker":
             return <ProgressTrackerCard card={card} />;
           case "score-cards":

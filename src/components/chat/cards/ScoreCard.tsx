@@ -65,8 +65,9 @@ function parseRevenueNumber(str: string): number {
 
 /** Re-format a parsed number with the original currency symbol and suffix. */
 function formatRevenue(str: string, count: number): string {
-  const symbol = str.match(/^[£$€¥]/) ? str[0] : "";
-  const suffix = str.replace(/^[£$€¥]?[\d,]+/, "");
+  const symbolMatch = str.match(/^([^\d,.\s]+)/);
+  const symbol = symbolMatch ? symbolMatch[1] : "";
+  const suffix = str.replace(/^[^\d,.\s]*[\d,]+/, "");
   return `${symbol}${count.toLocaleString()}${suffix}`;
 }
 

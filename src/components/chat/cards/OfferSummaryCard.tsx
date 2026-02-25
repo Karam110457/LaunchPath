@@ -70,8 +70,8 @@ export default function OfferSummaryCard({ card, onComplete }: OfferSummaryCardP
         <div>
           <SectionLabel>Pricing</SectionLabel>
           <div className="flex gap-3 mt-1.5">
-            <PriceChip label="Setup fee" value={`£${offer.pricing_setup.toLocaleString()}`} />
-            <PriceChip label="Monthly" value={`£${offer.pricing_monthly.toLocaleString()}/mo`} />
+            <PriceChip label="Setup fee" value={`${card.currencySymbol ?? "£"}${offer.pricing_setup.toLocaleString()}`} />
+            <PriceChip label="Monthly" value={`${card.currencySymbol ?? "£"}${offer.pricing_monthly.toLocaleString()}/mo`} />
           </div>
         </div>
 

@@ -50,6 +50,7 @@ const offerWorkflowInputSchema = z.object({
   answers: z.object({
     location_city: z.string().nullable(),
     location_target: z.string().nullable(),
+    location_country: z.string().nullable(),
   }),
 });
 

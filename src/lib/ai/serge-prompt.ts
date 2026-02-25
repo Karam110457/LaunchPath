@@ -145,6 +145,7 @@ export function buildUserContext(
     growth_direction: string | null;
     location_city: string | null;
     location_target: string | null;
+    location_country: string | null;
   },
   recommendationCount: number
 ): string {
@@ -198,7 +199,9 @@ export function buildUserContext(
     lines.push(`- Growth direction: ${answers.growth_direction}`);
   }
   if (answers.location_city) {
-    lines.push(`- Location: ${answers.location_city}`);
+    lines.push(`- Location: ${answers.location_city}${answers.location_country ? `, ${answers.location_country}` : ""}`);
+  } else if (answers.location_country) {
+    lines.push(`- Country: ${answers.location_country}`);
   }
   if (answers.location_target) {
     lines.push(`- Target area: ${LOCATION_TARGET_LABELS[answers.location_target] ?? answers.location_target}`);

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { FlowShell } from "@/components/flows/FlowShell";
 import { OptionCard } from "@/components/flows/OptionCard";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   ONBOARDING_STEPS,
   type OnboardingAnswers,
@@ -25,6 +27,8 @@ export function OnboardingFlow({ existingProfile }: OnboardingFlowProps) {
 
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Partial<OnboardingAnswers>>({
+    location_city: existingProfile?.location_city ?? undefined,
+    location_country: existingProfile?.location_country ?? undefined,
     current_situation:
       (existingProfile?.current_situation as OnboardingAnswers["current_situation"]) ??
       undefined,
@@ -45,6 +49,9 @@ export function OnboardingFlow({ existingProfile }: OnboardingFlowProps) {
   }
 
   function canProceed(): boolean {
+    if (currentStepConfig.type === "location") {
+      return !!(answers.location_city?.trim()) && !!(answers.location_country?.trim());
+    }
     return !!answers[currentStepConfig.field];
   }
 
@@ -85,21 +92,60 @@ export function OnboardingFlow({ existingProfile }: OnboardingFlowProps) {
           </h2>
         </div>
 
-        {/* Options */}
-        <div className="space-y-3">
-          {currentStepConfig.options.map((opt) => (
-            <OptionCard
-              key={opt.value}
-              value={opt.value}
-              label={opt.label}
-              description={
-                "description" in opt ? (opt.description as string) : undefined
-              }
-              selected={answers[currentStepConfig.field] === opt.value}
-              onSelect={handleSingleSelect}
-            />
-          ))}
-        </div>
+        {/* Step content */}
+        {currentStepConfig.type === "location" ? (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-muted-foreground">
+                City
+              </Label>
+              <Input
+                type="text"
+                placeholder="e.g. Lagos"
+                value={answers.location_city ?? ""}
+                onChange={(e) =>
+                  setAnswers((prev) => ({ ...prev, location_city: e.target.value }))
+                }
+                className="h-12 rounded-xl border-border bg-card text-foreground text-sm focus-visible:ring-primary"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleNext();
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-muted-foreground">
+                Country
+              </Label>
+              <Input
+                type="text"
+                placeholder="e.g. Nigeria"
+                value={answers.location_country ?? ""}
+                onChange={(e) =>
+                  setAnswers((prev) => ({ ...prev, location_country: e.target.value }))
+                }
+                className="h-12 rounded-xl border-border bg-card text-foreground text-sm focus-visible:ring-primary"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleNext();
+                }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {currentStepConfig.options?.map((opt) => (
+              <OptionCard
+                key={opt.value}
+                value={opt.value}
+                label={opt.label}
+                description={
+                  "description" in opt ? (opt.description as string) : undefined
+                }
+                selected={answers[currentStepConfig.field] === opt.value}
+                onSelect={handleSingleSelect}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Error */}
         {error && (

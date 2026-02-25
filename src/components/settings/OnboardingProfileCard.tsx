@@ -101,7 +101,7 @@ export function OnboardingProfileCard({ profile }: OnboardingProfileCardProps) {
             <div key={step.id} className="space-y-2">
               <h4 className="text-sm font-medium">{step.question}</h4>
               <div className="space-y-2">
-                {step.options.map((opt) => (
+                {step.options?.map((opt) => (
                   <OptionCard
                     key={opt.value}
                     value={opt.value}

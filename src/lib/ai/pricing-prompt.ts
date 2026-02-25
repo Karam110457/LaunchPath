@@ -28,7 +28,7 @@ Given a niche, revenue goal, and target segment, calculate:
 
 ## Revenue Goal Pricing Ranges
 
-Use the user's revenue goal as the target and the niche data as the anchor. Position within these ranges:
+These ranges are GBP reference anchors. Translate to the user's local currency and purchasing power based on their country.
 - 500_1k goal: target £400-500/month per client, ~2 clients
 - 1k_3k goal: target £500-800/month per client, ~3 clients
 - 3k_5k goal: target £800-1,500/month per client, ~3-4 clients
@@ -74,6 +74,7 @@ export function buildPricingContext(
   answers: {
     location_city: string | null;
     location_target: string | null;
+    location_country: string | null;
   }
 ): string {
   const lines: string[] = [];
@@ -102,6 +103,7 @@ export function buildPricingContext(
 
   lines.push("\n## Market Context");
   lines.push(`- Location: ${answers.location_city ?? "not specified"}`);
+  lines.push(`- Country: ${answers.location_country ?? "not specified"}`);
   lines.push(`- Target area: ${answers.location_target ?? "not specified"}`);
   lines.push("- Price in the local currency for this location. Adjust price ranges to realistic local market rates — do not just convert GBP, use purchasing-power-appropriate pricing.");
 

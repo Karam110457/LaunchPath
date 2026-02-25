@@ -98,6 +98,7 @@ export function buildDemoBuilderContext(
   answers?: {
     location_city: string | null;
     location_target: string | null;
+    location_country: string | null;
   }
 ): string {
   const lines: string[] = [];
@@ -106,7 +107,7 @@ export function buildDemoBuilderContext(
   lines.push(`- Segment: ${offer.segment}`);
   lines.push(`- System: ${offer.system_description}`);
   lines.push(`- Guarantee: ${offer.guarantee_text} (${offer.guarantee_type})`);
-  lines.push(`- Pricing: £${offer.pricing_setup} setup + £${offer.pricing_monthly}/month`);
+  lines.push(`- Pricing: ${offer.pricing_setup} setup + ${offer.pricing_monthly}/month`);
   lines.push(`- Pricing rationale: ${offer.pricing_rationale}`);
   lines.push(`- Delivery model: ${offer.delivery_model}`);
 
@@ -146,6 +147,7 @@ export function buildDemoBuilderContext(
   if (answers) {
     lines.push("\n## Market Context");
     lines.push(`- Location: ${answers.location_city ?? "not specified"}`);
+    lines.push(`- Country: ${answers.location_country ?? "not specified"}`);
     lines.push(`- Target area: ${answers.location_target ?? "not specified"}`);
     lines.push("- All form field placeholders, pricing references, and location examples must match this market. Use local currency, city names, and terminology. Adapt for ANY country — the user may be anywhere in the world.");
   }

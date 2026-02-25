@@ -15,6 +15,7 @@ import type { ChatMessage } from "@/lib/chat/types";
 import type { AssembledOffer } from "@/lib/ai/schemas";
 import { useChatStream } from "@/hooks/useChatStream";
 import { ChatContainer } from "@/components/chat/ChatContainer";
+import { getCurrencySymbol } from "@/lib/utils/currency";
 
 type System = Tables<"user_systems">;
 type Profile = Tables<"user_profiles">;
@@ -24,7 +25,7 @@ interface ChatFlowProps {
   profile: Profile;
 }
 
-export function ChatFlow({ system, profile: _profile }: ChatFlowProps) {
+export function ChatFlow({ system, profile }: ChatFlowProps) {
   const initialHistory = Array.isArray(system.conversation_history)
     ? (system.conversation_history as unknown as Parameters<typeof useChatStream>[0]["initialHistory"])
     : [];
@@ -67,6 +68,7 @@ export function ChatFlow({ system, profile: _profile }: ChatFlowProps) {
               id: "system-ready",
               demoUrl: system.demo_url,
               offer: system.offer as AssembledOffer,
+              currencySymbol: getCurrencySymbol(profile.location_country),
             },
             completed: false,
             timestamp: new Date().toISOString(),
