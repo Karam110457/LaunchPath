@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { ChevronDown, Check, ArrowRight, PhoneOff, Clock, UserMinus, ShieldCheck, PlayCircle, Zap, Star } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 // --- MINIMAL FADE-IN WRAPPER ---
 function FadeIn({
@@ -441,8 +443,8 @@ export default function DemoTemplate({ config }: { config?: DemoConfig }) {
                         return (
                             <FadeIn key={idx} delay={50 * idx} direction="up">
                                 <div className={`rounded-2xl border p-6 md:p-8 shadow-sm transition-all ${isPricing
-                                        ? "bg-[var(--primary)]/5 border-[var(--primary)]/30"
-                                        : "bg-white border-slate-200 hover:shadow-md"
+                                    ? "bg-[var(--primary)]/5 border-[var(--primary)]/30"
+                                    : "bg-white border-slate-200 hover:shadow-md"
                                     }`}>
                                     <h3 className={`font-bold text-[17px] md:text-[19px] mb-3 ${isPricing ? 'text-[var(--primary)]' : 'text-slate-900'}`}>
                                         {faq.question}
@@ -458,19 +460,33 @@ export default function DemoTemplate({ config }: { config?: DemoConfig }) {
             </section>
 
             {/* --- FOOTER (Powered By LaunchPath Branding) --- */}
-            <footer className="w-full bg-[#0F172A] py-8 md:py-10 px-5 text-center mt-auto">
-                <div className="max-w-6xl mx-auto flex flex-col items-center justify-center">
-                    <div className="flex items-center gap-2 opacity-80 mb-2 md:mb-3 hover:opacity-100 transition-opacity">
-                        <span className="text-[12px] md:text-[13px] font-medium text-slate-400">Powered by</span>
-                        <div className="w-4 h-4 md:w-5 md:h-5 rounded bg-[var(--primary)] flex items-center justify-center">
-                            <Zap className="w-[10px] h-[10px] md:w-3 md:h-3 text-white fill-current" />
+            <footer className="w-full bg-[#0F172A] py-10 md:py-12 px-5 text-center mt-auto border-t border-slate-800">
+                <div className="max-w-6xl mx-auto flex flex-col items-center justify-center gap-5">
+                    <FadeIn delay={100}>
+                        <div className="flex flex-col items-center justify-center gap-2">
+                            <div className="flex items-center gap-2 text-slate-400 font-medium opacity-80 hover:opacity-100 transition-opacity cursor-pointer">
+                                <span>Powered by</span>
+                                <div className="flex items-center gap-2 text-white">
+                                    <div className="bg-[var(--primary)] w-6 h-6 rounded flex items-center justify-center shadow-inner">
+                                        <Zap className="w-3.5 h-3.5 fill-white text-white" />
+                                    </div>
+                                    <Logo className="text-lg md:text-xl" />
+                                </div>
+                            </div>
                         </div>
-                        <span className="text-[14px] md:text-[15px] font-bold tracking-tight text-white">LaunchPath.</span>
-                    </div>
-
-                    <p className="text-[11px] md:text-sm text-slate-500 font-medium mt-1 md:mt-2">
-                        © {new Date().getFullYear()} LaunchPath Inc. All rights reserved. | Demo purposes only.
-                    </p>
+                    </FadeIn>
+                    <FadeIn delay={200}>
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="text-slate-500 text-[13px] md:text-sm font-medium">
+                                &copy; {new Date().getFullYear()} LaunchPath Inc. All rights reserved. <span className="mx-1">|</span> Demo purposes only
+                            </div>
+                            <div className="flex items-center gap-4 text-xs md:text-[13px] text-slate-500 font-medium">
+                                <Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link>
+                                <span className="text-slate-700">&bull;</span>
+                                <Link href="/terms-of-service" className="hover:text-white transition-colors">Terms of Service</Link>
+                            </div>
+                        </div>
+                    </FadeIn>
                 </div>
             </footer>
 
