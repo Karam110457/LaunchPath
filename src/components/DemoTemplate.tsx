@@ -1,17 +1,19 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { ChevronDown, Check, ArrowRight, PhoneOff, Clock, UserMinus, ShieldCheck, PlayCircle, Zap, MessageSquare } from "lucide-react";
+import { ChevronDown, Check, ArrowRight, ShieldCheck, PlayCircle, Zap, MessageSquare } from "lucide-react";
 
 // --- MINIMAL FADE-IN WRAPPER ---
 function FadeIn({
     children,
     delay = 0,
-    direction = "up"
+    direction = "up",
+    className = ""
 }: {
     children: React.ReactNode;
     delay?: number;
     direction?: "up" | "down" | "left" | "right" | "none";
+    className?: string;
 }) {
     const ref = useRef<HTMLDivElement>(null);
     const [isVisible, setIsVisible] = useState(false);
@@ -41,7 +43,7 @@ function FadeIn({
             ref={ref}
             style={{ transitionDelay: `${delay}ms` }}
             className={`transition-all duration-700 ease-out fill-mode-forwards ${isVisible ? "opacity-100 translate-y-0 translate-x-0" : `opacity-0 ${translateClass}`
-                }`}
+                } ${className}`}
         >
             {children}
         </div>
