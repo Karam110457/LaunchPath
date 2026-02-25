@@ -9,7 +9,7 @@ export async function updateSession(request: NextRequest) {
   });
 
   // Apply security headers on every request
-  applySecurityHeaders(supabaseResponse);
+  applySecurityHeaders(supabaseResponse, request.nextUrl.pathname);
 
   const { NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY } = getClientEnv();
   const supabase = createServerClient(

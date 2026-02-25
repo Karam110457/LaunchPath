@@ -44,8 +44,6 @@ export default async function DemoPageRoute({ params }: DemoPageProps) {
     transformation_from?: string;
     transformation_to?: string;
     guarantee_text?: string;
-    pricing_setup?: number;
-    pricing_monthly?: number;
   } | null;
 
   const demoConfig = system.demo_config as DemoConfig | null;

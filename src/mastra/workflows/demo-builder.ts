@@ -41,14 +41,11 @@ const demoBuilderInputSchema = z.object({
     transformation_from: z.string(),
     transformation_to: z.string(),
     system_description: z.string(),
-    // Guarantee and pricing fields may be absent on older offers generated
-    // before the parallel workflow was introduced. Default to empty strings
-    // so the demo builder can still run — it will omit those sections.
+    // Guarantee fields may be absent on older offers generated before the
+    // parallel workflow was introduced. Default to empty strings so the
+    // demo builder can still run.
     guarantee_text: z.string().optional().default(""),
     guarantee_type: z.string().optional().default(""),
-    pricing_setup: z.number().optional().default(0),
-    pricing_monthly: z.number().optional().default(0),
-    pricing_rationale: z.string().optional().default(""),
     delivery_model: z.string().optional().default("not specified"),
   }),
   answers: z.object({

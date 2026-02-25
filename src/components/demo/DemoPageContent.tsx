@@ -59,8 +59,6 @@ export function DemoPageContent({
   const transformationHeadline = demoConfig?.transformation_headline;
   const showGuarantee = demoConfig?.show_guarantee ?? false;
   const guaranteeText = demoConfig?.guarantee_text;
-  const showPricing = demoConfig?.show_pricing ?? false;
-  const pricingText = demoConfig?.pricing_text;
   const headlineStyle = demoConfig?.theme?.headline_style ?? "serif-italic";
 
   // Resolve form fields from demoConfig or agent
@@ -119,8 +117,6 @@ export function DemoPageContent({
       <DemoTrustBlock
         showGuarantee={showGuarantee}
         guaranteeText={guaranteeText}
-        showPricing={showPricing}
-        pricingText={pricingText}
         segment={segment}
       />
 

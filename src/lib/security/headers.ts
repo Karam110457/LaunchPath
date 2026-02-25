@@ -13,14 +13,16 @@ const isProduction = process.env.NODE_ENV === "production";
  * - script-src: 'self' and 'unsafe-inline' are required for Next.js (hydration and chunk
  *   loading use inline scripts). For stricter CSP use the Proxy convention with nonces
  *   (see Next.js CSP docs). In dev, 'unsafe-eval' is needed for some tooling.
+ * - Builder and demo pages need 'unsafe-eval' for the dynamic JSX renderer (sucrase + new Function).
  * - style-src: 'unsafe-inline' required for Tailwind/Next.js.
  * - frame-ancestors: 'none' prevents embedding (same as X-Frame-Options DENY).
  */
-function getCsp(): string {
+function getCsp(options?: { allowEval?: boolean }): string {
+  const needsEval = !isProduction || options?.allowEval;
   const scriptSrc = [
     "'self'",
     "'unsafe-inline'", // Next.js inline scripts (hydration, chunks)
-    ...(isProduction ? [] : ["'unsafe-eval'"]), // Dev tooling
+    ...(needsEval ? ["'unsafe-eval'"] : []), // Dev tooling + builder JSX renderer
   ].join(" ");
 
   const directives = [
@@ -41,7 +43,15 @@ function getCsp(): string {
   return directives.join("; ");
 }
 
-export function applySecurityHeaders(response: NextResponse): NextResponse {
+/** Routes that use the dynamic JSX renderer and need 'unsafe-eval'. */
+function needsEval(pathname: string): boolean {
+  return pathname.startsWith("/builder/") || pathname.startsWith("/demo/");
+}
+
+export function applySecurityHeaders(
+  response: NextResponse,
+  pathname?: string
+): NextResponse {
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -49,7 +59,8 @@ export function applySecurityHeaders(response: NextResponse): NextResponse {
     "Permissions-Policy",
     "camera=(), microphone=(), geolocation=(), interest-cohort=()"
   );
-  response.headers.set("Content-Security-Policy", getCsp());
+  const allowEval = pathname ? needsEval(pathname) : false;
+  response.headers.set("Content-Security-Policy", getCsp({ allowEval }));
 
   if (isProduction) {
     response.headers.set(

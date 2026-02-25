@@ -831,9 +831,6 @@ export function createChatTools(
         system_description: string;
         guarantee_text: string;
         guarantee_type: string;
-        pricing_setup: number;
-        pricing_monthly: number;
-        pricing_rationale: string;
         delivery_model: string;
       } | null;
 
@@ -870,9 +867,6 @@ export function createChatTools(
               system_description: offer.system_description ?? "",
               guarantee_text: offer.guarantee_text ?? "",
               guarantee_type: offer.guarantee_type ?? "",
-              pricing_setup: Number(offer.pricing_setup ?? 0),
-              pricing_monthly: Number(offer.pricing_monthly ?? 0),
-              pricing_rationale: offer.pricing_rationale ?? "",
               delivery_model: offer.delivery_model ?? "build_once",
             },
             answers: {

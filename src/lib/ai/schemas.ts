@@ -172,7 +172,7 @@ export const demoConfigSchema = z.object({
   // Offer integration
   show_guarantee: z.boolean(),
   guarantee_text: z.string().optional(),
-  show_pricing: z.boolean(),
+  show_pricing: z.boolean().default(false),
   pricing_text: z.string().optional(),
   transformation_headline: z.string(),
 

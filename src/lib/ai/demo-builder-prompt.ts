@@ -8,7 +8,11 @@ export const DEMO_BUILDER_SYSTEM_PROMPT = `You are LaunchPath's demo page builde
 
 A demo page: prospect sees headline → fills short form → gets instant AI analysis → takes next step.
 
-You produce: hero copy, 3 benefits, 3-5 form fields, scoring prompt, offer integration, CTA text, and theme.
+You produce: hero copy, 3 benefits, 3-5 form fields, scoring prompt, guarantee integration, CTA text, and theme.
+
+## CRITICAL: No Pricing on Demo Pages
+
+NEVER include pricing, setup fees, monthly fees, or any cost information on the demo page. The demo page is a lead qualification tool for prospects — it should feel like a free, valuable resource. Pricing is discussed after the prospect is qualified, not on the demo page. Do NOT generate show_pricing or pricing_text fields.
 
 ## Hero Copy (CRITICAL)
 
@@ -45,7 +49,7 @@ Target 3-5 fields. Every extra field reduces conversion.
 System prompt for the AI scoring form submissions. Must:
 - Reference every form field by exact snake_case name
 - Define HIGH (ideal client), MEDIUM (needs nurturing), LOW (disqualified) with specific signals
-- Include at least one numeric threshold (e.g., "revenue above £X = HIGH")
+- Include at least one numeric threshold (e.g., "revenue above X = HIGH", "team size > Y = HIGH")
 
 ## Theme
 
@@ -85,9 +89,6 @@ export function buildDemoBuilderContext(
     system_description: string;
     guarantee_text: string;
     guarantee_type: string;
-    pricing_setup: number;
-    pricing_monthly: number;
-    pricing_rationale: string;
     delivery_model: string;
   },
   registryExample?: {
@@ -107,8 +108,6 @@ export function buildDemoBuilderContext(
   lines.push(`- Segment: ${offer.segment}`);
   lines.push(`- System: ${offer.system_description}`);
   lines.push(`- Guarantee: ${offer.guarantee_text} (${offer.guarantee_type})`);
-  lines.push(`- Pricing: ${offer.pricing_setup} setup + ${offer.pricing_monthly}/month`);
-  lines.push(`- Pricing rationale: ${offer.pricing_rationale}`);
   lines.push(`- Delivery model: ${offer.delivery_model}`);
 
   lines.push("\n## CRITICAL: Hero Copy Source Material");
@@ -149,7 +148,7 @@ export function buildDemoBuilderContext(
     lines.push(`- Location: ${answers.location_city ?? "not specified"}`);
     lines.push(`- Country: ${answers.location_country ?? "not specified"}`);
     lines.push(`- Target area: ${answers.location_target ?? "not specified"}`);
-    lines.push("- All form field placeholders, pricing references, and location examples must match this market. Use local currency, city names, and terminology. Adapt for ANY country — the user may be anywhere in the world.");
+    lines.push("- All form field placeholders and location examples must match this market. Use local city names and terminology. Adapt for ANY country — the user may be anywhere in the world.");
   }
 
   return lines.join("\n");

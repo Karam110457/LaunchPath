@@ -86,9 +86,6 @@ export async function generateSystem(
           system_description: offer.system_description ?? "",
           guarantee_text: offer.guarantee_text ?? "",
           guarantee_type: offer.guarantee_type ?? "",
-          pricing_setup: offer.pricing_setup ?? 0,
-          pricing_monthly: offer.pricing_monthly ?? 0,
-          pricing_rationale: offer.pricing_rationale ?? "",
           delivery_model: offer.delivery_model ?? "not specified",
         },
         answers: {
