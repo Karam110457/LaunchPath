@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { ChevronDown, Check, ShieldCheck, Zap, MessageCircle, Bot, ArrowRight, Sparkles, Building2 } from "lucide-react";
+import { ChevronDown, Check, ShieldCheck, Zap, MessageCircle, Bot, ArrowRight, Sparkles, Building2, CalendarClock } from "lucide-react";
 
 // --- ANIMATION WRAPPER ---
 function FadeIn({
