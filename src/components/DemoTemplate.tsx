@@ -138,7 +138,7 @@ export default function DemoTemplate({ config }: { config?: DemoConfig }) {
             <main className="w-full max-w-6xl mx-auto px-5 pt-8 pb-16 md:pt-16 md:pb-24 grid grid-cols-1 lg:grid-cols-2 lg:gap-x-16 gap-y-10 relative z-10">
 
                 {/* ROW 1 LEFT: HEADLINE (Always visible first) */}
-                <div className="flex flex-col justify-end lg:pr-4">
+                <div className="flex flex-col justify-start lg:pr-4">
                     {/* 5. True Verifiable Social Proof High Up (Lesson 1 & 5) */}
                     <FadeIn>
                         <div className="flex items-center gap-3 mb-6">
@@ -158,14 +158,14 @@ export default function DemoTemplate({ config }: { config?: DemoConfig }) {
 
                     <FadeIn delay={100}>
                         {/* 1. Benefit-Driven Headline: Unified outome and mechanism */}
-                        <h1 className="text-[2.6rem] sm:text-[3rem] md:text-[3.6rem] font-extrabold tracking-tighter text-[#0F172A] leading-[1.05] mb-5 text-balance">
-                            How Local Businesses Turn Missed Calls Into <span className="text-[var(--primary)] inline-block relative">Booked Jobs<svg className="absolute w-full h-3 -bottom-1 left-0 text-[var(--primary)]/30" viewBox="0 0 100 10" preserveAspectRatio="none"><path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="3" fill="transparent" /></svg></span> Instantly Using AI.
+                        <h1 className="text-[2.8rem] sm:text-[3.2rem] md:text-[3.8rem] font-extrabold tracking-tighter text-[#0F172A] leading-[1.05] mb-5">
+                            Turn Missed Calls Into <span className="text-[var(--primary)] inline-block relative">Booked Jobs<svg className="absolute w-full h-3 -bottom-1 left-0 text-[var(--primary)]/30" viewBox="0 0 100 10" preserveAspectRatio="none"><path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="3" fill="transparent" /></svg></span> With AI.
                         </h1>
                     </FadeIn>
 
                     <FadeIn delay={150}>
                         {/* 1. Sub-headline: USP hook emphasized */}
-                        <p className="text-lg md:text-xl text-slate-600 mb-2 max-w-xl leading-relaxed text-balance">
+                        <p className="text-lg md:text-xl text-slate-600 mb-2 max-w-xl leading-relaxed">
                             <strong className="text-slate-900 font-bold block mb-1.5 text-[1.1rem] md:text-[1.25rem]">Experience our AI answering your phones live right now.</strong>
                             It takes exactly <span className="font-bold text-[var(--primary)] bg-[var(--primary)]/10 px-1.5 py-0.5 rounded">60 seconds</span> to try the interactive demo below.
                         </p>
