@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { ChevronDown, Check, ArrowRight, MessageSquare, CalendarCheck, TrendingUp, CheckCircle2, PhoneCall, Zap } from "lucide-react";
+import { ChevronDown, Check, ArrowRight, PhoneOff, Clock, UserMinus, ShieldCheck, PlayCircle, Zap } from "lucide-react";
 
 // --- MINIMAL FADE-IN WRAPPER ---
 function FadeIn({
@@ -31,16 +31,16 @@ function FadeIn({
     }, []);
 
     const translateClass =
-        direction === "up" ? "translate-y-8" :
-            direction === "down" ? "-translate-y-8" :
-                direction === "left" ? "translate-x-8" :
-                    direction === "right" ? "-translate-x-8" : "translate-y-0 translate-x-0";
+        direction === "up" ? "translate-y-6" :
+            direction === "down" ? "-translate-y-6" :
+                direction === "left" ? "translate-x-6" :
+                    direction === "right" ? "-translate-x-6" : "translate-y-0 translate-x-0";
 
     return (
         <div
             ref={ref}
             style={{ transitionDelay: `${delay}ms` }}
-            className={`transition-all duration-1000 ease-out fill-mode-forwards ${isVisible ? "opacity-100 translate-y-0 translate-x-0" : `opacity-0 ${translateClass}`
+            className={`transition-all duration-700 ease-out fill-mode-forwards ${isVisible ? "opacity-100 translate-y-0 translate-x-0" : `opacity-0 ${translateClass}`
                 }`}
         >
             {children}
@@ -57,333 +57,349 @@ export interface DemoConfig {
 export default function DemoTemplate({ config }: { config?: DemoConfig }) {
     const [openFaq, setOpenFaq] = useState<number | null>(0);
     const [isConsentChecked, setIsConsentChecked] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
+
+    // Form state
+    const [formData, setFormData] = useState({
+        name: "",
+        businessName: "",
+        industry: "",
+        phone: ""
+    });
 
     const faqs = config?.faq || [
         {
-            question: "How does the AI handle unqualified leads?",
-            answer: "The AI politely ends the conversation or redirects them to a highly relevant resource, preventing unqualified prospects from ever reaching your calendar or wasting your sales team's time."
+            question: "Will the AI sound robotic to my customers?",
+            answer: "No. Hear it for yourself above. Our conversational models use natural language, understand context, and adapt to your specific business tone."
         },
         {
-            question: "Will it sound like a robot?",
-            answer: "No. Our conversational models are tuned to match your brand's specific tone of voice—whether that's highly professional, casual, or enthusiastic. It uses natural language, appropriate pacing, and contextual understanding."
+            question: "What happens to the information I submit here?",
+            answer: "Your details exist purely to run this live, personalized demo. They are securely processed and never sold to third parties."
         },
         {
-            question: "What platforms does it work on?",
-            answer: "The core engine integrates natively with WhatsApp Business, SMS, Facebook Messenger, and Instagram DM. Wherever your leads are messaging you, the AI is there to capture them."
-        },
-        {
-            question: "How long does it take to go live?",
-            answer: "Typically under 48 hours. Our team handles the entire technical setup, knowledge base ingestion, and calendar mapping. You simply review the test bot and give the green light."
+            question: "How much does a system like this cost?",
+            answer: "Experiencing this demo is 100% free. If you like the results we deliver on your phone right now, we can discuss a customized pricing plan tailored to your lead volume."
         }
     ];
 
+    const handleDemoSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!isConsentChecked) return;
+
+        setIsSubmitting(true);
+
+        // Simulate API request/submission
+        setTimeout(() => {
+            setIsSubmitting(false);
+            setIsSuccess(true);
+        }, 1500);
+    };
+
     return (
-        <div className="min-h-screen bg-[#F8F9FA] text-[#111827] font-sans selection:bg-[#4F46E5] selection:text-white flex flex-col items-center w-full relative overflow-hidden">
+        <div className="min-h-screen bg-[#FAFAFA] text-[#0F172A] font-sans selection:bg-[#4F46E5] selection:text-white flex flex-col justify-center w-full relative overflow-x-hidden">
 
             {/* --- INJECTED STYLE --- */}
             <style dangerouslySetInnerHTML={{
                 __html: `
         :root {
-          /* High-converting, high-trust 'Electric Indigo' */
+          /* High-converting 'Electric Indigo' */
           --primary: #4F46E5; 
           --primary-hover: #4338CA;
-          /* Beautiful crisp white for cards */
+          /* Off-white background */
           --surface: #FFFFFF;
-          /* Off-white for section breaks */
-          --surface-alt: #F3F4F6;
-          /* Deep ink for max readability */
-          --ink: #030712;
+          /* Deep ink text */
+          --ink: #0F172A;
         }
 
-        /* Subtle architect-style dot grid */
-        .bg-dots {
-          background-image: radial-gradient(rgba(17, 24, 39, 0.08) 1px, transparent 1px);
-          background-size: 24px 24px;
+        /* Subtle noise texture for premium tactile feel */
+        .bg-noise {
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+          opacity: 0.02;
+          pointer-events: none;
         }
       `}} />
 
-            {/* --- FLOATING DOT BACKGROUND --- */}
-            <div className="absolute top-0 inset-x-0 h-[800px] pointer-events-none bg-dots -z-10 [mask-image:linear-gradient(to_bottom,white,transparent)]" />
+            {/* --- BACKGROUND FX --- */}
+            <div className="absolute inset-0 bg-noise z-0 mix-blend-overlay" />
+            <div className="absolute top-0 right-0 w-[50vw] h-[500px] bg-[var(--primary)]/5 blur-[120px] rounded-bl-full pointer-events-none -z-10" />
 
-            {/* --- NAVIGATION (MINIMAL) --- */}
-            <nav className="w-full max-w-7xl mx-auto px-6 py-8 flex items-center justify-between z-20 relative">
-                <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-[var(--primary)] text-white flex items-center justify-center shrink-0 shadow-lg shadow-[var(--primary)]/30">
-                        <Zap className="w-5 h-5 fill-current" />
-                    </div>
-                    <span className="text-xl font-extrabold tracking-tight text-[var(--ink)]">AutoConversion.</span>
-                </div>
-            </nav>
+            {/* NO NAVIGATION BAR - One page, One action */}
 
             {/* --- HERO SPLIT --- */}
-            <main className="w-full max-w-7xl mx-auto px-6 pt-12 pb-24 md:pt-20 md:pb-32 flex flex-col lg:flex-row gap-16 lg:gap-24 relative z-10">
+            <main className="w-full max-w-6xl mx-auto px-5 pt-12 pb-16 md:pt-20 md:pb-24 flex flex-col lg:flex-row gap-12 lg:gap-16 relative z-10">
 
-                {/* LEFT COPY */}
-                <div className="w-full lg:w-[55%] flex flex-col justify-center">
+                {/* LEFT: COPY & AGITATION */}
+                <div className="w-full lg:w-1/2 flex flex-col justify-center">
+
                     <FadeIn>
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[var(--primary)]/20 bg-[var(--primary)]/5 text-sm font-bold text-[var(--primary)] mb-8">
-                            <span className="w-2 h-2 rounded-full bg-[var(--primary)] animate-pulse" />
-                            Now integrating directly with WhatsApp
-                        </div>
-                    </FadeIn>
-
-                    <FadeIn delay={100}>
-                        <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tighter text-[var(--ink)] leading-[1.05] mb-6 text-balance">
-                            Turn messages into<br />
-                            <span className="text-[var(--primary)]">booked calendars.</span>
+                        <h1 className="text-[2.5rem] sm:text-5xl md:text-[3.5rem] font-extrabold tracking-tighter text-[var(--ink)] leading-[1.05] mb-5 text-balance">
+                            Never Miss A Hot Lead Again.<br />
+                            <span className="text-[var(--primary)] text-[2.2rem] sm:text-4xl md:text-[3rem] font-bold block mt-3">
+                                AI That Qualifies Callers 24/7.
+                            </span>
                         </h1>
                     </FadeIn>
 
-                    <FadeIn delay={200}>
-                        <p className="text-xl md:text-2xl text-gray-600 mb-10 max-w-xl leading-snug font-medium text-balance">
-                            A meticulously trained AI setter that works 24/7 to instantly qualify leads and secure appointments while you sleep.
+                    <FadeIn delay={100}>
+                        <p className="text-lg md:text-xl text-slate-600 mb-8 max-w-lg leading-snug font-medium text-balance">
+                            See how it handles your leads live. It takes exactly 60 seconds to try it below.
                         </p>
                     </FadeIn>
 
-                    <FadeIn delay={300}>
-                        <div className="flex flex-col sm:flex-row items-center gap-8 border-t border-gray-200 pt-8 w-full">
-                            <div className="flex -space-x-3">
-                                {[5, 11, 19, 30].map((i) => (
-                                    <div key={i} className="relative w-12 h-12 rounded-full border-2 border-[#F8F9FA] overflow-hidden bg-white shadow-sm">
-                                        <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${i}&backgroundColor=transparent`} alt="avatar" className="w-[120%] h-[120%] object-cover absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="flex flex-col text-sm text-gray-600 font-medium">
-                                <div className="flex items-center gap-1 mb-1">
-                                    {[1, 2, 3, 4, 5].map((s) => (
-                                        <svg key={s} className="w-4 h-4 text-[#F59E0B] fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                                    ))}
-                                </div>
-                                <span>Trusted by <strong className="text-[var(--ink)]">400+ local agencies</strong>.</span>
-                            </div>
+                    {/* PAIN AGITATION BLOCK (Crucial for local biz) */}
+                    <FadeIn delay={200}>
+                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 mb-10 max-w-lg relative">
+                            <div className="absolute -left-2 top-6 w-1 h-12 bg-rose-500 rounded-r-md"></div>
+                            <p className="text-sm md:text-base font-semibold text-slate-700 leading-relaxed">
+                                <strong className="text-slate-900 block mb-1">The reality right now:</strong>
+                                You're working a job site, missing calls, and losing leads to voicemail. By the time you call them back, they've already booked your competitor. You can't be on the phone all day.
+                            </p>
                         </div>
                     </FadeIn>
+
+                    {/* SCROLL CTA - Replaces navigation */}
+                    <FadeIn delay={300}>
+                        <button
+                            onClick={() => document.getElementById('demo-start')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                            className="inline-flex items-center gap-2 text-slate-600 font-bold hover:text-[var(--primary)] transition-colors group px-1 py-2"
+                        >
+                            See It Handle A Real Lead <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </button>
+                    </FadeIn>
+
                 </div>
 
-                {/* RIGHT FORM - MASSIVE CONTRAST */}
-                <div className="w-full lg:w-[45%] relative">
-                    <FadeIn delay={400} direction="left">
+                {/* RIGHT: THE CRITICAL DEMO FORM */}
+                <div className="w-full lg:w-1/2 relative" id="demo-start">
+                    <FadeIn delay={200} direction="left">
 
-                        {/* Soft decorative shadow behind the card */}
-                        <div className="absolute inset-4 bg-[var(--primary)] blur-3xl opacity-[0.15] translate-y-8 rounded-full -z-10" />
+                        <div className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-200 relative overflow-hidden flex flex-col">
 
-                        <div className="bg-white rounded-[32px] p-8 sm:p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)] border border-gray-100 relative overflow-hidden group">
-
-                            <div className="text-left mb-8">
-                                <h3 className="text-2xl font-extrabold text-[var(--ink)] tracking-tight mb-2">Experience the AI</h3>
-                                <p className="text-sm font-medium text-gray-500">Enter a valid phone number to receive a live, interactive demo via text immediately.</p>
+                            {/* Form Header */}
+                            <div className="bg-slate-50 border-b border-slate-100 p-6 md:px-8 py-6 flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-xl font-bold text-[var(--ink)] tracking-tight">Try The AI Live</h3>
+                                    <p className="text-sm font-medium text-slate-500 mt-0.5">Tell us about your business so the AI can introduce itself correctly.</p>
+                                </div>
+                                <div className="w-10 h-10 bg-[var(--primary)]/10 text-[var(--primary)] rounded-full flex items-center justify-center shrink-0">
+                                    <PlayCircle className="w-5 h-5" fill="currentColor" stroke="white" />
+                                </div>
                             </div>
 
-                            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-                                <div className="grid grid-cols-2 gap-4">
+                            {/* Dynamic State: Form vs Success */}
+                            {!isSuccess ? (
+                                <form className="p-6 md:p-8 space-y-5 flex-grow" onSubmit={handleDemoSubmit}>
+
+                                    {/* Minimized Fields - Max 4 */}
                                     <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-gray-700 uppercase tracking-widest">First Name</label>
+                                        <label className="text-[13px] font-bold text-slate-700">Business Name</label>
                                         <input
                                             type="text"
-                                            placeholder="Alex"
-                                            className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3.5 text-[15px] font-medium placeholder:text-gray-400 placeholder:font-normal focus:outline-none focus:bg-white focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] transition-all"
+                                            required
+                                            value={formData.businessName}
+                                            onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                                            placeholder="e.g. Acme Plumbing"
+                                            className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-4 py-3 min-h-[44px] text-[16px] font-medium placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] transition-all shadow-sm"
                                         />
                                     </div>
+
                                     <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-gray-700 uppercase tracking-widest">Last Name</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Smith"
-                                            className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3.5 text-[15px] font-medium placeholder:text-gray-400 placeholder:font-normal focus:outline-none focus:bg-white focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] transition-all"
-                                        />
+                                        <label className="text-[13px] font-bold text-slate-700">Industry / Type</label>
+                                        <div className="relative">
+                                            <select
+                                                required
+                                                value={formData.industry}
+                                                onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+                                                className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl pl-4 pr-10 py-3 min-h-[44px] text-[16px] font-medium appearance-none focus:outline-none focus:bg-white focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] transition-all shadow-sm"
+                                            >
+                                                <option value="" disabled hidden>Select your service...</option>
+                                                <option value="plumbing">Plumbing & HVAC</option>
+                                                <option value="roofing">Roofing & Contracting</option>
+                                                <option value="cleaning">Home Cleaning</option>
+                                                <option value="legal">Legal Services</option>
+                                                <option value="other">Other Local Service</option>
+                                            </select>
+                                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-gray-700 uppercase tracking-widest">Phone Number *</label>
-                                    <input
-                                        type="tel"
-                                        placeholder="+1 (555) 000-0000"
-                                        className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3.5 text-[15px] font-medium placeholder:text-gray-400 placeholder:font-normal focus:outline-none focus:bg-white focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] transition-all"
-                                    />
-                                </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[13px] font-bold text-slate-700">Your Name</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={formData.name}
+                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                placeholder="John Doe"
+                                                className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-4 py-3 min-h-[44px] text-[16px] font-medium placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] transition-all shadow-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[13px] font-bold text-slate-700">Mobile Phone</label>
+                                            <input
+                                                type="tel"
+                                                required
+                                                value={formData.phone}
+                                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                                placeholder="(555) 000-0000"
+                                                className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-4 py-3 min-h-[44px] text-[16px] font-medium placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] transition-all shadow-sm"
+                                            />
+                                        </div>
+                                    </div>
 
-                                {/* Highly readable, elegant consent box */}
-                                <div className="flex items-start gap-3 mt-6 pt-2 pb-2">
+                                    {/* High Trust Consent */}
+                                    <div className="flex items-start gap-3 mt-2 pt-2 pb-2">
+                                        <button
+                                            type="button"
+                                            className={`mt-0.5 min-w-[20px] min-h-[20px] w-5 h-5 rounded-md flex shrink-0 items-center justify-center transition-all border shadow-[0_1px_2px_rgba(0,0,0,0.05)] ${isConsentChecked ? "bg-[var(--primary)] border-[var(--primary)]" : "bg-white border-slate-300 hover:border-slate-400"
+                                                }`}
+                                            onClick={() => setIsConsentChecked(!isConsentChecked)}
+                                        >
+                                            {isConsentChecked && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3.5} />}
+                                        </button>
+                                        <p className="text-[12px] text-slate-500 font-medium leading-[1.5]">
+                                            I consent to receive a one-time live demo text to the number above. Reply STOP to end.
+                                        </p>
+                                    </div>
+
+                                    {/* Outcome Based CTA */}
                                     <button
-                                        type="button"
-                                        className={`mt-0.5 w-5 h-5 rounded-md flex shrink-0 items-center justify-center transition-all border shadow-sm ${isConsentChecked ? "bg-[var(--primary)] border-[var(--primary)]" : "bg-white border-gray-300 hover:border-gray-400"
-                                            }`}
-                                        onClick={() => setIsConsentChecked(!isConsentChecked)}
-                                    >
-                                        {isConsentChecked && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3.5} />}
-                                    </button>
-                                    <p className="text-[12px] text-gray-500 font-medium leading-[1.6]">
-                                        By checking this box, you agree to receive a live demo text to the number provided. You can type STOP at any time to end the test. Data is not shared.
-                                    </p>
-                                </div>
-
-                                <div className="pt-4">
-                                    <button
-                                        className="group relative w-full py-4.5 rounded-xl font-bold flex items-center justify-center overflow-hidden transition-all duration-300 shadow-xl shadow-[var(--primary)]/20 active:scale-[0.98]"
+                                        disabled={isSubmitting || !isConsentChecked}
+                                        className="w-full py-4 rounded-xl font-bold flex items-center justify-center transition-all duration-300 shadow-lg shadow-[var(--primary)]/20 hover:shadow-xl active:scale-[0.98] mt-2 min-h-[56px] disabled:opacity-70 disabled:cursor-not-allowed"
                                         style={{ backgroundColor: "var(--primary)" }}
                                     >
-                                        {/* Button shine effect */}
-                                        <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-20 group-hover:animate-shine" />
-                                        <span className="relative z-10 text-white text-[17px] flex items-center gap-2">
-                                            Send My Live Demo
-                                            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                        <span className="text-white text-[16px] md:text-[18px]">
+                                            {isSubmitting ? "Generating Custom Demo..." : "Start My Free Demo"}
                                         </span>
                                     </button>
+
+                                </form>
+                            ) : (
+                                // --- POST FORM EXPERIENCE ---
+                                <div className="p-8 md:p-10 flex flex-col items-center justify-center text-center flex-grow bg-slate-50/50">
+                                    <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-6">
+                                        <Check className="w-8 h-8 text-emerald-600" strokeWidth={3} />
+                                    </div>
+                                    <h3 className="text-2xl font-bold text-slate-900 mb-2">The AI is texting you now.</h3>
+                                    <p className="text-slate-600 font-medium mb-8">
+                                        <span className="font-bold text-slate-900">{formData.name}</span>, please check your mobile device at <span className="font-bold">{formData.phone}</span>.
+                                    </p>
+
+                                    <div className="bg-white p-5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 text-left w-full shadow-sm">
+                                        <p className="text-slate-800 font-bold mb-2 flex items-center gap-2"><Zap className="w-4 h-4 text-amber-500 fill-current" /> Next Steps:</p>
+                                        <ul className="space-y-2 list-disc pl-5">
+                                            <li>Interact directly with the AI via text.</li>
+                                            <li>Ask it any hard questions about {formData.industry === "other" || !formData.industry ? "your business" : formData.industry}.</li>
+                                            <li>Try to schedule an appointment with it.</li>
+                                        </ul>
+                                    </div>
                                 </div>
-                            </form>
+                            )}
+
+                            {/* Adjacent Social Proof attached to Form Base */}
+                            <div className="bg-slate-900 px-6 py-4 flex items-center justify-center gap-3 w-full">
+                                <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+                                <span className="text-[13px] md:text-sm font-semibold text-slate-200">
+                                    Responds to leads in under 3 seconds, 24/7.
+                                </span>
+                            </div>
+
                         </div>
                     </FadeIn>
                 </div>
             </main>
 
-            {/* --- REFINED BENTO GRID (HOW IT WORKS) --- */}
-            <section className="w-full bg-[var(--surface-alt)] py-24 md:py-32 outline outline-1 outline-gray-200 border-t border-b border-white">
-                <div className="max-w-7xl mx-auto px-6">
-                    <div className="text-center mb-16 md:mb-20">
+            {/* --- HOW IT WORKS (3 Simple Steps) --- */}
+            <section className="w-full bg-white py-16 md:py-24 border-y border-slate-200 my-4 shadow-sm relative z-0">
+                <div className="max-w-6xl mx-auto px-5">
+                    <div className="text-center mb-12">
                         <FadeIn>
-                            <h2 className="text-3xl md:text-5xl font-extrabold tracking-tighter text-[var(--ink)] mb-4">Complete booking automation.</h2>
-                            <p className="text-gray-500 text-lg md:text-xl font-medium max-w-2xl mx-auto text-balance">We built this so you never have to manually reply to a "how much?" message ever again.</p>
+                            <h2 className="text-2xl md:text-4xl font-extrabold tracking-tighter text-[var(--ink)] mb-3">How this Demo works.</h2>
                         </FadeIn>
                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-6 md:gap-8">
+                    <div className="grid md:grid-cols-3 gap-8 md:gap-12 text-center md:text-left">
                         <FadeIn delay={100} direction="up">
-                            <div className="bg-white p-8 rounded-[24px] border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                                <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-6">
-                                    <MessageSquare className="w-6 h-6" />
-                                </div>
-                                <h3 className="text-xl font-bold text-[var(--ink)] mb-3">1. Sub-second Replies</h3>
-                                <p className="text-gray-500 leading-relaxed font-medium">When a prospect texts you, the AI replies instantly. It hooks them into a conversation before they have time to message your competitors.</p>
+                            <div className="flex flex-col items-center md:items-start group">
+                                <div className="text-5xl font-black text-slate-100 group-hover:text-[var(--primary)]/10 transition-colors mb-2 -ml-2">1</div>
+                                <h3 className="text-lg font-bold text-slate-900 mb-2">Enter your details above</h3>
+                                <p className="text-slate-600 font-medium text-[15px] leading-relaxed">Fill out the short form so we can contextualize the AI to represent your business.</p>
                             </div>
                         </FadeIn>
-
                         <FadeIn delay={200} direction="up">
-                            <div className="bg-white p-8 rounded-[24px] border-2 border-[var(--primary)] shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 px-3 py-1 bg-[var(--primary)] text-white text-[10px] font-black uppercase tracking-widest rounded-bl-lg">Core Feature</div>
-                                <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-[var(--primary)] flex items-center justify-center mb-6">
-                                    <CheckCircle2 className="w-6 h-6" />
-                                </div>
-                                <h3 className="text-xl font-bold text-[var(--ink)] mb-3">2. Smart Vetting</h3>
-                                <p className="text-gray-500 leading-relaxed font-medium">It asks the budget, timeline, and scope questions you require. If they aren't a fit, it politely disqualifies them. Perfect leads only.</p>
+                            <div className="flex flex-col items-center md:items-start group">
+                                <div className="text-5xl font-black text-slate-100 group-hover:text-[var(--primary)]/10 transition-colors mb-2 -ml-2">2</div>
+                                <h3 className="text-lg font-bold text-slate-900 mb-2">Try the AI live via SMS</h3>
+                                <p className="text-slate-600 font-medium text-[15px] leading-relaxed">You will immediately receive a text from our AI. Talk to it just like a prospect would.</p>
                             </div>
                         </FadeIn>
-
                         <FadeIn delay={300} direction="up">
-                            <div className="bg-white p-8 rounded-[24px] border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                                <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-6">
-                                    <CalendarCheck className="w-6 h-6" />
-                                </div>
-                                <h3 className="text-xl font-bold text-[var(--ink)] mb-3">3. Calendar Injection</h3>
-                                <p className="text-gray-500 leading-relaxed font-medium">Once qualified, the AI presents available slots directly from your Google/Outlook calendar and locks in the meeting seamlessly.</p>
+                            <div className="flex flex-col items-center md:items-start group">
+                                <div className="text-5xl font-black text-slate-100 group-hover:text-[var(--primary)]/10 transition-colors mb-2 -ml-2">3</div>
+                                <h3 className="text-lg font-bold text-slate-900 mb-2">Experience the booking</h3>
+                                <p className="text-slate-600 font-medium text-[15px] leading-relaxed">Watch exactly how the AI qualifies you and seamlessly drops an appointment onto your calendar.</p>
                             </div>
                         </FadeIn>
                     </div>
                 </div>
             </section>
 
-            {/* --- MINIMAL FAQ --- */}
-            <section className="w-full py-24 px-6 bg-white border-b border-gray-200">
-                <div className="max-w-3xl mx-auto">
-                    <div className="mb-14">
-                        <FadeIn>
-                            <h2 className="text-3xl md:text-5xl font-extrabold text-[var(--ink)] tracking-tighter mb-4">Frequently asked questions.</h2>
-                            <p className="text-gray-500 text-lg font-medium">Straight answers to common concerns.</p>
-                        </FadeIn>
-                    </div>
-
-                    <div className="space-y-4">
-                        {faqs.map((faq, idx) => (
-                            <FadeIn key={idx} delay={50 * idx} direction="up">
-                                <div
-                                    className={`bg-white rounded-2xl border transition-all duration-300 overflow-hidden ${openFaq === idx ? 'border-[var(--primary)] shadow-md' : 'border-gray-200 hover:border-gray-300'}`}
-                                >
-                                    <button
-                                        className="w-full px-6 py-5 flex items-center justify-between text-left focus:outline-none bg-transparent"
-                                        onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                                    >
-                                        <span className={`font-bold text-[17px] pr-4 transition-colors ${openFaq === idx ? 'text-[var(--primary)]' : 'text-[var(--ink)]'}`}>
-                                            {faq.question}
-                                        </span>
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${openFaq === idx ? 'bg-[var(--primary)]/10 text-[var(--primary)]' : 'bg-gray-100 text-gray-500'}`}>
-                                            <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${openFaq === idx ? "rotate-180" : ""}`} />
-                                        </div>
-                                    </button>
-                                    <div
-                                        className={`px-6 text-gray-600 font-medium text-[15px] leading-relaxed transition-all duration-300`}
-                                        style={{
-                                            maxHeight: openFaq === idx ? "250px" : "0",
-                                            paddingBottom: openFaq === idx ? "24px" : "0",
-                                            opacity: openFaq === idx ? 1 : 0
-                                        }}
-                                    >
-                                        <p className="pt-2">{faq.answer}</p>
-                                    </div>
-                                </div>
-                            </FadeIn>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* --- GIGANTIC FINAL CTA --- */}
-            <section className="w-full bg-[var(--ink)] py-24 md:py-32 px-6 text-center text-white">
-                <div className="max-w-4xl mx-auto">
+            {/* --- FAQ SECTION DE-RISKING --- */}
+            <section className="w-full py-16 px-5 max-w-3xl mx-auto mb-12">
+                <div className="mb-10 text-center md:text-left">
                     <FadeIn>
-                        <h2 className="text-4xl md:text-5xl lg:text-7xl font-extrabold tracking-tighter mb-8 leading-[1.05]">
-                            Stop losing money to<br className="hidden md:block" /> delayed replies.
-                        </h2>
-                        <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto font-medium">
-                            Click below to trigger a live automated conversation and see exactly what your prospective clients will experience.
-                        </p>
-
-                        <button
-                            className="group relative inline-flex items-center justify-center gap-3 px-12 py-5 rounded-2xl font-bold transition-all duration-300 hover:scale-[1.03]"
-                            style={{ backgroundColor: "var(--primary)" }}
-                            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                        >
-                            <span className="text-white text-xl">Trigger Live Demo</span>
-                            <div className="w-8 h-8 rounded-full bg-black/20 flex items-center justify-center group-hover:translate-x-1 transition-transform">
-                                <ArrowRight className="w-4 h-4 text-white" />
-                            </div>
-                        </button>
+                        <h2 className="text-2xl md:text-3xl font-bold text-[var(--ink)] tracking-tight mb-2">Frequently asked questions</h2>
                     </FadeIn>
                 </div>
+
+                <div className="space-y-3">
+                    {faqs.map((faq, idx) => (
+                        <FadeIn key={idx} delay={50 * idx} direction="up">
+                            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                                <button
+                                    className="w-full px-5 py-4 flex items-center justify-between text-left focus:outline-none"
+                                    onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                                >
+                                    <span className={`font-bold text-[15px] pr-4 ${openFaq === idx ? 'text-[var(--primary)]' : 'text-slate-800'}`}>
+                                        {faq.question}
+                                    </span>
+                                    <div className={`w-6 h-6 rounded flex items-center justify-center shrink-0 ${openFaq === idx ? 'text-[var(--primary)]' : 'text-slate-400'}`}>
+                                        <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${openFaq === idx ? "rotate-180" : ""}`} />
+                                    </div>
+                                </button>
+                                <div
+                                    className={`px-5 text-slate-600 font-medium text-[14px] leading-relaxed transition-all duration-300`}
+                                    style={{
+                                        maxHeight: openFaq === idx ? "150px" : "0",
+                                        paddingBottom: openFaq === idx ? "16px" : "0",
+                                        opacity: openFaq === idx ? 1 : 0
+                                    }}
+                                >
+                                    <p>{faq.answer}</p>
+                                </div>
+                            </div>
+                        </FadeIn>
+                    ))}
+                </div>
             </section>
 
-            {/* --- FOOTER --- */}
-            <footer className="w-full bg-[#000000] py-10 px-6 text-center">
-                <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-md bg-white text-black flex items-center justify-center shrink-0">
-                            <Zap className="w-3.5 h-3.5 fill-current" />
-                        </div>
-                        <span className="text-lg font-extrabold tracking-tight text-white">AutoConversion.</span>
+            {/* --- FOOTER (Powered By LaunchPath Branding) --- */}
+            <footer className="w-full bg-[#0F172A] py-8 px-5 text-center mt-auto">
+                <div className="max-w-6xl mx-auto flex flex-col items-center justify-center">
+                    <div className="flex items-center gap-1.5 opacity-60 mb-2">
+                        <span className="text-[12px] font-medium text-slate-400">Powered by</span>
+                        <Zap className="w-3.5 h-3.5 text-[var(--primary)] fill-current" />
+                        <span className="text-[13px] font-bold tracking-tight text-white">LaunchPath AI</span>
                     </div>
 
-                    <div className="flex gap-8 text-[15px] text-gray-500 font-bold">
-                        <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-                        <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-                    </div>
-
-                    <p className="text-sm text-gray-600 font-medium">
-                        © {new Date().getFullYear()} AutoConversion Ltd.
+                    <p className="text-xs text-slate-600 font-medium mt-2">
+                        © {new Date().getFullYear()} LaunchPath. All rights reserved. | Demo purposes only.
                     </p>
                 </div>
             </footer>
 
-            {/* CSS Animation helper for the button shine */}
-            <style dangerouslySetInnerHTML={{
-                __html: `
-        @keyframes shine {
-          100% { left: 125%; }
-        }
-        .animate-shine {
-          left: -125%;
-          animation: shine 1.2s ease-in-out infinite;
-        }
-      `}} />
         </div>
     );
 }
