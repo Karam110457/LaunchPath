@@ -55,3 +55,20 @@ export const LOCATION_TARGET_OPTIONS = [
   { value: "international", label: "International / English-speaking countries", description: "Global reach" },
   { value: "anywhere", label: "Doesn't matter", description: "Open to any location" },
 ] as const;
+
+/**
+ * Countries where local/national target markets are viable
+ * because all generated content is in English.
+ * Lowercase for case-insensitive matching.
+ */
+const ENGLISH_SPEAKING_COUNTRIES = new Set([
+  "uk", "united kingdom", "england", "scotland", "wales", "northern ireland",
+  "us", "usa", "united states", "united states of america", "america",
+  "canada", "australia", "new zealand", "ireland", "south africa",
+]);
+
+/** Check if a country is English-speaking (local/national markets are viable). */
+export function isEnglishSpeakingCountry(country: string | null): boolean {
+  if (!country) return false;
+  return ENGLISH_SPEAKING_COUNTRIES.has(country.trim().toLowerCase());
+}

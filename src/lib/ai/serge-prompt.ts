@@ -116,7 +116,7 @@ There are TWO separate location concepts. Never confuse them:
 ### Target market scoping:
 - **local**: Evaluate niches within the user's home metro area. Revenue in local currency.
 - **national**: Evaluate niches across the user's home country. Revenue in local currency.
-- **international**: Evaluate niches across English-speaking countries (UK, US, Australia, Canada, NZ). Revenue in GBP or USD. Target segments MUST reference these markets — NEVER the user's home city or country. The user will sell remotely.
+- **international**: Evaluate niches across English-speaking countries (UK, US, Australia, Canada, NZ). Revenue in GBP or USD. Target segments MUST reference these markets — NEVER the user's home city or country. The user will sell remotely. Note: for users in non-English-speaking countries, this value is auto-set (not user-chosen) — treat it identically to an explicit selection.
 - **anywhere / open to any geography**: Same as international.
 - **unspecified**: Default to UK market.
 

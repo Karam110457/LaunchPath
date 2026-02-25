@@ -7,6 +7,7 @@
  */
 
 import type { Tables } from "@/types/database";
+import { isEnglishSpeakingCountry } from "@/types/start-business";
 
 type Profile = Tables<"user_profiles">;
 type System = Tables<"user_systems">;
@@ -70,6 +71,7 @@ export function buildBusinessStrategistPrompt(profile: Profile, system: System):
   const hasNicheChosen = !!system.chosen_recommendation;
   const hasOffer = !!system.offer;
   const isComplete = system.status === "complete";
+  const userIsEnglishSpeaking = isEnglishSpeakingCountry(profile.location_country);
 
   return `You are a sharp, opinionated business strategist helping someone build an AI-powered service business from scratch in a single conversation.
 
@@ -90,6 +92,7 @@ When explaining what they're building, frame it naturally: "You're going to buil
 ## THE USER'S PROFILE
 
 Location: ${profile.location_city ?? "not specified"}, ${profile.location_country ?? "not specified"}
+English-speaking country: ${userIsEnglishSpeaking ? "YES" : "NO"}
 Situation: ${SITUATION_LABELS[profile.current_situation ?? ""] ?? profile.current_situation ?? "unknown"}
 Time available: ${TIME_LABELS[profile.time_availability ?? ""] ?? profile.time_availability ?? "unknown"}
 Revenue goal: ${REVENUE_LABELS[profile.revenue_goal ?? ""] ?? profile.revenue_goal ?? "unknown"}
@@ -145,16 +148,19 @@ MUST collect (in this order):
 
 **IMPORTANT about what_went_wrong**: The user's answer is self-reported context for empathy and conversation tone. It does NOT skip or constrain the Serge analysis. Whether they say "couldn't find prospects" or "got overwhelmed," Serge always runs the full evaluation. Use their answer to show you understand their experience, not to limit the analysis.
 
-### ALWAYS COLLECT (both paths)
-- target market via request_target_market() (the user's city/country is already on their profile — you only need to ask WHERE they want to sell, not where they live)
+### TARGET MARKET (both paths)
 
-### TARGET MARKET GUIDANCE
-When presenting the target market question, consider the user's home country:
-- **Users in English-speaking countries** (UK, US, Australia, Canada, NZ, Ireland): All options are equally viable. Local, national, and international all work well.
-- **Users in non-English-speaking countries** (India, Nigeria, Brazil, Philippines, etc.): Strongly recommend "International / English-speaking countries". Explain why: the demo pages, AI agents, and all generated content are in English. English-speaking local businesses (UK roofers, US dentists, AU landscapers) can afford premium monthly fees. Selling remotely to these markets is the strongest path for this business model. Don't block other options, but make the case clearly.
+**If "English-speaking country" above is YES:**
+- Call request_target_market() to let them choose local, national, or international. All options work.
+
+**If "English-speaking country" above is NO:**
+- Do NOT call request_target_market(). Do NOT show a card or ask the user to choose.
+- Immediately call save_collected_answers({ updates: { location_target: "international" } }).
+- Tell the user naturally (2–3 sentences): since all demo pages, AI agents, and content are built in English, they'll be targeting **English-speaking businesses** — UK roofers, US dentists, Australian landscapers. These markets pay premium monthly fees and they can sell to them completely remotely. This is where the real opportunity is.
+- Then proceed directly to run the analysis.
 
 ### SEQUENCE
-Collect all path-specific fields first, THEN target market, THEN run analysis.
+Collect all path-specific fields first, THEN handle target market (auto-set or ask), THEN run analysis.
 
 ---
 
