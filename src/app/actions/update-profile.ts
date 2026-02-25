@@ -25,6 +25,8 @@ export async function updateProfile(
   const { error } = await supabase
     .from("user_profiles")
     .update({
+      location_city: parsed.data.location_city,
+      location_country: parsed.data.location_country,
       current_situation: parsed.data.current_situation,
       time_availability: parsed.data.time_availability,
       revenue_goal: parsed.data.revenue_goal,

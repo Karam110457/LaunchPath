@@ -10,6 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { OptionCard } from "@/components/flows/OptionCard";
 import {
   TIME_AVAILABILITY_OPTIONS,
@@ -40,6 +42,8 @@ export function OnboardingProfileCard({ profile }: OnboardingProfileCardProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Partial<OnboardingAnswers>>({
+    location_city: profile.location_city ?? undefined,
+    location_country: profile.location_country ?? undefined,
     current_situation:
       (profile.current_situation as OnboardingAnswers["current_situation"]) ?? undefined,
     time_availability:
@@ -48,7 +52,15 @@ export function OnboardingProfileCard({ profile }: OnboardingProfileCardProps) {
       (profile.revenue_goal as OnboardingAnswers["revenue_goal"]) ?? undefined,
   });
 
+  const locationDisplay = [profile.location_city, profile.location_country]
+    .filter(Boolean)
+    .join(", ") || "—";
+
   const summaryItems = [
+    {
+      label: "Location",
+      value: locationDisplay,
+    },
     {
       label: "Current situation",
       value: getLabel(CURRENT_SITUATION_OPTIONS, profile.current_situation),
@@ -100,24 +112,51 @@ export function OnboardingProfileCard({ profile }: OnboardingProfileCardProps) {
           {ONBOARDING_STEPS.map((step) => (
             <div key={step.id} className="space-y-2">
               <h4 className="text-sm font-medium">{step.question}</h4>
-              <div className="space-y-2">
-                {step.options?.map((opt) => (
-                  <OptionCard
-                    key={opt.value}
-                    value={opt.value}
-                    label={opt.label}
-                    description={
-                      "description" in opt
-                        ? (opt.description as string)
-                        : undefined
-                    }
-                    selected={answers[step.field] === opt.value}
-                    onSelect={(v) =>
-                      setAnswers((prev) => ({ ...prev, [step.field]: v }))
-                    }
-                  />
-                ))}
-              </div>
+              {step.type === "location" ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-city" className="text-xs text-muted-foreground">City</Label>
+                    <Input
+                      id="edit-city"
+                      placeholder="e.g. Lagos"
+                      value={answers.location_city ?? ""}
+                      onChange={(e) =>
+                        setAnswers((prev) => ({ ...prev, location_city: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-country" className="text-xs text-muted-foreground">Country</Label>
+                    <Input
+                      id="edit-country"
+                      placeholder="e.g. Nigeria"
+                      value={answers.location_country ?? ""}
+                      onChange={(e) =>
+                        setAnswers((prev) => ({ ...prev, location_country: e.target.value }))
+                      }
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {step.options?.map((opt) => (
+                    <OptionCard
+                      key={opt.value}
+                      value={opt.value}
+                      label={opt.label}
+                      description={
+                        "description" in opt
+                          ? (opt.description as string)
+                          : undefined
+                      }
+                      selected={answers[step.field] === opt.value}
+                      onSelect={(v) =>
+                        setAnswers((prev) => ({ ...prev, [step.field]: v }))
+                      }
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           ))}
 
