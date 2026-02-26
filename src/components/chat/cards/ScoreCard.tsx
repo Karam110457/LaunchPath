@@ -71,6 +71,14 @@ function formatRevenue(str: string, count: number): string {
   return `${symbol}${count.toLocaleString()}${suffix}`;
 }
 
+/** Get a human-readable match strength label from score. */
+function getMatchLabel(score: number): { label: string; color: string } {
+  if (score >= 85) return { label: "Excellent match", color: "text-emerald-400" };
+  if (score >= 75) return { label: "Strong match", color: "text-emerald-400" };
+  if (score >= 65) return { label: "Good match", color: "text-amber-400" };
+  return { label: "Worth exploring", color: "text-muted-foreground" };
+}
+
 export default function ScoreCard({
   card,
   completed,
@@ -137,7 +145,7 @@ export default function ScoreCard({
 }
 
 // ---------------------------------------------------------------------------
-// Primary card
+// Primary card — story-first layout
 // ---------------------------------------------------------------------------
 
 function PrimaryCard({
@@ -147,8 +155,9 @@ function PrimaryCard({
   recommendation: AIRecommendation;
   onChoose: () => void;
 }) {
-  // Score counts up from 0
   const animatedScore = useCountUp(rec.score, 600, 150);
+  const matchInfo = getMatchLabel(rec.score);
+  const [showScores, setShowScores] = useState(false);
 
   return (
     <div className="rounded-2xl border-2 border-primary/30 bg-card overflow-hidden shadow-sm">
@@ -156,7 +165,6 @@ function PrimaryCard({
       <div className="bg-gradient-to-br from-primary to-emerald-700 px-5 py-4">
         <div className="flex items-start justify-between gap-2">
           <div className="space-y-1">
-            {/* Badge pulses once on entry */}
             <span
               className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-semibold text-white"
               style={{ animation: "badge-pulse-once 500ms 100ms cubic-bezier(0.34, 1.56, 0.64, 1) both" }}
@@ -171,19 +179,28 @@ function PrimaryCard({
               {rec.niche}
             </h3>
           </div>
-          {/* Animated score badge */}
-          <AnimatedScoreBadge score={rec.score} animatedScore={animatedScore} large />
+          {/* Match strength label + score */}
+          <div
+            className="flex flex-col items-end gap-1 animate-in fade-in duration-300"
+            style={{ animationDelay: "150ms", animationFillMode: "both" }}
+          >
+            <span className={cn("text-xs font-semibold", matchInfo.color)}>
+              {matchInfo.label}
+            </span>
+            <AnimatedScoreBadge score={rec.score} animatedScore={animatedScore} large />
+          </div>
         </div>
       </div>
 
-      {/* Body — sections stagger in */}
+      {/* Body — story first, scores last */}
       <div className="p-5 space-y-5">
-        {/* Score bars — staggered fill */}
+        {/* Why this fits you — FIRST (most compelling, personalized) */}
         <div
-          className="animate-in fade-in duration-300"
+          className="rounded-xl bg-primary/10 border border-primary/20 px-4 py-3 animate-in fade-in duration-300"
           style={{ animationDelay: "200ms", animationFillMode: "both" }}
         >
-          <ScoreBarsSection scores={rec.segment_scores} entryDelay={250} />
+          <p className="text-xs font-semibold text-primary mb-1">Why this fits you</p>
+          <p className="text-sm text-foreground">{rec.why_for_you}</p>
         </div>
 
         {/* Who you help */}
@@ -191,15 +208,15 @@ function PrimaryCard({
           icon={<Users className="size-4 text-primary" />}
           label="Who you help"
           text={rec.target_segment.description}
-          delay={400}
+          delay={300}
         />
 
         {/* Bottleneck */}
         <InfoSection
           icon={<Zap className="size-4 text-amber-400" />}
-          label="The bottleneck"
+          label="The bottleneck you solve"
           text={rec.bottleneck}
-          delay={450}
+          delay={350}
         />
 
         {/* Solution */}
@@ -207,38 +224,53 @@ function PrimaryCard({
           icon={<ShieldCheck className="size-4 text-emerald-400" />}
           label="Your solution"
           text={rec.your_solution}
-          delay={500}
+          delay={400}
         />
 
         {/* Revenue — numbers count up */}
         <div
           className="animate-in fade-in duration-300"
-          style={{ animationDelay: "550ms", animationFillMode: "both" }}
+          style={{ animationDelay: "450ms", animationFillMode: "both" }}
         >
           <RevenueSection revenue={rec.revenue_potential} />
         </div>
 
-        {/* Strategic insight fades in last — it's the punchline */}
+        {/* Strategic insight — the punchline */}
         <p
           className="text-sm italic text-muted-foreground border-l-2 border-border pl-3 animate-in fade-in duration-400"
-          style={{ animationDelay: "700ms", animationFillMode: "both" }}
+          style={{ animationDelay: "550ms", animationFillMode: "both" }}
         >
           {rec.strategic_insight}
         </p>
 
-        {/* Why for you */}
+        {/* Score breakdown — collapsed by default */}
         <div
-          className="rounded-xl bg-primary/10 border border-primary/20 px-4 py-3 animate-in fade-in duration-300"
-          style={{ animationDelay: "800ms", animationFillMode: "both" }}
+          className="animate-in fade-in duration-300"
+          style={{ animationDelay: "600ms", animationFillMode: "both" }}
         >
-          <p className="text-xs font-semibold text-primary mb-1">Why this fits you</p>
-          <p className="text-sm text-foreground">{rec.why_for_you}</p>
+          <button
+            type="button"
+            onClick={() => setShowScores(!showScores)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {showScores ? (
+              <ChevronUp className="size-3.5" />
+            ) : (
+              <ChevronDown className="size-3.5" />
+            )}
+            {showScores ? "Hide score breakdown" : "See score breakdown"}
+          </button>
+          {showScores && (
+            <div className="mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
+              <ScoreBarsSection scores={rec.segment_scores} entryDelay={0} />
+            </div>
+          )}
         </div>
 
         {/* CTA */}
         <div
           className="animate-in fade-in slide-in-from-bottom-2 duration-300"
-          style={{ animationDelay: "850ms", animationFillMode: "both" }}
+          style={{ animationDelay: "650ms", animationFillMode: "both" }}
         >
           <Button
             onClick={onChoose}
@@ -269,6 +301,8 @@ function SecondaryCard({
   onToggle: () => void;
   onChoose: () => void;
 }) {
+  const matchInfo = getMatchLabel(rec.score);
+
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       <button
@@ -281,6 +315,7 @@ function SecondaryCard({
           <span className="text-sm font-semibold text-foreground font-serif italic">{rec.niche}</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <span className={cn("text-xs font-semibold", matchInfo.color)}>{matchInfo.label}</span>
           <ScoreBadge score={rec.score} />
           {isExpanded ? (
             <ChevronUp className="size-4 text-muted-foreground" />
@@ -292,15 +327,16 @@ function SecondaryCard({
 
       {isExpanded && (
         <div className="border-t border-border p-4 space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
-          <ScoreBarsSection scores={rec.segment_scores} entryDelay={0} />
-          <InfoSection icon={<Users className="size-4 text-primary" />} label="Who you help" text={rec.target_segment.description} delay={0} />
-          <InfoSection icon={<Zap className="size-4 text-amber-400" />} label="The bottleneck" text={rec.bottleneck} delay={0} />
-          <InfoSection icon={<ShieldCheck className="size-4 text-emerald-400" />} label="Your solution" text={rec.your_solution} delay={0} />
-          <RevenueSection revenue={rec.revenue_potential} />
+          {/* Why this fits you — first in expanded view too */}
           <div className="rounded-xl bg-primary/10 border border-primary/20 px-4 py-3">
             <p className="text-xs font-semibold text-primary mb-1">Why this fits you</p>
             <p className="text-sm text-foreground">{rec.why_for_you}</p>
           </div>
+          <InfoSection icon={<Users className="size-4 text-primary" />} label="Who you help" text={rec.target_segment.description} delay={0} />
+          <InfoSection icon={<Zap className="size-4 text-amber-400" />} label="The bottleneck you solve" text={rec.bottleneck} delay={0} />
+          <InfoSection icon={<ShieldCheck className="size-4 text-emerald-400" />} label="Your solution" text={rec.your_solution} delay={0} />
+          <RevenueSection revenue={rec.revenue_potential} />
+          <ScoreBarsSection scores={rec.segment_scores} entryDelay={0} />
           <Button
             onClick={onChoose}
             variant="outline"
@@ -470,7 +506,6 @@ function RevenueSection({
 }: {
   revenue: AIRecommendation["revenue_potential"];
 }) {
-  // Count up revenue numbers for the monthly total (the most impactful figure)
   const monthlyNum = useMemo(() => parseRevenueNumber(revenue.monthly_total), [revenue.monthly_total]);
   const animatedMonthly = useCountUp(monthlyNum, 700, 600);
 

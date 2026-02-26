@@ -779,7 +779,7 @@ export function createChatTools(
 
   const show_offer_review = tool({
     description:
-      "Show the offer-summary card for Exchange 3 (final review). Call after the user confirms Exchange 2. Shows the complete offer with a 'Build My System' CTA.",
+      "Show the offer-summary card (final review). Call in the SAME TURN after the user confirms pricing (Exchange 2 Part B). Shows the complete offer with a 'Build My System' CTA.",
     inputSchema: z.object({}),
     execute: async () => {
       const { data: freshSystem } = await supabase
