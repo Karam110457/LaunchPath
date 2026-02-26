@@ -23,6 +23,9 @@ export interface Offer {
   pricing_monthly: number;
   guarantee_text: string;
   delivery_model: string;
+  // Short pitch versions (1-sentence each, user-facing and editable)
+  pitch_from?: string;
+  pitch_to?: string;
   // Extended fields from AI generation (optional for backward compatibility)
   guarantee_type?: "time_bound" | "outcome_based" | "risk_reversal";
   guarantee_confidence?: string;

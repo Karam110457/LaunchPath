@@ -32,7 +32,7 @@ export default function OfferSummaryCard({ card, onComplete }: OfferSummaryCardP
       <div className="p-5 space-y-4">
         {/* Transformation — sequential reveal: FROM → arrow → TO */}
         <div>
-          <SectionLabel>Transformation</SectionLabel>
+          <SectionLabel>The transformation</SectionLabel>
           <div className="flex items-start gap-2 mt-1.5">
             {/* BEFORE — enters first */}
             <div
@@ -40,7 +40,7 @@ export default function OfferSummaryCard({ card, onComplete }: OfferSummaryCardP
               style={{ animationDelay: "0ms", animationFillMode: "both" }}
             >
               <p className="text-xs font-semibold text-red-400 mb-0.5">From</p>
-              <p className="text-sm text-red-300 leading-snug">{offer.transformation_from}</p>
+              <p className="text-sm text-red-300 leading-snug">{offer.pitch_from || offer.transformation_from}</p>
             </div>
             {/* Arrow — materialises after FROM */}
             <ArrowRight
@@ -53,7 +53,7 @@ export default function OfferSummaryCard({ card, onComplete }: OfferSummaryCardP
               style={{ animationDelay: "420ms", animationFillMode: "both" }}
             >
               <p className="text-xs font-semibold text-emerald-400 mb-0.5">To</p>
-              <p className="text-sm text-emerald-300 leading-snug">{offer.transformation_to}</p>
+              <p className="text-sm text-emerald-300 leading-snug">{offer.pitch_to || offer.transformation_to}</p>
             </div>
           </div>
         </div>

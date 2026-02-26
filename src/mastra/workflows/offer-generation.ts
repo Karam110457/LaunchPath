@@ -249,6 +249,8 @@ const assembleOffer = createStep({
       segment: initData.chosenRecommendation.target_segment.description,
       transformation_from: transformation.transformation_from,
       transformation_to: transformation.transformation_to,
+      pitch_from: transformation.pitch_from,
+      pitch_to: transformation.pitch_to,
       system_description: transformation.system_description,
       guarantee_text: guarantee.guarantee_text,
       guarantee_type: guarantee.guarantee_type,

@@ -42,6 +42,8 @@ export type AIRecommendation = z.infer<typeof aiRecommendationSchema>;
 export const offerTransformationOutputSchema = z.object({
   transformation_from: z.string(),
   transformation_to: z.string(),
+  pitch_from: z.string(),
+  pitch_to: z.string(),
   system_description: z.string(),
 });
 
@@ -95,6 +97,8 @@ export const assembledOfferSchema = z.object({
   segment: z.string(),
   transformation_from: z.string(),
   transformation_to: z.string(),
+  pitch_from: z.string().optional().default(""),
+  pitch_to: z.string().optional().default(""),
   system_description: z.string(),
   guarantee_text: z.string(),
   guarantee_type: z.enum(["time_bound", "outcome_based", "risk_reversal"]),

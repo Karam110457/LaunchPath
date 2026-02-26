@@ -718,7 +718,7 @@ export function createChatTools(
 
   const show_offer_story = tool({
     description:
-      "Show the editable-content card for Exchange 1 (the business story). Call after generate_offer returns. Fields: segment, transformation_from, transformation_to, system_description.",
+      "Show the editable-content card for Exchange 1 (the business pitch). Call after generate_offer returns. Fields: segment, pitch_from, pitch_to. These are short 1-sentence versions of the transformation.",
     inputSchema: z.object({}),
     execute: async () => {
       const { data: freshSystem } = await supabase
@@ -732,13 +732,12 @@ export function createChatTools(
       emitCard(emit, {
         type: "editable-content",
         id: "offer-story",
-        title: "Your Business Story",
-        subtitle: "Edit anything that doesn't feel right",
+        title: "Your Pitch",
+        subtitle: "This is how you'll describe your service — edit anything that doesn't sound like you",
         fields: [
-          { name: "segment", label: "Target Segment", value: String(offer.segment ?? ""), type: "textarea" },
-          { name: "transformation_from", label: "Where they are now", value: String(offer.transformation_from ?? ""), type: "textarea" },
-          { name: "transformation_to", label: "Where they'll be", value: String(offer.transformation_to ?? ""), type: "textarea" },
-          { name: "system_description", label: "What you deliver", value: String(offer.system_description ?? ""), type: "textarea" },
+          { name: "segment", label: "Who you help", value: String(offer.segment ?? ""), type: "text" },
+          { name: "pitch_from", label: "Their problem", value: String(offer.pitch_from ?? offer.transformation_from ?? ""), type: "text" },
+          { name: "pitch_to", label: "The outcome", value: String(offer.pitch_to ?? offer.transformation_to ?? ""), type: "text" },
         ],
         confirmLabel: "Looks good",
       });

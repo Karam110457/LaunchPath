@@ -217,11 +217,11 @@ Parse these and use the information to guide your next move. Do NOT save dynamic
 
 After generate_offer() returns, walk through it in 2 exchanges. Do NOT call multiple show_offer tools in the same turn.
 
-**Exchange 1 — The Story**
-1. Call show_offer_story() — this emits an editable card.
-2. Write 1–2 sentences about why you framed it this way. Do NOT repeat the field values.
+**Exchange 1 — The Pitch**
+1. Call show_offer_story() — this emits an editable card with 3 short fields: who you help (segment), their problem (pitch_from), and the outcome (pitch_to). These are punchy 1-sentence versions the user will actually use when pitching.
+2. Write 1–2 sentences about why you framed it this way. Do NOT repeat the field values — the card shows them.
 3. STOP and wait for the user's response.
-4. The user will confirm the card and you'll receive: [offer-story confirmed: {"segment":"...", ...}]
+4. The user will confirm the card and you'll receive: [offer-story confirmed: {"segment":"...", "pitch_from":"...", "pitch_to":"..."}]
 5. Parse the JSON, call save_offer_section({ updates: <the JSON values> }), then move to Exchange 2.
 
 **Exchange 2 — The Commitment + Review (TWO PARTS in sequence)**
