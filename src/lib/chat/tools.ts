@@ -21,7 +21,7 @@ import { mastra } from "@/mastra";
 import { buildUserContext } from "@/lib/ai/serge-prompt";
 import { nicheAnalysisOutputSchema, assembledOfferSchema } from "@/lib/ai/schemas";
 import { logger } from "@/lib/security/logger";
-import { getCurrencySymbol } from "@/lib/utils/currency";
+import { getTargetCurrencySymbol } from "@/lib/utils/currency";
 
 type Profile = Tables<"user_profiles">;
 type System = Tables<"user_systems">;
@@ -766,8 +766,8 @@ export function createChatTools(
         title: "The Commitment",
         subtitle: "Your pricing and guarantee",
         fields: [
-          { name: "pricing_setup", label: "Setup Fee", value: String(offer.pricing_setup ?? "0"), type: "number", prefix: getCurrencySymbol(profile.location_country) },
-          { name: "pricing_monthly", label: "Monthly Fee", value: String(offer.pricing_monthly ?? "0"), type: "number", prefix: getCurrencySymbol(profile.location_country) },
+          { name: "pricing_setup", label: "Setup Fee", value: String(offer.pricing_setup ?? "0"), type: "number", prefix: getTargetCurrencySymbol(profile.location_country, _system.location_target) },
+          { name: "pricing_monthly", label: "Monthly Fee", value: String(offer.pricing_monthly ?? "0"), type: "number", prefix: getTargetCurrencySymbol(profile.location_country, _system.location_target) },
           { name: "guarantee_text", label: "Guarantee", value: String(offer.guarantee_text ?? ""), type: "textarea" },
         ],
         confirmLabel: "Confirm pricing",
@@ -797,7 +797,7 @@ export function createChatTools(
         type: "offer-summary",
         id: "offer-review",
         offer: parsed.data,
-        currencySymbol: getCurrencySymbol(profile.location_country),
+        currencySymbol: getTargetCurrencySymbol(profile.location_country, _system.location_target),
       });
 
       return { displayed: true, section: "review" };
@@ -921,7 +921,7 @@ export function createChatTools(
           id: "system-ready",
           demoUrl,
           offer: fullOffer.success ? fullOffer.data : (freshSystem?.offer as never),
-          currencySymbol: getCurrencySymbol(profile.location_country),
+          currencySymbol: getTargetCurrencySymbol(profile.location_country, _system.location_target),
         });
 
         return { demoUrl };

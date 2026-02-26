@@ -143,3 +143,18 @@ export function formatCurrency(amount: number, country: string | null): string {
   const { symbol } = getCurrencyForCountry(country);
   return `${symbol}${amount.toLocaleString()}`;
 }
+
+/**
+ * Get the currency symbol based on the TARGET MARKET, not home country.
+ * - international / anywhere / unspecified → GBP (English-speaking markets)
+ * - local / national → home country currency
+ */
+export function getTargetCurrencySymbol(
+  homeCountry: string | null,
+  locationTarget: string | null,
+): string {
+  if (!locationTarget || locationTarget === "international" || locationTarget === "anywhere") {
+    return DEFAULT_CURRENCY.symbol; // £
+  }
+  return getCurrencySymbol(homeCountry);
+}

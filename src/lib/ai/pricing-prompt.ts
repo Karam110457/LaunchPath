@@ -38,11 +38,11 @@ These are ranges, not fixed prices. The niche's revenue_potential.per_client fro
 
 ## Currency
 
-Price in the currency appropriate to the user's location. This is a global platform — users may be in any country:
-- UK → GBP (£), US → USD ($), Nigeria → NGN (₦), India → INR (₹), South Africa → ZAR (R), Brazil → BRL (R$), Kenya → KES (KSh), etc.
-- Use your knowledge of the user's country to select the correct currency symbol and code.
-- Adjust price RANGES to be realistic for the local economy — do not simply convert UK prices to another currency. A service priced at £500/month in the UK might be ₦150,000/month in Nigeria or ₹25,000/month in India, reflecting local purchasing power.
-- If no location is specified, default to GBP (£).
+Price in the currency of the user's TARGET MARKET, not their home country:
+- If target area is "international", "anywhere", or unspecified → use GBP (£). The user is selling to English-speaking businesses.
+- If target area is "local" or "national" → use the user's home country currency (UK → GBP, US → USD, Nigeria → NGN, India → INR, etc.).
+- A user in Mumbai targeting international markets prices in £, not ₹. They are charging UK/US/AU businesses, not local ones.
+- Adjust price RANGES to be realistic for the target market economy. GBP reference ranges above apply directly for international targets.
 
 ## Quality Rules
 
@@ -102,10 +102,9 @@ export function buildPricingContext(
   lines.push("Use the revenue goal as the target and the niche revenue_potential as the anchor. Position the price so the user can realistically reach their goal with 2-5 clients.");
 
   lines.push("\n## Market Context");
-  lines.push(`- Location: ${answers.location_city ?? "not specified"}`);
-  lines.push(`- Country: ${answers.location_country ?? "not specified"}`);
-  lines.push(`- Target area: ${answers.location_target ?? "not specified"}`);
-  lines.push("- Price in the local currency for this location. Adjust price ranges to realistic local market rates — do not just convert GBP, use purchasing-power-appropriate pricing.");
+  lines.push(`- User's home country: ${answers.location_country ?? "not specified"}`);
+  lines.push(`- Target market: ${answers.location_target ?? "not specified"}`);
+  lines.push("- Price in the TARGET MARKET's currency. If target is international/anywhere/unspecified, use GBP (£). If local/national, use the user's home country currency.");
 
   lines.push("\n## Cross-Agent Alignment");
   lines.push("The offer transformation being written in parallel will describe a vivid before/after story. Your pricing rationale must reflect the value of that transformation — price the OUTCOME, not the tool.");

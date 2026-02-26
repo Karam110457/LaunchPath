@@ -78,10 +78,9 @@ export function buildOfferContext(
   lines.push(`- Location: ${answers.location_city ?? "not specified"}`);
 
   lines.push("\n## Market Context");
-  lines.push(`- Location: ${answers.location_city ?? "not specified"}`);
-  lines.push(`- Country: ${answers.location_country ?? "not specified"}`);
-  lines.push(`- Target area: ${answers.location_target ?? "not specified"}`);
-  lines.push("- Write copy that fits this market. Use the local currency, terminology, seasonal patterns, and cultural references appropriate to the user's location. Adapt for ANY country — not just UK/US. If unspecified, default to UK.");
+  lines.push(`- User's home country: ${answers.location_country ?? "not specified"}`);
+  lines.push(`- Target market: ${answers.location_target ?? "not specified"}`);
+  lines.push("- Write copy that fits the TARGET MARKET. If target is international/anywhere/unspecified, write for English-speaking markets (UK/US/AU). If local/national, use the user's home country terminology and cultural references.");
 
   lines.push("\n## Cross-Agent Alignment");
   lines.push("A guarantee and pricing are being generated in parallel to form the complete offer. Your transformation copy must support both:");

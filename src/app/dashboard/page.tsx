@@ -12,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Plus, ArrowRight, Rocket } from "lucide-react";
-import { getCurrencySymbol } from "@/lib/utils/currency";
+import { getTargetCurrencySymbol } from "@/lib/utils/currency";
 
 export default async function DashboardPage() {
   const user = await requireAuth();
@@ -21,7 +21,7 @@ export default async function DashboardPage() {
   const [{ data: systems }, { data: userProfile }] = await Promise.all([
     supabase
       .from("user_systems")
-      .select("id, status, intent, offer, demo_url, created_at, current_step")
+      .select("id, status, intent, offer, demo_url, created_at, current_step, location_target")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
     supabase
@@ -31,7 +31,7 @@ export default async function DashboardPage() {
       .single(),
   ]);
 
-  const currencySymbol = getCurrencySymbol(userProfile?.location_country ?? null);
+  const homeCountry = userProfile?.location_country ?? null;
   const hasSystems = systems && systems.length > 0;
 
   return (
@@ -84,7 +84,7 @@ export default async function DashboardPage() {
                   <div className="flex items-center justify-between">
                     {offer?.pricing_monthly && (
                       <span className="text-sm font-mono text-muted-foreground">
-                        {currencySymbol}{offer.pricing_monthly}/mo
+                        {getTargetCurrencySymbol(homeCountry, system.location_target)}{offer.pricing_monthly}/mo
                       </span>
                     )}
                     <Button variant="ghost" size="sm" asChild>

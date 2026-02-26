@@ -74,10 +74,9 @@ export function buildGuaranteeContext(
   lines.push("Guarantee should relate to system setup speed or automated output quality — the user deploys it once and the AI runs autonomously from there.");
 
   lines.push("\n## Market Context");
-  lines.push(`- Location: ${answers.location_city ?? "not specified"}`);
-  lines.push(`- Country: ${answers.location_country ?? "not specified"}`);
-  lines.push(`- Target area: ${answers.location_target ?? "not specified"}`);
-  lines.push("- Tailor the guarantee language to this market. Use local currency, terminology, and realistic timelines for this region.");
+  lines.push(`- User's home country: ${answers.location_country ?? "not specified"}`);
+  lines.push(`- Target market: ${answers.location_target ?? "not specified"}`);
+  lines.push("- Tailor the guarantee language to the TARGET MARKET. If target is international/anywhere/unspecified, write for English-speaking markets (UK/US/AU). If local/national, use the user's home country terminology.");
 
   return lines.join("\n");
 }

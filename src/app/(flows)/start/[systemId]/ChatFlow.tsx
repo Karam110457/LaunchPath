@@ -15,7 +15,7 @@ import type { ChatMessage } from "@/lib/chat/types";
 import type { AssembledOffer } from "@/lib/ai/schemas";
 import { useChatStream } from "@/hooks/useChatStream";
 import { ChatContainer } from "@/components/chat/ChatContainer";
-import { getCurrencySymbol } from "@/lib/utils/currency";
+import { getTargetCurrencySymbol } from "@/lib/utils/currency";
 
 type System = Tables<"user_systems">;
 type Profile = Tables<"user_profiles">;
@@ -68,7 +68,7 @@ export function ChatFlow({ system, profile }: ChatFlowProps) {
               id: "system-ready",
               demoUrl: system.demo_url,
               offer: system.offer as AssembledOffer,
-              currencySymbol: getCurrencySymbol(profile.location_country),
+              currencySymbol: getTargetCurrencySymbol(profile.location_country, system.location_target),
             },
             completed: false,
             timestamp: new Date().toISOString(),
