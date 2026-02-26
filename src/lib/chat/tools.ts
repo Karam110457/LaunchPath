@@ -22,6 +22,7 @@ import { buildUserContext } from "@/lib/ai/serge-prompt";
 import { nicheAnalysisOutputSchema, assembledOfferSchema } from "@/lib/ai/schemas";
 import { logger } from "@/lib/security/logger";
 import { getTargetCurrencySymbol } from "@/lib/utils/currency";
+import { withRateLimitRetry } from "@/lib/ai/rate-limit-retry";
 
 type Profile = Tables<"user_profiles">;
 type System = Tables<"user_systems">;
@@ -453,9 +454,11 @@ export function createChatTools(
 
       try {
         const agent = mastra.getAgent("serge");
-        const result = await agent.generate(userContext, {
-          structuredOutput: { schema: nicheAnalysisOutputSchema },
-        });
+        const result = await withRateLimitRetry(() =>
+          agent.generate(userContext, {
+            structuredOutput: { schema: nicheAnalysisOutputSchema },
+          })
+        );
 
         clearInterval(progressInterval);
 
