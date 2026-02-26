@@ -592,7 +592,7 @@ function AIAnalysisStep({
 
   const progressSteps = [
     "Analysing your profile",
-    "Scanning 70+ validated niches",
+    "Scanning 38 validated niches",
     "Scoring market opportunities",
     "Identifying bottlenecks",
     "Evaluating segment fit",
@@ -645,7 +645,7 @@ function AIAnalysisStep({
         <Sparkles className="h-8 w-8 text-primary mx-auto mb-4 animate-pulse" />
         <h2 className="text-xl font-serif italic">Finding your opportunity...</h2>
         <p className="text-sm text-muted-foreground mt-2">
-          AI is analysing your profile against 70+ validated niches
+          AI is analysing your profile against 38 validated niches
         </p>
       </div>
       <div className="space-y-3">

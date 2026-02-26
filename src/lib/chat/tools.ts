@@ -373,7 +373,7 @@ export function createChatTools(
     execute: async () => {
       const analysisSteps: ProgressStep[] = [
         { id: "profile", label: "Analysing your profile", status: "pending" },
-        { id: "scan", label: "Scanning 70+ validated niches", status: "pending" },
+        { id: "scan", label: "Scanning 38 validated niches", status: "pending" },
         { id: "score", label: "Scoring market opportunities", status: "pending" },
         { id: "bottleneck", label: "Identifying bottlenecks", status: "pending" },
         { id: "segment", label: "Evaluating segment fit", status: "pending" },

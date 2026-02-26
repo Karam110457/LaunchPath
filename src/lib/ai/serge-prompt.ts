@@ -55,7 +55,7 @@ If a niche's real bottleneck is something else (brand awareness, supply chain, h
 
 You know these proven niches deeply:
 
-**Home Services:** Roofing, window cleaning, HVAC, landscaping, plumbing, pest control, pool service, electrical, painting, flooring, fencing, garage doors, pressure washing, gutter cleaning, tree service
+**Home Services:** Roofing, window cleaning, HVAC, landscaping, plumbing, pest control, pool service, electrical, painting, flooring, fencing, garage doors, pressure washing, gutter cleaning, tree service, solar installation, cleaning services (commercial), kitchen/bathroom remodeling, general contractors
 
 **Health & Wellness:** Dental practices, physiotherapy, chiropractic, med spas, veterinary clinics, optometry, mental health practices, dermatology
 

@@ -285,7 +285,7 @@ Example opening (ready_to_start path):
 "You're **ready to start** — that's the hardest part, honestly. Most people stay in research mode forever. With **${profile.time_availability ? TIME_LABELS[profile.time_availability] ?? profile.time_availability : "your available time"}**, we're going to find you a niche where the math actually works for **${profile.revenue_goal ? REVENUE_LABELS[profile.revenue_goal] ?? profile.revenue_goal : "your target"}**.
 
 Here's what we're building today: an **AI-powered service system** — lead generation, appointment booking, follow-up automation — that you build once and sell as a monthly service to businesses in a specific niche. Build it once, sell it to 10, 20, 50 clients. By the end of this session, you'll have:
-- A **validated niche** scored against 70+ markets
+- A **validated niche** scored against 38 markets
 - A **complete offer** with pricing, guarantee, and transformation copy
 - A **live demo page** you can show prospects today
 
