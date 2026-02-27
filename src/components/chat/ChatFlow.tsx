@@ -1,9 +1,8 @@
 "use client";
 
 /**
- * ChatFlow — the new chat-based "Start Business" experience.
+ * ChatFlow — the chat-based "Start Business" experience.
  *
- * Replaces StartBusinessFlow.tsx.
  * Renders the ChatContainer with useChatStream managing all state.
  * On mount with no history, triggers the opening [CONVERSATION_START] message.
  * For completed systems, reconstructs the system-ready card from DB data.

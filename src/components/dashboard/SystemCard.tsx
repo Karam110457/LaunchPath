@@ -8,11 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
-
-// ---------------------------------------------------------------------------
-// Step-to-stage mapping
-// ---------------------------------------------------------------------------
+import { ArrowRight, Users } from "lucide-react";
 
 function getStageLabel(step: number): string {
   if (step <= 2) return "Gathering info";
@@ -22,10 +18,6 @@ function getStageLabel(step: number): string {
   if (step <= 8) return "Generating system";
   return "Finishing up";
 }
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 interface SystemCardProps {
   id: string;
@@ -40,6 +32,7 @@ interface SystemCardProps {
     niche?: string;
   } | null;
   currencySymbol: string;
+  leadsCount?: number;
 }
 
 export function SystemCard({
@@ -49,17 +42,18 @@ export function SystemCard({
   offer,
   chosenRecommendation,
   currencySymbol,
+  leadsCount,
 }: SystemCardProps) {
   const isComplete = status === "complete";
 
-  // Derive the best title available
-  const title = offer?.system_description
-    ?? chosenRecommendation?.niche
-    ?? "System in progress";
+  const title =
+    offer?.system_description ??
+    chosenRecommendation?.niche ??
+    "System in progress";
 
-  // Derive the best description available
-  const description = offer?.segment
-    ?? (chosenRecommendation?.niche ? "Niche selected" : "Setting up...");
+  const description =
+    offer?.segment ??
+    (chosenRecommendation?.niche ? "Niche selected" : "Setting up...");
 
   return (
     <Card className="relative overflow-hidden">
@@ -81,17 +75,26 @@ export function SystemCard({
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between">
-          {offer?.pricing_monthly != null && (
-            <span className="text-sm font-mono text-muted-foreground">
-              {currencySymbol}{offer.pricing_monthly}/mo
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {offer?.pricing_monthly != null && (
+              <span className="text-sm font-mono text-muted-foreground">
+                {currencySymbol}
+                {offer.pricing_monthly}/mo
+              </span>
+            )}
+            {leadsCount != null && leadsCount > 0 && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Users className="size-3" />
+                {leadsCount} lead{leadsCount !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
           <Button variant="ghost" size="sm" asChild>
             <Link
               href={
                 isComplete
                   ? `/dashboard/systems/${id}`
-                  : `/start/${id}`
+                  : `/dashboard/systems/${id}/chat`
               }
             >
               {isComplete ? "View System" : "Continue"}

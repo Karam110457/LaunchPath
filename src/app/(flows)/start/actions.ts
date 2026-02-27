@@ -25,5 +25,5 @@ export async function createSystem() {
     return { error: "Failed to create system. Please try again." };
   }
 
-  redirect(`/start/${newSystem.id}`);
+  redirect(`/dashboard/systems/${newSystem.id}/chat`);
 }

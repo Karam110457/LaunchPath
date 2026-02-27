@@ -1,12 +1,13 @@
 import { requireAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { PageShell } from "@/components/layout/PageShell";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import Link from "next/link";
-import { Plus, ArrowRight, Rocket } from "lucide-react";
+import { Rocket } from "lucide-react";
 import { getTargetCurrencySymbol } from "@/lib/utils/currency";
 import { SystemCard } from "@/components/dashboard/SystemCard";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { ActivityFeed, type ActivityItem } from "@/components/dashboard/ActivityFeed";
+import { CreateSystemButton } from "@/components/dashboard/CreateSystemButton";
 
 export default async function DashboardPage() {
   const user = await requireAuth();
@@ -15,7 +16,9 @@ export default async function DashboardPage() {
   const [{ data: systems }, { data: userProfile }] = await Promise.all([
     supabase
       .from("user_systems")
-      .select("id, status, intent, offer, demo_url, created_at, current_step, location_target, chosen_recommendation")
+      .select(
+        "id, status, intent, offer, demo_url, created_at, updated_at, current_step, location_target, chosen_recommendation"
+      )
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
     supabase
@@ -28,44 +31,159 @@ export default async function DashboardPage() {
   const homeCountry = userProfile?.location_country ?? null;
   const hasSystems = systems && systems.length > 0;
 
+  // Fetch submission counts per system for lead counts + activity feed
+  let submissionCounts: Record<string, number> = {};
+  let recentSubmissions: Array<{
+    system_id: string;
+    created_at: string;
+    result: { priority?: string } | null;
+  }> = [];
+
+  if (hasSystems) {
+    const systemIds = systems.map((s) => s.id);
+
+    const [{ data: allSubmissions }, { data: recent }] = await Promise.all([
+      supabase
+        .from("demo_submissions")
+        .select("system_id")
+        .in("system_id", systemIds),
+      supabase
+        .from("demo_submissions")
+        .select("system_id, created_at, result")
+        .in("system_id", systemIds)
+        .order("created_at", { ascending: false })
+        .limit(10),
+    ]);
+
+    if (allSubmissions) {
+      submissionCounts = allSubmissions.reduce<Record<string, number>>(
+        (acc, row) => {
+          acc[row.system_id] = (acc[row.system_id] ?? 0) + 1;
+          return acc;
+        },
+        {}
+      );
+    }
+
+    recentSubmissions = (recent ?? []) as typeof recentSubmissions;
+  }
+
+  // Compute aggregate stats
+  const activeSystems = (systems ?? []).filter(
+    (s) => s.status === "complete"
+  ).length;
+  const totalLeads = Object.values(submissionCounts).reduce(
+    (sum, n) => sum + n,
+    0
+  );
+
+  // Build a system name lookup for activity feed
+  const systemNameMap: Record<string, string> = {};
+  (systems ?? []).forEach((s) => {
+    const offer = s.offer as { system_description?: string } | null;
+    const rec = s.chosen_recommendation as { niche?: string } | null;
+    systemNameMap[s.id] =
+      offer?.system_description ?? rec?.niche ?? "Untitled System";
+  });
+
+  // Compute projected monthly revenue from complete systems
+  let projectedRevenue = 0;
+  const defaultCurrency = getTargetCurrencySymbol(homeCountry, null);
+  (systems ?? []).forEach((s) => {
+    if (s.status === "complete") {
+      const offer = s.offer as { pricing_monthly?: number } | null;
+      if (offer?.pricing_monthly) {
+        projectedRevenue += offer.pricing_monthly;
+      }
+    }
+  });
+
+  // Build activity items: leads + system events
+  const activityItems: ActivityItem[] = [];
+
+  // Recent lead submissions
+  recentSubmissions.forEach((sub) => {
+    activityItems.push({
+      type: "new_lead",
+      systemName: systemNameMap[sub.system_id] ?? "Unknown",
+      priority: (sub.result as { priority?: string } | null)?.priority,
+      timestamp: new Date(sub.created_at),
+    });
+  });
+
+  // System creation/completion events
+  (systems ?? []).forEach((s) => {
+    const name = systemNameMap[s.id] ?? "Untitled";
+    if (s.status === "complete" && s.updated_at) {
+      activityItems.push({
+        type: "system_completed",
+        systemName: name,
+        timestamp: new Date(s.updated_at as string),
+      });
+    }
+    activityItems.push({
+      type: "system_created",
+      systemName: name,
+      timestamp: new Date(s.created_at),
+    });
+  });
+
+  // Sort by timestamp descending, limit to 10
+  activityItems.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  const topActivity = activityItems.slice(0, 10);
+
   return (
     <PageShell
       title="Overview"
       description="Your systems and progress."
-      action={
-        <Button asChild>
-          <Link href="/start">
-            <Plus className="h-4 w-4 mr-2" />
-            New System
-          </Link>
-        </Button>
-      }
+      action={<CreateSystemButton />}
     >
       {hasSystems ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {systems.map((system) => (
-            <SystemCard
-              key={system.id}
-              id={system.id}
-              status={system.status ?? "in_progress"}
-              currentStep={system.current_step ?? 1}
-              offer={
-                system.offer as {
-                  system_description?: string;
-                  segment?: string;
-                  pricing_monthly?: number;
-                } | null
+        <>
+          {/* Aggregate stats */}
+          <div className="grid grid-cols-3 gap-4">
+            <StatCard label="Active Systems" value={activeSystems} />
+            <StatCard label="Total Leads" value={totalLeads} />
+            <StatCard
+              label="Projected Revenue"
+              value={
+                projectedRevenue > 0
+                  ? `${defaultCurrency}${projectedRevenue.toLocaleString()}/mo`
+                  : "\u2014"
               }
-              chosenRecommendation={
-                system.chosen_recommendation as { niche?: string } | null
-              }
-              currencySymbol={getTargetCurrencySymbol(
-                homeCountry,
-                system.location_target,
-              )}
             />
-          ))}
-        </div>
+          </div>
+
+          {/* Systems grid */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {systems.map((system) => (
+              <SystemCard
+                key={system.id}
+                id={system.id}
+                status={system.status ?? "in_progress"}
+                currentStep={system.current_step ?? 1}
+                offer={
+                  system.offer as {
+                    system_description?: string;
+                    segment?: string;
+                    pricing_monthly?: number;
+                  } | null
+                }
+                chosenRecommendation={
+                  system.chosen_recommendation as { niche?: string } | null
+                }
+                currencySymbol={getTargetCurrencySymbol(
+                  homeCountry,
+                  system.location_target
+                )}
+                leadsCount={submissionCounts[system.id] ?? 0}
+              />
+            ))}
+          </div>
+
+          {/* Recent activity */}
+          <ActivityFeed items={topActivity} />
+        </>
       ) : (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
@@ -78,12 +196,7 @@ export default async function DashboardPage() {
               discovery to a working demo page and ready-to-send prospect
               messages.
             </p>
-            <Button asChild>
-              <Link href="/start">
-                Start Your First Business
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Link>
-            </Button>
+            <CreateSystemButton />
           </CardContent>
         </Card>
       )}

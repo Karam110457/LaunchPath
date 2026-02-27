@@ -1,16 +1,19 @@
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import type { SidebarSystem, SidebarUser } from "@/lib/dashboard/sidebar-data";
 
 interface AppShellProps {
   children: React.ReactNode;
+  systems: SidebarSystem[];
+  user: SidebarUser;
 }
 
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({ children, systems, user }: AppShellProps) {
   return (
     <div className="min-h-screen bg-background flex">
-      <Sidebar />
+      <Sidebar systems={systems} user={user} />
       <div className="flex-1 flex flex-col md:ml-64 min-w-0 transition-all duration-300 ease-in-out">
-        <Header />
+        <Header systems={systems} />
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>

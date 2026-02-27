@@ -1,12 +1,21 @@
 import { requireAuth } from "@/lib/auth/guards";
 import { AppShell } from "@/components/layout/AppShell";
+import { getSidebarData } from "@/lib/dashboard/sidebar-data";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  await requireAuth();
+  const user = await requireAuth();
+  const { systems, user: sidebarUser } = await getSidebarData(
+    user.id,
+    user.email,
+  );
 
-  return <AppShell>{children}</AppShell>;
+  return (
+    <AppShell systems={systems} user={sidebarUser}>
+      {children}
+    </AppShell>
+  );
 }
