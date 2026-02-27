@@ -282,7 +282,7 @@ export default function SystemReadyCard({ card }: SystemReadyCardProps) {
           variant="outline"
           onClick={() => {
             const id = card.demoUrl.split("/demo/")[1]?.split(/[?#]/)[0];
-            if (id) router.push(`/builder/${id}`);
+            if (id) router.push(`/dashboard/systems/${id}/builder`);
           }}
           className="flex-1 h-12 rounded-xl font-semibold text-base gap-2"
         >

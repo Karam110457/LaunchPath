@@ -45,7 +45,7 @@ function getCsp(options?: { allowEval?: boolean }): string {
 
 /** Routes that use the dynamic JSX renderer and need 'unsafe-eval'. */
 function needsEval(pathname: string): boolean {
-  return pathname.startsWith("/builder/") || pathname.startsWith("/demo/");
+  return pathname.startsWith("/builder/") || pathname.startsWith("/demo/") || pathname.includes("/builder");
 }
 
 export function applySecurityHeaders(

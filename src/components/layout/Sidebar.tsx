@@ -12,6 +12,7 @@ import {
   LogOut,
   LayoutDashboard,
   MessageSquare,
+  Paintbrush,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { createSystem } from "@/app/(flows)/start/actions";
@@ -197,6 +198,20 @@ export function Sidebar({ systems, user }: SidebarProps) {
             <MessageSquare className="size-4" />
             Chat
           </Link>
+          {currentBusiness.status === "complete" && (
+            <Link
+              href={`/dashboard/systems/${currentId}/builder`}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+                pathname === `/dashboard/systems/${currentId}/builder`
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              )}
+            >
+              <Paintbrush className="size-4" />
+              Builder
+            </Link>
+          )}
         </nav>
       )}
 

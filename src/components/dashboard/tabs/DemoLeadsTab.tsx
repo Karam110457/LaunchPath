@@ -71,7 +71,7 @@ export function DemoLeadsTab({
               </Button>
             )}
             <Button variant="outline" size="sm" asChild>
-              <Link href={`/builder/${systemId}`}>
+              <Link href={`/dashboard/systems/${systemId}/builder`}>
                 <Pencil className="size-3.5 mr-1.5" />
                 Edit in Builder
               </Link>
