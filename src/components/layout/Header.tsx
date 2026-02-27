@@ -18,9 +18,9 @@ function buildBreadcrumbs(
 ): Breadcrumb[] {
   const crumbs: Breadcrumb[] = [];
 
-  // Always start with Overview
+  // Always start with Home
   crumbs.push({
-    label: "Overview",
+    label: "Home",
     href: "/dashboard",
     isActive: pathname === "/dashboard",
   });
@@ -45,7 +45,7 @@ function buildBreadcrumbs(
     const systemId = systemMatch[1];
     const subPage = systemMatch[3]; // "chat" or undefined
     const system = systems.find((s) => s.id === systemId);
-    const systemName = system?.name ?? "System";
+    const systemName = system?.name ?? "Business";
 
     crumbs.push({
       label: systemName,

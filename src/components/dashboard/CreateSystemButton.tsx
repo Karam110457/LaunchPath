@@ -14,7 +14,7 @@ export function CreateSystemButton() {
       disabled={isPending}
     >
       <Plus className="h-4 w-4 mr-2" />
-      {isPending ? "Creating..." : "New System"}
+      {isPending ? "Creating..." : "New Business"}
     </Button>
   );
 }

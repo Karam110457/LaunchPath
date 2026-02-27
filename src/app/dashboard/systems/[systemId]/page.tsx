@@ -88,9 +88,8 @@ export default async function SystemDetailPage({
   const systemName =
     offer?.system_description ??
     recommendation?.niche ??
-    "System in progress";
-  const segment =
-    offer?.segment ?? (isComplete ? "" : "This system is still being built.");
+    "New Business";
+  const segment = offer?.segment ?? "";
 
   return (
     <SystemWorkspace

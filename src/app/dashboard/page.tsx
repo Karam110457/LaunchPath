@@ -69,7 +69,7 @@ export default async function DashboardPage() {
   }
 
   // Compute aggregate stats
-  const activeSystems = (systems ?? []).filter(
+  const liveBusinesses = (systems ?? []).filter(
     (s) => s.status === "complete"
   ).length;
   const totalLeads = Object.values(submissionCounts).reduce(
@@ -77,16 +77,16 @@ export default async function DashboardPage() {
     0
   );
 
-  // Build a system name lookup for activity feed
-  const systemNameMap: Record<string, string> = {};
+  // Build a name lookup for activity feed
+  const nameMap: Record<string, string> = {};
   (systems ?? []).forEach((s) => {
     const offer = s.offer as { system_description?: string } | null;
     const rec = s.chosen_recommendation as { niche?: string } | null;
-    systemNameMap[s.id] =
-      offer?.system_description ?? rec?.niche ?? "Untitled System";
+    nameMap[s.id] =
+      offer?.system_description ?? rec?.niche ?? "Untitled Business";
   });
 
-  // Compute projected monthly revenue from complete systems
+  // Compute projected monthly revenue from live businesses
   let projectedRevenue = 0;
   const defaultCurrency = getTargetCurrencySymbol(homeCountry, null);
   (systems ?? []).forEach((s) => {
@@ -98,22 +98,22 @@ export default async function DashboardPage() {
     }
   });
 
-  // Build activity items: leads + system events
+  // Build activity items: leads + business events
   const activityItems: ActivityItem[] = [];
 
   // Recent lead submissions
   recentSubmissions.forEach((sub) => {
     activityItems.push({
       type: "new_lead",
-      systemName: systemNameMap[sub.system_id] ?? "Unknown",
+      systemName: nameMap[sub.system_id] ?? "Unknown",
       priority: (sub.result as { priority?: string } | null)?.priority,
       timestamp: new Date(sub.created_at),
     });
   });
 
-  // System creation/completion events
+  // Business creation/completion events
   (systems ?? []).forEach((s) => {
-    const name = systemNameMap[s.id] ?? "Untitled";
+    const name = nameMap[s.id] ?? "Untitled";
     if (s.status === "complete" && s.updated_at) {
       activityItems.push({
         type: "system_completed",
@@ -134,18 +134,18 @@ export default async function DashboardPage() {
 
   return (
     <PageShell
-      title="Overview"
-      description="Your systems and progress."
+      title="Home"
+      description="Your businesses at a glance."
       action={<CreateSystemButton />}
     >
       {hasSystems ? (
         <>
           {/* Aggregate stats */}
           <div className="grid grid-cols-3 gap-4">
-            <StatCard label="Active Systems" value={activeSystems} />
-            <StatCard label="Total Leads" value={totalLeads} />
+            <StatCard label="Live" value={liveBusinesses} />
+            <StatCard label="Leads" value={totalLeads} />
             <StatCard
-              label="Projected Revenue"
+              label="Revenue"
               value={
                 projectedRevenue > 0
                   ? `${defaultCurrency}${projectedRevenue.toLocaleString()}/mo`
@@ -154,7 +154,7 @@ export default async function DashboardPage() {
             />
           </div>
 
-          {/* Systems grid */}
+          {/* Businesses grid */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {systems.map((system) => (
               <SystemCard
@@ -190,11 +190,12 @@ export default async function DashboardPage() {
             <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
               <Rocket className="h-6 w-6 text-primary" />
             </div>
-            <h3 className="text-lg font-medium mb-2">No systems yet</h3>
+            <h3 className="text-lg font-medium mb-2">
+              Launch your first business
+            </h3>
             <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-              Start your first business system. We&apos;ll guide you from niche
-              discovery to a working demo page and ready-to-send prospect
-              messages.
+              We&apos;ll help you find a niche, craft an irresistible offer, and
+              build a demo page that qualifies leads for you.
             </p>
             <CreateSystemButton />
           </CardContent>

@@ -94,13 +94,13 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
                 )}
                 {item.type === "system_created" && (
                   <span>
-                    System created:{" "}
+                    Started building{" "}
                     <span className="font-medium">{item.systemName}</span>
                   </span>
                 )}
                 {item.type === "system_completed" && (
                   <span>
-                    System completed:{" "}
+                    Launched{" "}
                     <span className="font-medium">{item.systemName}</span>
                   </span>
                 )}

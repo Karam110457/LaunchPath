@@ -56,11 +56,11 @@ export function SystemWorkspace({
                   : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
               }
             >
-              {isComplete ? "Live" : "In Progress"}
+              {isComplete ? "Live" : "Building"}
             </Badge>
           </div>
-          {segment && (
-            <p className="text-muted-foreground text-sm md:text-base max-w-2xl">
+          {isComplete && segment && (
+            <p className="text-muted-foreground text-sm max-w-2xl">
               {segment}
             </p>
           )}
@@ -69,7 +69,7 @@ export function SystemWorkspace({
           <Button variant="outline" size="sm" asChild>
             <Link href={`/dashboard/systems/${systemId}/chat`}>
               <MessageSquare className="size-3.5 mr-1.5" />
-              Open Chat
+              {isComplete ? "Chat" : "Continue Building"}
             </Link>
           </Button>
         </div>

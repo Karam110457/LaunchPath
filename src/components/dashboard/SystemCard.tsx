@@ -10,13 +10,13 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowRight, Users } from "lucide-react";
 
-function getStageLabel(step: number): string {
-  if (step <= 2) return "Gathering info";
-  if (step <= 3) return "Analyzing niches";
-  if (step <= 4) return "Choosing niche";
-  if (step <= 6) return "Building offer";
-  if (step <= 8) return "Generating system";
-  return "Finishing up";
+function getStageLabel(
+  offer: SystemCardProps["offer"],
+  chosenRecommendation: SystemCardProps["chosenRecommendation"]
+): string {
+  if (offer?.system_description) return "Finishing up";
+  if (chosenRecommendation?.niche) return "Building offer";
+  return "Getting started";
 }
 
 interface SystemCardProps {
@@ -38,7 +38,6 @@ interface SystemCardProps {
 export function SystemCard({
   id,
   status,
-  currentStep,
   offer,
   chosenRecommendation,
   currencySymbol,
@@ -49,7 +48,7 @@ export function SystemCard({
   const title =
     offer?.system_description ??
     chosenRecommendation?.niche ??
-    "System in progress";
+    "New Business";
 
   const description =
     offer?.segment ??
@@ -63,11 +62,11 @@ export function SystemCard({
             variant="secondary"
             className={
               isComplete
-                ? "bg-primary/10 text-primary border-primary/20"
+                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                 : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
             }
           >
-            {isComplete ? "Live" : getStageLabel(currentStep)}
+            {isComplete ? "Live" : getStageLabel(offer, chosenRecommendation)}
           </Badge>
         </div>
         <CardTitle className="mt-2 text-lg">{title}</CardTitle>
@@ -97,7 +96,7 @@ export function SystemCard({
                   : `/dashboard/systems/${id}/chat`
               }
             >
-              {isComplete ? "View System" : "Continue"}
+              {isComplete ? "View" : "Continue"}
               <ArrowRight className="h-4 w-4 ml-1" />
             </Link>
           </Button>

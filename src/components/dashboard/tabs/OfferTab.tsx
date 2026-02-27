@@ -27,8 +27,8 @@ export function OfferTab({ offer, recommendation, currency }: OfferTabProps) {
       <Card>
         <CardContent className="py-12 text-center">
           <p className="text-sm text-muted-foreground">
-            No offer has been generated yet. Complete the system building flow
-            to see your offer details here.
+            No offer yet. Continue building your business to generate your
+            offer details.
           </p>
         </CardContent>
       </Card>

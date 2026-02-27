@@ -31,7 +31,7 @@ export async function getSidebarData(userId: string, email?: string) {
       name:
         offer?.system_description ??
         rec?.niche ??
-        "Untitled System",
+        "Untitled Business",
       currentStep: s.current_step ?? 1,
     };
   });
