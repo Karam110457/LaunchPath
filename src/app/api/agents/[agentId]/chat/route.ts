@@ -118,8 +118,9 @@ export async function POST(
               }
               return "";
             })
+            .map((t) => t.trim())
             .filter(Boolean)
-            .join("\n");
+            .join(" ");
 
           const fullContent = assistantText.trim() || "";
 
@@ -152,9 +153,11 @@ export async function POST(
         },
       });
 
-      // Process the stream — emit text deltas + thinking events
+      // Process the stream — emit text deltas + thinking events.
+      // We do NOT emit "text-done" between steps — only once at the very end
+      // so the client keeps all text in a single message bubble.
       let wasThinking = false;
-      let wasStreamingText = false;
+      let hasUnfinishedText = false;
 
       for await (const chunk of result.fullStream) {
         if (chunk.type === "reasoning-delta") {
@@ -170,17 +173,15 @@ export async function POST(
             wasThinking = false;
             emit({ type: "thinking-done" });
           }
-          wasStreamingText = true;
+          hasUnfinishedText = true;
           emit({ type: "text-delta", delta: chunk.text });
-        } else {
-          if (wasStreamingText) {
-            wasStreamingText = false;
-            emit({ type: "text-done" });
-          }
         }
+        // Intentionally no else — non-text chunks (step-finish, etc.) are
+        // ignored so text accumulates into one continuous message.
       }
 
-      if (wasStreamingText) {
+      // Stream is fully done — finalize any remaining text
+      if (hasUnfinishedText) {
         emit({ type: "text-done" });
       }
     } catch (err) {

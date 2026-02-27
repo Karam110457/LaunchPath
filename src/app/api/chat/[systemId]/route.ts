@@ -125,7 +125,11 @@ export async function POST(
             timestamp: new Date().toISOString(),
           };
 
-          // Collect assistant text from the response
+          // Collect assistant text from the response.
+          // In multi-step interactions (tool calls) the SDK creates a separate
+          // assistant message per step. Join with a single space so text that
+          // was split mid-sentence reconnects naturally instead of creating
+          // orphaned fragments on reload.
           const assistantText = response.messages
             .filter((m) => m.role === "assistant")
             .map((m) => {
@@ -138,8 +142,9 @@ export async function POST(
               }
               return "";
             })
+            .map((t) => t.trim())
             .filter(Boolean)
-            .join("\n");
+            .join(" ");
 
           // Don't append tool names to conversation history — the model sees
           // [tools:...] in prior turns and mimics it as literal text output.
@@ -171,10 +176,14 @@ export async function POST(
       });
 
       // Process the stream — emit text deltas + thinking events to the SSE.
-      // We track whether text was being streamed so we can emit text-done
-      // before a tool call (which may emit a card via the closure).
+      // IMPORTANT: We do NOT emit "text-done" between steps. When the model
+      // calls a tool mid-sentence the text continues in the next step, so
+      // emitting text-done would cause the client to split one response into
+      // separate bubbles (or create paragraph breaks on reload). We only emit
+      // text-done once — right before a card event (so text and cards stay
+      // visually separate) or when the entire stream is finished.
       let wasThinking = false;
-      let wasStreamingText = false;
+      let hasUnfinishedText = false;
       for await (const chunk of result.fullStream) {
         if (chunk.type === "reasoning-delta") {
           if (!wasThinking) {
@@ -191,20 +200,16 @@ export async function POST(
             wasThinking = false;
             emit({ type: "thinking-done" });
           }
-          wasStreamingText = true;
+          hasUnfinishedText = true;
           emit({ type: "text-delta", delta: chunk.text });
-        } else {
-          // Any non-text chunk after text (tool-call, step-finish, etc.)
-          // means text output has ended for this step.
-          if (wasStreamingText) {
-            wasStreamingText = false;
-            emit({ type: "text-done" });
-          }
         }
-        // tool calls are handled within the tool execute functions (emit via closure)
+        // tool-call, step-finish, etc. are ignored here — we intentionally
+        // do NOT emit text-done between steps so the client keeps
+        // accumulating text into the same message bubble.
+        // Tool calls are handled within the tool execute functions (emit via closure).
       }
-      // If text was the last thing streamed, close it before onFinish
-      if (wasStreamingText) {
+      // Stream is fully done — finalize any remaining text
+      if (hasUnfinishedText) {
         emit({ type: "text-done" });
       }
     } catch (err) {
