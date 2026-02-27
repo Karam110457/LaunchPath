@@ -22,16 +22,16 @@ export async function getSidebarData(userId: string, email?: string) {
     .order("created_at", { ascending: false });
 
   const sidebarSystems: SidebarSystem[] = (systems ?? []).map((s) => {
-    const offer = s.offer as { system_description?: string } | null;
+    const offer = s.offer as { segment?: string } | null;
     const rec = s.chosen_recommendation as { niche?: string } | null;
 
     return {
       id: s.id,
       status: s.status ?? "in_progress",
       name:
-        offer?.system_description ??
         rec?.niche ??
-        "Untitled Business",
+        offer?.segment ??
+        "New Business",
       currentStep: s.current_step ?? 1,
     };
   });

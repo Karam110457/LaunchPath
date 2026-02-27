@@ -14,12 +14,16 @@ import {
   CheckCircle2,
   Circle,
   Target,
+  ArrowDown,
+  Shield,
+  DollarSign,
+  Globe,
 } from "lucide-react";
 import { CopyUrlButton } from "@/components/dashboard/CopyUrlButton";
 import type { Offer, Recommendation, Submission } from "./types";
 
 // ---------------------------------------------------------------------------
-// Smart stage detection — uses actual data, not just currentStep
+// Smart stage detection
 // ---------------------------------------------------------------------------
 
 interface StageInfo {
@@ -36,21 +40,9 @@ function getSmartStages(
   const hasOffer = !!offer?.system_description;
 
   return [
-    {
-      label: "Niche discovery",
-      done: hasNiche,
-      active: !hasNiche,
-    },
-    {
-      label: "Offer creation",
-      done: hasOffer,
-      active: hasNiche && !hasOffer,
-    },
-    {
-      label: "Launch",
-      done: false,
-      active: hasOffer,
-    },
+    { label: "Niche", done: hasNiche, active: !hasNiche },
+    { label: "Offer", done: hasOffer, active: hasNiche && !hasOffer },
+    { label: "Launch", done: false, active: hasOffer },
   ];
 }
 
@@ -64,7 +56,7 @@ function getProgressPercent(
 }
 
 // ---------------------------------------------------------------------------
-// In-progress overview — visual, exciting, beginner-friendly
+// In-progress overview
 // ---------------------------------------------------------------------------
 
 function InProgressOverview({
@@ -82,19 +74,18 @@ function InProgressOverview({
   const progress = getProgressPercent(recommendation, offer);
 
   return (
-    <div className="space-y-6">
-      {/* Progress hero */}
+    <div className="space-y-5">
+      {/* Progress bar */}
       <Card className="overflow-hidden">
-        <CardContent className="pt-6 pb-6 space-y-4">
+        <CardContent className="pt-5 pb-5 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="size-4 text-primary" />
-              <span className="text-sm font-medium">Building your business</span>
+              <span className="text-sm font-medium">Progress</span>
             </div>
             <span className="text-sm font-mono text-primary">{progress}%</span>
           </div>
 
-          {/* Progress bar */}
           <div className="h-2 rounded-full bg-muted overflow-hidden">
             <div
               className="h-full rounded-full bg-gradient-to-r from-primary/80 to-primary transition-all duration-700"
@@ -102,16 +93,15 @@ function InProgressOverview({
             />
           </div>
 
-          {/* Stage indicators */}
-          <div className="flex gap-6 pt-2">
+          <div className="flex gap-4 pt-1">
             {stages.map((stage) => (
-              <div key={stage.label} className="flex items-center gap-2">
+              <div key={stage.label} className="flex items-center gap-1.5">
                 {stage.done ? (
-                  <CheckCircle2 className="size-4 text-emerald-500" />
+                  <CheckCircle2 className="size-3.5 text-emerald-500" />
                 ) : stage.active ? (
-                  <Circle className="size-4 text-primary" />
+                  <Circle className="size-3.5 text-primary" />
                 ) : (
-                  <Circle className="size-4 text-muted-foreground/20" />
+                  <Circle className="size-3.5 text-muted-foreground/20" />
                 )}
                 <span
                   className={`text-xs ${
@@ -130,17 +120,16 @@ function InProgressOverview({
         </CardContent>
       </Card>
 
-      {/* What we know so far */}
-      {recommendation && (
+      {/* Niche card */}
+      {recommendation?.niche && (
         <Card>
-          <CardContent className="pt-6 pb-6 space-y-4">
-            <div className="flex items-center gap-2 mb-1">
+          <CardContent className="pt-5 pb-5">
+            <div className="flex items-center gap-2 mb-3">
               <Target className="size-4 text-primary" />
-              <span className="text-sm font-medium">Your niche</span>
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Your Niche
+              </span>
             </div>
-            <p className="text-lg font-serif italic text-foreground leading-snug">
-              {recommendation.niche}
-            </p>
             {recommendation.your_solution && (
               <p className="text-sm text-muted-foreground leading-relaxed">
                 {recommendation.your_solution}
@@ -150,25 +139,56 @@ function InProgressOverview({
         </Card>
       )}
 
-      {/* Draft offer preview */}
-      {offer?.system_description && (
+      {/* Offer preview — show transformation if available */}
+      {offer && (
         <Card>
-          <CardContent className="pt-6 pb-6 space-y-3">
-            <div className="flex items-center gap-2 mb-1">
+          <CardContent className="pt-5 pb-5 space-y-4">
+            <div className="flex items-center gap-2">
               <Zap className="size-4 text-amber-400" />
-              <span className="text-sm font-medium">Your offer</span>
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Your Offer
+              </span>
               <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-400 border-amber-500/20">
                 Draft
               </Badge>
             </div>
-            <p className="text-sm text-foreground leading-relaxed">
-              {offer.system_description}
-            </p>
-            {offer.pricing_monthly != null && (
-              <p className="text-lg font-mono font-bold text-primary">
-                {currency}{offer.pricing_monthly}/mo
-              </p>
+
+            {/* Transformation FROM → TO */}
+            {offer.transformation_from && offer.transformation_to && (
+              <div className="space-y-2">
+                <div className="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3">
+                  <p className="text-[10px] font-bold text-red-400 uppercase tracking-wider mb-1">From</p>
+                  <p className="text-sm text-foreground">{offer.transformation_from}</p>
+                </div>
+                <div className="flex justify-center">
+                  <ArrowDown className="size-4 text-muted-foreground/40" />
+                </div>
+                <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
+                  <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-1">To</p>
+                  <p className="text-sm text-foreground">{offer.transformation_to}</p>
+                </div>
+              </div>
             )}
+
+            {/* Pricing + Guarantee highlights */}
+            <div className="flex flex-wrap gap-3">
+              {offer.pricing_monthly != null && (
+                <div className="flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/15 px-3 py-2">
+                  <DollarSign className="size-3.5 text-primary" />
+                  <span className="text-sm font-semibold font-mono text-primary">
+                    {currency}{offer.pricing_monthly}/mo
+                  </span>
+                </div>
+              )}
+              {offer.guarantee_text && (
+                <div className="flex items-center gap-2 rounded-lg bg-amber-500/5 border border-amber-500/15 px-3 py-2">
+                  <Shield className="size-3.5 text-amber-400" />
+                  <span className="text-xs text-amber-400 font-medium">
+                    Guarantee included
+                  </span>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -190,45 +210,125 @@ function InProgressOverview({
 
 function CompleteOverview({
   systemId,
+  offer,
   demoUrl,
   submissions,
+  currency,
 }: {
   systemId: string;
+  offer: Offer | null;
   demoUrl: string | null;
   submissions: Submission[];
+  currency: string;
 }) {
   const recentLeads = submissions.slice(0, 5);
 
   return (
-    <div className="space-y-6">
-      {/* Quick actions */}
-      <Card>
-        <CardContent className="pt-5 pb-5 flex flex-wrap gap-2">
-          {demoUrl && (
-            <>
-              <Button variant="outline" size="sm" asChild>
-                <a href={demoUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="size-3.5 mr-1.5" />
-                  View Demo
-                </a>
-              </Button>
-              <CopyUrlButton url={demoUrl} />
-            </>
-          )}
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/builder/${systemId}`}>
-              <Pencil className="size-3.5 mr-1.5" />
-              Edit Demo
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
+    <div className="space-y-5">
+      {/* Transformation hero */}
+      {offer?.transformation_from && offer?.transformation_to && (
+        <Card className="overflow-hidden">
+          <CardContent className="pt-5 pb-5 space-y-3">
+            <div className="grid gap-2">
+              <div className="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3">
+                <p className="text-[10px] font-bold text-red-400 uppercase tracking-wider mb-1">Your clients go from</p>
+                <p className="text-sm text-foreground">{offer.transformation_from}</p>
+              </div>
+              <div className="flex justify-center">
+                <ArrowDown className="size-4 text-muted-foreground/40" />
+              </div>
+              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
+                <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-1">To</p>
+                <p className="text-sm text-foreground">{offer.transformation_to}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Key numbers + Demo link */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        {/* Pricing */}
+        {offer?.pricing_monthly != null && (
+          <Card>
+            <CardContent className="pt-5 pb-5">
+              <div className="flex items-center gap-2 mb-2">
+                <DollarSign className="size-4 text-primary" />
+                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  You charge
+                </span>
+              </div>
+              <p className="text-2xl font-mono font-bold text-foreground">
+                {currency}{offer.pricing_monthly.toLocaleString()}
+                <span className="text-sm font-normal text-muted-foreground">/mo</span>
+              </p>
+              {offer.pricing_setup != null && offer.pricing_setup > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  + {currency}{offer.pricing_setup.toLocaleString()} setup
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Demo page */}
+        {demoUrl && (
+          <Card>
+            <CardContent className="pt-5 pb-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Globe className="size-4 text-emerald-400" />
+                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Your demo page
+                </span>
+                <span className="relative flex size-2 ml-auto">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mt-3">
+                <Button variant="outline" size="sm" asChild className="flex-1">
+                  <a href={demoUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="size-3.5 mr-1.5" />
+                    View
+                  </a>
+                </Button>
+                <CopyUrlButton url={demoUrl} />
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/builder/${systemId}`}>
+                    <Pencil className="size-3.5 mr-1.5" />
+                    Edit
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Guarantee highlight */}
+      {offer?.guarantee_text && (
+        <Card>
+          <CardContent className="pt-5 pb-5">
+            <div className="flex items-center gap-2 mb-2">
+              <Shield className="size-4 text-amber-400" />
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Your guarantee
+              </span>
+            </div>
+            <p className="text-sm text-foreground leading-relaxed">
+              {offer.guarantee_text}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent leads */}
       {recentLeads.length > 0 && (
         <Card>
           <CardContent className="pt-5 pb-5">
-            <p className="text-sm font-medium mb-3">Recent Leads</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
+              Recent Leads
+            </p>
             <div className="space-y-2">
               {recentLeads.map((sub, i) => {
                 const priority = (sub.result as { priority?: string } | null)
@@ -337,8 +437,10 @@ export function SystemOverviewTab({
   return (
     <CompleteOverview
       systemId={systemId}
+      offer={offer}
       demoUrl={demoUrl}
       submissions={submissions}
+      currency={currency}
     />
   );
 }

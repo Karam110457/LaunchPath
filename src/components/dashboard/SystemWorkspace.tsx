@@ -10,7 +10,6 @@ import type { Offer, Recommendation, Submission } from "./tabs/types";
 interface SystemWorkspaceProps {
   systemId: string;
   systemName: string;
-  segment: string;
   isComplete: boolean;
   currentStep: number;
   offer: Offer | null;
@@ -25,7 +24,6 @@ interface SystemWorkspaceProps {
 export function SystemWorkspace({
   systemId,
   systemName,
-  segment,
   isComplete,
   currentStep,
   offer,
@@ -41,7 +39,7 @@ export function SystemWorkspace({
       {/* Header */}
       <div className="space-y-1.5">
         <div className="flex items-center gap-3">
-          <h1 className="font-serif text-3xl md:text-4xl font-light italic tracking-tight text-foreground">
+          <h1 className="font-serif text-2xl md:text-3xl font-light italic tracking-tight text-foreground">
             {systemName}
           </h1>
           <Badge
@@ -55,9 +53,9 @@ export function SystemWorkspace({
             {isComplete ? "Live" : "Building"}
           </Badge>
         </div>
-        {isComplete && segment && (
+        {offer?.system_description && (
           <p className="text-muted-foreground text-sm max-w-2xl">
-            {segment}
+            {offer.system_description}
           </p>
         )}
       </div>
@@ -104,7 +102,6 @@ export function SystemWorkspace({
           </TabsContent>
         </Tabs>
       ) : (
-        /* In-progress: just show overview, no tabs needed */
         <SystemOverviewTab
           systemId={systemId}
           isComplete={isComplete}

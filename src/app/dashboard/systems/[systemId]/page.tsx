@@ -85,17 +85,15 @@ export default async function SystemDetailPage({
   });
   const totalLeads = (submissions ?? []).length;
 
-  const systemName =
-    offer?.system_description ??
+  const businessName =
     recommendation?.niche ??
+    offer?.segment ??
     "New Business";
-  const segment = offer?.segment ?? "";
 
   return (
     <SystemWorkspace
       systemId={systemId}
-      systemName={systemName}
-      segment={segment}
+      systemName={businessName}
       isComplete={isComplete}
       currentStep={system.current_step ?? 1}
       offer={offer}
