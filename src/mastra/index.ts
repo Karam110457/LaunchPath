@@ -10,6 +10,7 @@ import { offerAgent } from "./agents/offer-agent";
 import { guaranteeAgent } from "./agents/guarantee-agent";
 import { pricingAgent } from "./agents/pricing-agent";
 import { demoBuilderAgent } from "./agents/demo-builder-agent";
+import { agentBuilderAgent } from "./agents/agent-builder-agent";
 import { offerGenerationWorkflow } from "./workflows/offer-generation";
 import { demoBuilderWorkflow } from "./workflows/demo-builder";
 
@@ -21,6 +22,7 @@ export const mastra = new Mastra({
     guarantee: guaranteeAgent,
     pricing: pricingAgent,
     "demo-builder": demoBuilderAgent,
+    "agent-builder": agentBuilderAgent,
   },
   workflows: {
     "offer-generation": offerGenerationWorkflow,

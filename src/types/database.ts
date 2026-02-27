@@ -60,6 +60,57 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_agents: {
+        Row: {
+          id: string
+          user_id: string
+          system_id: string | null
+          name: string
+          description: string | null
+          system_prompt: string
+          personality: Json
+          enabled_tools: Json
+          knowledge_base: Json
+          model: string
+          template_id: string | null
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          system_id?: string | null
+          name?: string
+          description?: string | null
+          system_prompt?: string
+          personality?: Json
+          enabled_tools?: Json
+          knowledge_base?: Json
+          model?: string
+          template_id?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          system_id?: string | null
+          name?: string
+          description?: string | null
+          system_prompt?: string
+          personality?: Json
+          enabled_tools?: Json
+          knowledge_base?: Json
+          model?: string
+          template_id?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_systems: {
         Row: {
           id: string

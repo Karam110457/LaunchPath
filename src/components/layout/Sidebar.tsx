@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   MessageSquare,
   Paintbrush,
+  Bot,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { createSystem } from "@/app/(flows)/start/actions";
@@ -21,9 +22,10 @@ import type { SidebarSystem, SidebarUser } from "@/lib/dashboard/sidebar-data";
 interface SidebarProps {
   systems?: SidebarSystem[];
   user?: SidebarUser;
+  agentCount?: number;
 }
 
-export function Sidebar({ systems, user }: SidebarProps) {
+export function Sidebar({ systems, user, agentCount }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isCreating, startCreating] = useTransition();
@@ -170,6 +172,27 @@ export function Sidebar({ systems, user }: SidebarProps) {
           </div>
         )}
       </div>
+
+      {/* Global nav — always visible */}
+      <nav className="px-3 pt-3 space-y-0.5">
+        <Link
+          href="/dashboard/agents"
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+            pathname.startsWith("/dashboard/agents")
+              ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+              : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+          )}
+        >
+          <Bot className="size-4" />
+          Agents
+          {agentCount != null && agentCount > 0 && (
+            <span className="ml-auto text-xs text-sidebar-foreground/40">
+              {agentCount}
+            </span>
+          )}
+        </Link>
+      </nav>
 
       {/* Business navigation — only when a business is selected */}
       {currentBusiness && (

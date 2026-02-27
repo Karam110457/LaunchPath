@@ -28,6 +28,34 @@ function buildBreadcrumbs(
     return crumbs;
   }
 
+  // Agent pages
+  if (pathname.startsWith("/dashboard/agents")) {
+    crumbs.push({
+      label: "Agents",
+      href: "/dashboard/agents",
+      isActive: pathname === "/dashboard/agents",
+    });
+
+    if (pathname === "/dashboard/agents/new") {
+      crumbs.push({
+        label: "New Agent",
+        href: "/dashboard/agents/new",
+        isActive: true,
+      });
+    }
+
+    const agentMatch = pathname.match(/^\/dashboard\/agents\/([^/]+)$/);
+    if (agentMatch && agentMatch[1] !== "new") {
+      crumbs.push({
+        label: "Agent",
+        href: pathname,
+        isActive: true,
+      });
+    }
+
+    return crumbs;
+  }
+
   // Business pages: /dashboard/systems/[id] or /dashboard/systems/[id]/chat
   const systemMatch = pathname.match(
     /^\/dashboard\/systems\/([^/]+)(\/(.+))?$/
