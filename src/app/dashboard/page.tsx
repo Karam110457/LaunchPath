@@ -2,17 +2,11 @@ import { requireAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { Plus, ArrowRight, Rocket } from "lucide-react";
 import { getTargetCurrencySymbol } from "@/lib/utils/currency";
+import { SystemCard } from "@/components/dashboard/SystemCard";
 
 export default async function DashboardPage() {
   const user = await requireAuth();
@@ -21,7 +15,7 @@ export default async function DashboardPage() {
   const [{ data: systems }, { data: userProfile }] = await Promise.all([
     supabase
       .from("user_systems")
-      .select("id, status, intent, offer, demo_url, created_at, current_step, location_target")
+      .select("id, status, intent, offer, demo_url, created_at, current_step, location_target, chosen_recommendation")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
     supabase
@@ -49,61 +43,28 @@ export default async function DashboardPage() {
     >
       {hasSystems ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {systems.map((system) => {
-            const offer = system.offer as {
-              segment?: string;
-              system_description?: string;
-              pricing_monthly?: number;
-            } | null;
-
-            return (
-              <Card key={system.id} className="relative overflow-hidden">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <Badge
-                      variant="secondary"
-                      className={
-                        system.status === "complete"
-                          ? "bg-primary/10 text-primary border-primary/20"
-                          : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-                      }
-                    >
-                      {system.status === "complete"
-                        ? "Live"
-                        : `Step ${system.current_step}/10`}
-                    </Badge>
-                  </div>
-                  <CardTitle className="mt-2 text-lg">
-                    {offer?.system_description ?? "System in progress"}
-                  </CardTitle>
-                  <CardDescription>
-                    {offer?.segment ?? "Setting up..."}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    {offer?.pricing_monthly && (
-                      <span className="text-sm font-mono text-muted-foreground">
-                        {getTargetCurrencySymbol(homeCountry, system.location_target)}{offer.pricing_monthly}/mo
-                      </span>
-                    )}
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link
-                        href={
-                          system.status === "in_progress"
-                            ? `/start/${system.id}`
-                            : `/dashboard/demos`
-                        }
-                      >
-                        {system.status === "in_progress" ? "Continue" : "View Demos"}
-                        <ArrowRight className="h-4 w-4 ml-1" />
-                      </Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {systems.map((system) => (
+            <SystemCard
+              key={system.id}
+              id={system.id}
+              status={system.status ?? "in_progress"}
+              currentStep={system.current_step ?? 1}
+              offer={
+                system.offer as {
+                  system_description?: string;
+                  segment?: string;
+                  pricing_monthly?: number;
+                } | null
+              }
+              chosenRecommendation={
+                system.chosen_recommendation as { niche?: string } | null
+              }
+              currencySymbol={getTargetCurrencySymbol(
+                homeCountry,
+                system.location_target,
+              )}
+            />
+          ))}
         </div>
       ) : (
         <Card className="border-dashed">

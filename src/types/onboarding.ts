@@ -11,10 +11,10 @@ export const TIME_AVAILABILITY_OPTIONS = [
 ] as const;
 
 export const REVENUE_GOAL_OPTIONS = [
-  { value: "500_1k", label: "First meaningful win", description: "Enough to prove the model works" },
-  { value: "1k_3k", label: "Real side income", description: "Consistent monthly revenue" },
-  { value: "3k_5k", label: "Replace my salary", description: "Full-time income level" },
-  { value: "5k_10k_plus", label: "Build a real business", description: "Scaling beyond yourself" },
+  { value: "500_1k", label: "First meaningful win (500\u20131k/mo)", description: "Enough to prove the model works" },
+  { value: "1k_3k", label: "Real side income (1k\u20133k/mo)", description: "Consistent monthly revenue" },
+  { value: "3k_5k", label: "Replace my salary (3k\u20135k/mo)", description: "Full-time income level" },
+  { value: "5k_10k_plus", label: "Build a real business (5k\u201310k+/mo)", description: "Scaling beyond yourself" },
 ] as const;
 
 export type CurrentSituation = (typeof CURRENT_SITUATION_OPTIONS)[number]["value"];

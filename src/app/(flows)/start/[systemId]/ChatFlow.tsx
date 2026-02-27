@@ -86,6 +86,7 @@ export function ChatFlow({ system, profile }: ChatFlowProps) {
       isTyping={isTyping}
       isThinking={isThinking}
       thinkingText={thinkingText}
+      isReturning={initialHistory.length > 0}
       onSendMessage={sendMessage}
       onCardComplete={handleCardResponse}
       onStartOver={startOver}

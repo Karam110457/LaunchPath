@@ -7,7 +7,6 @@ import { Logo } from "@/components/Logo";
 import {
   LayoutDashboard,
   Plus,
-  Megaphone,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -20,11 +19,6 @@ const navItems = [
     href: "/dashboard",
     icon: LayoutDashboard,
     exact: true,
-  },
-  {
-    title: "Demos",
-    href: "/dashboard/demos",
-    icon: Megaphone,
   },
   {
     title: "New System",

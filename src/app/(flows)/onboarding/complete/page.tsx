@@ -9,7 +9,7 @@ export default async function OnboardingCompletePage() {
   const supabase = await createClient();
   const { data: profile } = await supabase
     .from("user_profiles")
-    .select("*")
+    .select("onboarding_completed")
     .eq("id", user.id)
     .single();
 
@@ -17,5 +17,5 @@ export default async function OnboardingCompletePage() {
     redirect("/onboarding");
   }
 
-  return <OnboardingComplete profile={profile} />;
+  return <OnboardingComplete />;
 }

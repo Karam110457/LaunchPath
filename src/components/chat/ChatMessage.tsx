@@ -82,14 +82,19 @@ export function ChatMessage({ message, onCardComplete, isStreaming }: ChatMessag
     // Cards slide up from below with a spring overshoot — they arrive with intention.
     <div
       className={cn(
-        "animate-in fade-in slide-in-from-bottom-4 duration-300",
-        cardBlocked && "pointer-events-none select-none opacity-60"
+        "relative animate-in fade-in slide-in-from-bottom-4 duration-300",
+        cardBlocked && "pointer-events-none select-none"
       )}
       style={{
         animationTimingFunction: "cubic-bezier(0.34, 1.56, 0.64, 1)",
         animationFillMode: "both",
       }}
     >
+      {cardBlocked && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-background/60 backdrop-blur-[1px]">
+          <span className="text-xs text-muted-foreground animate-pulse">Loading...</span>
+        </div>
+      )}
       {(() => {
         switch (card.type) {
           case "option-selector":

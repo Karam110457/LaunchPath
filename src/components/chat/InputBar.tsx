@@ -3,6 +3,7 @@
 /**
  * InputBar — floating glassy message input.
  * Disabled while the agent is streaming. Enter to send, Shift+Enter for newline.
+ * Subdued when a card is awaiting interaction (still functional, just de-emphasized).
  */
 
 import { useState, useRef, KeyboardEvent } from "react";
@@ -12,9 +13,10 @@ import { cn } from "@/lib/utils";
 interface InputBarProps {
   onSend: (text: string) => void;
   disabled?: boolean;
+  subdued?: boolean;
 }
 
-export function InputBar({ onSend, disabled = false }: InputBarProps) {
+export function InputBar({ onSend, disabled = false, subdued = false }: InputBarProps) {
   const [value, setValue] = useState("");
   const [justSent, setJustSent] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -53,12 +55,14 @@ export function InputBar({ onSend, disabled = false }: InputBarProps) {
       {/* Glassy floating card */}
       <div
         className={cn(
-          "flex items-end gap-3 rounded-2xl px-4 py-3",
+          "flex items-end gap-3 rounded-2xl px-4",
           "bg-card/80 backdrop-blur-md",
-          "border border-border/60",
-          "shadow-xl shadow-black/30",
+          "border",
           "transition-all duration-200",
           "focus-within:border-primary/50 focus-within:shadow-primary/5",
+          subdued
+            ? "py-2 border-border/30 shadow-none"
+            : "py-3 border-border/60 shadow-xl shadow-black/30",
           (disabled || justSent) && "opacity-60"
         )}
       >
@@ -69,7 +73,13 @@ export function InputBar({ onSend, disabled = false }: InputBarProps) {
           onKeyDown={handleKeyDown}
           disabled={disabled}
           rows={1}
-          placeholder={disabled ? "Agent is thinking…" : "Type a message…"}
+          placeholder={
+            disabled
+              ? "Agent is thinking\u2026"
+              : subdued
+                ? "You can also type a response\u2026"
+                : "Type a message\u2026"
+          }
           className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[24px] max-h-[160px] py-0.5"
           style={{ lineHeight: "1.5" }}
         />
