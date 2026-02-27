@@ -1,10 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { MessageSquare } from "lucide-react";
 import { SystemOverviewTab } from "./tabs/SystemOverviewTab";
 import { OfferTab } from "./tabs/OfferTab";
 import { DemoLeadsTab } from "./tabs/DemoLeadsTab";
@@ -42,37 +39,27 @@ export function SystemWorkspace({
   return (
     <div className="container py-8 md:py-10 max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-3">
-            <h1 className="font-serif text-3xl md:text-4xl font-light italic tracking-tight text-foreground">
-              {systemName}
-            </h1>
-            <Badge
-              variant="secondary"
-              className={
-                isComplete
-                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                  : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-              }
-            >
-              {isComplete ? "Live" : "Building"}
-            </Badge>
-          </div>
-          {isComplete && segment && (
-            <p className="text-muted-foreground text-sm max-w-2xl">
-              {segment}
-            </p>
-          )}
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-3">
+          <h1 className="font-serif text-3xl md:text-4xl font-light italic tracking-tight text-foreground">
+            {systemName}
+          </h1>
+          <Badge
+            variant="secondary"
+            className={
+              isComplete
+                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+            }
+          >
+            {isComplete ? "Live" : "Building"}
+          </Badge>
         </div>
-        <div className="flex-shrink-0">
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/dashboard/systems/${systemId}/chat`}>
-              <MessageSquare className="size-3.5 mr-1.5" />
-              {isComplete ? "Chat" : "Continue Building"}
-            </Link>
-          </Button>
-        </div>
+        {isComplete && segment && (
+          <p className="text-muted-foreground text-sm max-w-2xl">
+            {segment}
+          </p>
+        )}
       </div>
 
       {/* Tabs */}

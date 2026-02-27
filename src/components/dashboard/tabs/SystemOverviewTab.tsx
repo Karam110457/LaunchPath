@@ -29,7 +29,6 @@ interface StageInfo {
 }
 
 function getSmartStages(
-  currentStep: number,
   recommendation: Recommendation | null,
   offer: Offer | null
 ): StageInfo[] {
@@ -70,18 +69,16 @@ function getProgressPercent(
 
 function InProgressOverview({
   systemId,
-  currentStep,
   recommendation,
   offer,
   currency,
 }: {
   systemId: string;
-  currentStep: number;
   recommendation: Recommendation | null;
   offer: Offer | null;
   currency: string;
 }) {
-  const stages = getSmartStages(currentStep, recommendation, offer);
+  const stages = getSmartStages(recommendation, offer);
   const progress = getProgressPercent(recommendation, offer);
 
   return (
@@ -193,56 +190,17 @@ function InProgressOverview({
 
 function CompleteOverview({
   systemId,
-  offer,
   demoUrl,
   submissions,
-  totalLeads,
-  currency,
 }: {
   systemId: string;
-  offer: Offer | null;
   demoUrl: string | null;
   submissions: Submission[];
-  totalLeads: number;
-  currency: string;
 }) {
   const recentLeads = submissions.slice(0, 5);
 
   return (
     <div className="space-y-6">
-      {/* Quick stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <Card className="text-center">
-          <CardContent className="pt-4 pb-3 space-y-1">
-            <div className="flex items-center justify-center gap-1.5">
-              <span className="relative flex size-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-              </span>
-              <span className="text-xs font-bold text-emerald-400 tracking-wide">
-                LIVE
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground">Demo Page</p>
-          </CardContent>
-        </Card>
-        <Card className="text-center">
-          <CardContent className="pt-4 pb-3 space-y-1">
-            <p className="text-xl font-bold tabular-nums">{totalLeads}</p>
-            <p className="text-xs text-muted-foreground">Leads</p>
-          </CardContent>
-        </Card>
-        <Card className="text-center">
-          <CardContent className="pt-4 pb-3 space-y-1">
-            <p className="text-xl font-bold tabular-nums">
-              {currency}
-              {offer?.pricing_monthly?.toLocaleString() ?? "\u2014"}
-            </p>
-            <p className="text-xs text-muted-foreground">Per month</p>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Quick actions */}
       <Card>
         <CardContent className="pt-5 pb-5 flex flex-wrap gap-2">
@@ -359,19 +317,16 @@ interface SystemOverviewTabProps {
 export function SystemOverviewTab({
   systemId,
   isComplete,
-  currentStep,
   offer,
   recommendation,
   demoUrl,
   submissions,
-  totalLeads,
   currency,
 }: SystemOverviewTabProps) {
   if (!isComplete) {
     return (
       <InProgressOverview
         systemId={systemId}
-        currentStep={currentStep}
         recommendation={recommendation}
         offer={offer}
         currency={currency}
@@ -382,11 +337,8 @@ export function SystemOverviewTab({
   return (
     <CompleteOverview
       systemId={systemId}
-      offer={offer}
       demoUrl={demoUrl}
       submissions={submissions}
-      totalLeads={totalLeads}
-      currency={currency}
     />
   );
 }

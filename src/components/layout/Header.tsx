@@ -18,15 +18,6 @@ function buildBreadcrumbs(
 ): Breadcrumb[] {
   const crumbs: Breadcrumb[] = [];
 
-  // Always start with Home
-  crumbs.push({
-    label: "Home",
-    href: "/dashboard",
-    isActive: pathname === "/dashboard",
-  });
-
-  if (pathname === "/dashboard") return crumbs;
-
   // Settings
   if (pathname.startsWith("/dashboard/settings")) {
     crumbs.push({
@@ -37,7 +28,7 @@ function buildBreadcrumbs(
     return crumbs;
   }
 
-  // System pages: /dashboard/systems/[id] or /dashboard/systems/[id]/chat
+  // Business pages: /dashboard/systems/[id] or /dashboard/systems/[id]/chat
   const systemMatch = pathname.match(
     /^\/dashboard\/systems\/([^/]+)(\/(.+))?$/
   );
