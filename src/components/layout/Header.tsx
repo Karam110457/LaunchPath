@@ -38,16 +38,12 @@ function buildBreadcrumbs(
     const system = systems.find((s) => s.id === systemId);
     const systemName = system?.name ?? "Business";
 
-    crumbs.push({
-      label: systemName,
-      href: `/dashboard/systems/${systemId}`,
-      isActive: !subPage,
-    });
-
-    if (subPage === "chat") {
+    // Only show breadcrumb on the overview page, not on chat
+    // (chat has sidebar nav, breadcrumb is redundant there)
+    if (!subPage) {
       crumbs.push({
-        label: "Chat",
-        href: `/dashboard/systems/${systemId}/chat`,
+        label: systemName,
+        href: `/dashboard/systems/${systemId}`,
         isActive: true,
       });
     }

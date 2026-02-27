@@ -21,20 +21,34 @@ export async function getSidebarData(userId: string, email?: string) {
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
-  const sidebarSystems: SidebarSystem[] = (systems ?? []).map((s) => {
+  const rawSystems = (systems ?? []).map((s) => {
     const offer = s.offer as { segment?: string } | null;
     const rec = s.chosen_recommendation as { niche?: string } | null;
 
     return {
       id: s.id,
       status: s.status ?? "in_progress",
-      name:
-        rec?.niche ??
-        offer?.segment ??
-        "New Business",
+      name: rec?.niche ?? offer?.segment ?? "",
       currentStep: s.current_step ?? 1,
     };
   });
+
+  // Number unnamed businesses so they're distinguishable
+  // Systems are newest-first, so reverse to number oldest as 1
+  let unnamedCount = 0;
+  const reversed = [...rawSystems].reverse();
+  const nameMap = new Map<string, string>();
+  for (const s of reversed) {
+    if (!s.name) {
+      unnamedCount++;
+      nameMap.set(s.id, `Business ${unnamedCount}`);
+    }
+  }
+
+  const sidebarSystems: SidebarSystem[] = rawSystems.map((s) => ({
+    ...s,
+    name: s.name || nameMap.get(s.id) || "New Business",
+  }));
 
   const displayName = email ? email.split("@")[0] : "User";
 
