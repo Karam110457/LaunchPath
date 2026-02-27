@@ -40,7 +40,7 @@ export default async function BuilderRoute({ params }: Props) {
   } | null;
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] overflow-hidden">
+    <div className="h-screen overflow-hidden">
       <BuilderPage
         systemId={system.id}
         initialConfig={demoConfig}

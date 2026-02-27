@@ -30,7 +30,7 @@ export default async function SystemChatPage({ params }: Props) {
   if (!profile) redirect("/onboarding");
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] overflow-hidden">
+    <div className="h-screen overflow-hidden">
       <ChatFlow system={system} profile={profile} />
     </div>
   );

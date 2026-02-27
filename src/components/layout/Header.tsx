@@ -62,6 +62,9 @@ export function Header({ systems = [] }: HeaderProps) {
   const pathname = usePathname();
   const breadcrumbs = buildBreadcrumbs(pathname, systems);
 
+  // Hide the header entirely when there are no breadcrumbs (chat, builder)
+  if (breadcrumbs.length === 0) return null;
+
   return (
     <header className="sticky top-0 z-40 h-14 bg-background/80 backdrop-blur-md border-b border-border/40 flex items-center px-6 md:px-8">
       <nav className="flex items-center gap-1.5 text-sm">
