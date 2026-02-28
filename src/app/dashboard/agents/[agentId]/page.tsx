@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { AgentDetail } from "@/components/agents/AgentDetail";
 import { AgentChatPanel } from "@/components/agents/AgentChatPanel";
+import { AgentKnowledgePanel } from "@/components/agents/AgentKnowledgePanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AgentConversationMessage } from "@/lib/chat/agent-chat-types";
 
@@ -16,8 +17,8 @@ export default async function AgentDetailPage({ params }: Props) {
   const user = await requireAuth();
   const supabase = await createClient();
 
-  // Fetch agent + conversation in parallel
-  const [agentResult, conversationResult] = await Promise.all([
+  // Fetch agent + conversation + knowledge docs in parallel
+  const [agentResult, conversationResult, knowledgeResult] = await Promise.all([
     supabase
       .from("ai_agents")
       .select("*")
@@ -30,6 +31,12 @@ export default async function AgentDetailPage({ params }: Props) {
       .eq("agent_id", agentId)
       .eq("user_id", user.id)
       .single(),
+    supabase
+      .from("agent_knowledge_documents")
+      .select("id, source_type, source_name, chunk_count, status, error_message, created_at")
+      .eq("agent_id", agentId)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
   ]);
 
   if (!agentResult.data) notFound();
@@ -51,6 +58,16 @@ export default async function AgentDetailPage({ params }: Props) {
     ? (conversationResult.data.messages as unknown as AgentConversationMessage[])
     : [];
 
+  const initialDocuments = (knowledgeResult.data ?? []) as Array<{
+    id: string;
+    source_type: "file" | "website" | "faq";
+    source_name: string;
+    chunk_count: number;
+    status: "processing" | "ready" | "error";
+    error_message: string | null;
+    created_at: string;
+  }>;
+
   return (
     <PageShell
       title={agent.name}
@@ -59,6 +76,14 @@ export default async function AgentDetailPage({ params }: Props) {
       <Tabs defaultValue="overview" className="w-full">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="knowledge">
+            Knowledge
+            {initialDocuments.length > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium leading-none">
+                {initialDocuments.length}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="chat">Test Chat</TabsTrigger>
         </TabsList>
 
@@ -67,6 +92,13 @@ export default async function AgentDetailPage({ params }: Props) {
             agent={agent}
             personality={personality}
             tools={tools}
+          />
+        </TabsContent>
+
+        <TabsContent value="knowledge" className="mt-4">
+          <AgentKnowledgePanel
+            agentId={agent.id}
+            initialDocuments={initialDocuments}
           />
         </TabsContent>
 

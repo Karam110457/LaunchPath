@@ -12,6 +12,7 @@ import { streamText } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/security/logger";
+import { retrieveContext } from "@/lib/knowledge/rag";
 import type {
   AgentServerEvent,
   AgentConversationMessage,
@@ -60,6 +61,25 @@ export async function POST(
   }
 
   // ---------------------------------------------------------------------------
+  // RAG: retrieve relevant knowledge if the agent has documents
+  // ---------------------------------------------------------------------------
+
+  const { count: docCount } = await supabase
+    .from("agent_knowledge_documents")
+    .select("id", { count: "exact", head: true })
+    .eq("agent_id", agentId)
+    .eq("status", "ready");
+
+  let systemPrompt = agent.system_prompt;
+
+  if (docCount && docCount > 0) {
+    const ragContext = await retrieveContext(agentId, userMessage, supabase);
+    if (ragContext) {
+      systemPrompt = `${agent.system_prompt}\n\n${ragContext}`;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Set up SSE stream
   // ---------------------------------------------------------------------------
 
@@ -98,7 +118,7 @@ export async function POST(
     try {
       const result = streamText({
         model: anthropic(agent.model),
-        system: agent.system_prompt,
+        system: systemPrompt,
         messages: aiMessages,
         providerOptions: {
           anthropic: {

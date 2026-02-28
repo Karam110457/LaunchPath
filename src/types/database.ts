@@ -60,6 +60,84 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_knowledge_documents: {
+        Row: {
+          id: string
+          agent_id: string
+          user_id: string
+          source_type: string
+          source_name: string
+          file_path: string | null
+          content: string
+          chunk_count: number
+          status: string
+          error_message: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          agent_id: string
+          user_id: string
+          source_type: string
+          source_name: string
+          file_path?: string | null
+          content?: string
+          chunk_count?: number
+          status?: string
+          error_message?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          agent_id?: string
+          user_id?: string
+          source_type?: string
+          source_name?: string
+          file_path?: string | null
+          content?: string
+          chunk_count?: number
+          status?: string
+          error_message?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      agent_knowledge_chunks: {
+        Row: {
+          id: string
+          document_id: string
+          agent_id: string
+          chunk_index: number
+          content: string
+          embedding: string | null
+          token_count: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          document_id: string
+          agent_id: string
+          chunk_index: number
+          content: string
+          embedding?: string | null
+          token_count?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          document_id?: string
+          agent_id?: string
+          chunk_index?: number
+          content?: string
+          embedding?: string | null
+          token_count?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
       agent_conversations: {
         Row: {
           id: string
