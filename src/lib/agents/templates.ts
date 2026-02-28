@@ -10,6 +10,12 @@ export interface AgentTemplate {
     greeting_message: string;
     avatar_emoji: string;
   };
+  wizard_hints?: {
+    services_placeholder?: string;
+    qualifying_questions_examples?: string[];
+    business_description_placeholder?: string;
+    support_topics_examples?: string[];
+  };
 }
 
 export const AGENT_TEMPLATES: AgentTemplate[] = [
@@ -28,6 +34,15 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
         "Hi! I'd love to help you schedule an appointment. What service are you looking for?",
       avatar_emoji: "\u{1F4C5}",
     },
+    wizard_hints: {
+      services_placeholder:
+        "e.g., Residential roof replacement, repair, inspection",
+      qualifying_questions_examples: [
+        "What type of service are you looking for?",
+        "What's your preferred timeline?",
+        "What's your budget range?",
+      ],
+    },
   },
   {
     id: "customer-support",
@@ -43,6 +58,15 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
       greeting_message:
         "Hi there! I'm here to help with any questions or issues.",
       avatar_emoji: "\u{1F6DF}",
+    },
+    wizard_hints: {
+      business_description_placeholder:
+        "e.g., We sell project management software for small teams",
+      support_topics_examples: [
+        "Account & billing",
+        "Feature requests",
+        "Bug reports",
+      ],
     },
   },
 ];

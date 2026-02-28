@@ -1,7 +1,7 @@
 import { requireAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { PageShell } from "@/components/layout/PageShell";
-import { NewAgentForm } from "@/components/agents/NewAgentForm";
+import { AgentCreationLanding } from "@/components/agents/AgentCreationLanding";
 
 export default async function NewAgentPage() {
   const user = await requireAuth();
@@ -27,9 +27,9 @@ export default async function NewAgentPage() {
   return (
     <PageShell
       title="New Agent"
-      description="Choose a template or describe the agent you want to build."
+      description="Create an AI agent for your business."
     >
-      <NewAgentForm businesses={businesses} />
+      <AgentCreationLanding businesses={businesses} />
     </PageShell>
   );
 }

@@ -58,9 +58,96 @@ export function buildAgentGenerationContext(input: {
     segment: string;
     offer_description: string;
   } | null;
+  wizardConfig?: {
+    templateId: string;
+    businessDescription?: string;
+    behaviorConfig: Record<string, unknown>;
+    personality: { tone: string; greeting_message: string };
+  } | null;
 }): string {
   const parts: string[] = [];
 
+  // Wizard config produces a rich structured prompt
+  if (input.wizardConfig) {
+    const wc = input.wizardConfig;
+
+    if (wc.businessDescription) {
+      parts.push(`BUSINESS CONTEXT:\n${wc.businessDescription}`);
+    }
+
+    if (wc.templateId === "appointment-booker") {
+      const bc = wc.behaviorConfig as {
+        services?: string;
+        qualifying_questions?: string[];
+        lead_fields?: {
+          phone?: boolean;
+          company?: boolean;
+          custom_fields?: string[];
+        };
+        booking_behavior?: string;
+      };
+
+      const lines = ["AGENT TYPE: Appointment Booker"];
+      if (bc.services) lines.push(`Services offered: ${bc.services}`);
+
+      const questions = (bc.qualifying_questions ?? []).filter((q) => q.trim());
+      if (questions.length > 0) {
+        lines.push(
+          `Qualifying questions to ask leads:\n${questions.map((q, i) => `  ${i + 1}. ${q}`).join("\n")}`,
+        );
+      }
+
+      const fields = ["name (always)", "email (always)"];
+      if (bc.lead_fields?.phone) fields.push("phone");
+      if (bc.lead_fields?.company) fields.push("company");
+      const custom = (bc.lead_fields?.custom_fields ?? []).filter((f) =>
+        f.trim(),
+      );
+      fields.push(...custom);
+      lines.push(`Lead fields to capture: ${fields.join(", ")}`);
+      lines.push(
+        `Booking behavior: ${bc.booking_behavior === "book_directly" ? "Book appointments directly on calendar" : "Collect lead information for manual follow-up"}`,
+      );
+
+      parts.push(lines.join("\n"));
+    } else if (wc.templateId === "customer-support") {
+      const sc = wc.behaviorConfig as {
+        business_description?: string;
+        support_topics?: string[];
+        escalation_mode?: string;
+        response_style?: string;
+      };
+
+      const lines = ["AGENT TYPE: Customer Support"];
+      if (sc.business_description) {
+        lines.push(`Business/product description: ${sc.business_description}`);
+      }
+
+      const topics = (sc.support_topics ?? []).filter((t) => t.trim());
+      if (topics.length > 0) {
+        lines.push(
+          `Support topics:\n${topics.map((t, i) => `  ${i + 1}. ${t}`).join("\n")}`,
+        );
+      }
+
+      lines.push(
+        `Escalation: ${sc.escalation_mode === "always_available" ? "Handle everything, never escalate" : "Escalate complex issues to a human agent"}`,
+      );
+      lines.push(
+        `Response style: ${sc.response_style === "concise" ? "Keep answers short and direct" : "Provide detailed, thorough explanations"}`,
+      );
+
+      parts.push(lines.join("\n"));
+    }
+
+    parts.push(
+      `PERSONALITY PREFERENCES (use these closely, only polish slightly):\nTone: ${wc.personality.tone}\nGreeting message: ${wc.personality.greeting_message}`,
+    );
+
+    return parts.join("\n\n---\n\n");
+  }
+
+  // Existing prompt-based flow
   if (input.userPrompt) {
     parts.push(`USER REQUEST:\n${input.userPrompt}`);
   }

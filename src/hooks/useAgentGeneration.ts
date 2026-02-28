@@ -2,19 +2,23 @@
 
 import { useState, useCallback, useRef } from "react";
 import type { AgentGenerationOutput } from "@/lib/ai/schemas";
+import type { WizardGenerationPayload } from "@/types/agent-wizard";
 
 type GeneratedAgent = AgentGenerationOutput & { id: string };
+
+interface GenerationInput {
+  prompt?: string;
+  templateId?: string;
+  systemId?: string;
+  wizardConfig?: WizardGenerationPayload;
+}
 
 interface AgentGenerationState {
   isLoading: boolean;
   currentLabel: string | null;
   agent: GeneratedAgent | null;
   error: string | null;
-  startGeneration: (input: {
-    prompt: string;
-    templateId?: string;
-    systemId?: string;
-  }) => void;
+  startGeneration: (input: GenerationInput) => void;
 }
 
 export function useAgentGeneration(): AgentGenerationState {
@@ -25,7 +29,7 @@ export function useAgentGeneration(): AgentGenerationState {
   const abortRef = useRef<AbortController | null>(null);
 
   const startGeneration = useCallback(
-    (input: { prompt: string; templateId?: string; systemId?: string }) => {
+    (input: GenerationInput) => {
       // Abort any in-flight request
       abortRef.current?.abort();
       const controller = new AbortController();

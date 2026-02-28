@@ -18,30 +18,44 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  let body: { prompt?: string; templateId?: string; systemId?: string };
+  let body: {
+    prompt?: string;
+    templateId?: string;
+    systemId?: string;
+    wizardConfig?: {
+      templateId: string;
+      systemId?: string;
+      businessDescription?: string;
+      behaviorConfig: Record<string, unknown>;
+      personality: { tone: string; greeting_message: string };
+    };
+  };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { prompt, templateId, systemId } = body;
+  const { prompt, wizardConfig } = body;
+  // Wizard config can provide templateId and systemId
+  const templateId = body.wizardConfig?.templateId ?? body.templateId;
+  const systemId = body.wizardConfig?.systemId ?? body.systemId;
 
-  if (!prompt && !templateId) {
+  if (!prompt && !templateId && !wizardConfig) {
     return NextResponse.json(
-      { error: "Prompt or template required" },
+      { error: "Prompt, template, or wizard config required" },
       { status: 400 },
     );
   }
 
-  // Optionally fetch business context
+  // Optionally fetch business context (for prompt-based flow)
   let businessContext: {
     niche: string;
     segment: string;
     offer_description: string;
   } | null = null;
 
-  if (systemId) {
+  if (systemId && !wizardConfig) {
     const { data: system } = await supabase
       .from("user_systems")
       .select("chosen_recommendation, offer")
@@ -66,21 +80,23 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Get template context
+  // Get template context (for prompt-based flow)
   const template = templateId ? getTemplateById(templateId) : null;
-  const templateContext = template
-    ? {
-        name: template.name,
-        default_system_prompt_hint: template.default_system_prompt_hint,
-        default_tools: template.default_tools,
-        suggested_personality: template.suggested_personality,
-      }
-    : null;
+  const templateContext =
+    template && !wizardConfig
+      ? {
+          name: template.name,
+          default_system_prompt_hint: template.default_system_prompt_hint,
+          default_tools: template.default_tools,
+          suggested_personality: template.suggested_personality,
+        }
+      : null;
 
   const context = buildAgentGenerationContext({
     userPrompt: prompt ?? "",
     templateContext,
     businessContext,
+    wizardConfig: wizardConfig ?? null,
   });
 
   const encoder = new TextEncoder();
