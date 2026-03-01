@@ -245,3 +245,24 @@ export const agentGenerationOutputSchema = z.object({
 });
 
 export type AgentGenerationOutput = z.infer<typeof agentGenerationOutputSchema>;
+
+// -- Wizard: FAQ generation schema --
+
+export const wizardFaqOutputSchema = z.object({
+  faqs: z.array(
+    z.object({
+      question: z.string(),
+      answer: z.string(),
+    }),
+  ),
+});
+
+export type WizardFaqOutput = z.infer<typeof wizardFaqOutputSchema>;
+
+// -- Wizard: Qualifying question generation schema --
+
+export const wizardQuestionsOutputSchema = z.object({
+  questions: z.array(z.string()),
+});
+
+export type WizardQuestionsOutput = z.infer<typeof wizardQuestionsOutputSchema>;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
@@ -16,8 +16,9 @@ import { getTemplateById } from "@/lib/agents/templates";
 
 import { ChooseTypeStep } from "./steps/ChooseTypeStep";
 import { BusinessContextStep } from "./steps/BusinessContextStep";
-import { BehaviorStep } from "./steps/BehaviorStep";
-import { PersonalityStep } from "./steps/PersonalityStep";
+import { KnowledgeBaseStep } from "./steps/KnowledgeBaseStep";
+import { ConversationFlowStep } from "./steps/ConversationFlowStep";
+import { AgentIdentityStep } from "./steps/AgentIdentityStep";
 import { ReviewStep } from "./steps/ReviewStep";
 
 interface AgentWizardProps {
@@ -78,11 +79,20 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
         }
         return false;
 
-      case "behavior":
-        return validateBehavior();
+      case "knowledge-base":
+        // Knowledge base is optional — always allow proceeding
+        return true;
 
-      case "personality":
-        return state.tone.trim().length > 0 && state.greetingMessage.trim().length > 0;
+      case "conversation-flow":
+        // Allow proceeding even with no questions (they're optional)
+        return true;
+
+      case "agent-identity":
+        return (
+          state.agentName.trim().length > 0 &&
+          state.tone.trim().length > 0 &&
+          state.greetingMessage.trim().length > 0
+        );
 
       case "review":
         return true;
@@ -90,24 +100,6 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
       default:
         return false;
     }
-  }
-
-  function validateBehavior(): boolean {
-    if (state.templateId === "appointment-booker") {
-      const c = state.appointmentBookerConfig;
-      return (
-        c.services.trim().length > 0 &&
-        c.qualifying_questions.some((q) => q.trim().length > 0)
-      );
-    }
-    if (state.templateId === "customer-support") {
-      const c = state.customerSupportConfig;
-      return (
-        c.business_description.trim().length > 0 &&
-        c.support_topics.some((t) => t.trim().length > 0)
-      );
-    }
-    return false;
   }
 
   // ---------------------------------------------------------------------------
@@ -157,6 +149,14 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
         ? state.appointmentBookerConfig
         : state.customerSupportConfig;
 
+    const scannedPages = state.discoveredPages
+      .filter((p) => p.selected && p.status === "done" && p.content)
+      .map((p) => ({ url: p.url, title: p.title, content: p.content! }));
+
+    const filesPayload = state.files
+      .filter((f) => f.extractedText)
+      .map((f) => ({ name: f.name, extractedText: f.extractedText! }));
+
     const payload: WizardGenerationPayload = {
       templateId: state.templateId,
       systemId:
@@ -167,15 +167,33 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
         state.businessContextMode === "describe"
           ? state.businessDescription
           : undefined,
+      agentName: state.agentName,
+      agentDescription: state.agentDescription,
       behaviorConfig,
       personality: {
         tone: state.tone,
         greeting_message: state.greetingMessage,
       },
+      qualifyingQuestions: state.qualifyingQuestions.filter((q) => q.trim()),
+      faqs: state.faqs.map((f) => ({
+        question: f.question,
+        answer: f.answer,
+      })),
+      scrapedPages: scannedPages,
+      files: filesPayload,
     };
 
     startGeneration({ wizardConfig: payload });
   }
+
+  // ---------------------------------------------------------------------------
+  // Derived values for steps
+  // ---------------------------------------------------------------------------
+
+  const scrapedContent = state.discoveredPages
+    .filter((p) => p.selected && p.status === "done")
+    .map((p) => p.content || "")
+    .join("\n\n");
 
   // ---------------------------------------------------------------------------
   // Step rendering
@@ -197,21 +215,48 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
             mode={state.businessContextMode}
             linkedSystemId={state.linkedSystemId}
             businessDescription={state.businessDescription}
+            websiteUrl={state.websiteUrl}
+            discoveredPages={state.discoveredPages}
             businesses={businesses}
             onModeChange={(mode) => updateState("businessContextMode", mode)}
             onSystemSelect={(id) => updateState("linkedSystemId", id)}
             onDescriptionChange={(desc) =>
               updateState("businessDescription", desc)
             }
+            onWebsiteUrlChange={(url) => updateState("websiteUrl", url)}
+            onDiscoveredPagesChange={(pages) =>
+              updateState("discoveredPages", pages)
+            }
           />
         );
 
-      case "behavior":
+      case "knowledge-base":
+        return (
+          <KnowledgeBaseStep
+            discoveredPages={state.discoveredPages}
+            faqs={state.faqs}
+            files={state.files}
+            businessDescription={state.businessDescription}
+            onPagesChange={(pages) => updateState("discoveredPages", pages)}
+            onFaqsChange={(faqs) => updateState("faqs", faqs)}
+            onFilesChange={(files) => updateState("files", files)}
+          />
+        );
+
+      case "conversation-flow":
         return state.templateId ? (
-          <BehaviorStep
+          <ConversationFlowStep
             templateId={state.templateId}
+            qualifyingQuestions={state.qualifyingQuestions}
             appointmentBookerConfig={state.appointmentBookerConfig}
             customerSupportConfig={state.customerSupportConfig}
+            businessDescription={state.businessDescription}
+            scrapedContent={scrapedContent}
+            faqs={state.faqs.map((f) => ({
+              question: f.question,
+              answer: f.answer,
+            }))}
+            onQuestionsChange={(q) => updateState("qualifyingQuestions", q)}
             onUpdateAppointmentBooker={(updater) =>
               setState((prev) => ({
                 ...prev,
@@ -227,11 +272,17 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
           />
         ) : null;
 
-      case "personality":
+      case "agent-identity":
         return (
-          <PersonalityStep
+          <AgentIdentityStep
+            agentName={state.agentName}
+            agentDescription={state.agentDescription}
             tone={state.tone}
             greetingMessage={state.greetingMessage}
+            onNameChange={(name) => updateState("agentName", name)}
+            onDescriptionChange={(desc) =>
+              updateState("agentDescription", desc)
+            }
             onToneChange={(tone) => updateState("tone", tone)}
             onGreetingChange={(greeting) =>
               updateState("greetingMessage", greeting)

@@ -61,8 +61,13 @@ export function buildAgentGenerationContext(input: {
   wizardConfig?: {
     templateId: string;
     businessDescription?: string;
+    agentName?: string;
+    agentDescription?: string;
     behaviorConfig: Record<string, unknown>;
     personality: { tone: string; greeting_message: string };
+    qualifyingQuestions?: string[];
+    faqs?: Array<{ question: string; answer: string }>;
+    scrapedPages?: Array<{ url: string; title: string; content: string }>;
   } | null;
 }): string {
   const parts: string[] = [];
@@ -71,14 +76,22 @@ export function buildAgentGenerationContext(input: {
   if (input.wizardConfig) {
     const wc = input.wizardConfig;
 
+    // Agent name/description preferences
+    if (wc.agentName) {
+      parts.push(
+        `AGENT NAME (use this exact name): ${wc.agentName}${wc.agentDescription ? `\nAgent description: ${wc.agentDescription}` : ""}`,
+      );
+    }
+
     if (wc.businessDescription) {
       parts.push(`BUSINESS CONTEXT:\n${wc.businessDescription}`);
     }
 
+    // Qualifying questions (now top-level, shared across templates)
+    const questions = (wc.qualifyingQuestions ?? []).filter((q) => q.trim());
+
     if (wc.templateId === "appointment-booker") {
       const bc = wc.behaviorConfig as {
-        services?: string;
-        qualifying_questions?: string[];
         lead_fields?: {
           phone?: boolean;
           company?: boolean;
@@ -88,9 +101,7 @@ export function buildAgentGenerationContext(input: {
       };
 
       const lines = ["AGENT TYPE: Appointment Booker"];
-      if (bc.services) lines.push(`Services offered: ${bc.services}`);
 
-      const questions = (bc.qualifying_questions ?? []).filter((q) => q.trim());
       if (questions.length > 0) {
         lines.push(
           `Qualifying questions to ask leads:\n${questions.map((q, i) => `  ${i + 1}. ${q}`).join("\n")}`,
@@ -112,21 +123,15 @@ export function buildAgentGenerationContext(input: {
       parts.push(lines.join("\n"));
     } else if (wc.templateId === "customer-support") {
       const sc = wc.behaviorConfig as {
-        business_description?: string;
-        support_topics?: string[];
         escalation_mode?: string;
         response_style?: string;
       };
 
       const lines = ["AGENT TYPE: Customer Support"];
-      if (sc.business_description) {
-        lines.push(`Business/product description: ${sc.business_description}`);
-      }
 
-      const topics = (sc.support_topics ?? []).filter((t) => t.trim());
-      if (topics.length > 0) {
+      if (questions.length > 0) {
         lines.push(
-          `Support topics:\n${topics.map((t, i) => `  ${i + 1}. ${t}`).join("\n")}`,
+          `Qualifying questions to ask visitors:\n${questions.map((q, i) => `  ${i + 1}. ${q}`).join("\n")}`,
         );
       }
 
@@ -138,6 +143,28 @@ export function buildAgentGenerationContext(input: {
       );
 
       parts.push(lines.join("\n"));
+    }
+
+    // FAQs — include in system prompt context
+    const faqs = wc.faqs ?? [];
+    if (faqs.length > 0) {
+      const faqText = faqs
+        .map((f, i) => `  ${i + 1}. Q: ${f.question}\n     A: ${f.answer}`)
+        .join("\n");
+      parts.push(
+        `KNOWLEDGE BASE FAQS (embed these in the system prompt so the agent can answer them):\n${faqText}`,
+      );
+    }
+
+    // Scraped page summaries — give the builder agent context
+    const pages = wc.scrapedPages ?? [];
+    if (pages.length > 0) {
+      const summary = pages
+        .map((p) => `- ${p.title} (${p.url}): ${p.content.slice(0, 500)}...`)
+        .join("\n");
+      parts.push(
+        `WEBSITE CONTENT SUMMARY (use this to inform the agent's knowledge):\n${summary}`,
+      );
     }
 
     parts.push(

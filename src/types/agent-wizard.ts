@@ -1,10 +1,34 @@
 // ---------------------------------------------------------------------------
-// Template-specific behavior configs
+// Knowledge base types (used during wizard, before agent exists)
+// ---------------------------------------------------------------------------
+
+export interface DiscoveredPage {
+  url: string;
+  title: string;
+  selected: boolean;
+  status: "pending" | "scraping" | "done" | "error";
+  content?: string;
+}
+
+export interface WizardFaq {
+  id: string;
+  question: string;
+  answer: string;
+  source: "manual" | "generated";
+}
+
+export interface WizardFile {
+  file: File;
+  name: string;
+  size: number;
+  extractedText?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Template-specific behavior configs (kept for conversation flow step)
 // ---------------------------------------------------------------------------
 
 export interface AppointmentBookerConfig {
-  services: string;
-  qualifying_questions: string[];
   lead_fields: {
     phone: boolean;
     company: boolean;
@@ -14,44 +38,52 @@ export interface AppointmentBookerConfig {
 }
 
 export interface CustomerSupportConfig {
-  business_description: string;
-  support_topics: string[];
   escalation_mode: "always_available" | "escalate_complex";
   response_style: "concise" | "detailed";
 }
 
 // ---------------------------------------------------------------------------
-// Wizard state (accumulated across all steps)
+// Wizard state (accumulated across all 6 steps)
 // ---------------------------------------------------------------------------
 
 export interface AgentWizardState {
-  // Step 1
+  // Step 1: Agent Type
   templateId: "appointment-booker" | "customer-support" | null;
 
-  // Step 2
+  // Step 2: Your Business
   businessContextMode: "link_system" | "describe" | null;
   linkedSystemId: string | null;
   businessDescription: string;
+  websiteUrl: string;
+  discoveredPages: DiscoveredPage[];
 
-  // Step 3 (only one used, based on templateId)
+  // Step 3: Knowledge Base
+  faqs: WizardFaq[];
+  files: WizardFile[];
+
+  // Step 4: Conversation Flow
+  qualifyingQuestions: string[];
   appointmentBookerConfig: AppointmentBookerConfig;
   customerSupportConfig: CustomerSupportConfig;
 
-  // Step 4
+  // Step 5: Agent Identity
+  agentName: string;
+  agentDescription: string;
   tone: string;
   greetingMessage: string;
 }
 
 // ---------------------------------------------------------------------------
-// Step definitions
+// Step definitions (6 steps)
 // ---------------------------------------------------------------------------
 
 export interface WizardStepDef {
   id:
     | "choose-type"
     | "business-context"
-    | "behavior"
-    | "personality"
+    | "knowledge-base"
+    | "conversation-flow"
+    | "agent-identity"
     | "review";
   label: string;
 }
@@ -59,8 +91,9 @@ export interface WizardStepDef {
 export const WIZARD_STEPS: WizardStepDef[] = [
   { id: "choose-type", label: "Agent Type" },
   { id: "business-context", label: "Your Business" },
-  { id: "behavior", label: "Behavior" },
-  { id: "personality", label: "Personality" },
+  { id: "knowledge-base", label: "Knowledge Base" },
+  { id: "conversation-flow", label: "Conversation Flow" },
+  { id: "agent-identity", label: "Agent Identity" },
   { id: "review", label: "Review" },
 ];
 
@@ -74,18 +107,21 @@ export function createInitialWizardState(): AgentWizardState {
     businessContextMode: null,
     linkedSystemId: null,
     businessDescription: "",
+    websiteUrl: "",
+    discoveredPages: [],
+    faqs: [],
+    files: [],
+    qualifyingQuestions: [],
     appointmentBookerConfig: {
-      services: "",
-      qualifying_questions: [""],
       lead_fields: { phone: true, company: false, custom_fields: [] },
       booking_behavior: "collect_and_follow_up",
     },
     customerSupportConfig: {
-      business_description: "",
-      support_topics: [""],
       escalation_mode: "escalate_complex",
       response_style: "detailed",
     },
+    agentName: "",
+    agentDescription: "",
     tone: "",
     greetingMessage: "",
   };
@@ -99,9 +135,15 @@ export interface WizardGenerationPayload {
   templateId: string;
   systemId?: string;
   businessDescription?: string;
+  agentName: string;
+  agentDescription: string;
   behaviorConfig: AppointmentBookerConfig | CustomerSupportConfig;
   personality: {
     tone: string;
     greeting_message: string;
   };
+  qualifyingQuestions: string[];
+  faqs: Array<{ question: string; answer: string }>;
+  scrapedPages: Array<{ url: string; title: string; content: string }>;
+  files: Array<{ name: string; extractedText: string }>;
 }

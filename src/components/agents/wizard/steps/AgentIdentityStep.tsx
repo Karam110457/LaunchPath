@@ -4,31 +4,65 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
-interface PersonalityStepProps {
+interface AgentIdentityStepProps {
+  agentName: string;
+  agentDescription: string;
   tone: string;
   greetingMessage: string;
+  onNameChange: (name: string) => void;
+  onDescriptionChange: (desc: string) => void;
   onToneChange: (tone: string) => void;
   onGreetingChange: (greeting: string) => void;
 }
 
-export function PersonalityStep({
+export function AgentIdentityStep({
+  agentName,
+  agentDescription,
   tone,
   greetingMessage,
+  onNameChange,
+  onDescriptionChange,
   onToneChange,
   onGreetingChange,
-}: PersonalityStepProps) {
+}: AgentIdentityStepProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold tracking-tight">
-          How should your agent sound?
+          Give your agent an identity
         </h2>
         <p className="text-sm text-muted-foreground">
-          Set the tone and first impression for your agent.
+          Name your agent and define how it presents itself to visitors.
         </p>
       </div>
 
       <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="agent-name">Agent name</Label>
+          <Input
+            id="agent-name"
+            placeholder="e.g., Sarah, BookingBot, Support Assistant"
+            value={agentName}
+            onChange={(e) => onNameChange(e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">
+            A name your visitors will see when chatting.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="agent-description">Short description</Label>
+          <Input
+            id="agent-description"
+            placeholder="e.g., Friendly booking assistant for Smith Roofing"
+            value={agentDescription}
+            onChange={(e) => onDescriptionChange(e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">
+            A one-liner describing what this agent does.
+          </p>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="agent-tone">Communication tone</Label>
           <Input
