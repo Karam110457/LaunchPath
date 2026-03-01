@@ -168,18 +168,26 @@ export async function POST(request: NextRequest) {
         } else {
           // Post-generation: process wizard knowledge data
           if (wizardConfig) {
-            const knowledgeItems = [
-              ...(wizardConfig.scrapedPages ?? []),
-              ...(wizardConfig.faqs ?? []),
-              ...(wizardConfig.files ?? []),
-            ];
-            if (knowledgeItems.length > 0) {
-              enqueue({ type: "progress", label: "Processing knowledge base..." });
+            const pageCount = wizardConfig.scrapedPages?.length ?? 0;
+            const faqCount = wizardConfig.faqs?.length ?? 0;
+            const fileCount = wizardConfig.files?.length ?? 0;
+            const totalKnowledge = pageCount + faqCount + fileCount;
+
+            logger.info("Wizard knowledge payload", {
+              agentId: newAgent.id,
+              pages: pageCount,
+              faqs: faqCount,
+              files: fileCount,
+            });
+
+            if (totalKnowledge > 0) {
+              enqueue({ type: "progress", label: `Processing knowledge base (${totalKnowledge} items)...` });
               await processWizardKnowledge(
                 supabase,
                 newAgent.id,
                 user.id,
                 wizardConfig,
+                enqueue,
               );
             }
           }
@@ -229,135 +237,136 @@ async function processWizardKnowledge(
     faqs?: Array<{ question: string; answer: string }>;
     files?: Array<{ name: string; extractedText: string }>;
   },
+  enqueue: (event: Record<string, unknown>) => void,
 ) {
+  let processed = 0;
+  let failed = 0;
+
+  // Helper to insert a document, embed + chunk it, and mark ready
+  async function insertKnowledgeDoc(
+    sourceName: string,
+    sourceType: "website" | "faq" | "file",
+    content: string,
+  ) {
+    const { data: doc, error: docError } = await supabase
+      .from("agent_knowledge_documents")
+      .insert({
+        agent_id: agentId,
+        user_id: userId,
+        source_name: sourceName,
+        source_type: sourceType,
+        content: content.slice(0, 10000),
+        status: "processing",
+      })
+      .select("id")
+      .single();
+
+    if (docError || !doc) {
+      logger.error("Failed to insert knowledge document", {
+        agentId,
+        sourceName,
+        sourceType,
+        error: docError?.message ?? "No doc returned",
+      });
+      failed++;
+      return;
+    }
+
+    const chunks = chunkText(content);
+    if (chunks.length === 0) {
+      await supabase
+        .from("agent_knowledge_documents")
+        .update({ status: "ready", chunk_count: 0 })
+        .eq("id", doc.id);
+      processed++;
+      return;
+    }
+
+    const texts = chunks.map((c) => c.content);
+
+    // Try to embed; if OpenAI key is missing, store chunks without embeddings
+    let embeddings: number[][] | null = null;
+    try {
+      embeddings = await embedTexts(texts);
+    } catch (embedErr) {
+      const msg = embedErr instanceof Error ? embedErr.message : String(embedErr);
+      logger.warn("Embedding skipped for knowledge document", {
+        agentId,
+        docId: doc.id,
+        error: msg,
+      });
+    }
+
+    const chunkRows = texts.map((text, i) => ({
+      document_id: doc.id,
+      agent_id: agentId,
+      content: text,
+      embedding: embeddings ? JSON.stringify(embeddings[i]) : null,
+      chunk_index: i,
+    }));
+
+    const { error: chunkError } = await supabase
+      .from("agent_knowledge_chunks")
+      .insert(chunkRows);
+
+    if (chunkError) {
+      logger.error("Failed to insert knowledge chunks", {
+        agentId,
+        docId: doc.id,
+        error: chunkError.message,
+      });
+      await supabase
+        .from("agent_knowledge_documents")
+        .update({ status: "error", error_message: chunkError.message })
+        .eq("id", doc.id);
+      failed++;
+      return;
+    }
+
+    await supabase
+      .from("agent_knowledge_documents")
+      .update({ status: "ready", chunk_count: chunks.length })
+      .eq("id", doc.id);
+    processed++;
+  }
+
   try {
     // 1. Process scraped pages
     for (const page of wizardConfig.scrapedPages ?? []) {
       if (!page.content) continue;
-
-      const { data: doc } = await supabase
-        .from("agent_knowledge_documents")
-        .insert({
-          agent_id: agentId,
-          user_id: userId,
-          source_name: page.url,
-          source_type: "website",
-          content: page.content.slice(0, 10000),
-          status: "processing",
-        })
-        .select("id")
-        .single();
-
-      if (!doc) continue;
-
-      const chunks = chunkText(page.content);
-      if (chunks.length === 0) {
-        await supabase
-          .from("agent_knowledge_documents")
-          .update({ status: "ready", chunk_count: 0 })
-          .eq("id", doc.id);
-        continue;
-      }
-
-      const texts = chunks.map((c) => c.content);
-      const embeddings = await embedTexts(texts);
-      const chunkRows = texts.map((text, i) => ({
-        document_id: doc.id,
-        agent_id: agentId,
-        content: text,
-        embedding: JSON.stringify(embeddings[i]),
-        chunk_index: i,
-      }));
-
-      await supabase.from("agent_knowledge_chunks").insert(chunkRows);
-      await supabase
-        .from("agent_knowledge_documents")
-        .update({ status: "ready", chunk_count: chunks.length })
-        .eq("id", doc.id);
+      await insertKnowledgeDoc(page.url, "website", page.content);
     }
 
     // 2. Process FAQs (each FAQ becomes a single-chunk document)
     for (const faq of wizardConfig.faqs ?? []) {
       const content = `Q: ${faq.question}\nA: ${faq.answer}`;
-
-      const { data: doc } = await supabase
-        .from("agent_knowledge_documents")
-        .insert({
-          agent_id: agentId,
-          user_id: userId,
-          source_name: faq.question.slice(0, 100),
-          source_type: "faq",
-          content,
-          status: "processing",
-        })
-        .select("id")
-        .single();
-
-      if (!doc) continue;
-
-      const embeddings = await embedTexts([content]);
-      await supabase.from("agent_knowledge_chunks").insert({
-        document_id: doc.id,
-        agent_id: agentId,
-        content,
-        embedding: JSON.stringify(embeddings[0]),
-        chunk_index: 0,
-      });
-
-      await supabase
-        .from("agent_knowledge_documents")
-        .update({ status: "ready", chunk_count: 1 })
-        .eq("id", doc.id);
+      await insertKnowledgeDoc(faq.question.slice(0, 100), "faq", content);
     }
 
-    // 3. Process uploaded files (text already extracted client-side)
+    // 3. Process uploaded files
     for (const file of wizardConfig.files ?? []) {
       if (!file.extractedText) continue;
+      await insertKnowledgeDoc(file.name, "file", file.extractedText);
+    }
 
-      const { data: doc } = await supabase
-        .from("agent_knowledge_documents")
-        .insert({
-          agent_id: agentId,
-          user_id: userId,
-          source_name: file.name,
-          source_type: "file",
-          content: file.extractedText.slice(0, 10000),
-          status: "processing",
-        })
-        .select("id")
-        .single();
+    logger.info("Knowledge processing complete", {
+      agentId,
+      processed,
+      failed,
+    });
 
-      if (!doc) continue;
-
-      const chunks = chunkText(file.extractedText);
-      if (chunks.length === 0) {
-        await supabase
-          .from("agent_knowledge_documents")
-          .update({ status: "ready", chunk_count: 0 })
-          .eq("id", doc.id);
-        continue;
-      }
-
-      const fileTexts = chunks.map((c) => c.content);
-      const embeddings = await embedTexts(fileTexts);
-      const chunkRows = fileTexts.map((text, i) => ({
-        document_id: doc.id,
-        agent_id: agentId,
-        content: text,
-        embedding: JSON.stringify(embeddings[i]),
-        chunk_index: i,
-      }));
-
-      await supabase.from("agent_knowledge_chunks").insert(chunkRows);
-      await supabase
-        .from("agent_knowledge_documents")
-        .update({ status: "ready", chunk_count: chunks.length })
-        .eq("id", doc.id);
+    if (failed > 0) {
+      enqueue({
+        type: "progress",
+        label: `Knowledge base: ${processed} processed, ${failed} failed`,
+      });
     }
   } catch (err) {
-    // Knowledge processing is best-effort — log but don't fail the agent creation
+    // Unexpected error — log but don't fail the agent creation
     logger.error("Knowledge processing failed", {
       agentId,
+      processed,
+      failed,
       error: err instanceof Error ? err.message : String(err),
     });
   }
