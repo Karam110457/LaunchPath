@@ -240,9 +240,9 @@ async function processWizardKnowledge(
         .insert({
           agent_id: agentId,
           user_id: userId,
-          title: page.title || page.url,
+          source_name: page.url,
           source_type: "website",
-          source_url: page.url,
+          content: page.content.slice(0, 10000),
           status: "processing",
         })
         .select("id")
@@ -285,8 +285,9 @@ async function processWizardKnowledge(
         .insert({
           agent_id: agentId,
           user_id: userId,
-          title: faq.question,
+          source_name: faq.question.slice(0, 100),
           source_type: "faq",
+          content,
           status: "processing",
         })
         .select("id")
@@ -318,8 +319,9 @@ async function processWizardKnowledge(
         .insert({
           agent_id: agentId,
           user_id: userId,
-          title: file.name,
+          source_name: file.name,
           source_type: "file",
+          content: file.extractedText.slice(0, 10000),
           status: "processing",
         })
         .select("id")

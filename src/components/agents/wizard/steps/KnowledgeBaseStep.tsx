@@ -112,6 +112,7 @@ export function KnowledgeBaseStep({
             onFaqsChange={onFaqsChange}
             scrapedContent={scannedPages.map((p) => p.content || "").join("\n\n")}
             businessDescription={businessDescription}
+            hasUnscannedPages={selectedPages.length > scannedPages.length && selectedPages.length > 0}
           />
         </TabsContent>
 
@@ -275,11 +276,13 @@ function FaqsTab({
   onFaqsChange,
   scrapedContent,
   businessDescription,
+  hasUnscannedPages,
 }: {
   faqs: WizardFaq[];
   onFaqsChange: (faqs: WizardFaq[]) => void;
   scrapedContent: string;
   businessDescription: string;
+  hasUnscannedPages: boolean;
 }) {
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
@@ -345,7 +348,9 @@ function FaqsTab({
     onFaqsChange(faqs.filter((f) => f.id !== id));
   }
 
-  const hasContent = scrapedContent.trim().length > 0 || businessDescription.trim().length > 0;
+  const hasScrapedContent = scrapedContent.trim().length > 0;
+  const hasDescription = businessDescription.trim().length > 0;
+  const hasContent = hasScrapedContent || hasDescription;
 
   return (
     <div className="space-y-4 pt-3">
@@ -379,8 +384,9 @@ function FaqsTab({
 
       {!hasContent && (
         <p className="text-xs text-muted-foreground">
-          Add a business description or scan website pages first to enable AI
-          FAQ generation.
+          {hasUnscannedPages
+            ? "Scan your website pages in the Website tab first, then come back to generate FAQs."
+            : "Add a business description (step 2) or scan website pages first to enable AI FAQ generation."}
         </p>
       )}
 
