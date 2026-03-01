@@ -14,6 +14,7 @@ const ALLOWED_FIELDS = [
   "personality",
   "model",
   "status",
+  "wizard_config",
 ] as const;
 
 const VALID_STATUSES = new Set(["draft", "active", "paused"]);

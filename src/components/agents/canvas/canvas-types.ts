@@ -19,6 +19,15 @@ export interface KnowledgeNodeData {
   processingCount: number;
 }
 
+// Structured wizard configuration (stored in ai_agents.wizard_config JSONB)
+export interface WizardConfig {
+  templateId: "appointment-booker" | "customer-support";
+  businessDescription?: string;
+  qualifyingQuestions?: string[];
+  behaviorConfig: Record<string, unknown>;
+  personality: { tone: string; greeting_message: string };
+}
+
 // Lifted form state for agent editing (shared between edit panel + TopBar save)
 export interface AgentFormState {
   name: string;
@@ -29,6 +38,7 @@ export interface AgentFormState {
   model: string;
   status: string;
   systemPrompt: string;
+  wizardConfig: WizardConfig | null;
 }
 
 // Panel state: which panel is open and what data it needs

@@ -30,6 +30,7 @@ import type {
   AgentNodeData,
   KnowledgeNodeData,
   AgentFormState,
+  WizardConfig,
 } from "./canvas-types";
 import type { AgentConversationMessage } from "@/lib/chat/agent-chat-types";
 
@@ -51,6 +52,7 @@ export interface AgentCanvasPageProps {
     model: string;
     status: string;
     created_at: string;
+    wizard_config?: WizardConfig | null;
   };
   personality: {
     tone?: string;
@@ -89,6 +91,7 @@ function AgentCanvasInner({
       model: agent.model,
       status: agent.status,
       systemPrompt: agent.system_prompt,
+      wizardConfig: (agent.wizard_config as WizardConfig) ?? null,
     }),
     [agent, personality]
   );
@@ -100,7 +103,12 @@ function AgentCanvasInner({
 
   const isDirty = useMemo(() => {
     return (Object.keys(originalFormState) as (keyof AgentFormState)[]).some(
-      (key) => formState[key] !== originalFormState[key]
+      (key) => {
+        if (key === "wizardConfig") {
+          return JSON.stringify(formState.wizardConfig) !== JSON.stringify(originalFormState.wizardConfig);
+        }
+        return formState[key] !== originalFormState[key];
+      }
     );
   }, [formState, originalFormState]);
 
@@ -123,6 +131,7 @@ function AgentCanvasInner({
             },
             model: formState.model,
             status: formState.status,
+            wizard_config: formState.wizardConfig,
             version_title: title || undefined,
             version_description: description || undefined,
           }),
@@ -151,7 +160,7 @@ function AgentCanvasInner({
       model: string;
       status: string;
     }) => {
-      setFormState({
+      setFormState((prev) => ({
         name: revertedAgent.name,
         description: revertedAgent.description ?? "",
         avatarEmoji:
@@ -162,7 +171,8 @@ function AgentCanvasInner({
         model: revertedAgent.model,
         status: revertedAgent.status,
         systemPrompt: revertedAgent.system_prompt,
-      });
+        wizardConfig: prev.wizardConfig,
+      }));
       router.refresh();
     },
     [router]
