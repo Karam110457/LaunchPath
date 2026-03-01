@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Upload,
   Globe,
@@ -14,6 +14,7 @@ import {
   X,
   Pencil,
   RotateCcw,
+  Search,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,7 @@ export function KnowledgeDetailPanel({
     "upload" | "website" | "faq" | null
   >(null);
   const [editingDocId, setEditingDocId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const refreshDocuments = useCallback(async () => {
     try {
@@ -67,23 +69,31 @@ export function KnowledgeDetailPanel({
         setDocuments(data.documents ?? []);
       }
     } catch {
-      /* silent */
+      // Network error — will retry on next interval
     }
   }, [agentId]);
+
+  // Poll every 3s while any document is still processing
+  const hasProcessing = documents.some((d) => d.status === "processing");
+  useEffect(() => {
+    if (!hasProcessing) return;
+    const interval = setInterval(refreshDocuments, 3000);
+    return () => clearInterval(interval);
+  }, [hasProcessing, refreshDocuments]);
 
   const handleDocumentAdded = useCallback(
     (doc: KnowledgeDocument) => {
       setDocuments((prev) => [doc, ...prev]);
       setActiveForm(null);
-      if (doc.status === "processing") {
-        setTimeout(refreshDocuments, 3000);
-      }
     },
-    [refreshDocuments],
+    [],
   );
+
+  const [panelError, setPanelError] = useState<string | null>(null);
 
   const handleDelete = useCallback(
     async (documentId: string) => {
+      setPanelError(null);
       try {
         const res = await fetch(
           `/api/agents/${agentId}/knowledge?documentId=${documentId}`,
@@ -91,9 +101,11 @@ export function KnowledgeDetailPanel({
         );
         if (res.ok) {
           setDocuments((prev) => prev.filter((d) => d.id !== documentId));
+        } else {
+          setPanelError("Failed to delete document.");
         }
       } catch {
-        /* silent */
+        setPanelError("Network error. Please check your connection.");
       }
     },
     [agentId],
@@ -111,7 +123,7 @@ export function KnowledgeDetailPanel({
           },
         );
         if (res.ok) {
-          // Mark as processing in UI, then refresh
+          // Mark as processing — the useEffect interval will auto-poll
           setDocuments((prev) =>
             prev.map((d) =>
               d.id === documentId
@@ -119,17 +131,17 @@ export function KnowledgeDetailPanel({
                 : d,
             ),
           );
-          setTimeout(refreshDocuments, 3000);
         }
       } catch {
-        /* silent */
+        // Network error — user can retry manually
       }
     },
-    [agentId, refreshDocuments],
+    [agentId],
   );
 
   const handleFaqEdit = useCallback(
     async (documentId: string, question: string, answer: string) => {
+      setPanelError(null);
       try {
         const res = await fetch(`/api/agents/${agentId}/knowledge/faq`, {
           method: "PATCH",
@@ -139,9 +151,12 @@ export function KnowledgeDetailPanel({
         if (res.ok) {
           setEditingDocId(null);
           refreshDocuments();
+        } else {
+          const data = await res.json();
+          setPanelError(data.error || "Failed to update FAQ.");
         }
       } catch {
-        /* silent */
+        setPanelError("Network error. Please check your connection.");
       }
     },
     [agentId, refreshDocuments],
@@ -149,6 +164,19 @@ export function KnowledgeDetailPanel({
 
   return (
     <div className="p-5 space-y-5">
+      {panelError && (
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+          <AlertCircle className="w-3.5 h-3.5 text-destructive shrink-0 mt-0.5" />
+          <p className="text-xs text-destructive flex-1">{panelError}</p>
+          <button
+            type="button"
+            onClick={() => setPanelError(null)}
+            className="shrink-0 p-0.5 text-destructive/60 hover:text-destructive"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
       {/* Add Knowledge — stacked vertically for modal */}
       <div className="space-y-2">
         <p className="text-xs text-muted-foreground">
@@ -222,6 +250,18 @@ export function KnowledgeDetailPanel({
           </h3>
         </div>
 
+        {documents.length > 3 && (
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Search sources..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-8 pl-8 text-xs"
+            />
+          </div>
+        )}
+
         {documents.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">
             <FileText className="w-8 h-8 mx-auto mb-2 opacity-40" />
@@ -229,7 +269,14 @@ export function KnowledgeDetailPanel({
           </div>
         ) : (
           <div className="space-y-1.5">
-            {documents.map((doc) => (
+            {documents
+            .filter((doc) =>
+              !searchQuery.trim() ||
+              doc.source_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              doc.source_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              (doc.content?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
+            )
+            .map((doc) => (
               <div key={doc.id}>
                 <DocumentRow
                   document={doc}
@@ -636,10 +683,13 @@ function FaqEditForm({
   onCancel: () => void;
 }) {
   // Parse existing Q/A from content field (format: "Q: ...\nA: ...")
+  // Use indexOf instead of regex to handle questions with newlines or "A:" text
   const parsedAnswer = (() => {
     if (!doc.content) return "";
-    const match = doc.content.match(/^Q:.*?\nA:\s*([\s\S]*)$/);
-    return match ? match[1].trim() : doc.content;
+    const separator = "\nA: ";
+    const sepIndex = doc.content.indexOf(separator);
+    if (sepIndex === -1) return doc.content;
+    return doc.content.slice(sepIndex + separator.length).trim();
   })();
   const [question, setQuestion] = useState(doc.source_name);
   const [answer, setAnswer] = useState(parsedAnswer);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ReactFlow,
@@ -112,6 +112,16 @@ function AgentCanvasInner({
     );
   }, [formState, originalFormState]);
 
+  // Warn before navigating away with unsaved changes
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
+
   const handleSave = useCallback(
     async (title: string, description: string) => {
       if (!formState.name.trim()) return;
@@ -159,8 +169,9 @@ function AgentCanvasInner({
       personality: Record<string, unknown>;
       model: string;
       status: string;
+      wizard_config?: Record<string, unknown> | null;
     }) => {
-      setFormState((prev) => ({
+      setFormState(() => ({
         name: revertedAgent.name,
         description: revertedAgent.description ?? "",
         avatarEmoji:
@@ -171,7 +182,7 @@ function AgentCanvasInner({
         model: revertedAgent.model,
         status: revertedAgent.status,
         systemPrompt: revertedAgent.system_prompt,
-        wizardConfig: prev.wizardConfig,
+        wizardConfig: (revertedAgent.wizard_config as unknown as WizardConfig) ?? null,
       }));
       router.refresh();
     },
@@ -327,6 +338,7 @@ function AgentCanvasInner({
         open={showVersionHistory}
         onClose={() => setShowVersionHistory(false)}
         agentId={agent.id}
+        isDirty={isDirty}
         onReverted={handleReverted}
       />
     </div>

@@ -593,7 +593,9 @@ function FilesTab({
                   <p className="text-sm font-medium truncate">{f.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {formatFileSize(f.size)}
-                    {f.extractedText ? " — text extracted" : ""}
+                    {f.extractedText
+                      ? " — text extracted"
+                      : " — will be processed after your agent is created"}
                   </p>
                 </div>
               </div>

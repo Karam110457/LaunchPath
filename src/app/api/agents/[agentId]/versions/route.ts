@@ -26,7 +26,7 @@ export async function GET(
   const { data: versions, error } = await supabase
     .from("agent_versions")
     .select(
-      "id, version_number, name, description, system_prompt, personality, model, status, change_title, change_description, knowledge_snapshot, created_at"
+      "id, version_number, name, description, system_prompt, personality, model, status, wizard_config, change_title, change_description, knowledge_snapshot, created_at"
     )
     .eq("agent_id", agentId)
     .eq("user_id", user.id)
@@ -34,7 +34,7 @@ export async function GET(
     .limit(50);
 
   if (error) {
-    // Table may not exist yet — return empty list
+    console.error("Failed to fetch versions:", error.message);
     return NextResponse.json({ versions: [] });
   }
 
@@ -90,6 +90,7 @@ export async function POST(
       personality: version.personality,
       model: version.model,
       status: version.status,
+      wizard_config: version.wizard_config ?? null,
     })
     .eq("id", agentId)
     .eq("user_id", user.id);
@@ -109,6 +110,7 @@ export async function POST(
       personality: version.personality,
       model: version.model,
       status: version.status,
+      wizard_config: version.wizard_config ?? null,
     },
   });
 }

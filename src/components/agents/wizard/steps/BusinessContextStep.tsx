@@ -149,10 +149,14 @@ export function BusinessContextStep({
             onChange={(e) => onDescriptionChange(e.target.value)}
             className="min-h-[120px]"
           />
-          <p className="text-xs text-muted-foreground">
-            The more detail you provide, the better your agent will be at
-            representing your business.
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              The more detail you provide, the better your agent will be.
+            </p>
+            <span className={`text-xs tabular-nums ${businessDescription.trim().length > 10 ? "text-muted-foreground" : "text-amber-500"}`}>
+              {businessDescription.trim().length}/10 min
+            </span>
+          </div>
         </div>
       )}
 

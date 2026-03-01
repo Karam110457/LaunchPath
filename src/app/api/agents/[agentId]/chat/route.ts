@@ -128,6 +128,7 @@ export async function POST(
         model: anthropic(agent.model),
         system: systemPrompt,
         messages: aiMessages,
+        maxOutputTokens: 2048,
         providerOptions: {
           anthropic: {
             thinking: { type: "disabled" },

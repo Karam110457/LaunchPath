@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { mastra } from "@/mastra";
+import { rateLimit, getClientIdentifier } from "@/lib/api/rate-limit";
 import { wizardQuestionsOutputSchema } from "@/lib/ai/schemas";
 import { withRateLimitRetry } from "@/lib/ai/rate-limit-retry";
 
 export async function POST(request: NextRequest) {
+  const rl = rateLimit(getClientIdentifier(request), "wizard/generate-questions", 5);
+  if (!rl.success) {
+    return NextResponse.json(
+      { error: `Too many requests. Try again in ${rl.retryAfter}s.` },
+      { status: 429 }
+    );
+  }
+
   const supabase = await createClient();
   const {
     data: { user },

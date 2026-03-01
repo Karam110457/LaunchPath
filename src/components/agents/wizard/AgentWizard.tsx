@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
@@ -26,11 +26,50 @@ interface AgentWizardProps {
   onBack: () => void;
 }
 
+const WIZARD_DRAFT_KEY = "launchpath_wizard_draft";
+
+function loadDraft(): { stepIndex: number; state: AgentWizardState } | null {
+  try {
+    const raw = localStorage.getItem(WIZARD_DRAFT_KEY);
+    if (!raw) return null;
+    const draft = JSON.parse(raw);
+    // Restore files as empty (File objects can't be serialized)
+    if (draft.state) draft.state.files = [];
+    return draft;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(stepIndex: number, state: AgentWizardState) {
+  try {
+    // Exclude File objects from serialization
+    const serializable = { ...state, files: [] };
+    localStorage.setItem(
+      WIZARD_DRAFT_KEY,
+      JSON.stringify({ stepIndex, state: serializable })
+    );
+  } catch {
+    // Storage full or unavailable — ignore
+  }
+}
+
+function clearDraft() {
+  try {
+    localStorage.removeItem(WIZARD_DRAFT_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
   const router = useRouter();
-  const [stepIndex, setStepIndex] = useState(0);
+
+  // Restore draft from localStorage on mount
+  const draft = useRef(loadDraft());
+  const [stepIndex, setStepIndex] = useState(draft.current?.stepIndex ?? 0);
   const [state, setState] = useState<AgentWizardState>(
-    createInitialWizardState(),
+    draft.current?.state ?? createInitialWizardState(),
   );
   const { isLoading, currentLabel, agent, error, startGeneration } =
     useAgentGeneration();
@@ -38,9 +77,30 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
   const currentStep = WIZARD_STEPS[stepIndex];
   const totalSteps = WIZARD_STEPS.length;
 
-  // Redirect on generation complete
+  // Persist draft to localStorage on every change
+  useEffect(() => {
+    saveDraft(stepIndex, state);
+  }, [stepIndex, state]);
+
+  // Warn before closing tab if wizard has meaningful progress
+  useEffect(() => {
+    const hasProgress =
+      state.templateId !== null ||
+      state.businessDescription.trim().length > 0 ||
+      state.faqs.length > 0 ||
+      state.agentName.trim().length > 0;
+    if (!hasProgress) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [state]);
+
+  // Redirect on generation complete — clear draft
   useEffect(() => {
     if (agent?.id) {
+      clearDraft();
       router.push(`/dashboard/agents/${agent.id}`);
     }
   }, [agent, router]);
@@ -66,39 +126,45 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
   // ---------------------------------------------------------------------------
 
   function canProceed(): boolean {
+    return !getValidationError();
+  }
+
+  function getValidationError(): string | null {
     switch (currentStep.id) {
       case "choose-type":
-        return state.templateId !== null;
+        return state.templateId === null ? "Select an agent type to continue" : null;
 
       case "business-context":
-        if (state.businessContextMode === "link_system") {
-          return state.linkedSystemId !== null;
+        if (!state.businessContextMode) return "Choose how to describe your business";
+        if (state.businessContextMode === "link_system" && !state.linkedSystemId) {
+          return "Select a business to continue";
         }
         if (state.businessContextMode === "describe") {
-          return state.businessDescription.trim().length > 10;
+          const len = state.businessDescription.trim().length;
+          if (len === 0) return "Describe your business to continue";
+          if (len <= 10) return `Add a bit more detail (${len}/10 characters minimum)`;
         }
-        return false;
+        return null;
 
       case "knowledge-base":
-        // Knowledge base is optional — always allow proceeding
-        return true;
+        return null;
 
       case "conversation-flow":
-        // Allow proceeding even with no questions (they're optional)
-        return true;
+        return null;
 
-      case "agent-identity":
-        return (
-          state.agentName.trim().length > 0 &&
-          state.tone.trim().length > 0 &&
-          state.greetingMessage.trim().length > 0
-        );
+      case "agent-identity": {
+        const missing: string[] = [];
+        if (!state.agentName.trim()) missing.push("name");
+        if (!state.tone.trim()) missing.push("tone");
+        if (!state.greetingMessage.trim()) missing.push("greeting message");
+        return missing.length > 0 ? `Fill in the ${missing.join(", ")} to continue` : null;
+      }
 
       case "review":
-        return true;
+        return null;
 
       default:
-        return false;
+        return "Unknown step";
     }
   }
 
@@ -125,6 +191,7 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
 
   function handleBack() {
     if (stepIndex === 0) {
+      clearDraft();
       onBack();
     } else {
       setStepIndex((s) => s - 1);
@@ -341,23 +408,30 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
       </div>
 
       {/* Navigation */}
-      <div className="flex items-center justify-between pt-4">
-        <Button variant="ghost" onClick={handleBack}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-
-        {currentStep.id === "review" ? (
-          <Button onClick={handleGenerate}>
-            <Sparkles className="h-4 w-4 mr-2" />
-            Generate Agent
-          </Button>
-        ) : (
-          <Button onClick={handleNext} disabled={!canProceed()}>
-            Continue
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
+      <div className="space-y-2 pt-4">
+        {getValidationError() && (
+          <p className="text-xs text-muted-foreground text-center">
+            {getValidationError()}
+          </p>
         )}
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" onClick={handleBack}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+
+          {currentStep.id === "review" ? (
+            <Button onClick={handleGenerate}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              Generate Agent
+            </Button>
+          ) : (
+            <Button onClick={handleNext} disabled={!canProceed()}>
+              Continue
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

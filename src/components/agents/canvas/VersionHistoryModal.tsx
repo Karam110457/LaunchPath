@@ -51,12 +51,14 @@ interface RevertedAgent {
   personality: Record<string, unknown>;
   model: string;
   status: string;
+  wizard_config?: Record<string, unknown> | null;
 }
 
 interface VersionHistoryModalProps {
   open: boolean;
   onClose: () => void;
   agentId: string;
+  isDirty?: boolean;
   onReverted: (agent: RevertedAgent) => void;
 }
 
@@ -70,6 +72,7 @@ export function VersionHistoryModal({
   open,
   onClose,
   agentId,
+  isDirty,
   onReverted,
 }: VersionHistoryModalProps) {
   const [versions, setVersions] = useState<VersionEntry[]>([]);
@@ -207,8 +210,12 @@ export function VersionHistoryModal({
                             <AlertDialogDescription>
                               This will restore the agent configuration to this
                               version. Knowledge base documents won&apos;t be
-                              affected. Your current state will be saved as a
-                              new version first.
+                              affected.
+                              {isDirty && (
+                                <span className="block mt-2 font-medium text-destructive">
+                                  You have unsaved changes that will be lost.
+                                </span>
+                              )}
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>

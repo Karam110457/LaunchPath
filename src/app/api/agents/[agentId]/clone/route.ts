@@ -29,7 +29,7 @@ export async function POST(
   const { data: source } = await supabase
     .from("ai_agents")
     .select(
-      "name, description, system_prompt, personality, enabled_tools, model, template_id"
+      "name, description, system_prompt, personality, enabled_tools, model, template_id, wizard_config"
     )
     .eq("id", agentId)
     .eq("user_id", user.id)
@@ -51,6 +51,7 @@ export async function POST(
       enabled_tools: source.enabled_tools,
       model: source.model,
       template_id: source.template_id,
+      wizard_config: source.wizard_config,
       status: "draft",
     })
     .select("id")

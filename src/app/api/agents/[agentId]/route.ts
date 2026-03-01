@@ -73,7 +73,7 @@ export async function PATCH(
   try {
     const { data: updated } = await supabase
       .from("ai_agents")
-      .select("name, description, system_prompt, personality, model, status")
+      .select("name, description, system_prompt, personality, model, status, wizard_config")
       .eq("id", agentId)
       .eq("user_id", user.id)
       .single();
@@ -101,13 +101,14 @@ export async function PATCH(
         personality: updated.personality ?? {},
         model: updated.model,
         status: updated.status,
+        wizard_config: updated.wizard_config ?? null,
         change_title: changeTitle?.trim() || null,
         change_description: changeDescription?.trim() || null,
         knowledge_snapshot: knowledgeDocs ?? [],
       });
     }
-  } catch {
-    // Versioning table may not exist yet — continue
+  } catch (err) {
+    console.error("Version snapshot failed:", err instanceof Error ? err.message : err);
   }
 
   return NextResponse.json({ ok: true });

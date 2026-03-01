@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import * as cheerio from "cheerio";
 import { BROWSER_HEADERS } from "@/lib/knowledge/web-scraper";
+import { rateLimit, getClientIdentifier } from "@/lib/api/rate-limit";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -26,6 +27,14 @@ function validateUrl(url: string): boolean {
 }
 
 export async function POST(request: NextRequest) {
+  const rl = rateLimit(getClientIdentifier(request), "wizard/discover-pages", 10);
+  if (!rl.success) {
+    return NextResponse.json(
+      { error: `Too many requests. Try again in ${rl.retryAfter}s.` },
+      { status: 429 }
+    );
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
