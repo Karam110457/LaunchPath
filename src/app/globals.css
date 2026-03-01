@@ -236,6 +236,23 @@
   }
 }
 
+/* Agent canvas: animated dashed edges */
+@keyframes dash-flow {
+  to { stroke-dashoffset: -10; }
+}
+.canvas-edge-animated {
+  animation: dash-flow 1s linear infinite;
+}
+
+/* Agent canvas: node entrance */
+@keyframes node-enter {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.react-flow__node {
+  animation: node-enter 0.4s ease-out;
+}
+
 /* Centered page container: max-width + horizontal margin auto + consistent padding */
 @layer components {
   .container {

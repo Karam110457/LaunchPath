@@ -34,6 +34,7 @@ interface AgentChatPanelProps {
   agentName: string;
   greetingMessage?: string;
   initialMessages: AgentConversationMessage[];
+  embedded?: boolean;
 }
 
 export function AgentChatPanel({
@@ -41,6 +42,7 @@ export function AgentChatPanel({
   agentName,
   greetingMessage,
   initialMessages,
+  embedded,
 }: AgentChatPanelProps) {
   const {
     messages,
@@ -61,7 +63,7 @@ export function AgentChatPanel({
   }, [messages, isTyping, isThinking, thinkingText]);
 
   return (
-    <div className="relative flex flex-col h-[calc(100vh-16rem)] min-h-[400px] border border-border rounded-xl overflow-hidden bg-background">
+    <div className={`relative flex flex-col ${embedded ? "h-full" : "h-[calc(100vh-16rem)] min-h-[400px] border border-border rounded-xl"} overflow-hidden bg-background`}>
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur-sm flex-shrink-0">
         <span className="text-sm font-semibold text-foreground tracking-tight">

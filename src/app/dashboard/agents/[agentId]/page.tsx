@@ -1,11 +1,7 @@
 import { requireAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { PageShell } from "@/components/layout/PageShell";
-import { AgentDetail } from "@/components/agents/AgentDetail";
-import { AgentChatPanel } from "@/components/agents/AgentChatPanel";
-import { AgentKnowledgePanel } from "@/components/agents/AgentKnowledgePanel";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AgentCanvasPage } from "@/components/agents/canvas/AgentCanvasPage";
 import type { AgentConversationMessage } from "@/lib/chat/agent-chat-types";
 
 interface Props {
@@ -69,48 +65,12 @@ export default async function AgentDetailPage({ params }: Props) {
   }>;
 
   return (
-    <PageShell
-      title={agent.name}
-      description={agent.description ?? undefined}
-    >
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="knowledge">
-            Knowledge
-            {initialDocuments.length > 0 && (
-              <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium leading-none">
-                {initialDocuments.length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="chat">Test Chat</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview">
-          <AgentDetail
-            agent={agent}
-            personality={personality}
-            tools={tools}
-          />
-        </TabsContent>
-
-        <TabsContent value="knowledge" className="mt-4">
-          <AgentKnowledgePanel
-            agentId={agent.id}
-            initialDocuments={initialDocuments}
-          />
-        </TabsContent>
-
-        <TabsContent value="chat" className="mt-4">
-          <AgentChatPanel
-            agentId={agent.id}
-            agentName={agent.name}
-            greetingMessage={personality?.greeting_message}
-            initialMessages={initialChatMessages}
-          />
-        </TabsContent>
-      </Tabs>
-    </PageShell>
+    <AgentCanvasPage
+      agent={agent}
+      personality={personality}
+      tools={tools}
+      initialDocuments={initialDocuments}
+      initialChatMessages={initialChatMessages}
+    />
   );
 }
