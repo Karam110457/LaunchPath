@@ -110,6 +110,7 @@ export async function POST(
       id: doc.id,
       source_type: "faq",
       source_name: question.trim().slice(0, 100),
+      content,
       chunk_count: 1,
       status: "ready",
     });

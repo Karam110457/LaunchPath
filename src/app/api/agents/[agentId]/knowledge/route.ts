@@ -25,7 +25,7 @@ export async function GET(
 
   const { data: documents, error } = await supabase
     .from("agent_knowledge_documents")
-    .select("id, source_type, source_name, chunk_count, status, error_message, created_at")
+    .select("id, source_type, source_name, content, chunk_count, status, error_message, created_at")
     .eq("agent_id", agentId)
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });

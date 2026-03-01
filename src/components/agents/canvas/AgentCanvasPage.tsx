@@ -59,6 +59,7 @@ export interface AgentCanvasPageProps {
     id: string;
     source_type: "file" | "website" | "faq";
     source_name: string;
+    content: string | null;
     chunk_count: number;
     status: "processing" | "ready" | "error";
     error_message: string | null;

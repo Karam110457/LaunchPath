@@ -36,6 +36,7 @@ interface KnowledgeDocument {
   id: string;
   source_type: "file" | "website" | "faq";
   source_name: string;
+  content: string | null;
   chunk_count: number;
   status: "processing" | "ready" | "error";
   error_message: string | null;
@@ -634,9 +635,14 @@ function FaqEditForm({
   onSave: (question: string, answer: string) => void;
   onCancel: () => void;
 }) {
-  // Parse existing Q/A from source_name and infer answer
+  // Parse existing Q/A from content field (format: "Q: ...\nA: ...")
+  const parsedAnswer = (() => {
+    if (!doc.content) return "";
+    const match = doc.content.match(/^Q:.*?\nA:\s*([\s\S]*)$/);
+    return match ? match[1].trim() : doc.content;
+  })();
   const [question, setQuestion] = useState(doc.source_name);
-  const [answer, setAnswer] = useState("");
+  const [answer, setAnswer] = useState(parsedAnswer);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -54,33 +54,37 @@ export async function PATCH(
   }
 
   // Snapshot current state before applying update (versioning)
-  const { data: current } = await supabase
-    .from("ai_agents")
-    .select("name, description, system_prompt, personality, model, status")
-    .eq("id", agentId)
-    .eq("user_id", user.id)
-    .single();
+  // Wrapped in try/catch so versioning failures don't block the update
+  try {
+    const { data: current } = await supabase
+      .from("ai_agents")
+      .select("name, description, system_prompt, personality, model, status")
+      .eq("id", agentId)
+      .eq("user_id", user.id)
+      .single();
 
-  if (current) {
-    // Get next version number
-    const { count } = await supabase
-      .from("agent_versions")
-      .select("id", { count: "exact", head: true })
-      .eq("agent_id", agentId);
+    if (current) {
+      const { count } = await supabase
+        .from("agent_versions")
+        .select("id", { count: "exact", head: true })
+        .eq("agent_id", agentId);
 
-    const versionNumber = (count ?? 0) + 1;
+      const versionNumber = (count ?? 0) + 1;
 
-    await supabase.from("agent_versions").insert({
-      agent_id: agentId,
-      user_id: user.id,
-      version_number: versionNumber,
-      name: current.name,
-      description: current.description,
-      system_prompt: current.system_prompt,
-      personality: current.personality ?? {},
-      model: current.model,
-      status: current.status,
-    });
+      await supabase.from("agent_versions").insert({
+        agent_id: agentId,
+        user_id: user.id,
+        version_number: versionNumber,
+        name: current.name,
+        description: current.description,
+        system_prompt: current.system_prompt,
+        personality: current.personality ?? {},
+        model: current.model,
+        status: current.status,
+      });
+    }
+  } catch {
+    // Versioning table may not exist yet — continue with the update
   }
 
   const { error } = await supabase

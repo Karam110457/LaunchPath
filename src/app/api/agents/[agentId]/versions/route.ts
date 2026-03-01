@@ -32,10 +32,8 @@ export async function GET(
     .limit(50);
 
   if (error) {
-    return NextResponse.json(
-      { error: "Failed to fetch versions" },
-      { status: 500 }
-    );
+    // Table may not exist yet — return empty list instead of 500
+    return NextResponse.json({ versions: [] });
   }
 
   return NextResponse.json({ versions: versions ?? [] });
