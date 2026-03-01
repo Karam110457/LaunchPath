@@ -201,6 +201,31 @@ export async function POST(request: NextRequest) {
             }
           }
 
+          // Create initial version snapshot (v1)
+          try {
+            const { data: knowledgeDocs } = await supabase
+              .from("agent_knowledge_documents")
+              .select("id, source_type, source_name, status")
+              .eq("agent_id", newAgent.id);
+
+            await supabase.from("agent_versions").insert({
+              agent_id: newAgent.id,
+              user_id: user.id,
+              version_number: 1,
+              name: agentConfig.name,
+              description: agentConfig.description,
+              system_prompt: agentConfig.system_prompt,
+              personality: agentConfig.personality ?? {},
+              model: "claude-sonnet-4-5-20250929",
+              status: "draft",
+              change_title: "Initial version",
+              change_description: null,
+              knowledge_snapshot: knowledgeDocs ?? [],
+            });
+          } catch {
+            // Versioning table may not exist yet — don't block creation
+          }
+
           logger.info("Agent created", {
             agentId: newAgent.id,
             userId: user.id,
