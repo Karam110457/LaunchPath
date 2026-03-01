@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import * as cheerio from "cheerio";
+import { BROWSER_HEADERS } from "@/lib/knowledge/web-scraper";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -60,10 +61,7 @@ export async function POST(request: NextRequest) {
 
     const response = await fetch(url, {
       signal: controller.signal,
-      headers: {
-        "User-Agent": "LaunchPath-Bot/1.0 (Page Discovery)",
-        Accept: "text/html,application/xhtml+xml",
-      },
+      headers: BROWSER_HEADERS,
     });
     clearTimeout(timeout);
 

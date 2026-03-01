@@ -8,6 +8,17 @@ import * as cheerio from "cheerio";
 const MAX_CONTENT_LENGTH = 100 * 1024; // 100KB text limit
 const FETCH_TIMEOUT_MS = 10_000;
 
+/** Browser-like headers to avoid 403 blocks from sites that reject bots. */
+export const BROWSER_HEADERS: Record<string, string> = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  Accept:
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+  "Cache-Control": "no-cache",
+  Pragma: "no-cache",
+};
+
 export interface ScrapedContent {
   title: string;
   content: string;
@@ -50,10 +61,7 @@ export async function scrapeWebsite(url: string): Promise<ScrapedContent> {
   try {
     const response = await fetch(url, {
       signal: controller.signal,
-      headers: {
-        "User-Agent": "LaunchPath-Bot/1.0 (Knowledge Base Indexer)",
-        Accept: "text/html,application/xhtml+xml",
-      },
+      headers: BROWSER_HEADERS,
     });
 
     if (!response.ok) {
