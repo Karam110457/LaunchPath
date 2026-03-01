@@ -9,6 +9,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { extractPdfText } from "@/lib/knowledge/pdf-extract";
+import { extractDocxText } from "@/lib/knowledge/docx-extract";
+import { extractCsvText } from "@/lib/knowledge/csv-extract";
 import { chunkText } from "@/lib/knowledge/chunking";
 import { embedTexts } from "@/lib/knowledge/embeddings";
 
@@ -19,6 +21,8 @@ const ALLOWED_MIME = new Set([
   "application/pdf",
   "text/plain",
   "text/markdown",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/csv",
 ]);
 
 export async function POST(
@@ -76,7 +80,7 @@ export async function POST(
 
   if (!ALLOWED_MIME.has(file.type)) {
     return NextResponse.json(
-      { error: "File type not supported. Use PDF, TXT, or MD." },
+      { error: "File type not supported. Use PDF, TXT, MD, DOCX, or CSV." },
       { status: 400 }
     );
   }
@@ -118,6 +122,13 @@ export async function POST(
     let text: string;
     if (file.type === "application/pdf") {
       text = await extractPdfText(fileBuffer);
+    } else if (
+      file.type ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ) {
+      text = await extractDocxText(fileBuffer);
+    } else if (file.type === "text/csv") {
+      text = extractCsvText(fileBuffer);
     } else {
       text = fileBuffer.toString("utf-8");
     }

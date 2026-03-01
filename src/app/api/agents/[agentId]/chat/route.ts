@@ -73,7 +73,15 @@ export async function POST(
   let systemPrompt = agent.system_prompt;
 
   if (docCount && docCount > 0) {
-    const ragContext = await retrieveContext(agentId, userMessage, supabase);
+    // Multi-turn retrieval: use recent user messages for better follow-up handling
+    const recentUserMsgs = conversationHistory
+      .filter((m) => m.role === "user")
+      .slice(-2)
+      .map((m) => m.content);
+    recentUserMsgs.push(userMessage);
+    const retrievalQuery = recentUserMsgs.join("\n");
+
+    const ragContext = await retrieveContext(agentId, retrievalQuery, supabase);
     if (ragContext) {
       systemPrompt = `${agent.system_prompt}\n\n${ragContext}`;
     }

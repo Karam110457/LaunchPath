@@ -12,6 +12,8 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
+  Pencil,
+  RotateCcw,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,6 +56,7 @@ export function KnowledgeDetailPanel({
   const [activeForm, setActiveForm] = useState<
     "upload" | "website" | "faq" | null
   >(null);
+  const [editingDocId, setEditingDocId] = useState<string | null>(null);
 
   const refreshDocuments = useCallback(async () => {
     try {
@@ -93,6 +96,54 @@ export function KnowledgeDetailPanel({
       }
     },
     [agentId],
+  );
+
+  const handleRetry = useCallback(
+    async (documentId: string) => {
+      try {
+        const res = await fetch(
+          `/api/agents/${agentId}/knowledge/retry`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ documentId }),
+          },
+        );
+        if (res.ok) {
+          // Mark as processing in UI, then refresh
+          setDocuments((prev) =>
+            prev.map((d) =>
+              d.id === documentId
+                ? { ...d, status: "processing" as const, error_message: null }
+                : d,
+            ),
+          );
+          setTimeout(refreshDocuments, 3000);
+        }
+      } catch {
+        /* silent */
+      }
+    },
+    [agentId, refreshDocuments],
+  );
+
+  const handleFaqEdit = useCallback(
+    async (documentId: string, question: string, answer: string) => {
+      try {
+        const res = await fetch(`/api/agents/${agentId}/knowledge/faq`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ documentId, question, answer }),
+        });
+        if (res.ok) {
+          setEditingDocId(null);
+          refreshDocuments();
+        }
+      } catch {
+        /* silent */
+      }
+    },
+    [agentId, refreshDocuments],
   );
 
   return (
@@ -178,11 +229,26 @@ export function KnowledgeDetailPanel({
         ) : (
           <div className="space-y-1.5">
             {documents.map((doc) => (
-              <DocumentRow
-                key={doc.id}
-                document={doc}
-                onDelete={handleDelete}
-              />
+              <div key={doc.id}>
+                <DocumentRow
+                  document={doc}
+                  onDelete={handleDelete}
+                  onRetry={handleRetry}
+                  onEdit={
+                    doc.source_type === "faq"
+                      ? () => setEditingDocId(doc.id)
+                      : undefined
+                  }
+                  isEditing={editingDocId === doc.id}
+                />
+                {editingDocId === doc.id && (
+                  <FaqEditForm
+                    document={doc}
+                    onSave={(q, a) => handleFaqEdit(doc.id, q, a)}
+                    onCancel={() => setEditingDocId(null)}
+                  />
+                )}
+              </div>
             ))}
           </div>
         )}
@@ -192,7 +258,7 @@ export function KnowledgeDetailPanel({
 }
 
 // ---------------------------------------------------------------------------
-// File Upload Form (compact)
+// File Upload Form (bulk support)
 // ---------------------------------------------------------------------------
 
 function FileUploadForm({
@@ -207,47 +273,63 @@ function FileUploadForm({
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = useCallback((file: File) => {
-    const allowed = ["application/pdf", "text/plain", "text/markdown"];
-    if (!allowed.includes(file.type)) {
-      setError("Only PDF, TXT, and MD files are supported.");
-      return;
-    }
-    if (file.size > 25 * 1024 * 1024) {
-      setError("File must be under 25MB.");
-      return;
+  const ALLOWED_TYPES = [
+    "application/pdf",
+    "text/plain",
+    "text/markdown",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text/csv",
+  ];
+
+  const handleFiles = useCallback((files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    for (const file of fileArray) {
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        setError(`"${file.name}" is not a supported format.`);
+        return;
+      }
+      if (file.size > 25 * 1024 * 1024) {
+        setError(`"${file.name}" exceeds 25MB limit.`);
+        return;
+      }
     }
     setError(null);
-    setSelectedFile(file);
+    setSelectedFiles((prev) => [...prev, ...fileArray]);
   }, []);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragging(false);
-      const file = e.dataTransfer.files[0];
-      if (file) handleFile(file);
+      if (e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files);
     },
-    [handleFile],
+    [handleFiles],
   );
 
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleUpload = async () => {
-    if (!selectedFile) return;
+    if (selectedFiles.length === 0) return;
     setIsUploading(true);
     setError(null);
     try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      const res = await fetch(`/api/agents/${agentId}/knowledge/upload`, {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
-      onSuccess(data as KnowledgeDocument);
+      for (const file of selectedFiles) {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch(`/api/agents/${agentId}/knowledge/upload`, {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `Upload failed: ${file.name}`);
+        onSuccess(data as KnowledgeDocument);
+      }
+      setSelectedFiles([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -265,46 +347,53 @@ function FileUploadForm({
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`relative flex flex-col items-center justify-center gap-1.5 p-5 rounded-lg border-2 border-dashed cursor-pointer transition-all ${isDragging ? "border-primary bg-primary/5" : selectedFile ? "border-primary/40 bg-primary/5" : "border-border hover:border-primary/30"}`}
+        className={`relative flex flex-col items-center justify-center gap-1.5 p-5 rounded-lg border-2 border-dashed cursor-pointer transition-all ${isDragging ? "border-primary bg-primary/5" : selectedFiles.length > 0 ? "border-primary/40 bg-primary/5" : "border-border hover:border-primary/30"}`}
       >
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf,.txt,.md"
+          accept=".pdf,.txt,.md,.docx,.csv"
+          multiple
           className="hidden"
           onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleFile(file);
+            if (e.target.files && e.target.files.length > 0)
+              handleFiles(e.target.files);
           }}
         />
-        {selectedFile ? (
-          <>
-            <FileText className="w-6 h-6 text-primary" />
-            <p className="text-xs font-medium">{selectedFile.name}</p>
-            <p className="text-[10px] text-muted-foreground">
-              {(selectedFile.size / 1024).toFixed(0)} KB
-            </p>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedFile(null);
-              }}
-              className="absolute top-2 right-2 p-1 rounded-md hover:bg-muted text-muted-foreground"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </>
-        ) : (
-          <>
-            <Upload className="w-6 h-6 text-muted-foreground" />
-            <p className="text-xs text-muted-foreground">
-              <span className="text-primary font-medium">Click</span> or drag
-              &mdash; PDF, TXT, MD (max 25MB)
-            </p>
-          </>
-        )}
+        <Upload className="w-6 h-6 text-muted-foreground" />
+        <p className="text-xs text-muted-foreground">
+          <span className="text-primary font-medium">Click</span> or drag
+          &mdash; PDF, TXT, MD, DOCX, CSV (max 25MB)
+        </p>
       </div>
+
+      {/* Selected files list */}
+      {selectedFiles.length > 0 && (
+        <div className="space-y-1">
+          {selectedFiles.map((file, i) => (
+            <div
+              key={`${file.name}-${i}`}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/30 text-xs"
+            >
+              <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <span className="truncate flex-1">{file.name}</span>
+              <span className="text-muted-foreground shrink-0">
+                {(file.size / 1024).toFixed(0)} KB
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeFile(i);
+                }}
+                className="p-0.5 rounded hover:bg-muted text-muted-foreground"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {error && (
         <p className="text-xs text-destructive flex items-center gap-1">
@@ -320,7 +409,7 @@ function FileUploadForm({
         <Button
           size="sm"
           onClick={handleUpload}
-          disabled={!selectedFile || isUploading}
+          disabled={selectedFiles.length === 0 || isUploading}
         >
           {isUploading ? (
             <>
@@ -328,7 +417,7 @@ function FileUploadForm({
               Uploading
             </>
           ) : (
-            "Upload"
+            `Upload${selectedFiles.length > 1 ? ` (${selectedFiles.length})` : ""}`
           )}
         </Button>
       </div>
@@ -533,6 +622,84 @@ function FaqForm({
 }
 
 // ---------------------------------------------------------------------------
+// FAQ Edit Form (inline, below document row)
+// ---------------------------------------------------------------------------
+
+function FaqEditForm({
+  document: doc,
+  onSave,
+  onCancel,
+}: {
+  document: KnowledgeDocument;
+  onSave: (question: string, answer: string) => void;
+  onCancel: () => void;
+}) {
+  // Parse existing Q/A from source_name and infer answer
+  const [question, setQuestion] = useState(doc.source_name);
+  const [answer, setAnswer] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!question.trim() || !answer.trim()) return;
+    setIsLoading(true);
+    onSave(question.trim(), answer.trim());
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="ml-6 mt-1 mb-2 space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3"
+    >
+      <div className="space-y-1">
+        <Label className="text-xs">Question</Label>
+        <Input
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          className="h-8 text-xs"
+          disabled={isLoading}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs">Answer</Label>
+        <Textarea
+          value={answer}
+          onChange={(e) => setAnswer(e.target.value)}
+          rows={2}
+          className="text-xs"
+          placeholder="Enter the updated answer"
+          disabled={isLoading}
+        />
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onCancel}
+          className="h-7 text-xs"
+          disabled={isLoading}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          size="sm"
+          className="h-7 text-xs"
+          disabled={!question.trim() || !answer.trim() || isLoading}
+        >
+          {isLoading ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            "Save"
+          )}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Document Row (compact)
 // ---------------------------------------------------------------------------
 
@@ -545,12 +712,20 @@ const sourceIcons: Record<string, React.ReactNode> = {
 function DocumentRow({
   document: doc,
   onDelete,
+  onRetry,
+  onEdit,
+  isEditing,
 }: {
   document: KnowledgeDocument;
   onDelete: (id: string) => void;
+  onRetry: (id: string) => void;
+  onEdit?: () => void;
+  isEditing?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-border hover:bg-muted/30 transition-colors group">
+    <div
+      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border transition-colors group ${isEditing ? "border-primary/30 bg-primary/5" : "border-border hover:bg-muted/30"}`}
+    >
       <div className="shrink-0 text-muted-foreground">
         {sourceIcons[doc.source_type] ?? <FileText className="w-3.5 h-3.5" />}
       </div>
@@ -579,7 +754,29 @@ function DocumentRow({
         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
       )}
       {doc.status === "error" && (
-        <AlertCircle className="w-3.5 h-3.5 text-destructive shrink-0" />
+        <>
+          <AlertCircle className="w-3.5 h-3.5 text-destructive shrink-0" />
+          <button
+            type="button"
+            onClick={() => onRetry(doc.id)}
+            className="shrink-0 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
+            title="Retry import"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+        </>
+      )}
+
+      {/* Edit (FAQ only) */}
+      {onEdit && doc.status !== "processing" && (
+        <button
+          type="button"
+          onClick={onEdit}
+          className="shrink-0 p-1 rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-muted opacity-0 group-hover:opacity-100 transition-all"
+          title="Edit FAQ"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
       )}
 
       {/* Delete */}

@@ -9,9 +9,10 @@ interface TopBarProps {
   agentName: string;
   status: "draft" | "active" | "paused";
   avatarEmoji: string;
+  onEdit: () => void;
 }
 
-export function TopBar({ agentName, status, avatarEmoji }: TopBarProps) {
+export function TopBar({ agentName, status, avatarEmoji, onEdit }: TopBarProps) {
   return (
     <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-background/80 backdrop-blur-sm border-b border-border/50">
       <div className="flex items-center gap-3">
@@ -33,7 +34,7 @@ export function TopBar({ agentName, status, avatarEmoji }: TopBarProps) {
         </Badge>
       </div>
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" onClick={onEdit}>
           <Settings className="w-3.5 h-3.5 mr-1.5" />
           Edit
         </Button>

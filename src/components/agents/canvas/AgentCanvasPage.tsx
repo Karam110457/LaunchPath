@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -19,6 +20,7 @@ import { TopBar } from "./TopBar";
 import { BottomBar } from "./BottomBar";
 import { NodeModal } from "./panels/NodeModal";
 import { AgentDetailPanel } from "./panels/AgentDetailPanel";
+import { AgentEditPanel } from "./panels/AgentEditPanel";
 import { KnowledgeDetailPanel } from "./panels/KnowledgeDetailPanel";
 import { AgentChatPanel } from "@/components/agents/AgentChatPanel";
 import { useCanvasLayout } from "./useCanvasLayout";
@@ -71,6 +73,8 @@ function AgentCanvasInner({
   initialDocuments,
   initialChatMessages,
 }: AgentCanvasPageProps) {
+  const router = useRouter();
+
   // Build node data
   const agentData: AgentNodeData = {
     agentId: agent.id,
@@ -128,7 +132,8 @@ function AgentCanvasInner({
 
   // Modal title
   let modalTitle = "";
-  if (modal.type === "agent") modalTitle = "Modify Agent";
+  if (modal.type === "agent") modalTitle = "Agent Details";
+  else if (modal.type === "edit-agent") modalTitle = "Edit Agent";
   else if (modal.type === "knowledge") modalTitle = "Knowledge Base";
   else if (modal.type === "chat") modalTitle = `Test ${agent.name}`;
 
@@ -138,6 +143,7 @@ function AgentCanvasInner({
         agentName={agent.name}
         status={agent.status as "draft" | "active" | "paused"}
         avatarEmoji={personality?.avatar_emoji ?? "\u{1F916}"}
+        onEdit={() => setModal({ type: "edit-agent" })}
       />
 
       <ReactFlow
@@ -176,6 +182,16 @@ function AgentCanvasInner({
       >
         {modal.type === "agent" && (
           <AgentDetailPanel agent={agent} personality={personality} />
+        )}
+        {modal.type === "edit-agent" && (
+          <AgentEditPanel
+            agent={agent}
+            personality={personality}
+            onSave={() => {
+              setModal({ type: "none" });
+              router.refresh();
+            }}
+          />
         )}
         {modal.type === "knowledge" && (
           <KnowledgeDetailPanel

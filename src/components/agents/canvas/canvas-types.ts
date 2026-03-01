@@ -24,4 +24,5 @@ export type PanelState =
   | { type: "none" }
   | { type: "agent" }
   | { type: "knowledge" }
+  | { type: "edit-agent" }
   | { type: "chat" };

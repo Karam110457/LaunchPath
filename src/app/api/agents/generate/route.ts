@@ -152,6 +152,15 @@ export async function POST(request: NextRequest) {
             template_id: templateId ?? null,
             model: "claude-sonnet-4-5-20250929",
             status: "draft",
+            wizard_config: wizardConfig
+              ? {
+                  templateId: wizardConfig.templateId,
+                  businessDescription: wizardConfig.businessDescription,
+                  qualifyingQuestions: wizardConfig.qualifyingQuestions,
+                  behaviorConfig: wizardConfig.behaviorConfig,
+                  personality: wizardConfig.personality,
+                }
+              : null,
           })
           .select("id")
           .single();
