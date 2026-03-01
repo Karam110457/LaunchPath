@@ -28,7 +28,7 @@ export const KnowledgeNode = memo(function KnowledgeNode({
 
       <Handle
         type="target"
-        position={Position.Left}
+        position={Position.Top}
         className="!bg-violet-400 !w-2 !h-2 !border-2 !border-card"
       />
     </div>

@@ -42,7 +42,7 @@ export const ToolNode = memo(function ToolNode({ data }: NodeProps) {
 
       <Handle
         type="target"
-        position={Position.Right}
+        position={Position.Top}
         className="!bg-blue-400 !w-2 !h-2 !border-2 !border-card"
       />
     </div>

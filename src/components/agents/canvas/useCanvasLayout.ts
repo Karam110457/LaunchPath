@@ -7,7 +7,6 @@ import type {
 } from "./canvas-types";
 
 // React Flow expects Record<string, unknown> for node data.
-// We use a loose node type to avoid index-signature mismatches with our typed data.
 type CanvasNode = {
   id: string;
   type: string;
@@ -22,17 +21,17 @@ interface LayoutInput {
   tools: ToolNodeData[];
 }
 
-const AGENT_POS = { x: 400, y: 300 };
-const KNOWLEDGE_OFFSET = { x: 320, y: 0 };
-const TOOL_X_OFFSET = -300;
-const TOOL_Y_SPACING = 110;
+// Vertical hierarchy: agent on top, children below
+const AGENT_POS = { x: 400, y: 100 };
+const CHILD_Y = 300; // vertical distance below agent
+const CHILD_X_SPACING = 200; // horizontal spacing between children
 
 export function useCanvasLayout({ agent, knowledge, tools }: LayoutInput) {
   return useMemo(() => {
     const nodes: CanvasNode[] = [];
     const edges: Edge[] = [];
 
-    // 1. Agent node (center)
+    // 1. Agent node (top center)
     nodes.push({
       id: "agent",
       type: "agentNode",
@@ -41,47 +40,44 @@ export function useCanvasLayout({ agent, knowledge, tools }: LayoutInput) {
       draggable: true,
     });
 
-    // 2. Knowledge node (right of agent)
-    nodes.push({
+    // All children: tools + knowledge, laid out horizontally below agent
+    const children: { id: string; type: string; data: Record<string, unknown> }[] = [];
+
+    tools.forEach((tool) => {
+      children.push({
+        id: `tool-${tool.toolId}`,
+        type: "toolNode",
+        data: tool as unknown as Record<string, unknown>,
+      });
+    });
+
+    children.push({
       id: "knowledge",
       type: "knowledgeNode",
-      position: {
-        x: AGENT_POS.x + KNOWLEDGE_OFFSET.x,
-        y: AGENT_POS.y + KNOWLEDGE_OFFSET.y,
-      },
       data: knowledge as unknown as Record<string, unknown>,
-      draggable: true,
     });
 
-    edges.push({
-      id: "agent-knowledge",
-      source: "agent",
-      target: "knowledge",
-      type: "dashedEdge",
-    });
+    // Center children horizontally under the agent
+    const totalWidth = (children.length - 1) * CHILD_X_SPACING;
+    const startX = AGENT_POS.x - totalWidth / 2 + 30; // +30 offset to center visually (agent node ~220px wide)
 
-    // 3. Tool nodes (left of agent, stacked vertically)
-    const totalToolHeight = (tools.length - 1) * TOOL_Y_SPACING;
-    const toolStartY = AGENT_POS.y - totalToolHeight / 2;
-
-    tools.forEach((tool, i) => {
-      const nodeId = `tool-${tool.toolId}`;
+    children.forEach((child, i) => {
       nodes.push({
-        id: nodeId,
-        type: "toolNode",
+        id: child.id,
+        type: child.type,
         position: {
-          x: AGENT_POS.x + TOOL_X_OFFSET,
-          y: toolStartY + i * TOOL_Y_SPACING,
+          x: startX + i * CHILD_X_SPACING,
+          y: CHILD_Y,
         },
-        data: tool as unknown as Record<string, unknown>,
+        data: child.data,
         draggable: true,
       });
 
       edges.push({
-        id: `agent-${nodeId}`,
+        id: `agent-${child.id}`,
         source: "agent",
-        sourceHandle: "left",
-        target: nodeId,
+        sourceHandle: "bottom",
+        target: child.id,
         type: "dashedEdge",
       });
     });

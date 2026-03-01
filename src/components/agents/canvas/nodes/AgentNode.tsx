@@ -44,28 +44,11 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
           </Badge>
         </div>
 
-        {/* Handles */}
-        <Handle
-          type="source"
-          position={Position.Right}
-          className="!bg-primary !w-2.5 !h-2.5 !border-2 !border-card"
-        />
-        <Handle
-          type="source"
-          position={Position.Left}
-          id="left"
-          className="!bg-primary !w-2.5 !h-2.5 !border-2 !border-card"
-        />
+        {/* Bottom handle — edges flow downward to children */}
         <Handle
           type="source"
           position={Position.Bottom}
           id="bottom"
-          className="!bg-primary !w-2.5 !h-2.5 !border-2 !border-card"
-        />
-        <Handle
-          type="source"
-          position={Position.Top}
-          id="top"
           className="!bg-primary !w-2.5 !h-2.5 !border-2 !border-card"
         />
       </div>
