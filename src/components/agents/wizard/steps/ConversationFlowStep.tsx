@@ -86,14 +86,19 @@ export function ConversationFlowStep({
     <div className="space-y-6">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold tracking-tight">
-          Customize your conversation flow
+          {templateId === "appointment-booker"
+            ? "Customize your conversation flow"
+            : "Configure support behavior"}
         </h2>
         <p className="text-sm text-muted-foreground">
-          Define the questions your agent asks and how it handles conversations.
+          {templateId === "appointment-booker"
+            ? "Define the questions your agent asks to qualify leads and how it handles bookings."
+            : "Choose how your agent handles issues and responds to visitors."}
         </p>
       </div>
 
-      {/* Qualifying Questions */}
+      {/* Questions — only for appointment-booker */}
+      {templateId === "appointment-booker" && (
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <Label>Qualifying questions</Label>
@@ -113,7 +118,7 @@ export function ConversationFlowStep({
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Questions your agent will ask to understand what the visitor needs.
+          Questions your agent asks to qualify leads before booking.
         </p>
 
         {genError && (
@@ -147,6 +152,7 @@ export function ConversationFlowStep({
           Add custom question
         </Button>
       </div>
+      )}
 
       {/* Template-specific config */}
       <div className="border-t pt-6 space-y-4">

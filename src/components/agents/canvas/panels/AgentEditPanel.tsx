@@ -282,8 +282,8 @@ export function AgentEditPanel({
             </>
           )}
 
-          {/* ── Qualifying Questions (wizard agents only) ── */}
-          {hasWizard && (
+          {/* ── Qualifying Questions (appointment-booker only) ── */}
+          {hasWizard && formState.wizardConfig!.templateId === "appointment-booker" && (
             <>
               <hr className="border-border" />
               <QuestionsSection
