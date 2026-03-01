@@ -53,21 +53,31 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
 
-  // Snapshot current state before applying update (versioning)
-  // Wrapped in try/catch so versioning failures don't block the update
   const changeTitle = body.version_title as string | undefined;
   const changeDescription = body.version_description as string | undefined;
 
+  // Apply the update first
+  const { error } = await supabase
+    .from("ai_agents")
+    .update(updates)
+    .eq("id", agentId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return NextResponse.json({ error: "Update failed" }, { status: 500 });
+  }
+
+  // Snapshot the NEW state after update (versioning)
+  // Wrapped in try/catch so versioning failures don't block the response
   try {
-    const { data: current } = await supabase
+    const { data: updated } = await supabase
       .from("ai_agents")
       .select("name, description, system_prompt, personality, model, status")
       .eq("id", agentId)
       .eq("user_id", user.id)
       .single();
 
-    if (current) {
-      // Capture knowledge docs metadata as part of snapshot
+    if (updated) {
       const { data: knowledgeDocs } = await supabase
         .from("agent_knowledge_documents")
         .select("id, source_type, source_name, status")
@@ -84,29 +94,19 @@ export async function PATCH(
         agent_id: agentId,
         user_id: user.id,
         version_number: versionNumber,
-        name: current.name,
-        description: current.description,
-        system_prompt: current.system_prompt,
-        personality: current.personality ?? {},
-        model: current.model,
-        status: current.status,
+        name: updated.name,
+        description: updated.description,
+        system_prompt: updated.system_prompt,
+        personality: updated.personality ?? {},
+        model: updated.model,
+        status: updated.status,
         change_title: changeTitle?.trim() || null,
         change_description: changeDescription?.trim() || null,
         knowledge_snapshot: knowledgeDocs ?? [],
       });
     }
   } catch {
-    // Versioning table may not exist yet — continue with the update
-  }
-
-  const { error } = await supabase
-    .from("ai_agents")
-    .update(updates)
-    .eq("id", agentId)
-    .eq("user_id", user.id);
-
-  if (error) {
-    return NextResponse.json({ error: "Update failed" }, { status: 500 });
+    // Versioning table may not exist yet — continue
   }
 
   return NextResponse.json({ ok: true });
