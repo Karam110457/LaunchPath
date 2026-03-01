@@ -22,6 +22,8 @@ import { NodeModal } from "./panels/NodeModal";
 import { AgentEditPanel } from "./panels/AgentEditPanel";
 import { KnowledgeDetailPanel } from "./panels/KnowledgeDetailPanel";
 import { AgentChatPanel } from "@/components/agents/AgentChatPanel";
+import { SaveDialog } from "./SaveDialog";
+import { VersionHistoryModal } from "./VersionHistoryModal";
 import { useCanvasLayout } from "./useCanvasLayout";
 import type {
   PanelState,
@@ -93,6 +95,8 @@ function AgentCanvasInner({
 
   const [formState, setFormState] = useState<AgentFormState>(originalFormState);
   const [isSaving, setIsSaving] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
 
   const isDirty = useMemo(() => {
     return (Object.keys(originalFormState) as (keyof AgentFormState)[]).some(
@@ -100,37 +104,69 @@ function AgentCanvasInner({
     );
   }, [formState, originalFormState]);
 
-  const handleSave = useCallback(async () => {
-    if (!formState.name.trim()) return;
-    setIsSaving(true);
-    try {
-      const res = await fetch(`/api/agents/${agent.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formState.name.trim(),
-          description: formState.description.trim() || null,
-          system_prompt: formState.systemPrompt,
-          personality: {
-            tone: formState.tone.trim() || undefined,
-            greeting_message: formState.greetingMessage.trim() || undefined,
-            avatar_emoji: formState.avatarEmoji.trim() || "🤖",
-          },
-          model: formState.model,
-          status: formState.status,
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Update failed");
+  const handleSave = useCallback(
+    async (title: string, description: string) => {
+      if (!formState.name.trim()) return;
+      setIsSaving(true);
+      try {
+        const res = await fetch(`/api/agents/${agent.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: formState.name.trim(),
+            description: formState.description.trim() || null,
+            system_prompt: formState.systemPrompt,
+            personality: {
+              tone: formState.tone.trim() || undefined,
+              greeting_message: formState.greetingMessage.trim() || undefined,
+              avatar_emoji: formState.avatarEmoji.trim() || "🤖",
+            },
+            model: formState.model,
+            status: formState.status,
+            version_title: title || undefined,
+            version_description: description || undefined,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Update failed");
+        }
+        setShowSaveDialog(false);
+        router.refresh();
+      } catch (err) {
+        console.error("Save failed:", err);
+      } finally {
+        setIsSaving(false);
       }
+    },
+    [agent.id, formState, router]
+  );
+
+  const handleReverted = useCallback(
+    (revertedAgent: {
+      name: string;
+      description: string | null;
+      system_prompt: string;
+      personality: Record<string, unknown>;
+      model: string;
+      status: string;
+    }) => {
+      setFormState({
+        name: revertedAgent.name,
+        description: revertedAgent.description ?? "",
+        avatarEmoji:
+          (revertedAgent.personality?.avatar_emoji as string) ?? "🤖",
+        tone: (revertedAgent.personality?.tone as string) ?? "",
+        greetingMessage:
+          (revertedAgent.personality?.greeting_message as string) ?? "",
+        model: revertedAgent.model,
+        status: revertedAgent.status,
+        systemPrompt: revertedAgent.system_prompt,
+      });
       router.refresh();
-    } catch (err) {
-      console.error("Save failed:", err);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [agent.id, formState, router]);
+    },
+    [router]
+  );
 
   // Build node data
   const agentData: AgentNodeData = {
@@ -205,7 +241,8 @@ function AgentCanvasInner({
         agentName={formState.name}
         status={formState.status as "draft" | "active" | "paused"}
         avatarEmoji={formState.avatarEmoji}
-        onSave={handleSave}
+        onSave={() => setShowSaveDialog(true)}
+        onVersionHistory={() => setShowVersionHistory(true)}
         isSaving={isSaving}
         isDirty={isDirty}
       />
@@ -268,6 +305,20 @@ function AgentCanvasInner({
           />
         )}
       </NodeModal>
+
+      <SaveDialog
+        open={showSaveDialog}
+        onClose={() => setShowSaveDialog(false)}
+        onSave={handleSave}
+        isSaving={isSaving}
+      />
+
+      <VersionHistoryModal
+        open={showVersionHistory}
+        onClose={() => setShowVersionHistory(false)}
+        agentId={agent.id}
+        onReverted={handleReverted}
+      />
     </div>
   );
 }

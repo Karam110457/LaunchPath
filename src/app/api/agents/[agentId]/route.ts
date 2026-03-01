@@ -55,6 +55,9 @@ export async function PATCH(
 
   // Snapshot current state before applying update (versioning)
   // Wrapped in try/catch so versioning failures don't block the update
+  const changeTitle = body.version_title as string | undefined;
+  const changeDescription = body.version_description as string | undefined;
+
   try {
     const { data: current } = await supabase
       .from("ai_agents")
@@ -64,6 +67,12 @@ export async function PATCH(
       .single();
 
     if (current) {
+      // Capture knowledge docs metadata as part of snapshot
+      const { data: knowledgeDocs } = await supabase
+        .from("agent_knowledge_documents")
+        .select("id, source_type, source_name, status")
+        .eq("agent_id", agentId);
+
       const { count } = await supabase
         .from("agent_versions")
         .select("id", { count: "exact", head: true })
@@ -81,6 +90,9 @@ export async function PATCH(
         personality: current.personality ?? {},
         model: current.model,
         status: current.status,
+        change_title: changeTitle?.trim() || null,
+        change_description: changeDescription?.trim() || null,
+        knowledge_snapshot: knowledgeDocs ?? [],
       });
     }
   } catch {

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Rocket, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Rocket, Save, Loader2, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -10,6 +10,7 @@ interface TopBarProps {
   status: "draft" | "active" | "paused";
   avatarEmoji: string;
   onSave: () => void;
+  onVersionHistory: () => void;
   isSaving: boolean;
   isDirty: boolean;
 }
@@ -19,6 +20,7 @@ export function TopBar({
   status,
   avatarEmoji,
   onSave,
+  onVersionHistory,
   isSaving,
   isDirty,
 }: TopBarProps) {
@@ -43,6 +45,15 @@ export function TopBar({
         </Badge>
       </div>
       <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onVersionHistory}
+          className="text-muted-foreground"
+        >
+          <History className="w-3.5 h-3.5 mr-1.5" />
+          Versions
+        </Button>
         <Button
           variant={isDirty ? "default" : "outline"}
           size="sm"

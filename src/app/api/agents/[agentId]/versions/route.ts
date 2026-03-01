@@ -25,14 +25,16 @@ export async function GET(
 
   const { data: versions, error } = await supabase
     .from("agent_versions")
-    .select("id, version_number, name, description, model, status, created_at")
+    .select(
+      "id, version_number, name, description, system_prompt, personality, model, status, change_title, change_description, knowledge_snapshot, created_at"
+    )
     .eq("agent_id", agentId)
     .eq("user_id", user.id)
     .order("version_number", { ascending: false })
     .limit(50);
 
   if (error) {
-    // Table may not exist yet — return empty list instead of 500
+    // Table may not exist yet — return empty list
     return NextResponse.json({ versions: [] });
   }
 
@@ -75,10 +77,7 @@ export async function POST(
     .single();
 
   if (!version) {
-    return NextResponse.json(
-      { error: "Version not found" },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: "Version not found" }, { status: 404 });
   }
 
   // Apply the snapshot as an update to the agent
@@ -96,11 +95,20 @@ export async function POST(
     .eq("user_id", user.id);
 
   if (updateError) {
-    return NextResponse.json(
-      { error: "Failed to revert" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to revert" }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, revertedTo: version.version_number });
+  // Return the reverted agent state so the client can sync form state
+  return NextResponse.json({
+    ok: true,
+    revertedTo: version.version_number,
+    agent: {
+      name: version.name,
+      description: version.description,
+      system_prompt: version.system_prompt,
+      personality: version.personality,
+      model: version.model,
+      status: version.status,
+    },
+  });
 }
