@@ -253,6 +253,12 @@
   animation: node-enter 0.4s ease-out;
 }
 
+/* Hide connection handle dots on canvas nodes */
+.react-flow__handle {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 /* Centered page container: max-width + horizontal margin auto + consistent padding */
 @layer components {
   .container {

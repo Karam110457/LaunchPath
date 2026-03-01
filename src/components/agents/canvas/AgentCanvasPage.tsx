@@ -177,10 +177,10 @@ function AgentCanvasInner({
         elementsSelectable
       >
         <Background
-          variant={BackgroundVariant.Lines}
-          gap={40}
-          size={1}
-          color="rgba(255, 255, 255, 0.04)"
+          variant={BackgroundVariant.Dots}
+          gap={24}
+          size={1.2}
+          color="rgba(255, 255, 255, 0.15)"
         />
       </ReactFlow>
 
