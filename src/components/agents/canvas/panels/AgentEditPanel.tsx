@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, ChevronDown, ChevronRight, History, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,22 +18,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import type { AgentFormState } from "../canvas-types";
 
 interface AgentEditPanelProps {
-  agent: {
-    id: string;
-    name: string;
-    description: string | null;
-    system_prompt: string;
-    model: string;
-    status: string;
-  };
-  personality: {
-    tone?: string;
-    greeting_message?: string;
-    avatar_emoji?: string;
-  } | null;
-  onSave: () => void;
+  agentId: string;
+  formState: AgentFormState;
+  setFormState: React.Dispatch<React.SetStateAction<AgentFormState>>;
 }
 
 const MODEL_OPTIONS = [
@@ -47,70 +37,42 @@ const STATUS_OPTIONS = [
   { value: "paused", label: "Paused" },
 ];
 
+interface VersionEntry {
+  id: string;
+  version_number: number;
+  name: string;
+  description: string | null;
+  model: string;
+  status: string;
+  created_at: string;
+}
+
 export function AgentEditPanel({
-  agent,
-  personality,
-  onSave,
+  agentId,
+  formState,
+  setFormState,
 }: AgentEditPanelProps) {
   const router = useRouter();
-
-  const [name, setName] = useState(agent.name);
-  const [description, setDescription] = useState(agent.description ?? "");
-  const [avatarEmoji, setAvatarEmoji] = useState(
-    personality?.avatar_emoji ?? "🤖"
-  );
-  const [tone, setTone] = useState(personality?.tone ?? "");
-  const [greetingMessage, setGreetingMessage] = useState(
-    personality?.greeting_message ?? ""
-  );
-  const [model, setModel] = useState(agent.model);
-  const [status, setStatus] = useState(agent.status);
-  const [systemPrompt, setSystemPrompt] = useState(agent.system_prompt);
-
-  const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSave = async () => {
-    if (!name.trim()) {
-      setError("Agent name is required.");
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/agents/${agent.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          description: description.trim() || null,
-          system_prompt: systemPrompt,
-          personality: {
-            tone: tone.trim() || undefined,
-            greeting_message: greetingMessage.trim() || undefined,
-            avatar_emoji: avatarEmoji.trim() || "🤖",
-          },
-          model,
-          status,
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Update failed");
-      }
-      onSave();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Update failed");
-    } finally {
-      setSaving(false);
-    }
+  // Version history
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const [versions, setVersions] = useState<VersionEntry[]>([]);
+  const [loadingVersions, setLoadingVersions] = useState(false);
+  const [reverting, setReverting] = useState<string | null>(null);
+
+  const update = <K extends keyof AgentFormState>(
+    key: K,
+    value: AgentFormState[K]
+  ) => {
+    setFormState((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      const res = await fetch(`/api/agents/${agent.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/agents/${agentId}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Delete failed");
@@ -121,6 +83,48 @@ export function AgentEditPanel({
       setDeleting(false);
     }
   };
+
+  const fetchVersions = useCallback(async () => {
+    setLoadingVersions(true);
+    try {
+      const res = await fetch(`/api/agents/${agentId}/versions`);
+      if (res.ok) {
+        const data = await res.json();
+        setVersions(data.versions ?? []);
+      }
+    } finally {
+      setLoadingVersions(false);
+    }
+  }, [agentId]);
+
+  const handleToggleVersions = () => {
+    const next = !versionsOpen;
+    setVersionsOpen(next);
+    if (next && versions.length === 0) {
+      fetchVersions();
+    }
+  };
+
+  const handleRevert = async (versionId: string) => {
+    setReverting(versionId);
+    try {
+      const res = await fetch(`/api/agents/${agentId}/versions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ versionId }),
+      });
+      if (res.ok) {
+        router.refresh();
+      }
+    } finally {
+      setReverting(null);
+    }
+  };
+
+  // Re-fetch versions when panel opens
+  useEffect(() => {
+    if (versionsOpen) fetchVersions();
+  }, [versionsOpen, fetchVersions]);
 
   return (
     <div className="p-5 space-y-5">
@@ -136,8 +140,8 @@ export function AgentEditPanel({
             </Label>
             <Input
               id="edit-emoji"
-              value={avatarEmoji}
-              onChange={(e) => setAvatarEmoji(e.target.value)}
+              value={formState.avatarEmoji}
+              onChange={(e) => update("avatarEmoji", e.target.value)}
               className="h-9 text-center text-lg"
               maxLength={2}
             />
@@ -148,8 +152,8 @@ export function AgentEditPanel({
             </Label>
             <Input
               id="edit-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={formState.name}
+              onChange={(e) => update("name", e.target.value)}
               className="h-9 text-sm"
               placeholder="Agent name"
             />
@@ -161,8 +165,8 @@ export function AgentEditPanel({
           </Label>
           <Textarea
             id="edit-description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            value={formState.description}
+            onChange={(e) => update("description", e.target.value)}
             rows={2}
             className="text-sm"
             placeholder="What does this agent do?"
@@ -183,8 +187,8 @@ export function AgentEditPanel({
           </Label>
           <Input
             id="edit-tone"
-            value={tone}
-            onChange={(e) => setTone(e.target.value)}
+            value={formState.tone}
+            onChange={(e) => update("tone", e.target.value)}
             className="h-9 text-sm"
             placeholder="e.g., friendly and professional"
           />
@@ -195,8 +199,8 @@ export function AgentEditPanel({
           </Label>
           <Textarea
             id="edit-greeting"
-            value={greetingMessage}
-            onChange={(e) => setGreetingMessage(e.target.value)}
+            value={formState.greetingMessage}
+            onChange={(e) => update("greetingMessage", e.target.value)}
             rows={2}
             className="text-sm"
             placeholder="First message shown to visitors"
@@ -218,8 +222,8 @@ export function AgentEditPanel({
             </Label>
             <select
               id="edit-model"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
+              value={formState.model}
+              onChange={(e) => update("model", e.target.value)}
               className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               {MODEL_OPTIONS.map((opt) => (
@@ -235,8 +239,8 @@ export function AgentEditPanel({
             </Label>
             <select
               id="edit-status"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
+              value={formState.status}
+              onChange={(e) => update("status", e.target.value)}
               className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               {STATUS_OPTIONS.map((opt) => (
@@ -257,8 +261,8 @@ export function AgentEditPanel({
           System Prompt
         </h3>
         <Textarea
-          value={systemPrompt}
-          onChange={(e) => setSystemPrompt(e.target.value)}
+          value={formState.systemPrompt}
+          onChange={(e) => update("systemPrompt", e.target.value)}
           rows={10}
           className="text-sm font-mono"
           placeholder="Instructions for how the agent should behave..."
@@ -266,25 +270,76 @@ export function AgentEditPanel({
       </section>
 
       {/* Error */}
-      {error && (
-        <p className="text-xs text-destructive">{error}</p>
-      )}
+      {error && <p className="text-xs text-destructive">{error}</p>}
 
-      {/* Save */}
-      <Button
-        onClick={handleSave}
-        disabled={saving || !name.trim()}
-        className="w-full"
-      >
-        {saving ? (
-          <>
-            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-            Saving...
-          </>
-        ) : (
-          "Save Changes"
+      {/* Version History */}
+      <section className="space-y-2">
+        <button
+          type="button"
+          onClick={handleToggleVersions}
+          className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors w-full"
+        >
+          {versionsOpen ? (
+            <ChevronDown className="w-3.5 h-3.5" />
+          ) : (
+            <ChevronRight className="w-3.5 h-3.5" />
+          )}
+          <History className="w-3.5 h-3.5" />
+          Version History
+        </button>
+
+        {versionsOpen && (
+          <div className="space-y-1.5 pl-1">
+            {loadingVersions && (
+              <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Loading versions...
+              </div>
+            )}
+            {!loadingVersions && versions.length === 0 && (
+              <p className="text-xs text-muted-foreground py-2">
+                No previous versions. Versions are created automatically when you save changes.
+              </p>
+            )}
+            {versions.map((v) => (
+              <div
+                key={v.id}
+                className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors"
+              >
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-foreground truncate">
+                    v{v.version_number} &middot; {v.name}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {new Date(v.created_at).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  disabled={reverting === v.id}
+                  onClick={() => handleRevert(v.id)}
+                >
+                  {reverting === v.id ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <>
+                      <RotateCcw className="w-3 h-3 mr-1" />
+                      Revert
+                    </>
+                  )}
+                </Button>
+              </div>
+            ))}
+          </div>
         )}
-      </Button>
+      </section>
 
       {/* Danger Zone */}
       <section className="border-t border-destructive/20 pt-5 mt-2">

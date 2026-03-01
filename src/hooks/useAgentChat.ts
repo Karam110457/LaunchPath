@@ -28,6 +28,7 @@ interface UseAgentChatOptions {
 
 interface UseAgentChatReturn {
   messages: AgentChatMessage[];
+  restoredCount: number;
   isStreaming: boolean;
   isTyping: boolean;
   isThinking: boolean;
@@ -67,6 +68,7 @@ export function useAgentChat({
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingText, setThinkingText] = useState("");
 
+  const restoredCount = initialMessages.length;
   const historyRef = useRef<AgentConversationMessage[]>(initialMessages);
   const streamingIdRef = useRef<string | null>(null);
 
@@ -271,6 +273,7 @@ export function useAgentChat({
 
   return {
     messages,
+    restoredCount,
     isStreaming,
     isTyping,
     isThinking,

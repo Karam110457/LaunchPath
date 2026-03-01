@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Rocket, Settings } from "lucide-react";
+import { ArrowLeft, Rocket, Save, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -9,10 +9,19 @@ interface TopBarProps {
   agentName: string;
   status: "draft" | "active" | "paused";
   avatarEmoji: string;
-  onEdit: () => void;
+  onSave: () => void;
+  isSaving: boolean;
+  isDirty: boolean;
 }
 
-export function TopBar({ agentName, status, avatarEmoji, onEdit }: TopBarProps) {
+export function TopBar({
+  agentName,
+  status,
+  avatarEmoji,
+  onSave,
+  isSaving,
+  isDirty,
+}: TopBarProps) {
   return (
     <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-background/80 backdrop-blur-sm border-b border-border/50">
       <div className="flex items-center gap-3">
@@ -34,9 +43,23 @@ export function TopBar({ agentName, status, avatarEmoji, onEdit }: TopBarProps) 
         </Badge>
       </div>
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" onClick={onEdit}>
-          <Settings className="w-3.5 h-3.5 mr-1.5" />
-          Edit
+        <Button
+          variant={isDirty ? "default" : "outline"}
+          size="sm"
+          onClick={onSave}
+          disabled={!isDirty || isSaving}
+        >
+          {isSaving ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="w-3.5 h-3.5 mr-1.5" />
+              Save
+            </>
+          )}
         </Button>
         <Button size="sm">
           <Rocket className="w-3.5 h-3.5 mr-1.5" />

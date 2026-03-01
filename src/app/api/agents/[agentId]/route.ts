@@ -53,6 +53,36 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
 
+  // Snapshot current state before applying update (versioning)
+  const { data: current } = await supabase
+    .from("ai_agents")
+    .select("name, description, system_prompt, personality, model, status")
+    .eq("id", agentId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (current) {
+    // Get next version number
+    const { count } = await supabase
+      .from("agent_versions")
+      .select("id", { count: "exact", head: true })
+      .eq("agent_id", agentId);
+
+    const versionNumber = (count ?? 0) + 1;
+
+    await supabase.from("agent_versions").insert({
+      agent_id: agentId,
+      user_id: user.id,
+      version_number: versionNumber,
+      name: current.name,
+      description: current.description,
+      system_prompt: current.system_prompt,
+      personality: current.personality ?? {},
+      model: current.model,
+      status: current.status,
+    });
+  }
+
   const { error } = await supabase
     .from("ai_agents")
     .update(updates)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ReactFlow,
@@ -19,7 +19,6 @@ import { DashedEdge } from "./edges/DashedEdge";
 import { TopBar } from "./TopBar";
 import { BottomBar } from "./BottomBar";
 import { NodeModal } from "./panels/NodeModal";
-import { AgentDetailPanel } from "./panels/AgentDetailPanel";
 import { AgentEditPanel } from "./panels/AgentEditPanel";
 import { KnowledgeDetailPanel } from "./panels/KnowledgeDetailPanel";
 import { AgentChatPanel } from "@/components/agents/AgentChatPanel";
@@ -28,6 +27,7 @@ import type {
   PanelState,
   AgentNodeData,
   KnowledgeNodeData,
+  AgentFormState,
 } from "./canvas-types";
 import type { AgentConversationMessage } from "@/lib/chat/agent-chat-types";
 
@@ -75,17 +75,73 @@ function AgentCanvasInner({
 }: AgentCanvasPageProps) {
   const router = useRouter();
 
+  // Lifted agent form state (shared between edit panel + TopBar save)
+  const originalFormState = useMemo<AgentFormState>(
+    () => ({
+      name: agent.name,
+      description: agent.description ?? "",
+      avatarEmoji: personality?.avatar_emoji ?? "🤖",
+      tone: personality?.tone ?? "",
+      greetingMessage: personality?.greeting_message ?? "",
+      model: agent.model,
+      status: agent.status,
+      systemPrompt: agent.system_prompt,
+    }),
+    [agent, personality]
+  );
+
+  const [formState, setFormState] = useState<AgentFormState>(originalFormState);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const isDirty = useMemo(() => {
+    return (Object.keys(originalFormState) as (keyof AgentFormState)[]).some(
+      (key) => formState[key] !== originalFormState[key]
+    );
+  }, [formState, originalFormState]);
+
+  const handleSave = useCallback(async () => {
+    if (!formState.name.trim()) return;
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/agents/${agent.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formState.name.trim(),
+          description: formState.description.trim() || null,
+          system_prompt: formState.systemPrompt,
+          personality: {
+            tone: formState.tone.trim() || undefined,
+            greeting_message: formState.greetingMessage.trim() || undefined,
+            avatar_emoji: formState.avatarEmoji.trim() || "🤖",
+          },
+          model: formState.model,
+          status: formState.status,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Update failed");
+      }
+      router.refresh();
+    } catch (err) {
+      console.error("Save failed:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [agent.id, formState, router]);
+
   // Build node data
   const agentData: AgentNodeData = {
     agentId: agent.id,
-    name: agent.name,
-    description: agent.description,
-    model: agent.model,
-    status: agent.status as "draft" | "active" | "paused",
-    avatarEmoji: personality?.avatar_emoji ?? "\u{1F916}",
-    tone: personality?.tone ?? null,
-    greetingMessage: personality?.greeting_message ?? null,
-    systemPrompt: agent.system_prompt,
+    name: formState.name,
+    description: formState.description || null,
+    model: formState.model,
+    status: formState.status as "draft" | "active" | "paused",
+    avatarEmoji: formState.avatarEmoji,
+    tone: formState.tone || null,
+    greetingMessage: formState.greetingMessage || null,
+    systemPrompt: formState.systemPrompt,
   };
 
   const knowledgeData: KnowledgeNodeData = {
@@ -109,11 +165,17 @@ function AgentCanvasInner({
   const [modal, setModal] = useState<PanelState>({ type: "none" });
   const [testMode, setTestMode] = useState(false);
 
+  // Single-click on knowledge node opens knowledge panel
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
-    if (node.type === "agentNode") {
-      setModal({ type: "agent" });
-    } else if (node.type === "knowledgeNode") {
+    if (node.type === "knowledgeNode") {
       setModal({ type: "knowledge" });
+    }
+  }, []);
+
+  // Double-click on agent node opens edit config
+  const onNodeDoubleClick: NodeMouseHandler = useCallback((_event, node) => {
+    if (node.type === "agentNode") {
+      setModal({ type: "edit-agent" });
     }
   }, []);
 
@@ -132,18 +194,19 @@ function AgentCanvasInner({
 
   // Modal title
   let modalTitle = "";
-  if (modal.type === "agent") modalTitle = "Agent Details";
-  else if (modal.type === "edit-agent") modalTitle = "Edit Agent";
+  if (modal.type === "edit-agent") modalTitle = "Edit Agent";
   else if (modal.type === "knowledge") modalTitle = "Knowledge Base";
   else if (modal.type === "chat") modalTitle = `Test ${agent.name}`;
 
   return (
     <div className="relative w-full h-[calc(100vh-3.5rem)] overflow-hidden bg-[#0a0a0a]">
       <TopBar
-        agentName={agent.name}
-        status={agent.status as "draft" | "active" | "paused"}
-        avatarEmoji={personality?.avatar_emoji ?? "\u{1F916}"}
-        onEdit={() => setModal({ type: "edit-agent" })}
+        agentName={formState.name}
+        status={formState.status as "draft" | "active" | "paused"}
+        avatarEmoji={formState.avatarEmoji}
+        onSave={handleSave}
+        isSaving={isSaving}
+        isDirty={isDirty}
       />
 
       <ReactFlow
@@ -152,6 +215,7 @@ function AgentCanvasInner({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
+        onNodeDoubleClick={onNodeDoubleClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
@@ -180,17 +244,11 @@ function AgentCanvasInner({
         title={modalTitle}
         size={modal.type === "chat" ? "chat" : "default"}
       >
-        {modal.type === "agent" && (
-          <AgentDetailPanel agent={agent} personality={personality} />
-        )}
         {modal.type === "edit-agent" && (
           <AgentEditPanel
-            agent={agent}
-            personality={personality}
-            onSave={() => {
-              setModal({ type: "none" });
-              router.refresh();
-            }}
+            agentId={agent.id}
+            formState={formState}
+            setFormState={setFormState}
           />
         )}
         {modal.type === "knowledge" && (

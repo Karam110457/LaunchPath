@@ -19,10 +19,21 @@ export interface KnowledgeNodeData {
   processingCount: number;
 }
 
+// Lifted form state for agent editing (shared between edit panel + TopBar save)
+export interface AgentFormState {
+  name: string;
+  description: string;
+  avatarEmoji: string;
+  tone: string;
+  greetingMessage: string;
+  model: string;
+  status: string;
+  systemPrompt: string;
+}
+
 // Panel state: which panel is open and what data it needs
 export type PanelState =
   | { type: "none" }
-  | { type: "agent" }
   | { type: "knowledge" }
   | { type: "edit-agent" }
   | { type: "chat" };

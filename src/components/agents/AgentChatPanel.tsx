@@ -46,6 +46,7 @@ export function AgentChatPanel({
 }: AgentChatPanelProps) {
   const {
     messages,
+    restoredCount,
     isStreaming,
     isTyping,
     isThinking,
@@ -107,8 +108,20 @@ export function AgentChatPanel({
         aria-label="Test conversation"
       >
         <div className="max-w-3xl mx-auto w-full px-4 space-y-4">
-          {messages.map((msg) => (
-            <AgentMessage key={msg.id} message={msg} />
+          {messages.map((msg, idx) => (
+            <div key={msg.id}>
+              <AgentMessage message={msg} />
+              {/* Separator between restored history and new messages */}
+              {restoredCount > 0 && idx === restoredCount - 1 && idx < messages.length - 1 && (
+                <div className="flex items-center gap-3 py-3 mt-4">
+                  <div className="flex-1 border-t border-border/50" />
+                  <span className="text-[11px] text-muted-foreground/70 whitespace-nowrap">
+                    Previous conversation ({restoredCount} messages)
+                  </span>
+                  <div className="flex-1 border-t border-border/50" />
+                </div>
+              )}
+            </div>
           ))}
 
           {/* Thinking indicator */}
@@ -134,9 +147,13 @@ export function AgentChatPanel({
 
 /** Simple message bubble — no card handling. */
 function AgentMessage({ message }: { message: AgentChatMessage }) {
+  const timeLabel = message.timestamp
+    ? new Date(message.timestamp).toLocaleString()
+    : undefined;
+
   if (message.role === "user") {
     return (
-      <div className="flex justify-end">
+      <div className="flex justify-end" title={timeLabel}>
         <div className="max-w-[75%] rounded-2xl rounded-tr-sm px-4 py-2.5 bg-primary text-primary-foreground text-sm">
           {message.content}
         </div>
@@ -145,7 +162,7 @@ function AgentMessage({ message }: { message: AgentChatMessage }) {
   }
 
   return (
-    <div className="text-sm text-foreground leading-relaxed py-1">
+    <div className="text-sm text-foreground leading-relaxed py-1" title={timeLabel}>
       <StreamingText
         content={message.content}
         isStreaming={message.isStreaming ?? false}
