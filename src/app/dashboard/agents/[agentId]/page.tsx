@@ -44,12 +44,6 @@ export default async function AgentDetailPage({ params }: Props) {
     avatar_emoji?: string;
   } | null;
 
-  const tools = (agent.enabled_tools ?? []) as Array<{
-    tool_id: string;
-    label: string;
-    description: string;
-  }>;
-
   const initialChatMessages = Array.isArray(conversationResult.data?.messages)
     ? (conversationResult.data.messages as unknown as AgentConversationMessage[])
     : [];
@@ -68,7 +62,6 @@ export default async function AgentDetailPage({ params }: Props) {
     <AgentCanvasPage
       agent={agent}
       personality={personality}
-      tools={tools}
       initialDocuments={initialDocuments}
       initialChatMessages={initialChatMessages}
     />

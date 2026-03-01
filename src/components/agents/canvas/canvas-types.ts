@@ -19,17 +19,9 @@ export interface KnowledgeNodeData {
   processingCount: number;
 }
 
-// Data payload for each tool node
-export interface ToolNodeData {
-  toolId: string;
-  label: string;
-  description: string;
-}
-
 // Panel state: which panel is open and what data it needs
 export type PanelState =
   | { type: "none" }
   | { type: "agent" }
   | { type: "knowledge" }
-  | { type: "tool"; toolId: string }
   | { type: "chat" };

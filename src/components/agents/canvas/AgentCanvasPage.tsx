@@ -14,21 +14,18 @@ import "@xyflow/react/dist/style.css";
 
 import { AgentNode } from "./nodes/AgentNode";
 import { KnowledgeNode } from "./nodes/KnowledgeNode";
-import { ToolNode } from "./nodes/ToolNode";
 import { DashedEdge } from "./edges/DashedEdge";
 import { TopBar } from "./TopBar";
 import { BottomBar } from "./BottomBar";
 import { NodeModal } from "./panels/NodeModal";
 import { AgentDetailPanel } from "./panels/AgentDetailPanel";
 import { KnowledgeDetailPanel } from "./panels/KnowledgeDetailPanel";
-import { ToolDetailPanel } from "./panels/ToolDetailPanel";
 import { AgentChatPanel } from "@/components/agents/AgentChatPanel";
 import { useCanvasLayout } from "./useCanvasLayout";
 import type {
   PanelState,
   AgentNodeData,
   KnowledgeNodeData,
-  ToolNodeData,
 } from "./canvas-types";
 import type { AgentConversationMessage } from "@/lib/chat/agent-chat-types";
 
@@ -36,7 +33,6 @@ import type { AgentConversationMessage } from "@/lib/chat/agent-chat-types";
 const nodeTypes = {
   agentNode: AgentNode,
   knowledgeNode: KnowledgeNode,
-  toolNode: ToolNode,
 };
 const edgeTypes = {
   dashedEdge: DashedEdge,
@@ -57,7 +53,6 @@ export interface AgentCanvasPageProps {
     greeting_message?: string;
     avatar_emoji?: string;
   } | null;
-  tools: Array<{ tool_id: string; label: string; description: string }>;
   initialDocuments: Array<{
     id: string;
     source_type: "file" | "website" | "faq";
@@ -73,7 +68,6 @@ export interface AgentCanvasPageProps {
 function AgentCanvasInner({
   agent,
   personality,
-  tools,
   initialDocuments,
   initialChatMessages,
 }: AgentCanvasPageProps) {
@@ -98,17 +92,10 @@ function AgentCanvasInner({
       .length,
   };
 
-  const toolData: ToolNodeData[] = tools.map((t) => ({
-    toolId: t.tool_id,
-    label: t.label,
-    description: t.description,
-  }));
-
   // Layout
   const { nodes: initialNodes, edges: initialEdges } = useCanvasLayout({
     agent: agentData,
     knowledge: knowledgeData,
-    tools: toolData,
   });
 
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
@@ -123,9 +110,6 @@ function AgentCanvasInner({
       setModal({ type: "agent" });
     } else if (node.type === "knowledgeNode") {
       setModal({ type: "knowledge" });
-    } else if (node.type === "toolNode") {
-      const toolId = (node.data as unknown as ToolNodeData).toolId;
-      setModal({ type: "tool", toolId });
     }
   }, []);
 
@@ -146,9 +130,6 @@ function AgentCanvasInner({
   let modalTitle = "";
   if (modal.type === "agent") modalTitle = "Modify Agent";
   else if (modal.type === "knowledge") modalTitle = "Knowledge Base";
-  else if (modal.type === "tool")
-    modalTitle =
-      tools.find((t) => t.tool_id === modal.toolId)?.label ?? "Tool";
   else if (modal.type === "chat") modalTitle = `Test ${agent.name}`;
 
   return (
@@ -200,11 +181,6 @@ function AgentCanvasInner({
           <KnowledgeDetailPanel
             agentId={agent.id}
             initialDocuments={initialDocuments}
-          />
-        )}
-        {modal.type === "tool" && (
-          <ToolDetailPanel
-            tool={tools.find((t) => t.tool_id === modal.toolId)!}
           />
         )}
         {modal.type === "chat" && (
