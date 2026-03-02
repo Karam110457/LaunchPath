@@ -8,6 +8,8 @@ import {
   ReactFlowProvider,
   useNodesState,
   useEdgesState,
+  useNodesInitialized,
+  useReactFlow,
   Background,
   BackgroundVariant,
   type Node,
@@ -85,29 +87,40 @@ function CanvasFlow({
   onNodeDoubleClick,
   onReady,
 }: CanvasFlowProps) {
+  // Log what positions CanvasFlow is seeded with on first mount
+  const mountPositions = useRef<boolean>(false);
+  if (!mountPositions.current) {
+    mountPositions.current = true;
+    console.log("[canvas:CanvasFlow] MOUNT — initialNodes positions:");
+    for (const n of initialNodes) {
+      console.log(`  ${n.id}: x=${(n as unknown as {position:{x:number;y:number}}).position?.x} y=${(n as unknown as {position:{x:number;y:number}}).position?.y}`);
+    }
+  }
+
   // Initialised with correct nodes — no position jump on first paint
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // ─── Reveal after React Flow finishes its internal setup ─────────────────
-  // React Flow runs fitView via ResizeObserver (node measurement) which fires
-  // 1-2 frames after mount. We hide the canvas until that cycle is done so
-  // the user never sees the pre-fitView "squished" state.
+  // ─── Event-driven reveal ──────────────────────────────────────────────────
+  // Wait until React Flow has measured all node dimensions (ResizeObserver),
+  // then call fitView() imperatively — it returns Promise<boolean> which
+  // resolves only after the viewport has been adjusted. Only then reveal.
+  // This eliminates the fragile fixed-frame heuristic.
   const [isReady, setIsReady] = useState(false);
+  const hasRevealedRef = useRef(false);
+  const nodesInitialized = useNodesInitialized();
+  const { fitView } = useReactFlow();
+
   useEffect(() => {
-    let raf1: number, raf2: number;
-    // Two frames: frame 1 lets ResizeObserver fire, frame 2 lets fitView settle
-    raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
-        setIsReady(true);
-        onReady();
-      });
+    if (!nodesInitialized || hasRevealedRef.current) return;
+    hasRevealedRef.current = true;
+    console.log("[canvas:CanvasFlow] nodesInitialized — calling fitView");
+    void fitView({ padding: 0.4 }).then((fitted) => {
+      console.log("[canvas:CanvasFlow] fitView resolved:", fitted, "— revealing canvas");
+      setIsReady(true);
+      onReady();
     });
-    return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-    };
-  }, []); // run once on mount
+  }, [nodesInitialized, fitView, onReady]);
 
   // Recompute layout whenever tools or saved positions change
   const { nodes: layoutNodes, edges: layoutEdges } = useCanvasLayout({
@@ -155,8 +168,8 @@ function CanvasFlow({
   }, [agentTools]);
 
   return (
-    // opacity wrapper: hides the pre-fitView initialization state, then
-    // fades in cleanly once React Flow has settled (2 animation frames)
+    // opacity wrapper: hides the canvas until nodesInitialized + fitView()
+    // Promise resolves — then fades in cleanly
     <div
       className="w-full h-full"
       style={{
@@ -174,8 +187,6 @@ function CanvasFlow({
         onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.4 }}
         proOptions={{ hideAttribution: true }}
         minZoom={0.3}
         maxZoom={2}
@@ -392,7 +403,10 @@ function AgentCanvasInner({
   const [toolsReady, setToolsReady] = useState(false);
   // canvasReady flips true once CanvasFlow's 2-frame delay resolves
   const [canvasReady, setCanvasReady] = useState(false);
-  const handleCanvasReady = useCallback(() => setCanvasReady(true), []);
+  const handleCanvasReady = useCallback(() => {
+    console.log("[canvas:AgentCanvasInner] canvasReady=true — spinner hidden");
+    setCanvasReady(true);
+  }, []);
 
   const fetchTools = useCallback(async () => {
     try {
@@ -404,6 +418,7 @@ function AgentCanvasInner({
     } catch {
       // non-critical
     } finally {
+      console.log("[canvas:fetchTools] done — setting toolsReady=true");
       setToolsReady(true);
     }
   }, [agent.id]);
@@ -423,9 +438,9 @@ function AgentCanvasInner({
   );
 
   // ─── Position persistence ─────────────────────────────────────────────────
-  const [savedPositions, setSavedPositions] = useState<SavedPositions>(
-    (agent.canvas_layout as SavedPositions) ?? {}
-  );
+  const rawLayout = (agent.canvas_layout as SavedPositions) ?? {};
+  console.log("[canvas:init] canvas_layout from DB:", JSON.stringify(rawLayout));
+  const [savedPositions, setSavedPositions] = useState<SavedPositions>(rawLayout);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const persistPositions = useCallback(
@@ -452,6 +467,17 @@ function AgentCanvasInner({
     savedPositions,
   });
 
+  // Log what is being passed to CanvasFlow on toolsReady
+  useEffect(() => {
+    if (!toolsReady) return;
+    console.log("[canvas:AgentCanvasInner] toolsReady — layoutNodes being passed to CanvasFlow:");
+    for (const n of layoutNodes) {
+      console.log(`  ${n.id}: x=${n.position.x} y=${n.position.y}`);
+    }
+    console.log("[canvas:AgentCanvasInner] current savedPositions state:", JSON.stringify(savedPositions));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toolsReady]);
+
   // ─── Drag: capture positions and persist ─────────────────────────────────
   const onNodeDragStop: OnNodeDrag = useCallback(
     (_event, _node, allNodes) => {
@@ -459,6 +485,7 @@ function AgentCanvasInner({
       for (const n of allNodes) {
         updated[n.id] = { x: Math.round(n.position.x), y: Math.round(n.position.y) };
       }
+      console.log("[canvas:drag] saving positions:", JSON.stringify(updated));
       setSavedPositions(updated);
       persistPositions(updated);
     },

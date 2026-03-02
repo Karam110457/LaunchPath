@@ -260,6 +260,21 @@ export function ToolSetupDialog({
             </div>
           )}
 
+          {/* When to use — always visible, prominent */}
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">When should your agent use this?</Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              className="text-sm resize-none"
+              placeholder={`e.g. "Use this when the visitor asks to book a call, schedule a meeting, or wants to talk to someone."`}
+            />
+            <p className="text-xs text-muted-foreground">
+              This tells your agent exactly when to trigger this tool. Be specific about the phrases or situations that should activate it.
+            </p>
+          </div>
+
           {/* Test connection */}
           <div className="space-y-2">
             <Button
@@ -298,7 +313,7 @@ export function ToolSetupDialog({
             )}
           </div>
 
-          {/* Advanced: customize name + description */}
+          {/* Advanced: customize display name only */}
           <div>
             <button
               type="button"
@@ -310,36 +325,21 @@ export function ToolSetupDialog({
               ) : (
                 <ChevronDown className="w-3.5 h-3.5" />
               )}
-              Customize name &amp; description
+              Customize display name
             </button>
 
             {showAdvanced && (
-              <div className="space-y-4 mt-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Display name</Label>
-                  <Input
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="text-sm"
-                    placeholder="e.g. Book a Call"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Shown in the agent builder interface.
-                  </p>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Agent instructions</Label>
-                  <Textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={4}
-                    className="text-sm resize-none"
-                    placeholder="Describe when the agent should use this tool…"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    This is passed to the AI to explain when and how to use the tool.
-                  </p>
-                </div>
+              <div className="space-y-1.5 mt-3">
+                <Label className="text-xs">Display name</Label>
+                <Input
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="text-sm"
+                  placeholder="e.g. Book a Call"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Shown in the agent builder interface.
+                </p>
               </div>
             )}
           </div>

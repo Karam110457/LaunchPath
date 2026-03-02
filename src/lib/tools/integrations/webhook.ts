@@ -63,7 +63,7 @@ export function buildWebhookTool(
             body,
           });
 
-          if (res.ok || res.status < 500) {
+          if (res.ok) {
             return { success: true, message: "Data sent successfully." };
           }
           logger.error("Webhook returned error", { status: res.status, url: config.url });

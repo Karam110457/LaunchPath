@@ -61,11 +61,23 @@ export async function buildMCPTools(
               arguments: args as Record<string, unknown>,
             });
             await execClient.close();
-            return result;
+            // Normalize MCP CallToolResult to { success, message } shape
+            // so the chat route can render tool-result events correctly.
+            const content = result.content as Array<{ type: string; text?: string }>;
+            const text = content
+              .filter((c) => c.type === "text" && typeof c.text === "string")
+              .map((c) => c.text as string)
+              .join("\n")
+              .trim();
+            const success = !result.isError;
+            return {
+              success,
+              message: text || (success ? "Done." : `Tool ${capturedName} returned an error.`),
+            };
           } catch (err) {
             logger.error("MCP tool execution error", { tool: capturedName, err });
             await execClient.close().catch(() => {});
-            return { error: `MCP tool ${capturedName} failed.` };
+            return { success: false, message: `MCP tool ${capturedName} failed.` };
           }
         },
       });

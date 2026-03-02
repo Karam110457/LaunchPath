@@ -125,6 +125,16 @@ export async function POST(
     }
   }
 
+  // Auto-inject tool instructions so Claude knows when to use each tool
+  if (hasTools && agentToolRecords.length > 0) {
+    const toolLines = agentToolRecords
+      .map((t) => `- **${t.display_name}**: ${t.description}`)
+      .join("\n");
+    systemPrompt =
+      `${systemPrompt}\n\n## Tools Available\nYou have the following tools. ` +
+      `Use them proactively — if the user's request matches a tool's purpose, use the tool rather than just describing what you would do.\n${toolLines}`;
+  }
+
   // ---------------------------------------------------------------------------
   // Set up SSE stream
   // ---------------------------------------------------------------------------
@@ -251,7 +261,7 @@ export async function POST(
       // Add tools if any are configured
       if (hasTools) {
         streamOptions.tools = tools as Parameters<typeof streamText>[0]["tools"];
-        streamOptions.stopWhen = stepCountIs(5);
+        streamOptions.stopWhen = stepCountIs(10);
       }
 
       const result = streamText(streamOptions);
