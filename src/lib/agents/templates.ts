@@ -4,7 +4,6 @@ export interface AgentTemplate {
   description: string;
   icon: string;
   default_system_prompt_hint: string;
-  default_tools: string[];
   suggested_personality: {
     tone: string;
     greeting_message: string;
@@ -27,7 +26,6 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     icon: "Calendar",
     default_system_prompt_hint:
       "An AI agent that qualifies leads by asking about their needs, then books appointments on the calendar. Captures name, email, and phone before booking.",
-    default_tools: ["calendar", "lead-capture", "email"],
     suggested_personality: {
       tone: "friendly and efficient",
       greeting_message:
@@ -52,7 +50,6 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     icon: "LifeBuoy",
     default_system_prompt_hint:
       "A support agent that resolves customer issues using the knowledge base. Asks clarifying questions, provides step-by-step solutions, and escalates to a human when it cannot resolve the issue.",
-    default_tools: ["knowledge-base", "human-handoff"],
     suggested_personality: {
       tone: "patient and helpful",
       greeting_message:

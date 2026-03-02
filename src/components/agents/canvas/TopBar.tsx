@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Rocket, Save, Loader2, History } from "lucide-react";
+import { ArrowLeft, Save, Loader2, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -71,10 +71,6 @@ export function TopBar({
               Save
             </>
           )}
-        </Button>
-        <Button size="sm">
-          <Rocket className="w-3.5 h-3.5 mr-1.5" />
-          Deploy
         </Button>
       </div>
     </div>

@@ -43,9 +43,9 @@ const MODEL_OPTIONS = [
 ];
 
 const STATUS_OPTIONS = [
-  { value: "draft", label: "Draft", color: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
-  { value: "active", label: "Active", color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
-  { value: "paused", label: "Paused", color: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30" },
+  { value: "draft", label: "Draft", color: "bg-amber-500/15 text-amber-400 border-amber-500/30", desc: "Work in progress" },
+  { value: "active", label: "Active", color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", desc: "Ready for testing" },
+  { value: "paused", label: "Paused", color: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30", desc: "Temporarily disabled" },
 ];
 
 const TONE_PRESETS = [
@@ -264,11 +264,15 @@ export function AgentEditPanel({
                       ? opt.color
                       : "border-border text-muted-foreground hover:border-border/80"
                   )}
+                  title={opt.desc}
                 >
                   {opt.label}
                 </button>
               ))}
             </div>
+            <p className="text-[11px] text-muted-foreground">
+              Status is for your own tracking. Deployment is coming soon.
+            </p>
           </section>
 
           {/* ── Behavior (wizard agents only) ── */}

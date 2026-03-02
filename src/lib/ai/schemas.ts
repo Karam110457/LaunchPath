@@ -228,20 +228,11 @@ export const agentPersonalitySchema = z.object({
 
 export type AgentPersonality = z.infer<typeof agentPersonalitySchema>;
 
-export const agentToolConfigSchema = z.object({
-  tool_id: z.string(),
-  label: z.string(),
-  description: z.string(),
-});
-
-export type AgentToolConfig = z.infer<typeof agentToolConfigSchema>;
-
 export const agentGenerationOutputSchema = z.object({
   name: z.string(),
   description: z.string(),
   system_prompt: z.string(),
   personality: agentPersonalitySchema,
-  suggested_tools: z.array(agentToolConfigSchema),
 });
 
 export type AgentGenerationOutput = z.infer<typeof agentGenerationOutputSchema>;

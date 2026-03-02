@@ -25,18 +25,9 @@ You will receive a description of what kind of agent the user wants. You must ge
    - greeting_message: The first message the agent sends when a conversation starts (1-2 sentences)
    - avatar_emoji: A single emoji that represents this agent's purpose
 
-5. **suggested_tools** — An array of tools this agent should have access to. Choose from ONLY these available tools:
-   - { tool_id: "calendar", label: "Calendar Booking", description: "Book appointments and check availability" }
-   - { tool_id: "lead-capture", label: "Lead Capture", description: "Collect and save contact information" }
-   - { tool_id: "email", label: "Email", description: "Send emails to prospects or clients" }
-   - { tool_id: "knowledge-base", label: "Knowledge Base", description: "Answer questions from uploaded documents and FAQs" }
-   - { tool_id: "human-handoff", label: "Human Handoff", description: "Escalate to a human when the agent cannot help" }
-
-   Only include tools that are relevant to the agent's purpose. Most agents need 2-4 tools.
-
 IMPORTANT RULES:
 - The system_prompt must be self-contained — it should work as standalone instructions for an AI agent without any other context.
-- Do NOT include tool implementation details in the system_prompt. Just describe when the agent should use each capability.
+- Do NOT reference specific tools or tool names in the system_prompt. Describe capabilities in general terms (e.g. "collect their contact information" instead of "use the lead-capture tool").
 - The name should feel branded and specific, not generic like "AI Assistant" or "Chatbot".
 - The greeting_message should be natural and inviting, not corporate or stiff.
 - If the user mentions a specific business or niche, tailor everything to that context.`;
@@ -46,7 +37,6 @@ export function buildAgentGenerationContext(input: {
   templateContext?: {
     name: string;
     default_system_prompt_hint: string;
-    default_tools: string[];
     suggested_personality: {
       tone: string;
       greeting_message: string;
@@ -185,7 +175,6 @@ export function buildAgentGenerationContext(input: {
       `TEMPLATE STARTING POINT (use as a base, customize based on user request):\n` +
         `Template: ${t.name}\n` +
         `Hint: ${t.default_system_prompt_hint}\n` +
-        `Default tools: ${t.default_tools.join(", ")}\n` +
         `Suggested tone: ${t.suggested_personality.tone}\n` +
         `Suggested greeting: ${t.suggested_personality.greeting_message}`,
     );

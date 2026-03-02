@@ -96,7 +96,6 @@ export async function POST(request: NextRequest) {
       ? {
           name: template.name,
           default_system_prompt_hint: template.default_system_prompt_hint,
-          default_tools: template.default_tools,
           suggested_personality: template.suggested_personality,
         }
       : null;
@@ -137,6 +136,11 @@ export async function POST(request: NextRequest) {
           return;
         }
 
+        if (!agentConfig.system_prompt || !agentConfig.system_prompt.trim()) {
+          enqueue({ type: "error", error: "AI failed to generate a system prompt. Please try again." });
+          return;
+        }
+
         enqueue({ type: "progress", label: "Saving your agent..." });
 
         const { data: newAgent, error: insertError } = await supabase
@@ -148,7 +152,7 @@ export async function POST(request: NextRequest) {
             description: agentConfig.description,
             system_prompt: agentConfig.system_prompt,
             personality: agentConfig.personality,
-            enabled_tools: agentConfig.suggested_tools,
+            enabled_tools: [],
             template_id: templateId ?? null,
             model: "claude-sonnet-4-5-20250929",
             status: "draft",

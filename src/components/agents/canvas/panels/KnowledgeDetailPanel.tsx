@@ -162,6 +162,9 @@ export function KnowledgeDetailPanel({
     [agentId, refreshDocuments],
   );
 
+  const MAX_DOCUMENTS = 10;
+  const atLimit = documents.length >= MAX_DOCUMENTS;
+
   return (
     <div className="p-5 space-y-5">
       {panelError && (
@@ -179,31 +182,44 @@ export function KnowledgeDetailPanel({
       )}
       {/* Add Knowledge — stacked vertically for modal */}
       <div className="space-y-2">
-        <p className="text-xs text-muted-foreground">
-          Add documents, websites, or FAQs to your agent&apos;s knowledge.
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            Add documents, websites, or FAQs to your agent&apos;s knowledge.
+          </p>
+          <span className={`text-xs tabular-nums ${atLimit ? "text-amber-500 font-medium" : "text-muted-foreground"}`}>
+            {documents.length}/{MAX_DOCUMENTS}
+          </span>
+        </div>
+        {atLimit && (
+          <p className="text-xs text-amber-500">
+            Knowledge base limit reached. Remove a source to add more.
+          </p>
+        )}
         <div className="flex gap-2">
           <button
             onClick={() =>
-              setActiveForm(activeForm === "upload" ? null : "upload")
+              !atLimit && setActiveForm(activeForm === "upload" ? null : "upload")
             }
-            className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left text-xs transition-all ${activeForm === "upload" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/50"}`}
+            disabled={atLimit}
+            className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left text-xs transition-all ${atLimit ? "opacity-50 cursor-not-allowed border-border" : activeForm === "upload" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/50"}`}
           >
             <Upload className="w-4 h-4 shrink-0 text-muted-foreground" />
             <span className="font-medium">File</span>
           </button>
           <button
             onClick={() =>
-              setActiveForm(activeForm === "website" ? null : "website")
+              !atLimit && setActiveForm(activeForm === "website" ? null : "website")
             }
-            className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left text-xs transition-all ${activeForm === "website" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/50"}`}
+            disabled={atLimit}
+            className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left text-xs transition-all ${atLimit ? "opacity-50 cursor-not-allowed border-border" : activeForm === "website" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/50"}`}
           >
             <Globe className="w-4 h-4 shrink-0 text-muted-foreground" />
             <span className="font-medium">Website</span>
           </button>
           <button
-            onClick={() => setActiveForm(activeForm === "faq" ? null : "faq")}
-            className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left text-xs transition-all ${activeForm === "faq" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/50"}`}
+            onClick={() => !atLimit && setActiveForm(activeForm === "faq" ? null : "faq")}
+            disabled={atLimit}
+            className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left text-xs transition-all ${atLimit ? "opacity-50 cursor-not-allowed border-border" : activeForm === "faq" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/50"}`}
           >
             <MessageSquarePlus className="w-4 h-4 shrink-0 text-muted-foreground" />
             <span className="font-medium">FAQ</span>

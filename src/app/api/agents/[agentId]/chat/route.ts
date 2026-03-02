@@ -109,12 +109,16 @@ export async function POST(
 
   type AIMessage = { role: "user" | "assistant"; content: string };
 
-  const aiMessages: AIMessage[] = conversationHistory
+  // Sliding window: keep last 20 messages to avoid hitting context limits
+  const MAX_HISTORY_MESSAGES = 20;
+  const recentHistory = conversationHistory
     .filter((m) => m.role === "user" || m.role === "assistant")
-    .map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    }));
+    .slice(-MAX_HISTORY_MESSAGES);
+
+  const aiMessages: AIMessage[] = recentHistory.map((m) => ({
+    role: m.role as "user" | "assistant",
+    content: m.content,
+  }));
 
   aiMessages.push({ role: "user", content: userMessage });
 
