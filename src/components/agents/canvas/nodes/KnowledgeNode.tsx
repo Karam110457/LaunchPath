@@ -9,48 +9,44 @@ export const KnowledgeNode = memo(function KnowledgeNode({ data }: NodeProps) {
   const d = data as unknown as KnowledgeNodeData;
 
   return (
-    <div className="group relative">
-      <div className="absolute -inset-1.5 rounded-2xl bg-violet-500/15 opacity-0 group-hover:opacity-100 blur-lg transition-opacity duration-300" />
+    <div className="group relative flex flex-col items-center">
+      {/* Circle node */}
+      <div className="relative w-[130px] h-[130px] rounded-full bg-violet-950/70 border-2 border-violet-500/40 flex flex-col items-center justify-center cursor-pointer shadow-xl transition-all duration-200 hover:border-violet-400/65 hover:bg-violet-950/85">
+        {/* Glow — inside circle so it stays circular */}
+        <div className="absolute -inset-4 rounded-full bg-violet-500/15 opacity-0 group-hover:opacity-100 blur-2xl transition-opacity duration-300 pointer-events-none" />
 
-      {/* Violet-tinted background distinguishes this as a "data store" node */}
-      <div className="relative w-[195px] bg-violet-500/8 border border-violet-500/25 rounded-xl p-4 shadow-md cursor-pointer transition-all hover:border-violet-500/50 hover:bg-violet-500/12">
-        {/* Header */}
-        <div className="flex items-center gap-2.5 mb-4">
-          <div className="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center shrink-0">
-            <Brain className="w-4 h-4 text-violet-400" />
+        {/* Processing spinner */}
+        {d.processingCount > 0 && (
+          <div className="absolute top-3 right-3 z-10">
+            <Loader2 className="w-3 h-3 text-amber-400 animate-spin" />
           </div>
-          <span className="text-sm font-semibold text-foreground">Knowledge</span>
+        )}
+
+        {/* Icon */}
+        <div className="w-10 h-10 rounded-full bg-violet-500/30 flex items-center justify-center mb-2 z-10">
+          <Brain className="w-5 h-5 text-violet-300" />
         </div>
 
-        {/* Big count — the dominant visual element */}
-        <div className="flex items-end justify-between">
-          <div>
-            <p className="text-3xl font-bold text-violet-400 leading-none">
-              {d.documentCount}
-            </p>
-            <p className="text-[11px] text-violet-300/70 mt-1">
-              {d.documentCount === 1 ? "source" : "sources"}
-            </p>
-          </div>
-          {d.processingCount > 0 && (
-            <div className="flex items-center gap-1 text-[10px] text-amber-400 mb-0.5">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              <span>{d.processingCount} indexing</span>
-            </div>
-          )}
-        </div>
-
-        <p className="text-[10px] text-violet-300/0 group-hover:text-violet-300/50 mt-3 transition-colors duration-200">
-          click to manage
+        {/* Count */}
+        <p className="text-2xl font-bold text-violet-300 leading-none tabular-nums z-10">
+          {d.documentCount}
+        </p>
+        <p className="text-[10px] text-violet-300/50 mt-0.5 z-10">
+          {d.documentCount === 1 ? "source" : "sources"}
         </p>
 
-        {/* Top target handle — edge comes from agent's bottom-left */}
+        {/* Handle at top of circle */}
         <Handle
           type="target"
           position={Position.Top}
-          className="!bg-violet-400 !w-2 !h-2 !border-2 !border-card"
+          className="!bg-violet-400 !w-2.5 !h-2.5 !border-2 !border-card"
         />
       </div>
+
+      {/* Label below circle */}
+      <p className="mt-2.5 text-[11px] font-medium text-violet-300/50 tracking-wide select-none">
+        Knowledge Base
+      </p>
     </div>
   );
 });

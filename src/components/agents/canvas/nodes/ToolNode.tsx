@@ -22,46 +22,64 @@ const ICON_MAP: Record<string, LucideIcon> = {
   mcp: Plug,
 };
 
-// Each tool type gets its own accent color — applied as a left border stripe
 const STYLE_MAP: Record<
   string,
-  { accent: string; iconBg: string; iconColor: string; glow: string; badge: string }
+  {
+    iconBg: string;
+    iconColor: string;
+    glow: string;
+    badge: string;
+    headerBg: string;
+    handleColor: string;
+  }
 > = {
   calendly: {
-    accent: "bg-violet-400",
-    iconBg: "bg-violet-500/15", iconColor: "text-violet-400",
-    glow: "bg-violet-500/15",
-    badge: "bg-violet-500/10 text-violet-400 border-violet-500/20",
+    iconBg: "bg-violet-500/25",
+    iconColor: "text-violet-400",
+    glow: "bg-violet-500/20",
+    badge: "bg-violet-500/10 text-violet-400 border-violet-500/25",
+    headerBg: "bg-violet-500/10",
+    handleColor: "!bg-violet-400",
   },
   ghl: {
-    accent: "bg-orange-400",
-    iconBg: "bg-orange-500/15", iconColor: "text-orange-400",
+    iconBg: "bg-orange-500/25",
+    iconColor: "text-orange-400",
     glow: "bg-orange-500/15",
-    badge: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+    badge: "bg-orange-500/10 text-orange-400 border-orange-500/25",
+    headerBg: "bg-orange-500/10",
+    handleColor: "!bg-orange-400",
   },
   hubspot: {
-    accent: "bg-red-400",
-    iconBg: "bg-red-500/15", iconColor: "text-red-400",
+    iconBg: "bg-red-500/25",
+    iconColor: "text-red-400",
     glow: "bg-red-500/15",
-    badge: "bg-red-500/10 text-red-400 border-red-500/20",
+    badge: "bg-red-500/10 text-red-400 border-red-500/25",
+    headerBg: "bg-red-500/10",
+    handleColor: "!bg-red-400",
   },
   "human-handoff": {
-    accent: "bg-blue-400",
-    iconBg: "bg-blue-500/15", iconColor: "text-blue-400",
+    iconBg: "bg-blue-500/25",
+    iconColor: "text-blue-400",
     glow: "bg-blue-500/15",
-    badge: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    badge: "bg-blue-500/10 text-blue-400 border-blue-500/25",
+    headerBg: "bg-blue-500/10",
+    handleColor: "!bg-blue-400",
   },
   webhook: {
-    accent: "bg-emerald-400",
-    iconBg: "bg-emerald-500/15", iconColor: "text-emerald-400",
+    iconBg: "bg-emerald-500/25",
+    iconColor: "text-emerald-400",
     glow: "bg-emerald-500/15",
-    badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/25",
+    headerBg: "bg-emerald-500/10",
+    handleColor: "!bg-emerald-400",
   },
   mcp: {
-    accent: "bg-zinc-400",
-    iconBg: "bg-zinc-500/15", iconColor: "text-zinc-400",
+    iconBg: "bg-zinc-500/25",
+    iconColor: "text-zinc-400",
     glow: "bg-zinc-500/15",
-    badge: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+    badge: "bg-zinc-500/10 text-zinc-400 border-zinc-500/25",
+    headerBg: "bg-zinc-500/10",
+    handleColor: "!bg-zinc-400",
   },
 };
 
@@ -75,10 +93,12 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const DEFAULT_STYLE = {
-  accent: "bg-primary",
-  iconBg: "bg-primary/10", iconColor: "text-primary",
+  iconBg: "bg-primary/20",
+  iconColor: "text-primary",
   glow: "bg-primary/15",
-  badge: "bg-primary/10 text-primary border-primary/20",
+  badge: "bg-primary/10 text-primary border-primary/25",
+  headerBg: "bg-primary/8",
+  handleColor: "!bg-primary",
 };
 
 export const ToolNode = memo(function ToolNode({ data }: NodeProps) {
@@ -89,63 +109,63 @@ export const ToolNode = memo(function ToolNode({ data }: NodeProps) {
 
   return (
     <div className="group relative">
+      {/* Glow */}
       <div
         className={cn(
-          "absolute -inset-1.5 rounded-xl opacity-0 group-hover:opacity-100 blur-lg transition-opacity duration-300",
+          "absolute -inset-3 rounded-2xl opacity-0 group-hover:opacity-100 blur-2xl transition-opacity duration-300 pointer-events-none",
           style.glow
         )}
       />
 
-      {/* Tool nodes: standard card + colored left accent stripe to look like "integrations" */}
       <div
         className={cn(
-          "relative w-[195px] bg-card border border-border/60 rounded-xl shadow-md cursor-pointer transition-all hover:border-border/80 overflow-hidden",
-          !d.isEnabled && "opacity-50"
+          "relative w-[140px] bg-card border border-border/60 rounded-xl shadow-md cursor-pointer transition-all duration-200 hover:border-border hover:shadow-xl overflow-hidden",
+          !d.isEnabled && "opacity-40"
         )}
       >
-        {/* Colored left accent bar — key visual differentiator from KnowledgeNode */}
-        <div className={cn("absolute left-0 top-0 bottom-0 w-[3px]", style.accent)} />
-
-        <div className="pl-4 pr-3 py-3.5">
-          <div className="flex items-center gap-2.5">
-            <div
-              className={cn(
-                "w-7 h-7 rounded-md flex items-center justify-center shrink-0",
-                style.iconBg
-              )}
-            >
-              <Icon className={cn("w-3.5 h-3.5", style.iconColor)} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate leading-tight">
-                {d.displayName}
-              </p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span
-                  className={cn(
-                    "text-[10px] font-medium px-1.5 py-0.5 rounded-full border leading-none",
-                    style.badge
-                  )}
-                >
-                  {typeLabel}
-                </span>
-                {!d.isEnabled && (
-                  <span className="text-[10px] text-muted-foreground/50">off</span>
-                )}
-              </div>
-            </div>
+        {/* Icon header area — colored top section like n8n */}
+        <div className={cn("flex items-center justify-center pt-5 pb-4", style.headerBg)}>
+          <div
+            className={cn(
+              "w-12 h-12 rounded-xl flex items-center justify-center shadow-sm",
+              style.iconBg
+            )}
+          >
+            <Icon className={cn("w-6 h-6", style.iconColor)} />
           </div>
-
-          <p className="text-[10px] text-muted-foreground/0 group-hover:text-muted-foreground/50 mt-2 transition-colors duration-200">
-            click to configure
-          </p>
         </div>
 
-        {/* Top target handle — edge comes from agent's bottom-right */}
+        {/* Divider */}
+        <div className="h-px bg-border/40" />
+
+        {/* Name + type badge */}
+        <div className="px-3 py-3 text-center">
+          <p className="text-[12px] font-semibold text-foreground truncate leading-tight mb-2">
+            {d.displayName}
+          </p>
+          <span
+            className={cn(
+              "inline-block text-[10px] font-medium px-2 py-0.5 rounded-full border",
+              style.badge
+            )}
+          >
+            {typeLabel}
+          </span>
+          {!d.isEnabled && (
+            <p className="text-[9px] text-muted-foreground/35 mt-1.5">disabled</p>
+          )}
+        </div>
+
+        {/* Hover hint */}
+        <p className="text-[9px] text-center text-muted-foreground/0 group-hover:text-muted-foreground/30 pb-2 -mt-1 transition-colors duration-200">
+          click to configure
+        </p>
+
+        {/* Handle */}
         <Handle
           type="target"
           position={Position.Top}
-          className="!bg-border !w-2 !h-2 !border-2 !border-card"
+          className={cn("!w-2.5 !h-2.5 !border-2 !border-card", style.handleColor)}
         />
       </div>
     </div>

@@ -20,29 +20,32 @@ interface LayoutInput {
   tools: ToolNodeData[];
 }
 
-// Vertical hierarchy: agent top-center, knowledge + tools below
-const TOOL_SPACING  = 130; // px gap between tool nodes
-const ROW_GAP       = 280; // vertical gap from agent to children
-const AGENT_W       = 220;
-const CHILD_W       = 195;
+// Node dimensions (match actual rendered sizes)
+const AGENT_W       = 210;  // AgentNode width
+const KNOWLEDGE_W   = 130;  // KnowledgeNode circle diameter
+const TOOL_W        = 140;  // ToolNode width
+
+// Spacing
+const TOOL_SPACING  = 170;  // vertical gap between stacked tool nodes
+const ROW_GAP       = 270;  // vertical distance from agent top to first child
+const COL_GAP       = 185;  // horizontal gap between knowledge and tools columns
 
 export function useCanvasLayout({ agent, knowledge, tools }: LayoutInput) {
   return useMemo(() => {
-    // Right column height
     const toolsColHeight = tools.length > 0 ? (tools.length - 1) * TOOL_SPACING : 0;
 
-    // Center agent horizontally between knowledge center and tools center
-    const knowledgeCenterX = CHILD_W / 2;                     // ~97
-    const toolsCenterX     = CHILD_W + 180 + CHILD_W / 2;    // ~470  (knowledge + gap + tools center)
+    // Horizontal centering: agent sits between the two child columns
+    const knowledgeCenterX = KNOWLEDGE_W / 2;                   // ~65
+    const toolsX           = KNOWLEDGE_W + COL_GAP;             // ~315
+    const toolsCenterX     = toolsX + TOOL_W / 2;               // ~385
     const agentCenterX     = (knowledgeCenterX + toolsCenterX) / 2;
     const agentX           = Math.round(agentCenterX - AGENT_W / 2);
 
-    // Knowledge starts at y = ROW_GAP, vertically centered with tools column
+    // Knowledge: vertically centered alongside tools column
     const knowledgeX = 0;
     const knowledgeY = ROW_GAP + Math.round(toolsColHeight / 2);
 
-    // Tools start at y = ROW_GAP
-    const toolsX = CHILD_W + 180;
+    // Tools: start at ROW_GAP, stack downward
     const toolsStartY = ROW_GAP;
 
     const nodes: CanvasNode[] = [
@@ -54,7 +57,7 @@ export function useCanvasLayout({ agent, knowledge, tools }: LayoutInput) {
         data: agent as unknown as Record<string, unknown>,
         draggable: true,
       },
-      // Knowledge (bottom left)
+      // Knowledge (bottom left — circle)
       {
         id: "knowledge",
         type: "knowledgeNode",
