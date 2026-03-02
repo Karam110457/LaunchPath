@@ -15,6 +15,8 @@ import "@xyflow/react/dist/style.css";
 
 import { AgentNode } from "./nodes/AgentNode";
 import { KnowledgeNode } from "./nodes/KnowledgeNode";
+import { ToolNode } from "./nodes/ToolNode";
+import { AddToolNode } from "./nodes/AddToolNode";
 import { DashedEdge } from "./edges/DashedEdge";
 import { TopBar } from "./TopBar";
 import { BottomBar } from "./BottomBar";
@@ -22,7 +24,8 @@ import { NodeModal } from "./panels/NodeModal";
 import { AgentEditPanel } from "./panels/AgentEditPanel";
 import { KnowledgeDetailPanel } from "./panels/KnowledgeDetailPanel";
 import { AgentChatPanel } from "@/components/agents/AgentChatPanel";
-import { ToolsTab } from "./panels/tools/ToolsTab";
+import { ToolCatalogModal } from "./panels/tools/ToolCatalogModal";
+import { ToolSetupDialog } from "./panels/tools/ToolSetupDialog";
 import { SaveDialog } from "./SaveDialog";
 import { VersionHistoryModal } from "./VersionHistoryModal";
 import { useCanvasLayout } from "./useCanvasLayout";
@@ -30,14 +33,18 @@ import type {
   PanelState,
   AgentNodeData,
   KnowledgeNodeData,
+  ToolNodeData,
   AgentFormState,
   WizardConfig,
 } from "./canvas-types";
+import type { AgentToolResponse, ToolType } from "@/lib/tools/types";
 
 // Stable references for React Flow
 const nodeTypes = {
   agentNode: AgentNode,
   knowledgeNode: KnowledgeNode,
+  toolNode: ToolNode,
+  addToolNode: AddToolNode,
 };
 const edgeTypes = {
   dashedEdge: DashedEdge,
@@ -78,7 +85,7 @@ function AgentCanvasInner({
 }: AgentCanvasPageProps) {
   const router = useRouter();
 
-  // Lifted agent form state (shared between edit panel + TopBar save)
+  // ─── Agent form state ────────────────────────────────────────────────────
   const originalFormState = useMemo<AgentFormState>(
     () => ({
       name: agent.name,
@@ -110,12 +117,9 @@ function AgentCanvasInner({
     );
   }, [formState, originalFormState]);
 
-  // Warn before navigating away with unsaved changes
   useEffect(() => {
     if (!isDirty) return;
-    const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-    };
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty]);
@@ -172,11 +176,9 @@ function AgentCanvasInner({
       setFormState(() => ({
         name: revertedAgent.name,
         description: revertedAgent.description ?? "",
-        avatarEmoji:
-          (revertedAgent.personality?.avatar_emoji as string) ?? "🤖",
+        avatarEmoji: (revertedAgent.personality?.avatar_emoji as string) ?? "🤖",
         tone: (revertedAgent.personality?.tone as string) ?? "",
-        greetingMessage:
-          (revertedAgent.personality?.greeting_message as string) ?? "",
+        greetingMessage: (revertedAgent.personality?.greeting_message as string) ?? "",
         model: revertedAgent.model,
         status: revertedAgent.status,
         systemPrompt: revertedAgent.system_prompt,
@@ -187,7 +189,7 @@ function AgentCanvasInner({
     [router]
   );
 
-  // Build node data
+  // ─── Node data ────────────────────────────────────────────────────────────
   const agentData: AgentNodeData = {
     agentId: agent.id,
     name: formState.name,
@@ -214,7 +216,7 @@ function AgentCanvasInner({
         processing: docs.filter((d) => d.status === "processing").length,
       });
     },
-    [],
+    []
   );
 
   const knowledgeData: KnowledgeNodeData = {
@@ -224,42 +226,118 @@ function AgentCanvasInner({
     processingCount: docCounts.processing,
   };
 
-  // Layout
-  const { nodes: initialNodes, edges: initialEdges } = useCanvasLayout({
+  // ─── Tools state ──────────────────────────────────────────────────────────
+  const [agentTools, setAgentTools] = useState<AgentToolResponse[]>([]);
+
+  const fetchTools = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/agents/${agent.id}/tools`);
+      if (res.ok) {
+        const data = (await res.json()) as { tools: AgentToolResponse[] };
+        setAgentTools(data.tools);
+      }
+    } catch {
+      // non-critical
+    }
+  }, [agent.id]);
+
+  useEffect(() => { void fetchTools(); }, [fetchTools]);
+
+  // Convert to ToolNodeData for layout
+  const toolNodeItems = useMemo<ToolNodeData[]>(
+    () =>
+      agentTools.map((t) => ({
+        toolId: t.id,
+        agentId: agent.id,
+        toolType: t.tool_type,
+        displayName: t.display_name,
+        isEnabled: t.is_enabled,
+      })),
+    [agentTools, agent.id]
+  );
+
+  // Tool dialog state (managed here, not inside a panel)
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [setupTool, setSetupTool] = useState<{
+    toolType: string;
+    existing?: AgentToolResponse;
+  } | null>(null);
+
+  const handleToolSaved = useCallback(async () => {
+    setSetupTool(null);
+    setCatalogOpen(false);
+    await fetchTools();
+  }, [fetchTools]);
+
+  const handleToolDeleted = useCallback(async () => {
+    setSetupTool(null);
+    await fetchTools();
+  }, [fetchTools]);
+
+  // ─── Canvas layout ────────────────────────────────────────────────────────
+  const { nodes: layoutNodes, edges: layoutEdges } = useCanvasLayout({
     agent: agentData,
     knowledge: knowledgeData,
+    tools: toolNodeItems,
   });
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(layoutEdges);
 
-  // Keep knowledge node data in sync with live document counts
+  // When agentData changes (form edits), update agent node data in place
   useEffect(() => {
     setNodes((nds) =>
       nds.map((n) =>
-        n.type === "knowledgeNode" ? { ...n, data: { ...n.data, ...knowledgeData } } : n,
-      ),
+        n.type === "agentNode"
+          ? { ...n, data: agentData as unknown as Record<string, unknown> }
+          : n
+      )
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [docCounts, setNodes]);
+  }, [agentData]);
 
-  // Modal state
+  // When doc counts change, update knowledge node data in place
+  useEffect(() => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.type === "knowledgeNode"
+          ? { ...n, data: knowledgeData as unknown as Record<string, unknown> }
+          : n
+      )
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docCounts]);
+
+  // When tools change (add/remove/toggle), rebuild the full layout
+  useEffect(() => {
+    setNodes(layoutNodes);
+    setEdges(layoutEdges);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentTools]);
+
+  // ─── Interaction ─────────────────────────────────────────────────────────
   const [modal, setModal] = useState<PanelState>({ type: "none" });
   const [testMode, setTestMode] = useState(false);
-  const [toolCount, setToolCount] = useState(0);
 
-  // Single-click on knowledge node opens knowledge panel
-  const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
-    if (node.type === "knowledgeNode") {
-      setModal({ type: "knowledge" });
-    }
-  }, []);
+  const onNodeClick: NodeMouseHandler = useCallback(
+    (_event, node) => {
+      if (node.type === "knowledgeNode") {
+        setModal({ type: "knowledge" });
+      }
+      if (node.type === "toolNode") {
+        const d = node.data as unknown as ToolNodeData;
+        const existing = agentTools.find((t) => t.id === d.toolId);
+        if (existing) setSetupTool({ toolType: existing.tool_type, existing });
+      }
+      if (node.type === "addToolNode") {
+        setCatalogOpen(true);
+      }
+    },
+    [agentTools]
+  );
 
-  // Double-click on agent node opens edit config
   const onNodeDoubleClick: NodeMouseHandler = useCallback((_event, node) => {
-    if (node.type === "agentNode") {
-      setModal({ type: "edit-agent" });
-    }
+    if (node.type === "agentNode") setModal({ type: "edit-agent" });
   }, []);
 
   const handleToggleTest = useCallback(() => {
@@ -275,12 +353,10 @@ function AgentCanvasInner({
     setTestMode(false);
   }, []);
 
-  // Modal title
   let modalTitle = "";
   if (modal.type === "edit-agent") modalTitle = "Edit Agent";
   else if (modal.type === "knowledge") modalTitle = "Knowledge Base";
   else if (modal.type === "chat") modalTitle = `Test ${agent.name}`;
-  else if (modal.type === "tools") modalTitle = "Tools";
 
   return (
     <div className="relative w-full h-[calc(100vh-3.5rem)] overflow-hidden bg-[#0a0a0a]">
@@ -290,10 +366,8 @@ function AgentCanvasInner({
         avatarEmoji={formState.avatarEmoji}
         onSave={() => setShowSaveDialog(true)}
         onVersionHistory={() => setShowVersionHistory(true)}
-        onTools={() => setModal({ type: "tools" })}
         isSaving={isSaving}
         isDirty={isDirty}
-        toolCount={toolCount}
       />
 
       <ReactFlow
@@ -324,7 +398,7 @@ function AgentCanvasInner({
 
       <BottomBar testMode={testMode} onToggleTest={handleToggleTest} />
 
-      {/* Modal for node configs + test chat */}
+      {/* Panel modal (knowledge, edit, chat) */}
       <NodeModal
         open={modal.type !== "none"}
         onClose={handleCloseModal}
@@ -353,10 +427,30 @@ function AgentCanvasInner({
             embedded
           />
         )}
-        {modal.type === "tools" && (
-          <ToolsTab agentId={agent.id} onToolCountChange={setToolCount} />
-        )}
       </NodeModal>
+
+      {/* Tool catalog — opens when clicking Add Tool node */}
+      <ToolCatalogModal
+        open={catalogOpen}
+        onClose={() => setCatalogOpen(false)}
+        onSelect={(toolType) => {
+          setCatalogOpen(false);
+          setSetupTool({ toolType });
+        }}
+        existingTypes={agentTools.map((t) => t.tool_type as ToolType)}
+      />
+
+      {/* Tool setup dialog — opens when clicking a tool node or selecting from catalog */}
+      {setupTool && (
+        <ToolSetupDialog
+          agentId={agent.id}
+          toolType={setupTool.toolType}
+          existing={setupTool.existing}
+          onSaved={handleToolSaved}
+          onDeleted={handleToolDeleted}
+          onClose={() => setSetupTool(null)}
+        />
+      )}
 
       <SaveDialog
         open={showSaveDialog}

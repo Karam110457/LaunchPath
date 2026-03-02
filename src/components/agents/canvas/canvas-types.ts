@@ -19,6 +19,20 @@ export interface KnowledgeNodeData {
   processingCount: number;
 }
 
+// Data payload for a single tool node on the canvas
+export interface ToolNodeData {
+  toolId: string;
+  agentId: string;
+  toolType: string;
+  displayName: string;
+  isEnabled: boolean;
+}
+
+// Data payload for the "Add Tool" button node
+export interface AddToolNodeData {
+  agentId: string;
+}
+
 // Structured wizard configuration (stored in ai_agents.wizard_config JSONB)
 export interface WizardConfig {
   templateId: "appointment-booker" | "customer-support";
@@ -46,5 +60,4 @@ export type PanelState =
   | { type: "none" }
   | { type: "knowledge" }
   | { type: "edit-agent" }
-  | { type: "chat" }
-  | { type: "tools" };
+  | { type: "chat" };

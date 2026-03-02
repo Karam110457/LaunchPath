@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Eye, EyeOff, CheckCircle2, XCircle, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Eye, EyeOff, CheckCircle2, XCircle, Loader2, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,7 @@ interface ToolSetupDialogProps {
   toolType: string;
   existing?: AgentToolResponse;
   onSaved: () => void;
+  onDeleted?: () => void;
   onClose: () => void;
 }
 
@@ -28,6 +29,7 @@ export function ToolSetupDialog({
   toolType,
   existing,
   onSaved,
+  onDeleted,
   onClose,
 }: ToolSetupDialogProps) {
   const entry = getCatalogEntry(toolType);
@@ -52,6 +54,9 @@ export function ToolSetupDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isEnabled, setIsEnabled] = useState(existing?.is_enabled ?? true);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // MCP-specific: discovered tools
   const [mcpTools, setMcpTools] = useState<{ name: string; description: string }[]>([]);
@@ -105,7 +110,7 @@ export function ToolSetupDialog({
     const method = isEdit ? "PATCH" : "POST";
 
     const body = isEdit
-      ? { display_name: displayName, description, config }
+      ? { display_name: displayName, description, config, is_enabled: isEnabled }
       : { tool_type: toolType, display_name: displayName, description, config };
 
     const res = await fetch(url, {
@@ -318,8 +323,75 @@ export function ToolSetupDialog({
             <p className="text-xs text-destructive">{error}</p>
           )}
 
+          {/* Enable / disable toggle (edit mode only) */}
+          {isEdit && (
+            <div className="flex items-center justify-between py-2 border-t border-border/50">
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  {isEnabled ? "Tool is enabled" : "Tool is disabled"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {isEnabled
+                    ? "Agent will use this tool during conversations"
+                    : "Agent will not use this tool"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEnabled((p) => !p)}
+                className={`relative w-10 h-5.5 rounded-full transition-colors ${
+                  isEnabled ? "bg-primary" : "bg-muted"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform shadow-sm ${
+                    isEnabled ? "translate-x-5" : "translate-x-0.5"
+                  }`}
+                />
+              </button>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex gap-2 pt-1">
+            {isEdit && onDeleted && (
+              confirmDelete ? (
+                <div className="flex items-center gap-1.5 mr-auto">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    disabled={deleting}
+                    onClick={async () => {
+                      setDeleting(true);
+                      await fetch(`/api/agents/${agentId}/tools/${existing!.id}`, { method: "DELETE" });
+                      onDeleted();
+                    }}
+                  >
+                    {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Confirm remove"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setConfirmDelete(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 mr-auto"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                  Remove
+                </Button>
+              )
+            )}
             <Button
               type="button"
               variant="outline"

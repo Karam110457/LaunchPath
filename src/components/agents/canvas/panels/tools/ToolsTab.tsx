@@ -10,7 +10,7 @@ import type { AgentToolResponse } from "@/lib/tools/types";
 
 interface ToolsTabProps {
   agentId: string;
-  onToolCountChange?: (count: number) => void;
+  onToolCountChange?: (count: number, names: string[]) => void;
 }
 
 export function ToolsTab({ agentId, onToolCountChange }: ToolsTabProps) {
@@ -28,7 +28,8 @@ export function ToolsTab({ agentId, onToolCountChange }: ToolsTabProps) {
       if (res.ok) {
         const data = (await res.json()) as { tools: AgentToolResponse[] };
         setTools(data.tools);
-        onToolCountChange?.(data.tools.filter((t) => t.is_enabled).length);
+        const enabled = data.tools.filter((t) => t.is_enabled);
+        onToolCountChange?.(enabled.length, enabled.map((t) => t.display_name));
       }
     } finally {
       setLoading(false);
@@ -58,19 +59,21 @@ export function ToolsTab({ agentId, onToolCountChange }: ToolsTabProps) {
     await fetch(`/api/agents/${agentId}/tools/${toolId}`, { method: "DELETE" });
     const updated = tools.filter((t) => t.id !== toolId);
     setTools(updated);
-    onToolCountChange?.(updated.filter((t) => t.is_enabled).length);
+    const enabled = updated.filter((t) => t.is_enabled);
+    onToolCountChange?.(enabled.length, enabled.map((t) => t.display_name));
   };
 
-  const handleToggleTool = async (toolId: string, enabled: boolean) => {
+  const handleToggleTool = async (toolId: string, isEnabled: boolean) => {
     const updated = tools.map((t) =>
-      t.id === toolId ? { ...t, is_enabled: enabled } : t
+      t.id === toolId ? { ...t, is_enabled: isEnabled } : t
     );
     setTools(updated);
-    onToolCountChange?.(updated.filter((t) => t.is_enabled).length);
+    const enabledTools = updated.filter((t) => t.is_enabled);
+    onToolCountChange?.(enabledTools.length, enabledTools.map((t) => t.display_name));
     await fetch(`/api/agents/${agentId}/tools/${toolId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_enabled: enabled }),
+      body: JSON.stringify({ is_enabled: isEnabled }),
     });
   };
 
