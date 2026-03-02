@@ -12,7 +12,6 @@ import { logger } from "@/lib/security/logger";
 import { buildCalendlyTool } from "./integrations/calendly";
 import { buildGHLTool } from "./integrations/ghl";
 import { buildHubSpotTool } from "./integrations/hubspot";
-import { buildHumanHandoffTool } from "./integrations/human-handoff";
 import { buildWebhookTool } from "./integrations/webhook";
 import { buildMCPTools } from "./integrations/mcp";
 import type {
@@ -20,7 +19,6 @@ import type {
   CalendlyConfig,
   GHLConfig,
   HubSpotConfig,
-  HumanHandoffConfig,
   WebhookConfig,
   MCPConfig,
 } from "./types";
@@ -45,22 +43,14 @@ export async function buildAgentTools(
         case "ghl": {
           const cfg = agentTool.config as unknown as GHLConfig;
           if (!cfg.api_key || !cfg.location_id) break;
-          tools["create_crm_contact"] = buildGHLTool(cfg, agentTool.description);
+          tools["create_ghl_contact"] = buildGHLTool(cfg, agentTool.description);
           break;
         }
 
         case "hubspot": {
           const cfg = agentTool.config as unknown as HubSpotConfig;
           if (!cfg.access_token) break;
-          // Use different key if GHL is also present
-          const key = tools["create_crm_contact"] ? "create_hubspot_contact" : "create_crm_contact";
-          tools[key] = buildHubSpotTool(cfg, agentTool.description);
-          break;
-        }
-
-        case "human-handoff": {
-          const cfg = agentTool.config as unknown as HumanHandoffConfig;
-          tools["transfer_to_human"] = buildHumanHandoffTool(cfg, agentTool.description);
+          tools["create_hubspot_contact"] = buildHubSpotTool(cfg, agentTool.description);
           break;
         }
 

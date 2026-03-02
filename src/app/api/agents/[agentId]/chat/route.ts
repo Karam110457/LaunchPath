@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/security/logger";
 import { retrieveContext } from "@/lib/knowledge/rag";
 import { buildAgentTools } from "@/lib/tools/builder";
+import { makeWebhookToolKey } from "@/lib/tools/integrations/webhook";
 import type { AgentToolRecord } from "@/lib/tools/types";
 import type {
   AgentServerEvent,
@@ -74,25 +75,25 @@ export async function POST(
 
   const agentToolRecords = (toolRecords ?? []) as AgentToolRecord[];
 
-  // Build a display-name map for tool events (toolName → displayName)
+  // Build a display-name map for tool events (toolName → displayName).
+  // Keys must exactly match what buildAgentTools() registers in the tools map.
   const toolDisplayNames: Record<string, string> = {};
   for (const t of agentToolRecords) {
-    // Map expected tool names to display names
-    const key =
-      t.tool_type === "calendly"
-        ? "book_appointment"
-        : t.tool_type === "ghl"
-        ? "create_crm_contact"
-        : t.tool_type === "hubspot"
-        ? "create_crm_contact"
-        : t.tool_type === "human-handoff"
-        ? "transfer_to_human"
-        : t.display_name
-            .toLowerCase()
-            .replace(/[^a-z0-9_]/g, "_")
-            .replace(/_+/g, "_")
-            .slice(0, 60);
-    toolDisplayNames[key] = t.display_name;
+    switch (t.tool_type) {
+      case "calendly":
+        toolDisplayNames["book_appointment"] = t.display_name;
+        break;
+      case "ghl":
+        toolDisplayNames["create_ghl_contact"] = t.display_name;
+        break;
+      case "hubspot":
+        toolDisplayNames["create_hubspot_contact"] = t.display_name;
+        break;
+      case "webhook":
+        toolDisplayNames[makeWebhookToolKey(t.display_name)] = t.display_name;
+        break;
+      // MCP: tool names come from the server — falls back to raw tool name in the UI
+    }
   }
 
   const tools = await buildAgentTools(agentToolRecords);

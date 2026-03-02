@@ -5,7 +5,6 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import {
   CalendarCheck,
   Users,
-  UserCheck,
   Webhook,
   Plug,
   type LucideIcon,
@@ -17,7 +16,6 @@ const ICON_MAP: Record<string, LucideIcon> = {
   calendly: CalendarCheck,
   ghl: Users,
   hubspot: Users,
-  "human-handoff": UserCheck,
   webhook: Webhook,
   mcp: Plug,
 };
@@ -26,7 +24,6 @@ const COLOR_MAP: Record<string, string> = {
   calendly: "text-blue-400",
   ghl: "text-orange-400",
   hubspot: "text-red-400",
-  "human-handoff": "text-indigo-400",
   webhook: "text-emerald-400",
   mcp: "text-zinc-400",
 };

@@ -14,7 +14,6 @@ const ALLOWED_TOOL_TYPES = new Set([
   "calendly",
   "ghl",
   "hubspot",
-  "human-handoff",
   "webhook",
   "mcp",
 ]);

@@ -51,9 +51,6 @@ export async function POST(
     case "hubspot":
       result = await testHubSpot(config);
       break;
-    case "human-handoff":
-      result = await testHumanHandoff(config);
-      break;
     case "webhook":
       result = await testWebhook(config);
       break;
@@ -82,7 +79,6 @@ async function testCalendly(config: Record<string, unknown>): Promise<TestToolRe
   }
 
   if (!url.includes("calendly.com") && !url.includes("cal.com")) {
-    // Still allow custom domains but warn
     return {
       success: true,
       message: "URL saved. Note: this doesn't appear to be a Calendly or Cal.com URL — double-check it works.",
@@ -98,6 +94,11 @@ async function testGHL(config: Record<string, unknown>): Promise<TestToolResult>
 
   if (!apiKey || !locationId) {
     return { success: false, message: "API Key and Location ID are both required." };
+  }
+
+  // Skip live test if user hasn't changed masked credentials
+  if (apiKey.startsWith("••••") || locationId.startsWith("••••")) {
+    return { success: true, message: "Credentials are saved. No re-test needed." };
   }
 
   try {
@@ -134,6 +135,10 @@ async function testHubSpot(config: Record<string, unknown>): Promise<TestToolRes
     return { success: false, message: "Access token is required." };
   }
 
+  if (token.startsWith("••••")) {
+    return { success: true, message: "Credentials are saved. No re-test needed." };
+  }
+
   try {
     const res = await fetch("https://api.hubapi.com/crm/v3/objects/contacts?limit=1", {
       headers: {
@@ -157,29 +162,6 @@ async function testHubSpot(config: Record<string, unknown>): Promise<TestToolRes
   }
 }
 
-async function testHumanHandoff(config: Record<string, unknown>): Promise<TestToolResult> {
-  const webhookUrl = config.webhook_url as string | undefined;
-  const email = config.notify_email as string | undefined;
-
-  if (!webhookUrl && !email) {
-    // Zero config is valid — handoff still works without notification
-    return {
-      success: true,
-      message: "Human Handoff is ready. Add an email or webhook above to receive notifications when a handoff is triggered.",
-    };
-  }
-
-  if (webhookUrl) {
-    try {
-      new URL(webhookUrl);
-    } catch {
-      return { success: false, message: "Webhook URL doesn't look valid. Make sure it starts with https://." };
-    }
-  }
-
-  return { success: true, message: "Human Handoff is configured and ready." };
-}
-
 async function testWebhook(config: Record<string, unknown>): Promise<TestToolResult> {
   const url = config.url as string;
 
@@ -192,10 +174,15 @@ async function testWebhook(config: Record<string, unknown>): Promise<TestToolRes
   }
 
   try {
+    // Mirror the exact payload shape that real webhook execution sends
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ test: true, source: "launchpath-agent", timestamp: new Date().toISOString() }),
+      body: JSON.stringify({
+        data: { message: "Test ping from LaunchPath agent builder" },
+        source: "launchpath-agent",
+        timestamp: new Date().toISOString(),
+      }),
     });
 
     if (res.ok || res.status < 500) {
@@ -218,7 +205,6 @@ async function testMCP(config: Record<string, unknown>): Promise<TestToolResult>
     return { success: false, message: "Server URL doesn't look valid." };
   }
 
-  // Dynamic import to avoid loading MCP SDK on routes that don't need it
   try {
     const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
     const { StreamableHTTPClientTransport } = await import(
@@ -229,14 +215,17 @@ async function testMCP(config: Record<string, unknown>): Promise<TestToolResult>
     const transport = new StreamableHTTPClientTransport(new URL(serverUrl));
 
     await client.connect(transport);
-    const { tools } = await client.listTools();
-    await client.close();
-
-    return {
-      success: true,
-      message: `Connected! Found ${tools.length} tool${tools.length !== 1 ? "s" : ""} on this server.`,
-      details: { toolCount: tools.length },
-    };
+    try {
+      const { tools } = await client.listTools();
+      return {
+        success: true,
+        message: `Connected! Found ${tools.length} tool${tools.length !== 1 ? "s" : ""} on this server.`,
+        details: { toolCount: tools.length },
+      };
+    } finally {
+      // Always close — even if listTools() throws
+      await client.close().catch(() => {});
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     return { success: false, message: `Could not connect to MCP server: ${msg}` };

@@ -28,7 +28,13 @@ export async function buildMCPTools(
     const { tools: mcpTools } = await client.listTools();
 
     for (const mcpTool of mcpTools) {
-      const toolName = mcpTool.name.replace(/[^a-zA-Z0-9_]/g, "_").slice(0, 60);
+      // Sanitize to a valid Claude tool name; deduplicate if two tools collide post-sanitization
+      const baseName = mcpTool.name.replace(/[^a-zA-Z0-9_]/g, "_").slice(0, 57);
+      let toolName = baseName;
+      let suffix = 2;
+      while (tools[toolName]) {
+        toolName = `${baseName}_${suffix++}`;
+      }
 
       // Build a Zod schema from the MCP inputSchema
       const zodSchema = mcpSchemaToZod(

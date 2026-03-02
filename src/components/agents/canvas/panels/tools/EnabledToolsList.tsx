@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Trash2, CalendarCheck, Users, UserCheck, Webhook, Plug, type LucideIcon } from "lucide-react";
+import { Pencil, Trash2, CalendarCheck, Users, Webhook, Plug, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AgentToolResponse, ToolType } from "@/lib/tools/types";
 
@@ -9,7 +9,6 @@ const ICON_MAP: Record<ToolType, LucideIcon> = {
   calendly: CalendarCheck,
   ghl: Users,
   hubspot: Users,
-  "human-handoff": UserCheck,
   webhook: Webhook,
   mcp: Plug,
 };
@@ -17,8 +16,7 @@ const ICON_MAP: Record<ToolType, LucideIcon> = {
 const CATEGORY_COLORS: Record<ToolType, string> = {
   calendly: "bg-violet-500/10 text-violet-400 border-violet-500/20",
   ghl: "bg-orange-500/10 text-orange-400 border-orange-500/20",
-  hubspot: "bg-orange-500/10 text-orange-400 border-orange-500/20",
-  "human-handoff": "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  hubspot: "bg-red-500/10 text-red-400 border-red-500/20",
   webhook: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   mcp: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
 };
@@ -27,7 +25,6 @@ const TYPE_LABELS: Record<ToolType, string> = {
   calendly: "Booking",
   ghl: "CRM",
   hubspot: "CRM",
-  "human-handoff": "Handoff",
   webhook: "Webhook",
   mcp: "MCP",
 };

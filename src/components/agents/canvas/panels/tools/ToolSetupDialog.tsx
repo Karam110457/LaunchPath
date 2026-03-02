@@ -65,7 +65,24 @@ export function ToolSetupDialog({
     setTestResult(null);
   }, [config]);
 
-  if (!entry) return null;
+  if (!entry) {
+    return (
+      <Dialog open onOpenChange={(o) => !o && onClose()}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Unknown tool type</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              The tool type &quot;{toolType}&quot; is not recognised. It may have been removed.
+              You can safely delete this tool and add a replacement.
+            </p>
+          </DialogHeader>
+          <div className="flex justify-end pt-2">
+            <Button type="button" variant="outline" onClick={onClose}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const handleTest = async () => {
     setTesting(true);
@@ -113,26 +130,34 @@ export function ToolSetupDialog({
       ? { display_name: displayName, description, config, is_enabled: isEnabled }
       : { tool_type: toolType, display_name: displayName, description, config };
 
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-    if (!res.ok) {
-      const data = (await res.json()) as { error?: string };
-      setError(data.error ?? "Failed to save tool");
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        setError(data.error ?? "Failed to save tool");
+        return;
+      }
+
+      onSaved();
+    } catch {
+      setError("Network error — please check your connection and try again.");
+    } finally {
       setSaving(false);
-      return;
     }
-
-    onSaved();
   };
 
   const requiredFields = entry.setupFields.filter((f) => f.required);
   const canSave = requiredFields.every((f) => {
     const val = config[f.key];
-    return val && val.length > 0 && !val.startsWith("••••");
+    if (!val || val.length === 0) return false;
+    // In edit mode, masked values (••••abcd) are acceptable — the server preserves them
+    if (isEdit && val.startsWith("••••")) return true;
+    return true;
   });
 
   return (

@@ -14,62 +14,75 @@ type CanvasNode = {
   draggable: boolean;
 };
 
+export type SavedPositions = Record<string, { x: number; y: number }>;
+
 interface LayoutInput {
   agent: AgentNodeData;
   knowledge: KnowledgeNodeData;
   tools: ToolNodeData[];
+  savedPositions?: SavedPositions;
 }
 
-// Node dimensions (match actual rendered sizes)
-const AGENT_W = 240;  // AgentNode width
-const KNOWLEDGE_W = 96;  // KnowledgeNode circle diameter
-const TOOL_W = 84;  // ToolNode width
+// ─── Node dimensions (match actual rendered sizes) ───────────────────────────
+const AGENT_W = 240;
+const KNOWLEDGE_W = 96;   // KnowledgeNode circle diameter
+const TOOL_W = 84;        // ToolNode square side
 
-// Spacing
-const TOOL_SPACING = 170;  // vertical gap between stacked tool nodes
-const ROW_GAP = 270;  // vertical distance from agent top to first child
-const COL_GAP = 185;  // horizontal gap between knowledge and tools columns
+// ─── Layout geometry ─────────────────────────────────────────────────────────
+// Agent handles at 25% and 75% of AGENT_W
+const LEFT_HANDLE_X = AGENT_W * 0.25;   // 60  — "Knowledge Base"
+const RIGHT_HANDLE_X = AGENT_W * 0.75;  // 180 — "Tools"
 
-export function useCanvasLayout({ agent, knowledge, tools }: LayoutInput) {
+const ROW_GAP = 260;           // vertical distance: agent top → children row top
+const TOOL_H_SPACING = 160;    // horizontal center-to-center spacing between tools
+
+// Place knowledge at x=0 so its center (48) aligns with the agent's left handle
+const KNOWLEDGE_X = 0;
+const KNOWLEDGE_CENTER_X = KNOWLEDGE_X + KNOWLEDGE_W / 2; // 48
+
+// Agent x: left handle must sit over knowledge center
+const AGENT_X = KNOWLEDGE_CENTER_X - LEFT_HANDLE_X; // -12
+
+// First tool x: agent right handle must sit over first tool center
+const FIRST_TOOL_CENTER_X = AGENT_X + RIGHT_HANDLE_X; // 168
+const FIRST_TOOL_X = FIRST_TOOL_CENTER_X - TOOL_W / 2; // 126
+
+// Children row y (top of knowledge / tool nodes)
+const CHILDREN_Y = ROW_GAP;
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function useCanvasLayout({ agent, knowledge, tools, savedPositions }: LayoutInput) {
   return useMemo(() => {
-    const toolsColHeight = tools.length > 0 ? (tools.length - 1) * TOOL_SPACING : 0;
-
-    // Horizontal centering: agent sits between the two child columns
-    const knowledgeCenterX = KNOWLEDGE_W / 2;                   // ~65
-    const toolsX = KNOWLEDGE_W + COL_GAP;             // ~315
-    const toolsCenterX = toolsX + TOOL_W / 2;               // ~385
-    const agentCenterX = (knowledgeCenterX + toolsCenterX) / 2;
-    const agentX = Math.round(agentCenterX - AGENT_W / 2);
-
-    // Knowledge: vertically centered alongside tools column
-    const knowledgeX = 0;
-    const knowledgeY = ROW_GAP + Math.round(toolsColHeight / 2);
-
-    // Tools: start at ROW_GAP, stack downward
-    const toolsStartY = ROW_GAP;
+    // Helper: use saved position if available, otherwise default
+    const pos = (id: string, defaultPos: { x: number; y: number }) =>
+      savedPositions?.[id] ?? defaultPos;
 
     const nodes: CanvasNode[] = [
-      // Agent (top center)
+      // Agent — top, left handle → knowledge, right handle → tools
       {
         id: "agent",
         type: "agentNode",
-        position: { x: agentX, y: 0 },
+        position: pos("agent", { x: AGENT_X, y: 0 }),
         data: agent as unknown as Record<string, unknown>,
         draggable: true,
       },
-      // Knowledge (bottom left — circle)
+      // Knowledge — bottom left, centered under left handle
       {
         id: "knowledge",
         type: "knowledgeNode",
-        position: { x: knowledgeX, y: knowledgeY },
+        position: pos("knowledge", { x: KNOWLEDGE_X, y: CHILDREN_Y }),
         data: knowledge as unknown as Record<string, unknown>,
         draggable: true,
       },
-      // Per-tool nodes (bottom right, stacked)
+      // Tools — horizontal row to the right of knowledge, all at same y
       ...tools.map((tool, i) => ({
         id: `tool-${tool.toolId}`,
         type: "toolNode",
-        position: { x: toolsX, y: toolsStartY + i * TOOL_SPACING },
+        position: pos(`tool-${tool.toolId}`, {
+          x: FIRST_TOOL_X + i * TOOL_H_SPACING,
+          y: CHILDREN_Y,
+        }),
         data: tool as unknown as Record<string, unknown>,
         draggable: true,
       })),
@@ -95,5 +108,5 @@ export function useCanvasLayout({ agent, knowledge, tools }: LayoutInput) {
     ];
 
     return { nodes, edges };
-  }, [agent, knowledge, tools]);
+  }, [agent, knowledge, tools, savedPositions]);
 }

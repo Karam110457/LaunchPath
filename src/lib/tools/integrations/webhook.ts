@@ -4,18 +4,28 @@ import { createHmac } from "crypto";
 import { logger } from "@/lib/security/logger";
 import type { WebhookConfig } from "../types";
 
+/**
+ * Derive a stable Claude tool name from a webhook's display name.
+ * Exported so the chat route can build the display-name map using
+ * the same logic without duplicating it.
+ */
+export function makeWebhookToolKey(displayName: string): string {
+  return (
+    displayName
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_|_$/g, "")
+      .slice(0, 60) || "send_webhook"
+  );
+}
+
 export function buildWebhookTool(
   config: WebhookConfig,
   displayName: string,
   description: string
 ) {
-  // Convert display name to a valid Claude tool name (snake_case, no spaces)
-  const toolName = displayName
-    .toLowerCase()
-    .replace(/[^a-z0-9_]/g, "_")
-    .replace(/_+/g, "_")
-    .replace(/^_|_$/g, "")
-    .slice(0, 60) || "send_webhook";
+  const toolName = makeWebhookToolKey(displayName);
 
   return {
     // Vercel AI SDK requires a stable name — we wrap it in an object keyed by toolName

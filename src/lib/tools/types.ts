@@ -2,7 +2,6 @@ export type ToolType =
   | "calendly"
   | "ghl"
   | "hubspot"
-  | "human-handoff"
   | "webhook"
   | "mcp";
 
@@ -38,11 +37,6 @@ export interface GHLConfig {
 
 export interface HubSpotConfig {
   access_token: string;
-}
-
-export interface HumanHandoffConfig {
-  notify_email?: string;
-  webhook_url?: string;
 }
 
 export interface WebhookConfig {

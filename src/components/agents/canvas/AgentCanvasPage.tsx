@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -11,6 +11,7 @@ import {
   Background,
   BackgroundVariant,
   type NodeMouseHandler,
+  type OnNodeDrag,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -28,7 +29,7 @@ import { ToolCatalogModal } from "./panels/tools/ToolCatalogModal";
 import { ToolSetupDialog } from "./panels/tools/ToolSetupDialog";
 import { SaveDialog } from "./SaveDialog";
 import { VersionHistoryModal } from "./VersionHistoryModal";
-import { useCanvasLayout } from "./useCanvasLayout";
+import { useCanvasLayout, type SavedPositions } from "./useCanvasLayout";
 import type {
   PanelState,
   AgentNodeData,
@@ -59,6 +60,7 @@ export interface AgentCanvasPageProps {
     status: string;
     created_at: string;
     wizard_config?: WizardConfig | null;
+    canvas_layout?: SavedPositions | null;
   };
   personality: {
     tone?: string;
@@ -188,7 +190,7 @@ function AgentCanvasInner({
     [router]
   );
 
-  // ─── Node data (memoized so effects don't fire on every render) ──────────
+  // ─── Node data ────────────────────────────────────────────────────────────
   const agentData = useMemo<AgentNodeData>(
     () => ({
       agentId: agent.id,
@@ -239,6 +241,8 @@ function AgentCanvasInner({
 
   // ─── Tools state ──────────────────────────────────────────────────────────
   const [agentTools, setAgentTools] = useState<AgentToolResponse[]>([]);
+  // Block canvas render until first tools fetch completes (prevents layout jump)
+  const [toolsReady, setToolsReady] = useState(false);
 
   const fetchTools = useCallback(async () => {
     try {
@@ -249,12 +253,13 @@ function AgentCanvasInner({
       }
     } catch {
       // non-critical
+    } finally {
+      setToolsReady(true);
     }
   }, [agent.id]);
 
   useEffect(() => { void fetchTools(); }, [fetchTools]);
 
-  // Convert to ToolNodeData for layout
   const toolNodeItems = useMemo<ToolNodeData[]>(
     () =>
       agentTools.map((t) => ({
@@ -267,7 +272,100 @@ function AgentCanvasInner({
     [agentTools, agent.id]
   );
 
-  // Tool dialog state (managed here, not inside a panel)
+  // ─── Canvas position persistence ─────────────────────────────────────────
+  // Initialise from the server-fetched canvas_layout (persisted positions)
+  const [savedPositions, setSavedPositions] = useState<SavedPositions>(
+    (agent.canvas_layout as SavedPositions) ?? {}
+  );
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const persistPositions = useCallback(
+    (positions: SavedPositions) => {
+      // Debounce to avoid spamming the API during rapid drags
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        void fetch(`/api/agents/${agent.id}/canvas-layout`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ positions }),
+        });
+      }, 600);
+    },
+    [agent.id]
+  );
+
+  // ─── Canvas layout ────────────────────────────────────────────────────────
+  const { nodes: layoutNodes, edges: layoutEdges } = useCanvasLayout({
+    agent: agentData,
+    knowledge: knowledgeData,
+    tools: toolNodeItems,
+    savedPositions,
+  });
+
+  // Start empty — set correctly before first paint via useLayoutEffect
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  // When toolsReady flips true: set the correct layout synchronously before
+  // the browser paints, so ReactFlow never renders with a stale/empty layout
+  useLayoutEffect(() => {
+    if (!toolsReady) return;
+    setNodes(layoutNodes);
+    setEdges(layoutEdges);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toolsReady]);
+
+  // Update agent node data in-place (preserves position)
+  useEffect(() => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.type === "agentNode"
+          ? { ...n, data: agentData as unknown as Record<string, unknown> }
+          : n
+      )
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentData]);
+
+  // Update knowledge node data in-place (preserves position)
+  useEffect(() => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.type === "knowledgeNode"
+          ? { ...n, data: knowledgeData as unknown as Record<string, unknown> }
+          : n
+      )
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docCounts]);
+
+  // When tools change after initial load: rebuild layout with saved positions
+  // New tool nodes get default positions; existing nodes keep their saved spot
+  useEffect(() => {
+    if (!toolsReady) return;
+    setNodes(layoutNodes);
+    setEdges(layoutEdges);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentTools]);
+
+  // ─── Drag end: capture new position and persist ───────────────────────────
+  const onNodeDragStop: OnNodeDrag = useCallback(
+    (_event, _node, allNodes) => {
+      const updated: SavedPositions = { ...savedPositions };
+      for (const n of allNodes) {
+        updated[n.id] = { x: Math.round(n.position.x), y: Math.round(n.position.y) };
+      }
+      setSavedPositions(updated);
+      persistPositions(updated);
+    },
+    [savedPositions, persistPositions]
+  );
+
+  // ─── Interaction ─────────────────────────────────────────────────────────
+  const [modal, setModal] = useState<PanelState>({ type: "none" });
+  const [testMode, setTestMode] = useState(false);
+
+  // Tool dialog state
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [setupTool, setSetupTool] = useState<{
     toolType: string;
@@ -284,51 +382,6 @@ function AgentCanvasInner({
     setSetupTool(null);
     await fetchTools();
   }, [fetchTools]);
-
-  // ─── Canvas layout ────────────────────────────────────────────────────────
-  const { nodes: layoutNodes, edges: layoutEdges } = useCanvasLayout({
-    agent: agentData,
-    knowledge: knowledgeData,
-    tools: toolNodeItems,
-  });
-
-  const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(layoutEdges);
-
-  // When agentData changes (form edits), update agent node data in place
-  useEffect(() => {
-    setNodes((nds) =>
-      nds.map((n) =>
-        n.type === "agentNode"
-          ? { ...n, data: agentData as unknown as Record<string, unknown> }
-          : n
-      )
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentData]);
-
-  // When doc counts change, update knowledge node data in place
-  useEffect(() => {
-    setNodes((nds) =>
-      nds.map((n) =>
-        n.type === "knowledgeNode"
-          ? { ...n, data: knowledgeData as unknown as Record<string, unknown> }
-          : n
-      )
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [docCounts]);
-
-  // When tools change (add/remove/toggle), rebuild the full layout
-  useEffect(() => {
-    setNodes(layoutNodes);
-    setEdges(layoutEdges);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentTools]);
-
-  // ─── Interaction ─────────────────────────────────────────────────────────
-  const [modal, setModal] = useState<PanelState>({ type: "none" });
-  const [testMode, setTestMode] = useState(false);
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (_event, node) => {
@@ -378,7 +431,7 @@ function AgentCanvasInner({
         isDirty={isDirty}
       />
 
-      {/* Fixed "Add Tool" button — top-right of canvas, n8n style */}
+      {/* Fixed "Add Tool" button */}
       <button
         onClick={() => setCatalogOpen(true)}
         className="absolute top-[60px] right-4 z-20 flex items-center gap-2 px-3 py-2 bg-card/90 backdrop-blur-sm border border-border/50 rounded-lg text-sm font-medium text-muted-foreground hover:text-amber-400 hover:border-amber-500/40 hover:bg-amber-500/5 transition-all shadow-sm"
@@ -387,35 +440,42 @@ function AgentCanvasInner({
         Add Tool
       </button>
 
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeClick={onNodeClick}
-        onNodeDoubleClick={onNodeDoubleClick}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.4 }}
-        proOptions={{ hideAttribution: true }}
-        minZoom={0.3}
-        maxZoom={2}
-        className="!bg-transparent"
-        nodesConnectable={false}
-        elementsSelectable
-      >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={24}
-          size={1.2}
-          color="rgba(255, 255, 255, 0.15)"
-        />
-      </ReactFlow>
+      {toolsReady ? (
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeClick={onNodeClick}
+          onNodeDoubleClick={onNodeDoubleClick}
+          onNodeDragStop={onNodeDragStop}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.4 }}
+          proOptions={{ hideAttribution: true }}
+          minZoom={0.3}
+          maxZoom={2}
+          className="!bg-transparent"
+          nodesConnectable={false}
+          elementsSelectable
+        >
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={24}
+            size={1.2}
+            color="rgba(255, 255, 255, 0.15)"
+          />
+        </ReactFlow>
+      ) : (
+        // Holds space while tools are fetched — no layout jump
+        <div className="w-full h-full flex items-center justify-center">
+          <div className="w-5 h-5 rounded-full border-2 border-zinc-700 border-t-zinc-400 animate-spin" />
+        </div>
+      )}
 
       <BottomBar testMode={testMode} onToggleTest={handleToggleTest} />
 
-      {/* Panel modal (knowledge, edit, chat) */}
       <NodeModal
         open={modal.type !== "none"}
         onClose={handleCloseModal}
@@ -446,7 +506,6 @@ function AgentCanvasInner({
         )}
       </NodeModal>
 
-      {/* Tool catalog — opens from Add Tool button (top-right) */}
       <ToolCatalogModal
         open={catalogOpen}
         onClose={() => setCatalogOpen(false)}
@@ -457,7 +516,6 @@ function AgentCanvasInner({
         existingTypes={agentTools.map((t) => t.tool_type as ToolType)}
       />
 
-      {/* Tool setup dialog — opens when clicking a tool node or selecting from catalog */}
       {setupTool && (
         <ToolSetupDialog
           agentId={agent.id}

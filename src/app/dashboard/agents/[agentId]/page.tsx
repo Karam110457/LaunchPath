@@ -50,7 +50,10 @@ export default async function AgentDetailPage({ params }: Props) {
 
   return (
     <AgentCanvasPage
-      agent={agent}
+      agent={{
+        ...agent,
+        canvas_layout: (agent.canvas_layout as Record<string, { x: number; y: number }> | null) ?? null,
+      }}
       personality={personality}
       initialDocuments={initialDocuments}
     />

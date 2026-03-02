@@ -64,17 +64,28 @@ export function ToolsTab({ agentId, onToolCountChange }: ToolsTabProps) {
   };
 
   const handleToggleTool = async (toolId: string, isEnabled: boolean) => {
+    // Optimistic update — roll back if the API call fails
+    const previous = tools;
     const updated = tools.map((t) =>
       t.id === toolId ? { ...t, is_enabled: isEnabled } : t
     );
     setTools(updated);
-    const enabledTools = updated.filter((t) => t.is_enabled);
-    onToolCountChange?.(enabledTools.length, enabledTools.map((t) => t.display_name));
-    await fetch(`/api/agents/${agentId}/tools/${toolId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_enabled: isEnabled }),
-    });
+    const enabledUpdated = updated.filter((t) => t.is_enabled);
+    onToolCountChange?.(enabledUpdated.length, enabledUpdated.map((t) => t.display_name));
+
+    try {
+      const res = await fetch(`/api/agents/${agentId}/tools/${toolId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_enabled: isEnabled }),
+      });
+      if (!res.ok) throw new Error("Update failed");
+    } catch {
+      // Revert to previous state on failure
+      setTools(previous);
+      const enabledPrevious = previous.filter((t) => t.is_enabled);
+      onToolCountChange?.(enabledPrevious.length, enabledPrevious.map((t) => t.display_name));
+    }
   };
 
   return (

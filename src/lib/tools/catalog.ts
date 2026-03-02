@@ -81,39 +81,6 @@ export const TOOL_CATALOG: ToolCatalogEntry[] = [
   },
 
   // ------------------------------------------------------------------
-  // COMMUNICATION
-  // ------------------------------------------------------------------
-  {
-    type: "human-handoff",
-    name: "Human Handoff",
-    tagline: "Escalate to a real person when the agent can't help or the customer asks for one.",
-    icon: "UserCheck",
-    category: "communication",
-    defaultDisplayName: "Transfer to Human",
-    defaultDescription:
-      "Transfer the conversation to a human agent when the customer is frustrated, has a complex issue, explicitly requests a person, or when you've reached the limit of what you can help with. Always summarize the conversation before handing off.",
-    setupFields: [
-      {
-        key: "notify_email",
-        label: "Notification Email (optional)",
-        type: "email",
-        placeholder: "you@example.com",
-        helpText: "Receive an email alert whenever a handoff is triggered.",
-        required: false,
-      },
-      {
-        key: "webhook_url",
-        label: "Webhook URL (optional)",
-        type: "url",
-        placeholder: "https://hooks.zapier.com/...",
-        helpText:
-          "POST a payload to this URL when a handoff occurs. Works with Zapier, Make, or any webhook handler.",
-        required: false,
-      },
-    ],
-  },
-
-  // ------------------------------------------------------------------
   // AUTOMATION
   // ------------------------------------------------------------------
   {
