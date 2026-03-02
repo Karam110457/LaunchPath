@@ -21,14 +21,14 @@ interface LayoutInput {
 }
 
 // Node dimensions (match actual rendered sizes)
-const AGENT_W       = 210;  // AgentNode width
-const KNOWLEDGE_W   = 130;  // KnowledgeNode circle diameter
-const TOOL_W        = 140;  // ToolNode width
+const AGENT_W = 240;  // AgentNode width
+const KNOWLEDGE_W = 96;  // KnowledgeNode circle diameter
+const TOOL_W = 84;  // ToolNode width
 
 // Spacing
-const TOOL_SPACING  = 170;  // vertical gap between stacked tool nodes
-const ROW_GAP       = 270;  // vertical distance from agent top to first child
-const COL_GAP       = 185;  // horizontal gap between knowledge and tools columns
+const TOOL_SPACING = 170;  // vertical gap between stacked tool nodes
+const ROW_GAP = 270;  // vertical distance from agent top to first child
+const COL_GAP = 185;  // horizontal gap between knowledge and tools columns
 
 export function useCanvasLayout({ agent, knowledge, tools }: LayoutInput) {
   return useMemo(() => {
@@ -36,10 +36,10 @@ export function useCanvasLayout({ agent, knowledge, tools }: LayoutInput) {
 
     // Horizontal centering: agent sits between the two child columns
     const knowledgeCenterX = KNOWLEDGE_W / 2;                   // ~65
-    const toolsX           = KNOWLEDGE_W + COL_GAP;             // ~315
-    const toolsCenterX     = toolsX + TOOL_W / 2;               // ~385
-    const agentCenterX     = (knowledgeCenterX + toolsCenterX) / 2;
-    const agentX           = Math.round(agentCenterX - AGENT_W / 2);
+    const toolsX = KNOWLEDGE_W + COL_GAP;             // ~315
+    const toolsCenterX = toolsX + TOOL_W / 2;               // ~385
+    const agentCenterX = (knowledgeCenterX + toolsCenterX) / 2;
+    const agentX = Math.round(agentCenterX - AGENT_W / 2);
 
     // Knowledge: vertically centered alongside tools column
     const knowledgeX = 0;
