@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { embedTexts } from "@/lib/knowledge/embeddings";
 
-const MAX_DOCS_PER_AGENT = 10;
+const MAX_DOCS_PER_AGENT = 20;
 
 export async function POST(
   request: NextRequest,

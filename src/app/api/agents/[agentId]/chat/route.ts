@@ -37,9 +37,10 @@ export async function POST(
   const body = (await request.json()) as {
     messages: AgentConversationMessage[];
     userMessage: string;
+    conversationId?: string;
   };
 
-  const { messages: conversationHistory = [], userMessage } = body;
+  const { messages: conversationHistory = [], userMessage, conversationId } = body;
 
   if (!userMessage || typeof userMessage !== "string") {
     return NextResponse.json(
@@ -171,18 +172,46 @@ export async function POST(
             },
           ];
 
-          // Upsert conversation (unique per agent+user)
-          await supabase.from("agent_conversations").upsert(
-            {
-              agent_id: agentId,
-              user_id: user.id,
-              messages:
-                updatedHistory as unknown as Record<string, unknown>[],
-            },
-            { onConflict: "agent_id,user_id" }
-          );
+          // Persist conversation
+          let finalConversationId = conversationId;
 
-          emit({ type: "done", assistantContent: fullContent });
+          if (finalConversationId) {
+            // Update existing conversation
+            await supabase
+              .from("agent_conversations")
+              .update({
+                messages:
+                  updatedHistory as unknown as Record<string, unknown>[],
+              })
+              .eq("id", finalConversationId)
+              .eq("user_id", user.id);
+          } else {
+            // Create new conversation with auto-title
+            const autoTitle =
+              userMessage.length > 50
+                ? userMessage.slice(0, 47) + "..."
+                : userMessage;
+
+            const { data: newConv } = await supabase
+              .from("agent_conversations")
+              .insert({
+                agent_id: agentId,
+                user_id: user.id,
+                title: autoTitle,
+                messages:
+                  updatedHistory as unknown as Record<string, unknown>[],
+              })
+              .select("id")
+              .single();
+
+            finalConversationId = newConv?.id;
+          }
+
+          emit({
+            type: "done",
+            assistantContent: fullContent,
+            conversationId: finalConversationId,
+          });
         },
       });
 

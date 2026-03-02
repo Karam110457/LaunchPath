@@ -2,7 +2,6 @@ import { requireAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { AgentCanvasPage } from "@/components/agents/canvas/AgentCanvasPage";
-import type { AgentConversationMessage } from "@/lib/chat/agent-chat-types";
 
 interface Props {
   params: Promise<{ agentId: string }>;
@@ -13,18 +12,12 @@ export default async function AgentDetailPage({ params }: Props) {
   const user = await requireAuth();
   const supabase = await createClient();
 
-  // Fetch agent + conversation + knowledge docs in parallel
-  const [agentResult, conversationResult, knowledgeResult] = await Promise.all([
+  // Fetch agent + knowledge docs in parallel (chat loads client-side)
+  const [agentResult, knowledgeResult] = await Promise.all([
     supabase
       .from("ai_agents")
       .select("*")
       .eq("id", agentId)
-      .eq("user_id", user.id)
-      .single(),
-    supabase
-      .from("agent_conversations")
-      .select("messages")
-      .eq("agent_id", agentId)
       .eq("user_id", user.id)
       .single(),
     supabase
@@ -44,10 +37,6 @@ export default async function AgentDetailPage({ params }: Props) {
     avatar_emoji?: string;
   } | null;
 
-  const initialChatMessages = Array.isArray(conversationResult.data?.messages)
-    ? (conversationResult.data.messages as unknown as AgentConversationMessage[])
-    : [];
-
   const initialDocuments = (knowledgeResult.data ?? []) as Array<{
     id: string;
     source_type: "file" | "website" | "faq";
@@ -64,7 +53,6 @@ export default async function AgentDetailPage({ params }: Props) {
       agent={agent}
       personality={personality}
       initialDocuments={initialDocuments}
-      initialChatMessages={initialChatMessages}
     />
   );
 }

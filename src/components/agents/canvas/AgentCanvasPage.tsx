@@ -32,7 +32,6 @@ import type {
   AgentFormState,
   WizardConfig,
 } from "./canvas-types";
-import type { AgentConversationMessage } from "@/lib/chat/agent-chat-types";
 
 // Stable references for React Flow
 const nodeTypes = {
@@ -69,14 +68,12 @@ export interface AgentCanvasPageProps {
     error_message: string | null;
     created_at: string;
   }>;
-  initialChatMessages: AgentConversationMessage[];
 }
 
 function AgentCanvasInner({
   agent,
   personality,
   initialDocuments,
-  initialChatMessages,
 }: AgentCanvasPageProps) {
   const router = useRouter();
 
@@ -321,7 +318,6 @@ function AgentCanvasInner({
             agentId={agent.id}
             agentName={agent.name}
             greetingMessage={personality?.greeting_message}
-            initialMessages={initialChatMessages}
             embedded
           />
         )}

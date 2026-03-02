@@ -1,14 +1,15 @@
 "use client";
 
 /**
- * useAgentChat — manages agent test chat state and SSE streaming.
- * Text-only, no cards, no tools.
+ * useAgentChat — manages agent test chat state, SSE streaming,
+ * and multi-conversation support.
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type {
   AgentChatMessage,
   AgentConversationMessage,
+  AgentConversationSummary,
   AgentServerEvent,
 } from "@/lib/chat/agent-chat-types";
 
@@ -22,55 +23,234 @@ function now() {
 
 interface UseAgentChatOptions {
   agentId: string;
-  initialMessages: AgentConversationMessage[];
   greetingMessage?: string;
 }
 
 interface UseAgentChatReturn {
   messages: AgentChatMessage[];
-  restoredCount: number;
   isStreaming: boolean;
   isTyping: boolean;
   isThinking: boolean;
   thinkingText: string;
   sendMessage: (text: string) => void;
-  clearConversation: () => void;
+
+  // Multi-conversation
+  conversations: AgentConversationSummary[];
+  activeConversationId: string | null;
+  isLoadingConversations: boolean;
+  startNewConversation: () => void;
+  switchConversation: (conversationId: string) => void;
+  deleteConversation: (conversationId: string) => void;
 }
 
 export function useAgentChat({
   agentId,
-  initialMessages,
   greetingMessage,
 }: UseAgentChatOptions): UseAgentChatReturn {
-  const [messages, setMessages] = useState<AgentChatMessage[]>(() => {
-    const restored: AgentChatMessage[] = initialMessages.map((m) => ({
-      id: generateId(),
-      role: m.role,
-      content: m.content,
-      isStreaming: false,
-      timestamp: m.timestamp,
-    }));
-    // If no history but there's a greeting, show it as the first assistant message
-    if (restored.length === 0 && greetingMessage) {
-      restored.push({
-        id: "greeting",
-        role: "assistant",
-        content: greetingMessage,
-        isStreaming: false,
-        timestamp: now(),
-      });
-    }
-    return restored;
-  });
+  // Conversation list
+  const [conversations, setConversations] = useState<
+    AgentConversationSummary[]
+  >([]);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(null);
 
+  // Messages for the active conversation
+  const [messages, setMessages] = useState<AgentChatMessage[]>(() =>
+    greetingMessage
+      ? [
+          {
+            id: "greeting",
+            role: "assistant",
+            content: greetingMessage,
+            isStreaming: false,
+            timestamp: now(),
+          },
+        ]
+      : []
+  );
+
+  // Streaming state
   const [isStreaming, setIsStreaming] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingText, setThinkingText] = useState("");
 
-  const restoredCount = initialMessages.length;
-  const historyRef = useRef<AgentConversationMessage[]>(initialMessages);
+  const historyRef = useRef<AgentConversationMessage[]>([]);
   const streamingIdRef = useRef<string | null>(null);
+
+  // -------------------------------------------------------------------------
+  // Fetch conversation list
+  // -------------------------------------------------------------------------
+
+  const fetchConversations = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/agents/${agentId}/chat/conversations`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setConversations(data.conversations ?? []);
+        return data.conversations as AgentConversationSummary[];
+      }
+    } catch {
+      // Network error — silent
+    }
+    return [] as AgentConversationSummary[];
+  }, [agentId]);
+
+  // Load conversations on mount, auto-select the most recent
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoadingConversations(true);
+
+    void fetchConversations().then((convos) => {
+      if (cancelled) return;
+      setIsLoadingConversations(false);
+
+      if (convos.length > 0) {
+        // Auto-load the most recent conversation
+        const mostRecent = convos[0];
+        void loadConversation(mostRecent.id);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentId]);
+
+  // -------------------------------------------------------------------------
+  // Load a single conversation's messages
+  // -------------------------------------------------------------------------
+
+  const loadConversation = useCallback(
+    async (conversationId: string) => {
+      setActiveConversationId(conversationId);
+      try {
+        const res = await fetch(
+          `/api/agents/${agentId}/chat/conversations?id=${conversationId}`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const msgs = Array.isArray(data.conversation?.messages)
+          ? data.conversation.messages
+          : [];
+
+        historyRef.current = msgs as AgentConversationMessage[];
+        setMessages(
+          (msgs as AgentConversationMessage[]).map(
+            (m: AgentConversationMessage) => ({
+              id: generateId(),
+              role: m.role,
+              content: m.content,
+              isStreaming: false,
+              timestamp: m.timestamp,
+            })
+          )
+        );
+      } catch {
+        // Network error
+      }
+    },
+    [agentId]
+  );
+
+  // -------------------------------------------------------------------------
+  // Start a new conversation
+  // -------------------------------------------------------------------------
+
+  const startNewConversation = useCallback(() => {
+    setActiveConversationId(null);
+    historyRef.current = [];
+    streamingIdRef.current = null;
+    setMessages(
+      greetingMessage
+        ? [
+            {
+              id: "greeting",
+              role: "assistant",
+              content: greetingMessage,
+              isStreaming: false,
+              timestamp: now(),
+            },
+          ]
+        : []
+    );
+    setIsStreaming(false);
+    setIsTyping(false);
+    setIsThinking(false);
+    setThinkingText("");
+  }, [greetingMessage]);
+
+  // -------------------------------------------------------------------------
+  // Switch to an existing conversation
+  // -------------------------------------------------------------------------
+
+  const switchConversation = useCallback(
+    (conversationId: string) => {
+      if (conversationId === activeConversationId) return;
+      setIsStreaming(false);
+      setIsTyping(false);
+      setIsThinking(false);
+      setThinkingText("");
+      streamingIdRef.current = null;
+      void loadConversation(conversationId);
+    },
+    [activeConversationId, loadConversation]
+  );
+
+  // -------------------------------------------------------------------------
+  // Delete a conversation
+  // -------------------------------------------------------------------------
+
+  const deleteConversation = useCallback(
+    async (conversationId: string) => {
+      try {
+        await fetch(`/api/agents/${agentId}/chat/clear`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ conversationId }),
+        });
+      } catch {
+        // Network error
+        return;
+      }
+
+      // Remove from list
+      setConversations((prev) =>
+        prev.filter((c) => c.id !== conversationId)
+      );
+
+      // If deleting the active conversation, switch to next or start new
+      if (conversationId === activeConversationId) {
+        const remaining = conversations.filter(
+          (c) => c.id !== conversationId
+        );
+        if (remaining.length > 0) {
+          void loadConversation(remaining[0].id);
+        } else {
+          startNewConversation();
+        }
+      }
+    },
+    [
+      agentId,
+      activeConversationId,
+      conversations,
+      loadConversation,
+      startNewConversation,
+    ]
+  );
+
+  // -------------------------------------------------------------------------
+  // Send a message
+  // -------------------------------------------------------------------------
+
+  const activeConvIdRef = useRef(activeConversationId);
+  activeConvIdRef.current = activeConversationId;
 
   const sendMessage = useCallback(
     (text: string) => {
@@ -97,6 +277,7 @@ export function useAgentChat({
             body: JSON.stringify({
               messages: historyRef.current,
               userMessage: text,
+              conversationId: activeConvIdRef.current ?? undefined,
             }),
           });
 
@@ -176,12 +357,17 @@ export function useAgentChat({
                   historyRef.current = [
                     ...historyRef.current,
                     { role: "user", content: text, timestamp: now() },
-                    {
-                      role: "assistant",
-                      content,
-                      timestamp: now(),
-                    },
+                    { role: "assistant", content, timestamp: now() },
                   ];
+
+                  // Capture the conversation ID (new or existing)
+                  if (event.conversationId) {
+                    setActiveConversationId(event.conversationId);
+                    activeConvIdRef.current = event.conversationId;
+                    // Refresh conversation list
+                    void fetchConversations();
+                  }
+
                   setIsStreaming(false);
                   setIsTyping(false);
                   setIsThinking(false);
@@ -243,42 +429,21 @@ export function useAgentChat({
         }
       })();
     },
-    [agentId, isStreaming]
+    [agentId, isStreaming, fetchConversations]
   );
-
-  const clearConversation = useCallback(() => {
-    void fetch(`/api/agents/${agentId}/chat/clear`, { method: "POST" }).then(
-      () => {
-        historyRef.current = [];
-        streamingIdRef.current = null;
-        setMessages(
-          greetingMessage
-            ? [
-                {
-                  id: "greeting",
-                  role: "assistant",
-                  content: greetingMessage,
-                  isStreaming: false,
-                  timestamp: now(),
-                },
-              ]
-            : []
-        );
-        setIsStreaming(false);
-        setIsTyping(false);
-        setIsThinking(false);
-      }
-    );
-  }, [agentId, greetingMessage]);
 
   return {
     messages,
-    restoredCount,
     isStreaming,
     isTyping,
     isThinking,
     thinkingText,
     sendMessage,
-    clearConversation,
+    conversations,
+    activeConversationId,
+    isLoadingConversations,
+    startNewConversation,
+    switchConversation,
+    deleteConversation,
   };
 }

@@ -19,11 +19,20 @@ export interface AgentConversationMessage {
   timestamp: string;
 }
 
+/** Lightweight summary for the conversation list. */
+export interface AgentConversationSummary {
+  id: string;
+  title: string | null;
+  updated_at: string;
+  preview: string | null;
+  message_count: number;
+}
+
 /** SSE events for agent chat — subset of ServerEvent, text-only. */
 export type AgentServerEvent =
   | { type: "text-delta"; delta: string }
   | { type: "text-done" }
   | { type: "thinking"; text: string }
   | { type: "thinking-done" }
-  | { type: "done"; assistantContent?: string }
+  | { type: "done"; assistantContent?: string; conversationId?: string }
   | { type: "error"; message: string };
