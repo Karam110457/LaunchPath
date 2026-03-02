@@ -189,18 +189,27 @@ function AgentCanvasInner({
     [router]
   );
 
-  // ─── Node data ────────────────────────────────────────────────────────────
-  const agentData: AgentNodeData = {
-    agentId: agent.id,
-    name: formState.name,
-    description: formState.description || null,
-    model: formState.model,
-    status: formState.status as "draft" | "active" | "paused",
-    avatarEmoji: formState.avatarEmoji,
-    tone: formState.tone || null,
-    greetingMessage: formState.greetingMessage || null,
-    systemPrompt: formState.systemPrompt,
-  };
+  // ─── Node data (memoized so effects don't fire on every render) ──────────
+  const agentData = useMemo<AgentNodeData>(
+    () => ({
+      agentId: agent.id,
+      name: formState.name,
+      description: formState.description || null,
+      model: formState.model,
+      status: formState.status as "draft" | "active" | "paused",
+      avatarEmoji: formState.avatarEmoji,
+      tone: formState.tone || null,
+      greetingMessage: formState.greetingMessage || null,
+      systemPrompt: formState.systemPrompt,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      agent.id,
+      formState.name, formState.description, formState.model,
+      formState.status, formState.avatarEmoji, formState.tone,
+      formState.greetingMessage, formState.systemPrompt,
+    ]
+  );
 
   const [docCounts, setDocCounts] = useState({
     total: initialDocuments.length,
@@ -219,12 +228,15 @@ function AgentCanvasInner({
     []
   );
 
-  const knowledgeData: KnowledgeNodeData = {
-    agentId: agent.id,
-    documentCount: docCounts.total,
-    readyCount: docCounts.ready,
-    processingCount: docCounts.processing,
-  };
+  const knowledgeData = useMemo<KnowledgeNodeData>(
+    () => ({
+      agentId: agent.id,
+      documentCount: docCounts.total,
+      readyCount: docCounts.ready,
+      processingCount: docCounts.processing,
+    }),
+    [agent.id, docCounts.total, docCounts.ready, docCounts.processing]
+  );
 
   // ─── Tools state ──────────────────────────────────────────────────────────
   const [agentTools, setAgentTools] = useState<AgentToolResponse[]>([]);
