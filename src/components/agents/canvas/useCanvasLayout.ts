@@ -20,54 +20,56 @@ interface LayoutInput {
   tools: ToolNodeData[];
 }
 
-// Horizontal layout: Knowledge ←— Agent —→ Tools (stacked vertically)
-const KNOWLEDGE_X = 0;
-const AGENT_X     = 270;
-const TOOLS_X     = 560;
-const TOOL_SPACING = 130; // px between each tool node
+// Vertical hierarchy: agent top-center, knowledge + tools below
+const TOOL_SPACING  = 130; // px gap between tool nodes
+const ROW_GAP       = 280; // vertical gap from agent to children
+const AGENT_W       = 220;
+const CHILD_W       = 195;
 
 export function useCanvasLayout({ agent, knowledge, tools }: LayoutInput) {
   return useMemo(() => {
-    // Vertically center the agent with the right-side column (tools + addTool)
-    const rightCount = tools.length + 1; // tools + addTool
-    const rightSpan  = (rightCount - 1) * TOOL_SPACING;
-    const centerY    = rightSpan / 2;
-    const agentY     = Math.max(centerY - 65, 0); // 65 ≈ half of agent node height
-    const knowledgeY = Math.max(centerY - 50, 0); // 50 ≈ half of knowledge node height
+    // Right column height
+    const toolsColHeight = tools.length > 0 ? (tools.length - 1) * TOOL_SPACING : 0;
+
+    // Center agent horizontally between knowledge center and tools center
+    const knowledgeCenterX = CHILD_W / 2;                     // ~97
+    const toolsCenterX     = CHILD_W + 180 + CHILD_W / 2;    // ~470  (knowledge + gap + tools center)
+    const agentCenterX     = (knowledgeCenterX + toolsCenterX) / 2;
+    const agentX           = Math.round(agentCenterX - AGENT_W / 2);
+
+    // Knowledge starts at y = ROW_GAP, vertically centered with tools column
+    const knowledgeX = 0;
+    const knowledgeY = ROW_GAP + Math.round(toolsColHeight / 2);
+
+    // Tools start at y = ROW_GAP
+    const toolsX = CHILD_W + 180;
+    const toolsStartY = ROW_GAP;
 
     const nodes: CanvasNode[] = [
-      // Agent (center)
+      // Agent (top center)
       {
         id: "agent",
         type: "agentNode",
-        position: { x: AGENT_X, y: agentY },
+        position: { x: agentX, y: 0 },
         data: agent as unknown as Record<string, unknown>,
         draggable: true,
       },
-      // Knowledge (left)
+      // Knowledge (bottom left)
       {
         id: "knowledge",
         type: "knowledgeNode",
-        position: { x: KNOWLEDGE_X, y: knowledgeY },
+        position: { x: knowledgeX, y: knowledgeY },
         data: knowledge as unknown as Record<string, unknown>,
         draggable: true,
       },
-      // Per-tool nodes (right, stacked top to bottom)
+      // Per-tool nodes (bottom right, stacked)
       ...tools.map((tool, i) => ({
         id: `tool-${tool.toolId}`,
         type: "toolNode",
-        position: { x: TOOLS_X, y: i * TOOL_SPACING },
+        position: { x: toolsX, y: toolsStartY + i * TOOL_SPACING },
         data: tool as unknown as Record<string, unknown>,
         draggable: true,
       })),
-      // "Add Tool" button node (below all tool nodes)
-      {
-        id: "add-tool",
-        type: "addToolNode",
-        position: { x: TOOLS_X, y: tools.length * TOOL_SPACING },
-        data: { agentId: agent.agentId },
-        draggable: false,
-      },
     ];
 
     const edges: Edge[] = [
@@ -75,7 +77,7 @@ export function useCanvasLayout({ agent, knowledge, tools }: LayoutInput) {
       {
         id: "agent-knowledge",
         source: "agent",
-        sourceHandle: "left",
+        sourceHandle: "bottom-left",
         target: "knowledge",
         type: "dashedEdge",
       },
@@ -83,18 +85,10 @@ export function useCanvasLayout({ agent, knowledge, tools }: LayoutInput) {
       ...tools.map((tool) => ({
         id: `agent-tool-${tool.toolId}`,
         source: "agent",
-        sourceHandle: "right",
+        sourceHandle: "bottom-right",
         target: `tool-${tool.toolId}`,
         type: "dashedEdge",
       })),
-      // Agent → Add Tool node
-      {
-        id: "agent-add-tool",
-        source: "agent",
-        sourceHandle: "right",
-        target: "add-tool",
-        type: "dashedEdge",
-      },
     ];
 
     return { nodes, edges };

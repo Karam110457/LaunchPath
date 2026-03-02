@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   ReactFlow,
@@ -16,7 +17,6 @@ import "@xyflow/react/dist/style.css";
 import { AgentNode } from "./nodes/AgentNode";
 import { KnowledgeNode } from "./nodes/KnowledgeNode";
 import { ToolNode } from "./nodes/ToolNode";
-import { AddToolNode } from "./nodes/AddToolNode";
 import { DashedEdge } from "./edges/DashedEdge";
 import { TopBar } from "./TopBar";
 import { BottomBar } from "./BottomBar";
@@ -44,7 +44,6 @@ const nodeTypes = {
   agentNode: AgentNode,
   knowledgeNode: KnowledgeNode,
   toolNode: ToolNode,
-  addToolNode: AddToolNode,
 };
 const edgeTypes = {
   dashedEdge: DashedEdge,
@@ -341,9 +340,6 @@ function AgentCanvasInner({
         const existing = agentTools.find((t) => t.id === d.toolId);
         if (existing) setSetupTool({ toolType: existing.tool_type, existing });
       }
-      if (node.type === "addToolNode") {
-        setCatalogOpen(true);
-      }
     },
     [agentTools]
   );
@@ -381,6 +377,15 @@ function AgentCanvasInner({
         isSaving={isSaving}
         isDirty={isDirty}
       />
+
+      {/* Fixed "Add Tool" button — top-right of canvas, n8n style */}
+      <button
+        onClick={() => setCatalogOpen(true)}
+        className="absolute top-[60px] right-4 z-20 flex items-center gap-2 px-3 py-2 bg-card/90 backdrop-blur-sm border border-border/50 rounded-lg text-sm font-medium text-muted-foreground hover:text-amber-400 hover:border-amber-500/40 hover:bg-amber-500/5 transition-all shadow-sm"
+      >
+        <Plus className="w-4 h-4 text-amber-400" />
+        Add Tool
+      </button>
 
       <ReactFlow
         nodes={nodes}
@@ -441,7 +446,7 @@ function AgentCanvasInner({
         )}
       </NodeModal>
 
-      {/* Tool catalog — opens when clicking Add Tool node */}
+      {/* Tool catalog — opens from Add Tool button (top-right) */}
       <ToolCatalogModal
         open={catalogOpen}
         onClose={() => setCatalogOpen(false)}

@@ -57,18 +57,20 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
           double-click to edit
         </p>
 
-        {/* Left source handle → Knowledge */}
+        {/* Bottom-left → Knowledge */}
         <Handle
           type="source"
-          position={Position.Left}
-          id="left"
+          position={Position.Bottom}
+          id="bottom-left"
+          style={{ left: "28%" }}
           className="!bg-primary !w-2.5 !h-2.5 !border-2 !border-card"
         />
-        {/* Right source handle → Tools */}
+        {/* Bottom-right → Tools */}
         <Handle
           type="source"
-          position={Position.Right}
-          id="right"
+          position={Position.Bottom}
+          id="bottom-right"
+          style={{ left: "72%" }}
           className="!bg-primary !w-2.5 !h-2.5 !border-2 !border-card"
         />
       </div>
