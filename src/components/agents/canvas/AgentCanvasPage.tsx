@@ -10,6 +10,8 @@ import {
   useEdgesState,
   Background,
   BackgroundVariant,
+  type Node,
+  type Edge,
   type NodeMouseHandler,
   type OnNodeDrag,
 } from "@xyflow/react";
@@ -303,8 +305,8 @@ function AgentCanvasInner({
   });
 
   // Start empty — set correctly before first paint via useLayoutEffect
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   // When toolsReady flips true: set the correct layout synchronously before
   // the browser paints, so ReactFlow never renders with a stale/empty layout
