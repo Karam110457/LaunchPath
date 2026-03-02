@@ -3,16 +3,17 @@
  * POST /api/agents/[agentId]/chat
  *
  * Accepts a user message + conversation history.
- * Returns SSE stream with text deltas from the agent's system prompt + model.
- * No tools, no cards — text-only for v1.
+ * Returns SSE stream with text deltas, tool events, and conversation state.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { streamText } from "ai";
+import { streamText, stepCountIs } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/security/logger";
 import { retrieveContext } from "@/lib/knowledge/rag";
+import { buildAgentTools } from "@/lib/tools/builder";
+import type { AgentToolRecord } from "@/lib/tools/types";
 import type {
   AgentServerEvent,
   AgentConversationMessage,
@@ -62,6 +63,42 @@ export async function POST(
   }
 
   // ---------------------------------------------------------------------------
+  // Load enabled tools
+  // ---------------------------------------------------------------------------
+
+  const { data: toolRecords } = await supabase
+    .from("agent_tools")
+    .select("*")
+    .eq("agent_id", agentId)
+    .eq("is_enabled", true);
+
+  const agentToolRecords = (toolRecords ?? []) as AgentToolRecord[];
+
+  // Build a display-name map for tool events (toolName → displayName)
+  const toolDisplayNames: Record<string, string> = {};
+  for (const t of agentToolRecords) {
+    // Map expected tool names to display names
+    const key =
+      t.tool_type === "calendly"
+        ? "book_appointment"
+        : t.tool_type === "ghl"
+        ? "create_crm_contact"
+        : t.tool_type === "hubspot"
+        ? "create_crm_contact"
+        : t.tool_type === "human-handoff"
+        ? "transfer_to_human"
+        : t.display_name
+            .toLowerCase()
+            .replace(/[^a-z0-9_]/g, "_")
+            .replace(/_+/g, "_")
+            .slice(0, 60);
+    toolDisplayNames[key] = t.display_name;
+  }
+
+  const tools = await buildAgentTools(agentToolRecords);
+  const hasTools = Object.keys(tools).length > 0;
+
+  // ---------------------------------------------------------------------------
   // RAG: retrieve relevant knowledge if the agent has documents
   // ---------------------------------------------------------------------------
 
@@ -74,7 +111,6 @@ export async function POST(
   let systemPrompt = agent.system_prompt;
 
   if (docCount && docCount > 0) {
-    // Multi-turn retrieval: use recent user messages for better follow-up handling
     const recentUserMsgs = conversationHistory
       .filter((m) => m.role === "user")
       .slice(-2)
@@ -110,7 +146,6 @@ export async function POST(
 
   type AIMessage = { role: "user" | "assistant"; content: string };
 
-  // Sliding window: keep last 20 messages to avoid hitting context limits
   const MAX_HISTORY_MESSAGES = 20;
   const recentHistory = conversationHistory
     .filter((m) => m.role === "user" || m.role === "assistant")
@@ -124,12 +159,12 @@ export async function POST(
   aiMessages.push({ role: "user", content: userMessage });
 
   // ---------------------------------------------------------------------------
-  // Run agent in background (don't await — we return the stream immediately)
+  // Run agent in background
   // ---------------------------------------------------------------------------
 
   void (async () => {
     try {
-      const result = streamText({
+      const streamOptions: Parameters<typeof streamText>[0] = {
         model: anthropic(agent.model),
         system: systemPrompt,
         messages: aiMessages,
@@ -172,11 +207,9 @@ export async function POST(
             },
           ];
 
-          // Persist conversation
           let finalConversationId = conversationId;
 
           if (finalConversationId) {
-            // Update existing conversation
             await supabase
               .from("agent_conversations")
               .update({
@@ -186,7 +219,6 @@ export async function POST(
               .eq("id", finalConversationId)
               .eq("user_id", user.id);
           } else {
-            // Create new conversation with auto-title
             const autoTitle =
               userMessage.length > 50
                 ? userMessage.slice(0, 47) + "..."
@@ -213,11 +245,16 @@ export async function POST(
             conversationId: finalConversationId,
           });
         },
-      });
+      };
 
-      // Process the stream — emit text deltas + thinking events.
-      // We do NOT emit "text-done" between steps — only once at the very end
-      // so the client keeps all text in a single message bubble.
+      // Add tools if any are configured
+      if (hasTools) {
+        streamOptions.tools = tools as Parameters<typeof streamText>[0]["tools"];
+        streamOptions.stopWhen = stepCountIs(5);
+      }
+
+      const result = streamText(streamOptions);
+
       let wasThinking = false;
       let hasUnfinishedText = false;
 
@@ -237,12 +274,23 @@ export async function POST(
           }
           hasUnfinishedText = true;
           emit({ type: "text-delta", delta: chunk.text });
+        } else if (chunk.type === "tool-call") {
+          emit({
+            type: "tool-call",
+            toolName: chunk.toolName,
+            displayName: toolDisplayNames[chunk.toolName] ?? chunk.toolName,
+          });
+        } else if (chunk.type === "tool-result") {
+          const output = chunk.output as { success?: boolean; message?: string } | null;
+          emit({
+            type: "tool-result",
+            toolName: chunk.toolName,
+            success: output?.success !== false,
+            message: output?.message,
+          });
         }
-        // Intentionally no else — non-text chunks (step-finish, etc.) are
-        // ignored so text accumulates into one continuous message.
       }
 
-      // Stream is fully done — finalize any remaining text
       if (hasUnfinishedText) {
         emit({ type: "text-done" });
       }

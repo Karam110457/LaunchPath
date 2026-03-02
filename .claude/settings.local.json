@@ -6,7 +6,8 @@
       "WebFetch(domain:github.com)",
       "mcp__claude_ai_Supabase__list_projects",
       "mcp__claude_ai_Supabase__apply_migration",
-      "mcp__claude_ai_Supabase__list_migrations"
+      "mcp__claude_ai_Supabase__list_migrations",
+      "Bash(node -e \":*)"
     ]
   }
 }

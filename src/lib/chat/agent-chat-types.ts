@@ -28,11 +28,13 @@ export interface AgentConversationSummary {
   message_count: number;
 }
 
-/** SSE events for agent chat — subset of ServerEvent, text-only. */
+/** SSE events for agent chat. */
 export type AgentServerEvent =
   | { type: "text-delta"; delta: string }
   | { type: "text-done" }
   | { type: "thinking"; text: string }
   | { type: "thinking-done" }
+  | { type: "tool-call"; toolName: string; displayName: string }
+  | { type: "tool-result"; toolName: string; success: boolean; message?: string }
   | { type: "done"; assistantContent?: string; conversationId?: string }
   | { type: "error"; message: string };

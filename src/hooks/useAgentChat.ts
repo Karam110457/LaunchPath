@@ -26,12 +26,20 @@ interface UseAgentChatOptions {
   greetingMessage?: string;
 }
 
+export interface ToolActivity {
+  toolName: string;
+  displayName: string;
+  status: "running" | "done" | "failed";
+  message?: string;
+}
+
 interface UseAgentChatReturn {
   messages: AgentChatMessage[];
   isStreaming: boolean;
   isTyping: boolean;
   isThinking: boolean;
   thinkingText: string;
+  toolActivity: ToolActivity[];
   sendMessage: (text: string) => void;
 
   // Multi-conversation
@@ -76,6 +84,8 @@ export function useAgentChat({
   const [isTyping, setIsTyping] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingText, setThinkingText] = useState("");
+
+  const [toolActivity, setToolActivity] = useState<ToolActivity[]>([]);
 
   const historyRef = useRef<AgentConversationMessage[]>([]);
   const streamingIdRef = useRef<string | null>(null);
@@ -265,6 +275,7 @@ export function useAgentChat({
       setIsTyping(true);
       setIsThinking(false);
       setThinkingText("");
+      setToolActivity([]);
       streamingIdRef.current = null;
 
       void (async () => {
@@ -344,6 +355,28 @@ export function useAgentChat({
                     )
                   );
                   streamingIdRef.current = null;
+                } else if (event.type === "tool-call") {
+                  setIsTyping(false);
+                  setToolActivity((prev) => [
+                    ...prev,
+                    {
+                      toolName: event.toolName,
+                      displayName: event.displayName,
+                      status: "running" as const,
+                    },
+                  ]);
+                } else if (event.type === "tool-result") {
+                  setToolActivity((prev) =>
+                    prev.map((t) =>
+                      t.toolName === event.toolName
+                        ? {
+                            ...t,
+                            status: event.success ? ("done" as const) : ("failed" as const),
+                            message: event.message,
+                          }
+                        : t
+                    )
+                  );
                 } else if (event.type === "thinking") {
                   setIsTyping(false);
                   setIsThinking(true);
@@ -371,6 +404,7 @@ export function useAgentChat({
                   setIsStreaming(false);
                   setIsTyping(false);
                   setIsThinking(false);
+                  setToolActivity([]);
                 } else if (event.type === "error") {
                   setIsStreaming(false);
                   setIsTyping(false);
@@ -438,6 +472,7 @@ export function useAgentChat({
     isTyping,
     isThinking,
     thinkingText,
+    toolActivity,
     sendMessage,
     conversations,
     activeConversationId,

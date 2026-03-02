@@ -12,6 +12,9 @@ import {
   ChevronDown,
   MessageSquare,
   Loader2,
+  CheckCircle2,
+  XCircle,
+  Wrench,
 } from "lucide-react";
 import { useAgentChat } from "@/hooks/useAgentChat";
 import { InputBar } from "@/components/chat/InputBar";
@@ -31,6 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import type { AgentChatMessage } from "@/lib/chat/agent-chat-types";
+import type { ToolActivity } from "@/hooks/useAgentChat";
 
 interface AgentChatPanelProps {
   agentId: string;
@@ -63,6 +67,7 @@ export function AgentChatPanel({
     isTyping,
     isThinking,
     thinkingText,
+    toolActivity,
     sendMessage,
     conversations,
     activeConversationId,
@@ -80,7 +85,7 @@ export function AgentChatPanel({
   useEffect(() => {
     const el = listRef.current;
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [messages, isTyping, isThinking, thinkingText]);
+  }, [messages, isTyping, isThinking, thinkingText, toolActivity]);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -239,6 +244,11 @@ export function AgentChatPanel({
             <AgentMessage key={msg.id} message={msg} />
           ))}
 
+          {/* Tool activity */}
+          {toolActivity.length > 0 && (
+            <ToolActivityDisplay activities={toolActivity} />
+          )}
+
           {/* Thinking indicator */}
           {(isThinking || thinkingText) && isStreaming && (
             <ThinkingBubble
@@ -248,7 +258,7 @@ export function AgentChatPanel({
           )}
 
           {/* Typing indicator */}
-          {isTyping && !isThinking && <TypingIndicator />}
+          {isTyping && !isThinking && toolActivity.length === 0 && <TypingIndicator />}
         </div>
       </div>
 
@@ -256,6 +266,41 @@ export function AgentChatPanel({
       <div className="absolute bottom-0 left-0 right-0 px-4 pb-5 pt-3 z-10">
         <InputBar onSend={sendMessage} disabled={isStreaming} />
       </div>
+    </div>
+  );
+}
+
+/** Tool activity pills shown during tool execution. */
+function ToolActivityDisplay({ activities }: { activities: ToolActivity[] }) {
+  return (
+    <div className="flex flex-col gap-1.5 py-1">
+      {activities.map((activity, i) => (
+        <div
+          key={`${activity.toolName}-${i}`}
+          className={cn(
+            "inline-flex items-center gap-1.5 self-start rounded-full px-3 py-1.5 text-xs border transition-all",
+            activity.status === "running"
+              ? "bg-primary/8 border-primary/20 text-primary/80"
+              : activity.status === "done"
+              ? "bg-emerald-500/8 border-emerald-500/20 text-emerald-500/80"
+              : "bg-destructive/8 border-destructive/20 text-destructive/80"
+          )}
+        >
+          {activity.status === "running" ? (
+            <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+          ) : activity.status === "done" ? (
+            <CheckCircle2 className="w-3 h-3 shrink-0" />
+          ) : (
+            <XCircle className="w-3 h-3 shrink-0" />
+          )}
+          <Wrench className="w-2.5 h-2.5 shrink-0 opacity-60" />
+          <span>
+            {activity.status === "running"
+              ? activity.displayName + "…"
+              : activity.message ?? activity.displayName}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
