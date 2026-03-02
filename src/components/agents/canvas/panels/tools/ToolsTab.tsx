@@ -10,9 +10,10 @@ import type { AgentToolResponse } from "@/lib/tools/types";
 
 interface ToolsTabProps {
   agentId: string;
+  onToolCountChange?: (count: number) => void;
 }
 
-export function ToolsTab({ agentId }: ToolsTabProps) {
+export function ToolsTab({ agentId, onToolCountChange }: ToolsTabProps) {
   const [tools, setTools] = useState<AgentToolResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [catalogOpen, setCatalogOpen] = useState(false);
@@ -27,11 +28,12 @@ export function ToolsTab({ agentId }: ToolsTabProps) {
       if (res.ok) {
         const data = (await res.json()) as { tools: AgentToolResponse[] };
         setTools(data.tools);
+        onToolCountChange?.(data.tools.filter((t) => t.is_enabled).length);
       }
     } finally {
       setLoading(false);
     }
-  }, [agentId]);
+  }, [agentId, onToolCountChange]);
 
   useEffect(() => {
     void fetchTools();
@@ -54,13 +56,17 @@ export function ToolsTab({ agentId }: ToolsTabProps) {
 
   const handleDeleteTool = async (toolId: string) => {
     await fetch(`/api/agents/${agentId}/tools/${toolId}`, { method: "DELETE" });
-    setTools((prev) => prev.filter((t) => t.id !== toolId));
+    const updated = tools.filter((t) => t.id !== toolId);
+    setTools(updated);
+    onToolCountChange?.(updated.filter((t) => t.is_enabled).length);
   };
 
   const handleToggleTool = async (toolId: string, enabled: boolean) => {
-    setTools((prev) =>
-      prev.map((t) => (t.id === toolId ? { ...t, is_enabled: enabled } : t))
+    const updated = tools.map((t) =>
+      t.id === toolId ? { ...t, is_enabled: enabled } : t
     );
+    setTools(updated);
+    onToolCountChange?.(updated.filter((t) => t.is_enabled).length);
     await fetch(`/api/agents/${agentId}/tools/${toolId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

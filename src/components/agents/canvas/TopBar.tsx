@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Save, Loader2, History } from "lucide-react";
+import { ArrowLeft, Save, Loader2, History, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -11,8 +11,10 @@ interface TopBarProps {
   avatarEmoji: string;
   onSave: () => void;
   onVersionHistory: () => void;
+  onTools: () => void;
   isSaving: boolean;
   isDirty: boolean;
+  toolCount?: number;
 }
 
 export function TopBar({
@@ -21,8 +23,10 @@ export function TopBar({
   avatarEmoji,
   onSave,
   onVersionHistory,
+  onTools,
   isSaving,
   isDirty,
+  toolCount,
 }: TopBarProps) {
   return (
     <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-background/80 backdrop-blur-sm border-b border-border/50">
@@ -45,6 +49,20 @@ export function TopBar({
         </Badge>
       </div>
       <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onTools}
+          className="text-muted-foreground relative"
+        >
+          <Wrench className="w-3.5 h-3.5 mr-1.5" />
+          Tools
+          {toolCount !== undefined && toolCount > 0 && (
+            <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold leading-none">
+              {toolCount}
+            </span>
+          )}
+        </Button>
         <Button
           variant="ghost"
           size="sm"

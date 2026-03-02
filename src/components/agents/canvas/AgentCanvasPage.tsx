@@ -22,6 +22,7 @@ import { NodeModal } from "./panels/NodeModal";
 import { AgentEditPanel } from "./panels/AgentEditPanel";
 import { KnowledgeDetailPanel } from "./panels/KnowledgeDetailPanel";
 import { AgentChatPanel } from "@/components/agents/AgentChatPanel";
+import { ToolsTab } from "./panels/tools/ToolsTab";
 import { SaveDialog } from "./SaveDialog";
 import { VersionHistoryModal } from "./VersionHistoryModal";
 import { useCanvasLayout } from "./useCanvasLayout";
@@ -245,6 +246,7 @@ function AgentCanvasInner({
   // Modal state
   const [modal, setModal] = useState<PanelState>({ type: "none" });
   const [testMode, setTestMode] = useState(false);
+  const [toolCount, setToolCount] = useState(0);
 
   // Single-click on knowledge node opens knowledge panel
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
@@ -278,6 +280,7 @@ function AgentCanvasInner({
   if (modal.type === "edit-agent") modalTitle = "Edit Agent";
   else if (modal.type === "knowledge") modalTitle = "Knowledge Base";
   else if (modal.type === "chat") modalTitle = `Test ${agent.name}`;
+  else if (modal.type === "tools") modalTitle = "Tools";
 
   return (
     <div className="relative w-full h-[calc(100vh-3.5rem)] overflow-hidden bg-[#0a0a0a]">
@@ -287,8 +290,10 @@ function AgentCanvasInner({
         avatarEmoji={formState.avatarEmoji}
         onSave={() => setShowSaveDialog(true)}
         onVersionHistory={() => setShowVersionHistory(true)}
+        onTools={() => setModal({ type: "tools" })}
         isSaving={isSaving}
         isDirty={isDirty}
+        toolCount={toolCount}
       />
 
       <ReactFlow
@@ -347,6 +352,9 @@ function AgentCanvasInner({
             greetingMessage={personality?.greeting_message}
             embedded
           />
+        )}
+        {modal.type === "tools" && (
+          <ToolsTab agentId={agent.id} onToolCountChange={setToolCount} />
         )}
       </NodeModal>
 
