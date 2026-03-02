@@ -8,6 +8,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { extractPdfText } from "@/lib/knowledge/pdf-extract";
+import { extractDocxText } from "@/lib/knowledge/docx-extract";
+import { extractCsvText } from "@/lib/knowledge/csv-extract";
 import { scrapeWebsite } from "@/lib/knowledge/web-scraper";
 import { chunkText } from "@/lib/knowledge/chunking";
 import { embedTexts } from "@/lib/knowledge/embeddings";
@@ -79,8 +81,13 @@ export async function POST(
       if (!fileData) throw new Error("Could not download file from storage");
 
       const buffer = Buffer.from(await fileData.arrayBuffer());
-      if (doc.source_name.endsWith(".pdf")) {
+      const name = (doc.source_name as string).toLowerCase();
+      if (name.endsWith(".pdf")) {
         content = await extractPdfText(buffer);
+      } else if (name.endsWith(".docx")) {
+        content = await extractDocxText(buffer);
+      } else if (name.endsWith(".csv")) {
+        content = extractCsvText(buffer);
       } else {
         content = buffer.toString("utf-8");
       }

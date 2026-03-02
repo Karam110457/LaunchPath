@@ -199,12 +199,28 @@ function AgentCanvasInner({
     systemPrompt: formState.systemPrompt,
   };
 
+  const [docCounts, setDocCounts] = useState({
+    total: initialDocuments.length,
+    ready: initialDocuments.filter((d) => d.status === "ready").length,
+    processing: initialDocuments.filter((d) => d.status === "processing").length,
+  });
+
+  const handleDocumentsChange = useCallback(
+    (docs: Array<{ status: string }>) => {
+      setDocCounts({
+        total: docs.length,
+        ready: docs.filter((d) => d.status === "ready").length,
+        processing: docs.filter((d) => d.status === "processing").length,
+      });
+    },
+    [],
+  );
+
   const knowledgeData: KnowledgeNodeData = {
     agentId: agent.id,
-    documentCount: initialDocuments.length,
-    readyCount: initialDocuments.filter((d) => d.status === "ready").length,
-    processingCount: initialDocuments.filter((d) => d.status === "processing")
-      .length,
+    documentCount: docCounts.total,
+    readyCount: docCounts.ready,
+    processingCount: docCounts.processing,
   };
 
   // Layout
@@ -213,8 +229,18 @@ function AgentCanvasInner({
     knowledge: knowledgeData,
   });
 
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, , onEdgesChange] = useEdgesState(initialEdges);
+
+  // Keep knowledge node data in sync with live document counts
+  useEffect(() => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.type === "knowledgeNode" ? { ...n, data: { ...n.data, ...knowledgeData } } : n,
+      ),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docCounts, setNodes]);
 
   // Modal state
   const [modal, setModal] = useState<PanelState>({ type: "none" });
@@ -311,6 +337,7 @@ function AgentCanvasInner({
           <KnowledgeDetailPanel
             agentId={agent.id}
             initialDocuments={initialDocuments}
+            onDocumentsChange={handleDocumentsChange}
           />
         )}
         {modal.type === "chat" && (

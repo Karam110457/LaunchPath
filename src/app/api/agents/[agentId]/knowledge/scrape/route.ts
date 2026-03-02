@@ -127,8 +127,11 @@ export async function POST(
       id: doc.id,
       source_type: "website",
       source_name: url,
+      content,
       chunk_count: chunks.length,
       status: "ready",
+      error_message: null,
+      created_at: new Date().toISOString(),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

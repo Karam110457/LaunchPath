@@ -179,8 +179,11 @@ export async function POST(
       id: doc.id,
       source_type: "file",
       source_name: file.name,
+      content: text,
       chunk_count: chunks.length,
       status: "ready",
+      error_message: null,
+      created_at: new Date().toISOString(),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

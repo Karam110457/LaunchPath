@@ -47,14 +47,28 @@ interface KnowledgeDocument {
 interface KnowledgeDetailPanelProps {
   agentId: string;
   initialDocuments: KnowledgeDocument[];
+  onDocumentsChange?: (documents: KnowledgeDocument[]) => void;
 }
 
 export function KnowledgeDetailPanel({
   agentId,
   initialDocuments,
+  onDocumentsChange,
 }: KnowledgeDetailPanelProps) {
-  const [documents, setDocuments] =
+  const [documents, setDocumentsRaw] =
     useState<KnowledgeDocument[]>(initialDocuments);
+
+  // Wrap setDocuments to notify parent of changes
+  const setDocuments = useCallback(
+    (updater: KnowledgeDocument[] | ((prev: KnowledgeDocument[]) => KnowledgeDocument[])) => {
+      setDocumentsRaw((prev) => {
+        const next = typeof updater === "function" ? updater(prev) : updater;
+        onDocumentsChange?.(next);
+        return next;
+      });
+    },
+    [onDocumentsChange],
+  );
   const [activeForm, setActiveForm] = useState<
     "upload" | "website" | "faq" | null
   >(null);
@@ -82,8 +96,9 @@ export function KnowledgeDetailPanel({
   }, [hasProcessing, refreshDocuments]);
 
   const handleDocumentAdded = useCallback(
-    (doc: KnowledgeDocument) => {
-      setDocuments((prev) => [doc, ...prev]);
+    (docs: KnowledgeDocument | KnowledgeDocument[]) => {
+      const arr = Array.isArray(docs) ? docs : [docs];
+      setDocuments((prev) => [...arr, ...prev]);
       setActiveForm(null);
     },
     [],
@@ -140,7 +155,7 @@ export function KnowledgeDetailPanel({
   );
 
   const handleFaqEdit = useCallback(
-    async (documentId: string, question: string, answer: string) => {
+    async (documentId: string, question: string, answer: string): Promise<boolean> => {
       setPanelError(null);
       try {
         const res = await fetch(`/api/agents/${agentId}/knowledge/faq`, {
@@ -151,12 +166,15 @@ export function KnowledgeDetailPanel({
         if (res.ok) {
           setEditingDocId(null);
           refreshDocuments();
+          return true;
         } else {
           const data = await res.json();
           setPanelError(data.error || "Failed to update FAQ.");
+          return false;
         }
       } catch {
         setPanelError("Network error. Please check your connection.");
+        return false;
       }
     },
     [agentId, refreshDocuments],
@@ -308,7 +326,7 @@ export function KnowledgeDetailPanel({
                 {editingDocId === doc.id && (
                   <FaqEditForm
                     document={doc}
-                    onSave={(q, a) => handleFaqEdit(doc.id, q, a)}
+                    onSave={async (q, a) => handleFaqEdit(doc.id, q, a)}
                     onCancel={() => setEditingDocId(null)}
                   />
                 )}
@@ -331,7 +349,7 @@ function FileUploadForm({
   onCancel,
 }: {
   agentId: string;
-  onSuccess: (doc: KnowledgeDocument) => void;
+  onSuccess: (docs: KnowledgeDocument | KnowledgeDocument[]) => void;
   onCancel: () => void;
 }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -381,6 +399,7 @@ function FileUploadForm({
     if (selectedFiles.length === 0) return;
     setIsUploading(true);
     setError(null);
+    const uploaded: KnowledgeDocument[] = [];
     try {
       for (const file of selectedFiles) {
         const formData = new FormData();
@@ -391,10 +410,13 @@ function FileUploadForm({
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `Upload failed: ${file.name}`);
-        onSuccess(data as KnowledgeDocument);
+        uploaded.push(data as KnowledgeDocument);
       }
       setSelectedFiles([]);
+      onSuccess(uploaded);
     } catch (err) {
+      // Add any successfully uploaded files before showing error
+      if (uploaded.length > 0) onSuccess(uploaded);
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setIsUploading(false);
@@ -499,7 +521,7 @@ function WebsiteScrapeForm({
   onCancel,
 }: {
   agentId: string;
-  onSuccess: (doc: KnowledgeDocument) => void;
+  onSuccess: (docs: KnowledgeDocument | KnowledgeDocument[]) => void;
   onCancel: () => void;
 }) {
   const [url, setUrl] = useState("");
@@ -590,7 +612,7 @@ function FaqForm({
   onCancel,
 }: {
   agentId: string;
-  onSuccess: (doc: KnowledgeDocument) => void;
+  onSuccess: (docs: KnowledgeDocument | KnowledgeDocument[]) => void;
   onCancel: () => void;
 }) {
   const [question, setQuestion] = useState("");
@@ -695,7 +717,7 @@ function FaqEditForm({
   onCancel,
 }: {
   document: KnowledgeDocument;
-  onSave: (question: string, answer: string) => void;
+  onSave: (question: string, answer: string) => Promise<boolean>;
   onCancel: () => void;
 }) {
   // Parse existing Q/A from content field (format: "Q: ...\nA: ...")
@@ -715,7 +737,8 @@ function FaqEditForm({
     e.preventDefault();
     if (!question.trim() || !answer.trim()) return;
     setIsLoading(true);
-    onSave(question.trim(), answer.trim());
+    const ok = await onSave(question.trim(), answer.trim());
+    if (!ok) setIsLoading(false);
   };
 
   return (
@@ -816,6 +839,11 @@ function DocumentRow({
             doc.chunk_count > 0 &&
             ` · ${doc.chunk_count} chunks`}
         </p>
+        {doc.status === "error" && doc.error_message && (
+          <p className="text-[10px] text-destructive truncate" title={doc.error_message}>
+            {doc.error_message}
+          </p>
+        )}
       </div>
 
       {/* Status */}

@@ -113,6 +113,8 @@ export async function POST(
       content,
       chunk_count: 1,
       status: "ready",
+      error_message: null,
+      created_at: new Date().toISOString(),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
