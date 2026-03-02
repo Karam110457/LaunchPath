@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -8,12 +8,8 @@ import {
   ReactFlowProvider,
   useNodesState,
   useEdgesState,
-  useNodesInitialized,
-  useReactFlow,
   Background,
   BackgroundVariant,
-  type Node,
-  type Edge,
   type NodeMouseHandler,
   type OnNodeDrag,
 } from "@xyflow/react";
@@ -44,7 +40,7 @@ import type {
 } from "./canvas-types";
 import type { AgentToolResponse, ToolType } from "@/lib/tools/types";
 
-// ─── Stable node/edge type maps ──────────────────────────────────────────────
+// Stable references for React Flow
 const nodeTypes = {
   agentNode: AgentNode,
   knowledgeNode: KnowledgeNode,
@@ -53,159 +49,6 @@ const nodeTypes = {
 const edgeTypes = {
   dashedEdge: DashedEdge,
 };
-
-// ─── CanvasFlow ───────────────────────────────────────────────────────────────
-// Separate component so useNodesState is initialised with the correct nodes
-// on first mount (instead of an empty array that causes a position animation).
-// Only rendered once toolsReady=true, at which point initialNodes/initialEdges
-// already contain the full layout.
-
-interface CanvasFlowProps {
-  initialNodes: Node[];
-  initialEdges: Edge[];
-  agentData: AgentNodeData;
-  knowledgeData: KnowledgeNodeData;
-  agentTools: AgentToolResponse[];
-  toolNodeItems: ToolNodeData[];
-  savedPositions: SavedPositions;
-  onNodeDragStop: OnNodeDrag;
-  onNodeClick: NodeMouseHandler;
-  onNodeDoubleClick: NodeMouseHandler;
-  onReady: () => void;
-}
-
-function CanvasFlow({
-  initialNodes,
-  initialEdges,
-  agentData,
-  knowledgeData,
-  agentTools,
-  toolNodeItems,
-  savedPositions,
-  onNodeDragStop,
-  onNodeClick,
-  onNodeDoubleClick,
-  onReady,
-}: CanvasFlowProps) {
-  // Log what positions CanvasFlow is seeded with on first mount
-  const mountPositions = useRef<boolean>(false);
-  if (!mountPositions.current) {
-    mountPositions.current = true;
-    console.log("[canvas:CanvasFlow] MOUNT — initialNodes positions:");
-    for (const n of initialNodes) {
-      console.log(`  ${n.id}: x=${(n as unknown as {position:{x:number;y:number}}).position?.x} y=${(n as unknown as {position:{x:number;y:number}}).position?.y}`);
-    }
-  }
-
-  // Initialised with correct nodes — no position jump on first paint
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-
-  // ─── Event-driven reveal ──────────────────────────────────────────────────
-  // Wait until React Flow has measured all node dimensions (ResizeObserver),
-  // then call fitView() imperatively — it returns Promise<boolean> which
-  // resolves only after the viewport has been adjusted. Only then reveal.
-  // This eliminates the fragile fixed-frame heuristic.
-  const [isReady, setIsReady] = useState(false);
-  const hasRevealedRef = useRef(false);
-  const nodesInitialized = useNodesInitialized();
-  const { fitView } = useReactFlow();
-
-  useEffect(() => {
-    if (!nodesInitialized || hasRevealedRef.current) return;
-    hasRevealedRef.current = true;
-    console.log("[canvas:CanvasFlow] nodesInitialized — calling fitView");
-    void fitView({ padding: 0.4 }).then((fitted) => {
-      console.log("[canvas:CanvasFlow] fitView resolved:", fitted, "— revealing canvas");
-      setIsReady(true);
-      onReady();
-    });
-  }, [nodesInitialized, fitView, onReady]);
-
-  // Recompute layout whenever tools or saved positions change
-  const { nodes: layoutNodes, edges: layoutEdges } = useCanvasLayout({
-    agent: agentData,
-    knowledge: knowledgeData,
-    tools: toolNodeItems,
-    savedPositions,
-  });
-
-  // Update agent node data in-place (preserves dragged position)
-  useEffect(() => {
-    setNodes((nds) =>
-      nds.map((n) =>
-        n.type === "agentNode"
-          ? { ...n, data: agentData as unknown as Record<string, unknown> }
-          : n
-      )
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentData]);
-
-  // Update knowledge node data in-place (preserves dragged position)
-  useEffect(() => {
-    setNodes((nds) =>
-      nds.map((n) =>
-        n.type === "knowledgeNode"
-          ? { ...n, data: knowledgeData as unknown as Record<string, unknown> }
-          : n
-      )
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [knowledgeData]);
-
-  // When tools are added/removed after initial mount: rebuild the full layout
-  // (new nodes get default positions; existing nodes keep their saved positions)
-  const isMounted = useRef(false);
-  useEffect(() => {
-    if (!isMounted.current) {
-      isMounted.current = true;
-      return; // skip first run — initialNodes already correct
-    }
-    setNodes(layoutNodes);
-    setEdges(layoutEdges);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentTools]);
-
-  return (
-    // opacity wrapper: hides the canvas until nodesInitialized + fitView()
-    // Promise resolves — then fades in cleanly
-    <div
-      className="w-full h-full"
-      style={{
-        opacity: isReady ? 1 : 0,
-        transition: isReady ? "opacity 0.18s ease" : "none",
-      }}
-    >
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeClick={onNodeClick}
-        onNodeDoubleClick={onNodeDoubleClick}
-        onNodeDragStop={onNodeDragStop}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        proOptions={{ hideAttribution: true }}
-        minZoom={0.3}
-        maxZoom={2}
-        className="!bg-transparent"
-        nodesConnectable={false}
-        elementsSelectable
-      >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={24}
-          size={1.2}
-          color="rgba(255, 255, 255, 0.15)"
-        />
-      </ReactFlow>
-    </div>
-  );
-}
-
-// ─── AgentCanvasPageProps ─────────────────────────────────────────────────────
 
 export interface AgentCanvasPageProps {
   agent: {
@@ -235,8 +78,6 @@ export interface AgentCanvasPageProps {
     created_at: string;
   }>;
 }
-
-// ─── AgentCanvasInner ─────────────────────────────────────────────────────────
 
 function AgentCanvasInner({
   agent,
@@ -398,15 +239,10 @@ function AgentCanvasInner({
     [agent.id, docCounts.total, docCounts.ready, docCounts.processing]
   );
 
-  // ─── Tools + canvas readiness ────────────────────────────────────────────
+  // ─── Tools state ──────────────────────────────────────────────────────────
   const [agentTools, setAgentTools] = useState<AgentToolResponse[]>([]);
+  // Block canvas render until first tools fetch completes (prevents layout jump)
   const [toolsReady, setToolsReady] = useState(false);
-  // canvasReady flips true once CanvasFlow's 2-frame delay resolves
-  const [canvasReady, setCanvasReady] = useState(false);
-  const handleCanvasReady = useCallback(() => {
-    console.log("[canvas:AgentCanvasInner] canvasReady=true — spinner hidden");
-    setCanvasReady(true);
-  }, []);
 
   const fetchTools = useCallback(async () => {
     try {
@@ -418,7 +254,6 @@ function AgentCanvasInner({
     } catch {
       // non-critical
     } finally {
-      console.log("[canvas:fetchTools] done — setting toolsReady=true");
       setToolsReady(true);
     }
   }, [agent.id]);
@@ -437,14 +272,16 @@ function AgentCanvasInner({
     [agentTools, agent.id]
   );
 
-  // ─── Position persistence ─────────────────────────────────────────────────
-  const rawLayout = (agent.canvas_layout as SavedPositions) ?? {};
-  console.log("[canvas:init] canvas_layout from DB:", JSON.stringify(rawLayout));
-  const [savedPositions, setSavedPositions] = useState<SavedPositions>(rawLayout);
+  // ─── Canvas position persistence ─────────────────────────────────────────
+  // Initialise from the server-fetched canvas_layout (persisted positions)
+  const [savedPositions, setSavedPositions] = useState<SavedPositions>(
+    (agent.canvas_layout as SavedPositions) ?? {}
+  );
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const persistPositions = useCallback(
     (positions: SavedPositions) => {
+      // Debounce to avoid spamming the API during rapid drags
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       saveTimerRef.current = setTimeout(() => {
         void fetch(`/api/agents/${agent.id}/canvas-layout`, {
@@ -457,9 +294,7 @@ function AgentCanvasInner({
     [agent.id]
   );
 
-  // ─── Initial layout (computed once when toolsReady flips true) ────────────
-  // Used as the initialNodes/initialEdges for CanvasFlow on its first mount.
-  // After that, CanvasFlow manages its own internal node state.
+  // ─── Canvas layout ────────────────────────────────────────────────────────
   const { nodes: layoutNodes, edges: layoutEdges } = useCanvasLayout({
     agent: agentData,
     knowledge: knowledgeData,
@@ -467,25 +302,59 @@ function AgentCanvasInner({
     savedPositions,
   });
 
-  // Log what is being passed to CanvasFlow on toolsReady
-  useEffect(() => {
+  // Start empty — set correctly before first paint via useLayoutEffect
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  // When toolsReady flips true: set the correct layout synchronously before
+  // the browser paints, so ReactFlow never renders with a stale/empty layout
+  useLayoutEffect(() => {
     if (!toolsReady) return;
-    console.log("[canvas:AgentCanvasInner] toolsReady — layoutNodes being passed to CanvasFlow:");
-    for (const n of layoutNodes) {
-      console.log(`  ${n.id}: x=${n.position.x} y=${n.position.y}`);
-    }
-    console.log("[canvas:AgentCanvasInner] current savedPositions state:", JSON.stringify(savedPositions));
+    setNodes(layoutNodes);
+    setEdges(layoutEdges);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toolsReady]);
 
-  // ─── Drag: capture positions and persist ─────────────────────────────────
+  // Update agent node data in-place (preserves position)
+  useEffect(() => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.type === "agentNode"
+          ? { ...n, data: agentData as unknown as Record<string, unknown> }
+          : n
+      )
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentData]);
+
+  // Update knowledge node data in-place (preserves position)
+  useEffect(() => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.type === "knowledgeNode"
+          ? { ...n, data: knowledgeData as unknown as Record<string, unknown> }
+          : n
+      )
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docCounts]);
+
+  // When tools change after initial load: rebuild layout with saved positions
+  // New tool nodes get default positions; existing nodes keep their saved spot
+  useEffect(() => {
+    if (!toolsReady) return;
+    setNodes(layoutNodes);
+    setEdges(layoutEdges);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentTools]);
+
+  // ─── Drag end: capture new position and persist ───────────────────────────
   const onNodeDragStop: OnNodeDrag = useCallback(
     (_event, _node, allNodes) => {
       const updated: SavedPositions = { ...savedPositions };
       for (const n of allNodes) {
         updated[n.id] = { x: Math.round(n.position.x), y: Math.round(n.position.y) };
       }
-      console.log("[canvas:drag] saving positions:", JSON.stringify(updated));
       setSavedPositions(updated);
       persistPositions(updated);
     },
@@ -495,6 +364,8 @@ function AgentCanvasInner({
   // ─── Interaction ─────────────────────────────────────────────────────────
   const [modal, setModal] = useState<PanelState>({ type: "none" });
   const [testMode, setTestMode] = useState(false);
+
+  // Tool dialog state
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [setupTool, setSetupTool] = useState<{
     toolType: string;
@@ -560,6 +431,7 @@ function AgentCanvasInner({
         isDirty={isDirty}
       />
 
+      {/* Fixed "Add Tool" button */}
       <button
         onClick={() => setCatalogOpen(true)}
         className="absolute top-[60px] right-4 z-20 flex items-center gap-2 px-3 py-2 bg-card/90 backdrop-blur-sm border border-border/50 rounded-lg text-sm font-medium text-muted-foreground hover:text-amber-400 hover:border-amber-500/40 hover:bg-amber-500/5 transition-all shadow-sm"
@@ -568,31 +440,38 @@ function AgentCanvasInner({
         Add Tool
       </button>
 
-      {/* Spinner: visible until tools are fetched AND React Flow has fully
-          settled (fitView + ResizeObserver complete). Crossfades with canvas. */}
-      {!canvasReady && (
-        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-          <div className="w-5 h-5 rounded-full border-2 border-zinc-700 border-t-zinc-400 animate-spin" />
-        </div>
-      )}
-
-      {/* Mount CanvasFlow once tools are loaded so useNodesState gets the
-          correct initial nodes. CanvasFlow hides itself (opacity:0) during
-          React Flow's 2-frame init cycle, then fades in via onReady. */}
-      {toolsReady && (
-        <CanvasFlow
-          initialNodes={layoutNodes as Node[]}
-          initialEdges={layoutEdges}
-          agentData={agentData}
-          knowledgeData={knowledgeData}
-          agentTools={agentTools}
-          toolNodeItems={toolNodeItems}
-          savedPositions={savedPositions}
-          onNodeDragStop={onNodeDragStop}
+      {toolsReady ? (
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
           onNodeClick={onNodeClick}
           onNodeDoubleClick={onNodeDoubleClick}
-          onReady={handleCanvasReady}
-        />
+          onNodeDragStop={onNodeDragStop}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.4 }}
+          proOptions={{ hideAttribution: true }}
+          minZoom={0.3}
+          maxZoom={2}
+          className="!bg-transparent"
+          nodesConnectable={false}
+          elementsSelectable
+        >
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={24}
+            size={1.2}
+            color="rgba(255, 255, 255, 0.15)"
+          />
+        </ReactFlow>
+      ) : (
+        // Holds space while tools are fetched — no layout jump
+        <div className="w-full h-full flex items-center justify-center">
+          <div className="w-5 h-5 rounded-full border-2 border-zinc-700 border-t-zinc-400 animate-spin" />
+        </div>
       )}
 
       <BottomBar testMode={testMode} onToggleTest={handleToggleTest} />

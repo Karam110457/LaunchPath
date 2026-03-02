@@ -55,17 +55,8 @@ const CHILDREN_Y = ROW_GAP;
 export function useCanvasLayout({ agent, knowledge, tools, savedPositions }: LayoutInput) {
   return useMemo(() => {
     // Helper: use saved position if available, otherwise default
-    const pos = (id: string, defaultPos: { x: number; y: number }) => {
-      const saved = savedPositions?.[id];
-      if (saved) {
-        console.log(`[canvas:layout] ${id} → SAVED pos`, saved);
-        return saved;
-      }
-      console.log(`[canvas:layout] ${id} → DEFAULT pos`, defaultPos);
-      return defaultPos;
-    };
-
-    console.log(`[canvas:layout] recompute — tools:${tools.length} savedKeys:`, Object.keys(savedPositions ?? {}));
+    const pos = (id: string, defaultPos: { x: number; y: number }) =>
+      savedPositions?.[id] ?? defaultPos;
 
     const nodes: CanvasNode[] = [
       // Agent — top, left handle → knowledge, right handle → tools
