@@ -8,7 +8,9 @@
       "mcp__claude_ai_Supabase__apply_migration",
       "mcp__claude_ai_Supabase__list_migrations",
       "Bash(node -e \":*)",
-      "Bash(npx tsc --noEmit)"
+      "Bash(npx tsc --noEmit)",
+      "Bash(python3 -c \" import re with open\\(''node_modules/@xyflow/react/dist/esm/index.js'', ''r''\\) as f: content = f.read\\(\\) # Find all patterns near ''fitView'' that reference timing matches = re.findall\\(r''.{200}fitView.{200}'', content\\) for m in matches[:5]: print\\(m\\) print\\(''---''\\) \")",
+      "Bash(xargs grep -l \"NodeMeasurer\\\\|ResizeObserver\\\\|measureNode\\\\|updateNodeInternals\")"
     ]
   }
 }

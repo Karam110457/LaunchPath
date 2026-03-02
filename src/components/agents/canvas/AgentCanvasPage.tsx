@@ -69,6 +69,7 @@ interface CanvasFlowProps {
   onNodeDragStop: OnNodeDrag;
   onNodeClick: NodeMouseHandler;
   onNodeDoubleClick: NodeMouseHandler;
+  onReady: () => void;
 }
 
 function CanvasFlow({
@@ -82,10 +83,31 @@ function CanvasFlow({
   onNodeDragStop,
   onNodeClick,
   onNodeDoubleClick,
+  onReady,
 }: CanvasFlowProps) {
   // Initialised with correct nodes — no position jump on first paint
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // ─── Reveal after React Flow finishes its internal setup ─────────────────
+  // React Flow runs fitView via ResizeObserver (node measurement) which fires
+  // 1-2 frames after mount. We hide the canvas until that cycle is done so
+  // the user never sees the pre-fitView "squished" state.
+  const [isReady, setIsReady] = useState(false);
+  useEffect(() => {
+    let raf1: number, raf2: number;
+    // Two frames: frame 1 lets ResizeObserver fire, frame 2 lets fitView settle
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        setIsReady(true);
+        onReady();
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, []); // run once on mount
 
   // Recompute layout whenever tools or saved positions change
   const { nodes: layoutNodes, edges: layoutEdges } = useCanvasLayout({
@@ -133,32 +155,42 @@ function CanvasFlow({
   }, [agentTools]);
 
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onNodeClick={onNodeClick}
-      onNodeDoubleClick={onNodeDoubleClick}
-      onNodeDragStop={onNodeDragStop}
-      nodeTypes={nodeTypes}
-      edgeTypes={edgeTypes}
-      fitView
-      fitViewOptions={{ padding: 0.4 }}
-      proOptions={{ hideAttribution: true }}
-      minZoom={0.3}
-      maxZoom={2}
-      className="!bg-transparent"
-      nodesConnectable={false}
-      elementsSelectable
+    // opacity wrapper: hides the pre-fitView initialization state, then
+    // fades in cleanly once React Flow has settled (2 animation frames)
+    <div
+      className="w-full h-full"
+      style={{
+        opacity: isReady ? 1 : 0,
+        transition: isReady ? "opacity 0.18s ease" : "none",
+      }}
     >
-      <Background
-        variant={BackgroundVariant.Dots}
-        gap={24}
-        size={1.2}
-        color="rgba(255, 255, 255, 0.15)"
-      />
-    </ReactFlow>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onNodeClick={onNodeClick}
+        onNodeDoubleClick={onNodeDoubleClick}
+        onNodeDragStop={onNodeDragStop}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        fitView
+        fitViewOptions={{ padding: 0.4 }}
+        proOptions={{ hideAttribution: true }}
+        minZoom={0.3}
+        maxZoom={2}
+        className="!bg-transparent"
+        nodesConnectable={false}
+        elementsSelectable
+      >
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={24}
+          size={1.2}
+          color="rgba(255, 255, 255, 0.15)"
+        />
+      </ReactFlow>
+    </div>
   );
 }
 
@@ -355,9 +387,12 @@ function AgentCanvasInner({
     [agent.id, docCounts.total, docCounts.ready, docCounts.processing]
   );
 
-  // ─── Tools state ──────────────────────────────────────────────────────────
+  // ─── Tools + canvas readiness ────────────────────────────────────────────
   const [agentTools, setAgentTools] = useState<AgentToolResponse[]>([]);
   const [toolsReady, setToolsReady] = useState(false);
+  // canvasReady flips true once CanvasFlow's 2-frame delay resolves
+  const [canvasReady, setCanvasReady] = useState(false);
+  const handleCanvasReady = useCallback(() => setCanvasReady(true), []);
 
   const fetchTools = useCallback(async () => {
     try {
@@ -506,10 +541,18 @@ function AgentCanvasInner({
         Add Tool
       </button>
 
-      {/* Gate: only mount CanvasFlow once tools are loaded.
-          This ensures useNodesState(initialNodes) in CanvasFlow is seeded
-          with the correct full layout — no position animation on load. */}
-      {toolsReady ? (
+      {/* Spinner: visible until tools are fetched AND React Flow has fully
+          settled (fitView + ResizeObserver complete). Crossfades with canvas. */}
+      {!canvasReady && (
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+          <div className="w-5 h-5 rounded-full border-2 border-zinc-700 border-t-zinc-400 animate-spin" />
+        </div>
+      )}
+
+      {/* Mount CanvasFlow once tools are loaded so useNodesState gets the
+          correct initial nodes. CanvasFlow hides itself (opacity:0) during
+          React Flow's 2-frame init cycle, then fades in via onReady. */}
+      {toolsReady && (
         <CanvasFlow
           initialNodes={layoutNodes as Node[]}
           initialEdges={layoutEdges}
@@ -521,11 +564,8 @@ function AgentCanvasInner({
           onNodeDragStop={onNodeDragStop}
           onNodeClick={onNodeClick}
           onNodeDoubleClick={onNodeDoubleClick}
+          onReady={handleCanvasReady}
         />
-      ) : (
-        <div className="w-full h-full flex items-center justify-center">
-          <div className="w-5 h-5 rounded-full border-2 border-zinc-700 border-t-zinc-400 animate-spin" />
-        </div>
       )}
 
       <BottomBar testMode={testMode} onToggleTest={handleToggleTest} />
