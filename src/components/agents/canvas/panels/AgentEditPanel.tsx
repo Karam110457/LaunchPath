@@ -29,6 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { ToolsTab } from "./tools/ToolsTab";
 import type { AgentFormState, WizardConfig } from "../canvas-types";
 
 interface AgentEditPanelProps {
@@ -113,6 +114,9 @@ export function AgentEditPanel({
         <TabsList className="w-full">
           <TabsTrigger value="basics" className="flex-1 text-xs">
             Basics
+          </TabsTrigger>
+          <TabsTrigger value="tools" className="flex-1 text-xs">
+            Tools
           </TabsTrigger>
           <TabsTrigger value="advanced" className="flex-1 text-xs">
             Advanced
@@ -309,6 +313,11 @@ export function AgentEditPanel({
             </>
           )}
         </div>
+      </TabsContent>
+
+      {/* ═══════════════════════ TOOLS TAB ═══════════════════════ */}
+      <TabsContent value="tools">
+        <ToolsTab agentId={agentId} />
       </TabsContent>
 
       {/* ═══════════════════════ ADVANCED TAB ═══════════════════════ */}
