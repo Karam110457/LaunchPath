@@ -499,7 +499,7 @@ function AgentCanvasInner({
           tipId="tools"
           icon={<Plus className="w-3.5 h-3.5 text-amber-400" />}
           text="Connect Calendly, CRM, webhooks, and more"
-          position="right-0 top-full mt-2"
+          position="right-0 top-full mt-4"
         />
       </div>
 

@@ -42,12 +42,12 @@ export const KnowledgeNode = memo(function KnowledgeNode({ data }: NodeProps) {
         </p>
       </div>
 
-      {/* Helper tip */}
+      {/* Helper tip — anchored to the left side of the node */}
       <NodeHelperTip
         tipId="knowledge"
         icon={<Database className="w-3.5 h-3.5 text-violet-400" />}
         text="Double-click to add documents, FAQs, and website content"
-        position="left-[calc(100%+12px)] top-1/2 -translate-y-1/2"
+        position="right-[calc(100%+16px)] top-1/2 -translate-y-1/2"
       />
     </div>
   );

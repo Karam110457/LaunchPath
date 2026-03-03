@@ -57,7 +57,7 @@ export function NodeHelperTip({ tipId, icon, text, position = "left-1/2 -transla
       className={`absolute ${position} z-30 pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-500`}
       onDoubleClick={(e) => e.stopPropagation()}
     >
-      <div className="flex items-start gap-2 px-3 py-2 bg-[#1a1a1a]/95 backdrop-blur-sm border border-[#333]/80 rounded-xl shadow-lg max-w-[220px] whitespace-normal">
+      <div className="flex items-start gap-2 px-3 py-2 bg-[#1a1a1a]/95 backdrop-blur-sm border border-[#333]/80 rounded-xl shadow-lg min-w-[200px] max-w-[280px] whitespace-normal">
         <div className="mt-0.5 shrink-0">{icon}</div>
         <p className="text-[11px] text-[#999] leading-relaxed flex-1">
           {text}
