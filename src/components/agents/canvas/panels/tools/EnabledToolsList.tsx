@@ -1,32 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Trash2, CalendarCheck, Users, Webhook, Plug, type LucideIcon } from "lucide-react";
+import { Pencil, Trash2, Webhook, Plug, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { AgentToolResponse, ToolType } from "@/lib/tools/types";
+import type { AgentToolResponse } from "@/lib/tools/types";
 
 const ICON_MAP: Record<string, LucideIcon> = {
-  calendly: CalendarCheck,
-  ghl: Users,
-  hubspot: Users,
   webhook: Webhook,
   mcp: Plug,
-  // composio uses emoji icons from the app catalog — no LucideIcon
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
-  calendly: "bg-violet-500/10 text-violet-400 border-violet-500/20",
-  ghl: "bg-orange-500/10 text-orange-400 border-orange-500/20",
-  hubspot: "bg-red-500/10 text-red-400 border-red-500/20",
   webhook: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   mcp: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
   composio: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  calendly: "Booking",
-  ghl: "CRM",
-  hubspot: "CRM",
   webhook: "Webhook",
   mcp: "MCP",
   // composio: label comes from config.toolkit_name

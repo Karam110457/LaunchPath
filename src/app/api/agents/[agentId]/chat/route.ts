@@ -79,21 +79,10 @@ export async function POST(
   // Keys must exactly match what buildAgentTools() registers in the tools map.
   const toolDisplayNames: Record<string, string> = {};
   for (const t of agentToolRecords) {
-    switch (t.tool_type) {
-      case "calendly":
-        toolDisplayNames["book_appointment"] = t.display_name;
-        break;
-      case "ghl":
-        toolDisplayNames["create_ghl_contact"] = t.display_name;
-        break;
-      case "hubspot":
-        toolDisplayNames["create_hubspot_contact"] = t.display_name;
-        break;
-      case "webhook":
-        toolDisplayNames[makeWebhookToolKey(t.display_name)] = t.display_name;
-        break;
-      // MCP + composio: tool names resolved after buildAgentTools()
+    if (t.tool_type === "webhook") {
+      toolDisplayNames[makeWebhookToolKey(t.display_name)] = t.display_name;
     }
+    // MCP + composio: tool names resolved after buildAgentTools()
   }
 
   const tools = await buildAgentTools(agentToolRecords, user.id);

@@ -1,7 +1,4 @@
 export type ToolType =
-  | "calendly"
-  | "ghl"
-  | "hubspot"
   | "webhook"
   | "mcp"
   | "composio";
@@ -26,19 +23,6 @@ export interface AgentToolRecord {
 // ------------------------------------------------------------------
 // Per-tool config shapes
 // ------------------------------------------------------------------
-
-export interface CalendlyConfig {
-  booking_url: string;
-}
-
-export interface GHLConfig {
-  api_key: string;
-  location_id: string;
-}
-
-export interface HubSpotConfig {
-  access_token: string;
-}
 
 export interface WebhookConfig {
   url: string;
@@ -79,7 +63,7 @@ export interface ToolSetupField {
 // Tool catalog entry — defines a tool type available for agents
 // ------------------------------------------------------------------
 
-export type ToolCategory = "booking" | "crm" | "communication" | "automation" | "advanced";
+export type ToolCategory = "automation" | "advanced";
 
 export interface ToolCatalogEntry {
   type: ToolType;

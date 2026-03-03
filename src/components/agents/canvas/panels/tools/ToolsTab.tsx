@@ -223,7 +223,7 @@ function ToolsEmptyState({ onAdd }: { onAdd: () => void }) {
       <div>
         <p className="text-sm font-medium text-foreground">No tools yet</p>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Add tools so your agent can book appointments, create CRM contacts, and more
+          Connect apps so your agent can send emails, manage calendars, and more
         </p>
       </div>
     </button>

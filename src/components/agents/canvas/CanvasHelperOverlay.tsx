@@ -28,7 +28,7 @@ const BUBBLES: HelperBubble[] = [
   {
     id: "tools",
     icon: <Wrench className="w-3.5 h-3.5 text-amber-400 shrink-0" />,
-    text: "Click 'Add Tool' to connect Calendly, CRM, webhooks, and more",
+    text: "Click 'Add Tool' to connect 900+ apps, webhooks, and more",
     position: "top-[110px] right-[180px]",
   },
 ];

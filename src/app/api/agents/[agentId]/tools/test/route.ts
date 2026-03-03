@@ -42,15 +42,6 @@ export async function POST(
   let result: TestToolResult;
 
   switch (tool_type) {
-    case "calendly":
-      result = await testCalendly(config);
-      break;
-    case "ghl":
-      result = await testGHL(config);
-      break;
-    case "hubspot":
-      result = await testHubSpot(config);
-      break;
     case "webhook":
       result = await testWebhook(config);
       break;
@@ -67,100 +58,6 @@ export async function POST(
 // ---------------------------------------------------------------------------
 // Per-tool test implementations
 // ---------------------------------------------------------------------------
-
-async function testCalendly(config: Record<string, unknown>): Promise<TestToolResult> {
-  const url = config.booking_url as string;
-  if (!url) return { success: false, message: "Booking URL is required." };
-
-  try {
-    new URL(url);
-  } catch {
-    return { success: false, message: "The URL you entered doesn't look valid. Make sure it starts with https://." };
-  }
-
-  if (!url.includes("calendly.com") && !url.includes("cal.com")) {
-    return {
-      success: true,
-      message: "URL saved. Note: this doesn't appear to be a Calendly or Cal.com URL — double-check it works.",
-    };
-  }
-
-  return { success: true, message: "Booking URL looks good!" };
-}
-
-async function testGHL(config: Record<string, unknown>): Promise<TestToolResult> {
-  const apiKey = config.api_key as string;
-  const locationId = config.location_id as string;
-
-  if (!apiKey || !locationId) {
-    return { success: false, message: "API Key and Location ID are both required." };
-  }
-
-  // Skip live test if user hasn't changed masked credentials
-  if (apiKey.startsWith("••••") || locationId.startsWith("••••")) {
-    return { success: true, message: "Credentials are saved. No re-test needed." };
-  }
-
-  try {
-    const res = await fetch(
-      `https://services.leadconnectorhq.com/contacts/?locationId=${locationId}&limit=1`,
-      {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          Version: "2021-07-28",
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (res.status === 200 || res.status === 201) {
-      return { success: true, message: "Connected to GoHighLevel successfully!" };
-    }
-    if (res.status === 401) {
-      return { success: false, message: "Invalid API key. Check that you copied the full token from GoHighLevel." };
-    }
-    if (res.status === 422) {
-      return { success: false, message: "Invalid Location ID. Check the value in your GoHighLevel settings." };
-    }
-    return { success: false, message: `GoHighLevel returned an unexpected status: ${res.status}` };
-  } catch {
-    return { success: false, message: "Could not reach GoHighLevel. Check your API key and try again." };
-  }
-}
-
-async function testHubSpot(config: Record<string, unknown>): Promise<TestToolResult> {
-  const token = config.access_token as string;
-
-  if (!token) {
-    return { success: false, message: "Access token is required." };
-  }
-
-  if (token.startsWith("••••")) {
-    return { success: true, message: "Credentials are saved. No re-test needed." };
-  }
-
-  try {
-    const res = await fetch("https://api.hubapi.com/crm/v3/objects/contacts?limit=1", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (res.status === 200) {
-      return { success: true, message: "Connected to HubSpot successfully!" };
-    }
-    if (res.status === 401) {
-      return { success: false, message: "Invalid access token. Make sure you copied the full token from your HubSpot private app." };
-    }
-    if (res.status === 403) {
-      return { success: false, message: "Missing permissions. Enable crm.objects.contacts.write in your HubSpot private app scopes." };
-    }
-    return { success: false, message: `HubSpot returned an unexpected status: ${res.status}` };
-  } catch {
-    return { success: false, message: "Could not reach HubSpot. Check your token and try again." };
-  }
-}
 
 async function testWebhook(config: Record<string, unknown>): Promise<TestToolResult> {
   const url = config.url as string;

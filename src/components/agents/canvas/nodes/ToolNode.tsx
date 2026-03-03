@@ -3,8 +3,6 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import {
-  CalendarCheck,
-  Users,
   Webhook,
   Plug,
   type LucideIcon,
@@ -13,25 +11,16 @@ import { cn } from "@/lib/utils";
 import type { ToolNodeData } from "../canvas-types";
 
 const ICON_MAP: Record<string, LucideIcon> = {
-  calendly: CalendarCheck,
-  ghl: Users,
-  hubspot: Users,
   webhook: Webhook,
   mcp: Plug,
 };
 
 const COLOR_MAP: Record<string, string> = {
-  calendly: "text-blue-400",
-  ghl: "text-orange-400",
-  hubspot: "text-red-400",
   webhook: "text-emerald-400",
   mcp: "text-zinc-400",
 };
 
 const ACTION_LABELS: Record<string, string> = {
-  calendly: "create: event",
-  ghl: "create: contact",
-  hubspot: "create: deal",
   webhook: "trigger: post",
   mcp: "execute: mcp",
 };

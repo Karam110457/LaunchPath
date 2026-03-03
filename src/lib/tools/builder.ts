@@ -9,17 +9,11 @@
  */
 
 import { logger } from "@/lib/security/logger";
-import { buildCalendlyTool } from "./integrations/calendly";
-import { buildGHLTool } from "./integrations/ghl";
-import { buildHubSpotTool } from "./integrations/hubspot";
 import { buildWebhookTool } from "./integrations/webhook";
 import { buildMCPTools } from "./integrations/mcp";
 import { buildComposioTools } from "./integrations/composio";
 import type {
   AgentToolRecord,
-  CalendlyConfig,
-  GHLConfig,
-  HubSpotConfig,
   WebhookConfig,
   MCPConfig,
 } from "./types";
@@ -36,27 +30,6 @@ export async function buildAgentTools(
 
     try {
       switch (agentTool.tool_type) {
-        case "calendly": {
-          const cfg = agentTool.config as unknown as CalendlyConfig;
-          if (!cfg.booking_url) break;
-          tools["book_appointment"] = buildCalendlyTool(cfg, agentTool.description);
-          break;
-        }
-
-        case "ghl": {
-          const cfg = agentTool.config as unknown as GHLConfig;
-          if (!cfg.api_key || !cfg.location_id) break;
-          tools["create_ghl_contact"] = buildGHLTool(cfg, agentTool.description);
-          break;
-        }
-
-        case "hubspot": {
-          const cfg = agentTool.config as unknown as HubSpotConfig;
-          if (!cfg.access_token) break;
-          tools["create_hubspot_contact"] = buildHubSpotTool(cfg, agentTool.description);
-          break;
-        }
-
         case "webhook": {
           const cfg = agentTool.config as unknown as WebhookConfig;
           if (!cfg.url) break;

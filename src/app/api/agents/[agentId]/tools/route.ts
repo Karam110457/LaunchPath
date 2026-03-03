@@ -12,9 +12,6 @@ import { logger } from "@/lib/security/logger";
 import type { CreateToolPayload } from "@/lib/tools/types";
 
 const ALLOWED_TOOL_TYPES = new Set([
-  "calendly",
-  "ghl",
-  "hubspot",
   "webhook",
   "mcp",
   "composio",

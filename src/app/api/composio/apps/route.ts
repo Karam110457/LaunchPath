@@ -58,7 +58,7 @@ async function getCachedApps(): Promise<ComposioApp[]> {
 
   const toolkits = await composio.toolkits.get({
     sortBy: "usage",
-    limit: 200,
+    limit: 1000,
   });
 
   const apps: ComposioApp[] = (toolkits as unknown as ComposioToolkitItem[])
