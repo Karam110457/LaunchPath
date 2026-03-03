@@ -14,6 +14,7 @@ import { buildGHLTool } from "./integrations/ghl";
 import { buildHubSpotTool } from "./integrations/hubspot";
 import { buildWebhookTool } from "./integrations/webhook";
 import { buildMCPTools } from "./integrations/mcp";
+import { buildComposioTools } from "./integrations/composio";
 import type {
   AgentToolRecord,
   CalendlyConfig,
@@ -24,9 +25,11 @@ import type {
 } from "./types";
 
 export async function buildAgentTools(
-  agentTools: AgentToolRecord[]
+  agentTools: AgentToolRecord[],
+  userId?: string
 ): Promise<Record<string, unknown>> {
   const tools: Record<string, unknown> = {};
+  const composioRecords: AgentToolRecord[] = [];
 
   for (const agentTool of agentTools) {
     if (!agentTool.is_enabled) continue;
@@ -79,6 +82,12 @@ export async function buildAgentTools(
           Object.assign(tools, mcpTools);
           break;
         }
+
+        case "composio": {
+          // Collect composio records — built in a single batch below
+          composioRecords.push(agentTool);
+          break;
+        }
       }
     } catch (err) {
       logger.error("Failed to build tool", {
@@ -86,6 +95,16 @@ export async function buildAgentTools(
         toolType: agentTool.tool_type,
         err,
       });
+    }
+  }
+
+  // Build all Composio tools in one batch (single session)
+  if (composioRecords.length > 0 && userId) {
+    try {
+      const composioTools = await buildComposioTools(userId, composioRecords);
+      Object.assign(tools, composioTools);
+    } catch (err) {
+      logger.error("Failed to build Composio tools", { userId, err });
     }
   }
 

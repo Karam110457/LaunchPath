@@ -14,6 +14,8 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.44",
+    "@composio/core": "^0.6.3",
+    "@composio/vercel": "^0.6.3",
     "@mastra/core": "^1.4.0",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@radix-ui/react-avatar": "^1.1.11",

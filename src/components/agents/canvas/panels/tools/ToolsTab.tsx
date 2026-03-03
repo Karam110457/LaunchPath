@@ -5,6 +5,8 @@ import { Plus, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ToolCatalogModal } from "./ToolCatalogModal";
 import { ToolSetupDialog } from "./ToolSetupDialog";
+import { AppLibraryModal } from "./AppLibraryModal";
+import { ComposioToolSetup } from "./ComposioToolSetup";
 import { EnabledToolsList } from "./EnabledToolsList";
 import type { AgentToolResponse } from "@/lib/tools/types";
 
@@ -19,6 +21,14 @@ export function ToolsTab({ agentId, onToolCountChange }: ToolsTabProps) {
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [setupTool, setSetupTool] = useState<{
     toolType: string;
+    existing?: AgentToolResponse;
+  } | null>(null);
+  const [appLibraryOpen, setAppLibraryOpen] = useState(false);
+  const [composioSetup, setComposioSetup] = useState<{
+    toolkit: string;
+    toolkitName: string;
+    toolkitIcon: string;
+    connectionId: string;
     existing?: AgentToolResponse;
   } | null>(null);
 
@@ -43,6 +53,8 @@ export function ToolsTab({ agentId, onToolCountChange }: ToolsTabProps) {
   const handleToolSaved = () => {
     setSetupTool(null);
     setCatalogOpen(false);
+    setComposioSetup(null);
+    setAppLibraryOpen(false);
     void fetchTools();
   };
 
@@ -52,7 +64,23 @@ export function ToolsTab({ agentId, onToolCountChange }: ToolsTabProps) {
   };
 
   const handleEditTool = (tool: AgentToolResponse) => {
-    setSetupTool({ toolType: tool.tool_type, existing: tool });
+    if (tool.tool_type === "composio") {
+      const cfg = tool.config as {
+        toolkit?: string;
+        toolkit_name?: string;
+        toolkit_icon?: string;
+        connection_id?: string;
+      };
+      setComposioSetup({
+        toolkit: cfg.toolkit ?? "",
+        toolkitName: cfg.toolkit_name ?? tool.display_name,
+        toolkitIcon: cfg.toolkit_icon ?? tool.display_name.charAt(0),
+        connectionId: cfg.connection_id ?? "",
+        existing: tool,
+      });
+    } else {
+      setSetupTool({ toolType: tool.tool_type, existing: tool });
+    }
   };
 
   const handleDeleteTool = async (toolId: string) => {
@@ -133,9 +161,28 @@ export function ToolsTab({ agentId, onToolCountChange }: ToolsTabProps) {
         onClose={() => setCatalogOpen(false)}
         onSelect={handleSelectFromCatalog}
         existingTypes={tools.map((t) => t.tool_type)}
+        onAppLibrary={() => {
+          setCatalogOpen(false);
+          setAppLibraryOpen(true);
+        }}
       />
 
-      {/* Setup dialog */}
+      {/* App Library (Composio) */}
+      <AppLibraryModal
+        open={appLibraryOpen}
+        onClose={() => setAppLibraryOpen(false)}
+        onSelectApp={(app, connection) => {
+          setAppLibraryOpen(false);
+          setComposioSetup({
+            toolkit: app.toolkit,
+            toolkitName: app.name,
+            toolkitIcon: app.icon,
+            connectionId: connection.id,
+          });
+        }}
+      />
+
+      {/* Setup dialog (direct tools) */}
       {setupTool && (
         <ToolSetupDialog
           agentId={agentId}
@@ -143,6 +190,20 @@ export function ToolsTab({ agentId, onToolCountChange }: ToolsTabProps) {
           existing={setupTool.existing}
           onSaved={handleToolSaved}
           onClose={() => setSetupTool(null)}
+        />
+      )}
+
+      {/* Setup dialog (Composio tools) */}
+      {composioSetup && (
+        <ComposioToolSetup
+          agentId={agentId}
+          toolkit={composioSetup.toolkit}
+          toolkitName={composioSetup.toolkitName}
+          toolkitIcon={composioSetup.toolkitIcon}
+          connectionId={composioSetup.connectionId}
+          existing={composioSetup.existing}
+          onSaved={handleToolSaved}
+          onClose={() => setComposioSetup(null)}
         />
       )}
     </div>

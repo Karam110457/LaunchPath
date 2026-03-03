@@ -30,6 +30,8 @@ import { KnowledgeDetailPanel } from "./panels/KnowledgeDetailPanel";
 import { FloatingChatWidget } from "./FloatingChatWidget";
 import { ToolCatalogModal } from "./panels/tools/ToolCatalogModal";
 import { ToolSetupDialog } from "./panels/tools/ToolSetupDialog";
+import { AppLibraryModal } from "./panels/tools/AppLibraryModal";
+import { ComposioToolSetup } from "./panels/tools/ComposioToolSetup";
 import { SaveDialog } from "./SaveDialog";
 import { VersionHistoryModal } from "./VersionHistoryModal";
 import { NodeHelperTip } from "./nodes/NodeHelperTip";
@@ -433,15 +435,27 @@ function AgentCanvasInner({
     toolType: string;
     existing?: AgentToolResponse;
   } | null>(null);
+  // Composio app library + tool setup state
+  const [appLibraryOpen, setAppLibraryOpen] = useState(false);
+  const [composioSetup, setComposioSetup] = useState<{
+    toolkit: string;
+    toolkitName: string;
+    toolkitIcon: string;
+    connectionId: string;
+    existing?: AgentToolResponse;
+  } | null>(null);
 
   const handleToolSaved = useCallback(async () => {
     setSetupTool(null);
     setCatalogOpen(false);
+    setComposioSetup(null);
+    setAppLibraryOpen(false);
     await fetchTools();
   }, [fetchTools]);
 
   const handleToolDeleted = useCallback(async () => {
     setSetupTool(null);
+    setComposioSetup(null);
     await fetchTools();
   }, [fetchTools]);
 
@@ -452,7 +466,25 @@ function AgentCanvasInner({
       if (node.type === "toolNode") {
         const d = node.data as unknown as ToolNodeData;
         const existing = agentTools.find((t) => t.id === d.toolId);
-        if (existing) setSetupTool({ toolType: existing.tool_type, existing });
+        if (existing) {
+          if (existing.tool_type === "composio") {
+            const cfg = existing.config as {
+              toolkit?: string;
+              toolkit_name?: string;
+              toolkit_icon?: string;
+              connection_id?: string;
+            };
+            setComposioSetup({
+              toolkit: cfg.toolkit ?? "",
+              toolkitName: cfg.toolkit_name ?? existing.display_name,
+              toolkitIcon: cfg.toolkit_icon ?? existing.display_name.charAt(0),
+              connectionId: cfg.connection_id ?? "",
+              existing,
+            });
+          } else {
+            setSetupTool({ toolType: existing.tool_type, existing });
+          }
+        }
       }
     },
     [agentTools]
@@ -495,7 +527,7 @@ function AgentCanvasInner({
         <NodeHelperTip
           tipId="tools"
           icon={<Plus className="w-3.5 h-3.5 text-amber-400" />}
-          text="Connect Calendly, CRM, webhooks, and more"
+          text="Connect 900+ apps — Gmail, Slack, CRM, and more"
           position="right-0 top-full mt-4"
         />
       </div>
@@ -574,6 +606,24 @@ function AgentCanvasInner({
           setSetupTool({ toolType });
         }}
         existingTypes={agentTools.map((t) => t.tool_type as ToolType)}
+        onAppLibrary={() => {
+          setCatalogOpen(false);
+          setAppLibraryOpen(true);
+        }}
+      />
+
+      <AppLibraryModal
+        open={appLibraryOpen}
+        onClose={() => setAppLibraryOpen(false)}
+        onSelectApp={(app, connection) => {
+          setAppLibraryOpen(false);
+          setComposioSetup({
+            toolkit: app.toolkit,
+            toolkitName: app.name,
+            toolkitIcon: app.icon,
+            connectionId: connection.id,
+          });
+        }}
       />
 
       {setupTool && (
@@ -584,6 +634,19 @@ function AgentCanvasInner({
           onSaved={handleToolSaved}
           onDeleted={handleToolDeleted}
           onClose={() => setSetupTool(null)}
+        />
+      )}
+
+      {composioSetup && (
+        <ComposioToolSetup
+          agentId={agent.id}
+          toolkit={composioSetup.toolkit}
+          toolkitName={composioSetup.toolkitName}
+          toolkitIcon={composioSetup.toolkitIcon}
+          connectionId={composioSetup.connectionId}
+          existing={composioSetup.existing}
+          onSaved={handleToolSaved}
+          onClose={() => setComposioSetup(null)}
         />
       )}
 

@@ -96,7 +96,7 @@ export async function POST(
     }
   }
 
-  const tools = await buildAgentTools(agentToolRecords);
+  const tools = await buildAgentTools(agentToolRecords, user.id);
   const hasTools = Object.keys(tools).length > 0;
 
   // ---------------------------------------------------------------------------

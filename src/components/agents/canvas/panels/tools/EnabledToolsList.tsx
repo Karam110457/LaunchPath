@@ -5,28 +5,31 @@ import { Pencil, Trash2, CalendarCheck, Users, Webhook, Plug, type LucideIcon } 
 import { cn } from "@/lib/utils";
 import type { AgentToolResponse, ToolType } from "@/lib/tools/types";
 
-const ICON_MAP: Record<ToolType, LucideIcon> = {
+const ICON_MAP: Record<string, LucideIcon> = {
   calendly: CalendarCheck,
   ghl: Users,
   hubspot: Users,
   webhook: Webhook,
   mcp: Plug,
+  // composio uses emoji icons from the app catalog — no LucideIcon
 };
 
-const CATEGORY_COLORS: Record<ToolType, string> = {
+const CATEGORY_COLORS: Record<string, string> = {
   calendly: "bg-violet-500/10 text-violet-400 border-violet-500/20",
   ghl: "bg-orange-500/10 text-orange-400 border-orange-500/20",
   hubspot: "bg-red-500/10 text-red-400 border-red-500/20",
   webhook: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   mcp: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+  composio: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
 };
 
-const TYPE_LABELS: Record<ToolType, string> = {
+const TYPE_LABELS: Record<string, string> = {
   calendly: "Booking",
   ghl: "CRM",
   hubspot: "CRM",
   webhook: "Webhook",
   mcp: "MCP",
+  // composio: label comes from config.toolkit_name
 };
 
 interface EnabledToolsListProps {
@@ -47,9 +50,15 @@ export function EnabledToolsList({
   return (
     <div className="space-y-2">
       {tools.map((tool) => {
+        const isComposio = tool.tool_type === "composio";
         const Icon = ICON_MAP[tool.tool_type] ?? Plug;
-        const colorClass = CATEGORY_COLORS[tool.tool_type];
-        const typeLabel = TYPE_LABELS[tool.tool_type];
+        const colorClass = CATEGORY_COLORS[tool.tool_type] ?? CATEGORY_COLORS.composio;
+        const composioConfig = isComposio
+          ? (tool.config as { toolkit_name?: string })
+          : null;
+        const typeLabel = isComposio
+          ? (composioConfig?.toolkit_name ?? "App")
+          : (TYPE_LABELS[tool.tool_type] ?? tool.tool_type);
 
         return (
           <div
@@ -68,7 +77,14 @@ export function EnabledToolsList({
                 tool.is_enabled ? "bg-primary/10" : "bg-muted/50"
               )}
             >
-              <Icon className={cn("w-4 h-4", tool.is_enabled ? "text-primary" : "text-muted-foreground")} />
+              {isComposio ? (
+                <span className="text-base leading-none">
+                  {(tool.config as { toolkit_icon?: string })?.toolkit_icon ??
+                    tool.display_name.charAt(0)}
+                </span>
+              ) : (
+                <Icon className={cn("w-4 h-4", tool.is_enabled ? "text-primary" : "text-muted-foreground")} />
+              )}
             </div>
 
             {/* Info */}

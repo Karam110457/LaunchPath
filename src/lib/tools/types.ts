@@ -3,7 +3,8 @@ export type ToolType =
   | "ghl"
   | "hubspot"
   | "webhook"
-  | "mcp";
+  | "mcp"
+  | "composio";
 
 // ------------------------------------------------------------------
 // DB row shape (what we read from agent_tools)
@@ -49,6 +50,13 @@ export interface MCPConfig {
   server_url: string;
   // Cached after first successful connect — not user-supplied
   discovered_tools?: string[];
+}
+
+export interface ComposioToolConfig {
+  toolkit: string;            // Composio toolkit slug e.g. "gmail", "hubspot"
+  toolkit_name: string;       // Display name e.g. "Gmail"
+  connection_id: string;      // FK to user_composio_connections.id
+  enabled_actions?: string[]; // e.g. ["GMAIL_SEND_EMAIL"] — undefined = all important actions
 }
 
 // ------------------------------------------------------------------

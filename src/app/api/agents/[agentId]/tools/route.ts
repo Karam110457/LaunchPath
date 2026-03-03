@@ -16,6 +16,7 @@ const ALLOWED_TOOL_TYPES = new Set([
   "hubspot",
   "webhook",
   "mcp",
+  "composio",
 ]);
 
 export async function GET(
@@ -105,16 +106,26 @@ export async function POST(
     return NextResponse.json({ error: "description is required" }, { status: 400 });
   }
 
-  // Validate required config fields
-  const catalogEntry = getCatalogEntry(tool_type);
-  if (catalogEntry) {
-    for (const field of catalogEntry.setupFields) {
-      if (field.required && !config?.[field.key]) {
-        return NextResponse.json(
-          { error: `${field.label} is required` },
-          { status: 400 }
-        );
+  // Validate required config fields (skip for composio — managed by Composio SDK)
+  if (tool_type !== "composio") {
+    const catalogEntry = getCatalogEntry(tool_type);
+    if (catalogEntry) {
+      for (const field of catalogEntry.setupFields) {
+        if (field.required && !config?.[field.key]) {
+          return NextResponse.json(
+            { error: `${field.label} is required` },
+            { status: 400 }
+          );
+        }
       }
+    }
+  } else {
+    // Composio: validate toolkit is present in config
+    if (!config?.toolkit) {
+      return NextResponse.json(
+        { error: "toolkit is required for composio tools" },
+        { status: 400 }
+      );
     }
   }
 

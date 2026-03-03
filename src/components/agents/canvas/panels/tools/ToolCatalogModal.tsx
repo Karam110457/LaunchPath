@@ -6,6 +6,8 @@ import {
   UserCheck,
   Webhook,
   Plug,
+  Library,
+  ChevronRight,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -39,6 +41,8 @@ interface ToolCatalogModalProps {
   onClose: () => void;
   onSelect: (toolType: string) => void;
   existingTypes: ToolType[];
+  /** Open the full app library (Composio) */
+  onAppLibrary?: () => void;
 }
 
 export function ToolCatalogModal({
@@ -46,6 +50,7 @@ export function ToolCatalogModal({
   onClose,
   onSelect,
   existingTypes,
+  onAppLibrary,
 }: ToolCatalogModalProps) {
   // Group by category
   const grouped: Record<string, ToolCatalogEntry[]> = {};
@@ -65,6 +70,7 @@ export function ToolCatalogModal({
         </DialogHeader>
 
         <div className="space-y-5 mt-2">
+          {/* Direct tools */}
           {Object.entries(grouped).map(([category, entries]) => (
             <div key={category}>
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
@@ -112,6 +118,38 @@ export function ToolCatalogModal({
               </div>
             </div>
           ))}
+
+          {/* App Library divider + button */}
+          {onAppLibrary && (
+            <>
+              <div className="flex items-center gap-3 pt-1">
+                <div className="flex-1 border-t border-border/40" />
+                <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/60">
+                  or
+                </span>
+                <div className="flex-1 border-t border-border/40" />
+              </div>
+
+              <button
+                type="button"
+                onClick={onAppLibrary}
+                className="w-full text-left rounded-xl border border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 hover:border-indigo-500/50 p-4 flex items-center gap-3.5 transition-all group"
+              >
+                <div className="w-9 h-9 rounded-lg bg-indigo-500/15 flex items-center justify-center shrink-0">
+                  <Library className="w-4.5 h-4.5 text-indigo-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium text-foreground">
+                    Browse App Library
+                  </span>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                    Connect 900+ apps — Gmail, Slack, Stripe, Notion, and more
+                  </p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-indigo-400 transition-colors shrink-0" />
+              </button>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

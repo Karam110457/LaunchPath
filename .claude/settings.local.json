@@ -13,7 +13,9 @@
       "Bash(xargs grep -l \"NodeMeasurer\\\\|ResizeObserver\\\\|measureNode\\\\|updateNodeInternals\")",
       "Bash(npm run build)",
       "WebFetch(domain:reactflow.dev)",
-      "Bash(xargs grep -l \"agent_versions\")"
+      "Bash(xargs grep -l \"agent_versions\")",
+      "WebFetch(domain:docs.composio.dev)",
+      "WebFetch(domain:composio.dev)"
     ]
   }
 }
