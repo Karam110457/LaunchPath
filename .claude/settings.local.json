@@ -15,7 +15,8 @@
       "WebFetch(domain:reactflow.dev)",
       "Bash(xargs grep -l \"agent_versions\")",
       "WebFetch(domain:docs.composio.dev)",
-      "WebFetch(domain:composio.dev)"
+      "WebFetch(domain:composio.dev)",
+      "Bash(npx next build)"
     ]
   }
 }

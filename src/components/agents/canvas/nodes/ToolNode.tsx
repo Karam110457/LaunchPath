@@ -28,10 +28,23 @@ const COLOR_MAP: Record<string, string> = {
   mcp: "text-zinc-400",
 };
 
+const ACTION_LABELS: Record<string, string> = {
+  calendly: "create: event",
+  ghl: "create: contact",
+  hubspot: "create: deal",
+  webhook: "trigger: post",
+  mcp: "execute: mcp",
+};
+
 export const ToolNode = memo(function ToolNode({ data }: NodeProps) {
   const d = data as unknown as ToolNodeData;
   const Icon = ICON_MAP[d.toolType] ?? Plug;
   const iconColor = COLOR_MAP[d.toolType] ?? "text-primary";
+  const hasLogoUrl = d.toolkitIcon?.startsWith("http");
+
+  // Action label — composio tools show toolkit name instead of "composio"
+  const actionLabel = ACTION_LABELS[d.toolType]
+    ?? (d.toolkitSlug ? `execute: ${d.toolkitSlug}` : `execute: ${d.toolType}`);
 
   return (
     <div className="group relative flex flex-col items-center">
@@ -43,7 +56,27 @@ export const ToolNode = memo(function ToolNode({ data }: NodeProps) {
         )}
       >
         <div className="w-12 h-12 flex items-center justify-center">
-          <Icon className={cn("w-10 h-10", iconColor)} strokeWidth={1.5} />
+          {hasLogoUrl ? (
+            <img
+              src={d.toolkitIcon}
+              alt={d.displayName}
+              className="w-10 h-10 object-contain rounded-lg"
+              onError={(e) => {
+                // Fallback: hide image and show first letter
+                const img = e.target as HTMLImageElement;
+                img.style.display = "none";
+                const parent = img.parentElement;
+                if (parent) {
+                  const span = document.createElement("span");
+                  span.className = "text-2xl font-semibold text-indigo-400";
+                  span.textContent = d.displayName.charAt(0);
+                  parent.appendChild(span);
+                }
+              }}
+            />
+          ) : (
+            <Icon className={cn("w-10 h-10", iconColor)} strokeWidth={1.5} />
+          )}
         </div>
 
         <Handle
@@ -59,11 +92,7 @@ export const ToolNode = memo(function ToolNode({ data }: NodeProps) {
           {d.displayName}
         </h3>
         <p className="text-[12px] text-[#777] mt-1">
-          {d.toolType === "calendly" ? "create: event" :
-            d.toolType === "ghl" ? "create: contact" :
-              d.toolType === "hubspot" ? "create: deal" :
-                d.toolType === "webhook" ? "trigger: post" :
-                  `execute: ${d.toolType}`}
+          {actionLabel}
         </p>
       </div>
     </div>

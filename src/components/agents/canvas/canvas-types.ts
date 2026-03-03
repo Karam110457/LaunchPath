@@ -25,6 +25,10 @@ export interface ToolNodeData {
   toolType: string;
   displayName: string;
   isEnabled: boolean;
+  /** Logo URL for composio tools (renders <img> instead of Lucide icon) */
+  toolkitIcon?: string;
+  /** Toolkit slug for composio tools (used in action label) */
+  toolkitSlug?: string;
 }
 
 // Data payload for the "Add Tool" button node

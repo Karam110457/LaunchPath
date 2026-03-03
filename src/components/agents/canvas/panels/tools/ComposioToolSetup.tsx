@@ -117,6 +117,7 @@ export function ComposioToolSetup({
     const config = {
       toolkit,
       toolkit_name: toolkitName,
+      toolkit_icon: toolkitIcon,
       connection_id: connectionId,
       enabled_actions: useAllActions ? undefined : Array.from(selectedActions),
     };

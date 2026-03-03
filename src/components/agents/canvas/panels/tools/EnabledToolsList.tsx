@@ -77,14 +77,26 @@ export function EnabledToolsList({
                 tool.is_enabled ? "bg-primary/10" : "bg-muted/50"
               )}
             >
-              {isComposio ? (
-                <span className="text-base leading-none">
-                  {(tool.config as { toolkit_icon?: string })?.toolkit_icon ??
-                    tool.display_name.charAt(0)}
-                </span>
-              ) : (
-                <Icon className={cn("w-4 h-4", tool.is_enabled ? "text-primary" : "text-muted-foreground")} />
-              )}
+              {(() => {
+                if (!isComposio) {
+                  return <Icon className={cn("w-4 h-4", tool.is_enabled ? "text-primary" : "text-muted-foreground")} />;
+                }
+                const icon = (tool.config as { toolkit_icon?: string })?.toolkit_icon;
+                if (icon?.startsWith("http")) {
+                  return (
+                    <img
+                      src={icon}
+                      alt={tool.display_name}
+                      className="w-4.5 h-4.5 object-contain"
+                    />
+                  );
+                }
+                return (
+                  <span className="text-base leading-none">
+                    {icon ?? tool.display_name.charAt(0)}
+                  </span>
+                );
+              })()}
             </div>
 
             {/* Info */}

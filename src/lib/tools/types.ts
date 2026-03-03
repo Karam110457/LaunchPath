@@ -55,6 +55,7 @@ export interface MCPConfig {
 export interface ComposioToolConfig {
   toolkit: string;            // Composio toolkit slug e.g. "gmail", "hubspot"
   toolkit_name: string;       // Display name e.g. "Gmail"
+  toolkit_icon?: string;      // Logo URL or single char fallback
   connection_id: string;      // FK to user_composio_connections.id
   enabled_actions?: string[]; // e.g. ["GMAIL_SEND_EMAIL"] — undefined = all important actions
 }

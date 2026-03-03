@@ -92,12 +92,38 @@ export async function POST(
       case "webhook":
         toolDisplayNames[makeWebhookToolKey(t.display_name)] = t.display_name;
         break;
-      // MCP: tool names come from the server — falls back to raw tool name in the UI
+      // MCP + composio: tool names resolved after buildAgentTools()
     }
   }
 
   const tools = await buildAgentTools(agentToolRecords, user.id);
   const hasTools = Object.keys(tools).length > 0;
+
+  // Map composio tool keys (e.g. GMAIL_SEND_EMAIL) to friendly display names.
+  // Tool keys are only available after buildAgentTools() runs — they come from the
+  // Composio session, not from our config. We match keys by toolkit prefix.
+  for (const t of agentToolRecords) {
+    if (t.tool_type !== "composio") continue;
+    const cfg = t.config as { toolkit?: string; toolkit_name?: string };
+    if (!cfg.toolkit) continue;
+
+    // Composio tool keys are UPPER_SNAKE_CASE with the toolkit slug as prefix
+    // e.g. toolkit "gmail" → keys like GMAIL_SEND_EMAIL, GMAIL_CREATE_DRAFT
+    const prefix = cfg.toolkit.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const displayPrefix = cfg.toolkit_name ?? cfg.toolkit;
+
+    for (const toolKey of Object.keys(tools)) {
+      if (toolKey.startsWith(prefix + "_") && !toolDisplayNames[toolKey]) {
+        // GMAIL_SEND_EMAIL → Send Email
+        const actionPart = toolKey.slice(prefix.length + 1);
+        const friendlyName = actionPart
+          .toLowerCase()
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+        toolDisplayNames[toolKey] = `${displayPrefix}: ${friendlyName}`;
+      }
+    }
+  }
 
   // ---------------------------------------------------------------------------
   // RAG: retrieve relevant knowledge if the agent has documents

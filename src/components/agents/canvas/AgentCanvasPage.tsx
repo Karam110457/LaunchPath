@@ -326,13 +326,20 @@ function AgentCanvasInner({
 
   const toolNodeItems = useMemo<ToolNodeData[]>(
     () =>
-      agentTools.map((t) => ({
-        toolId: t.id,
-        agentId: agent.id,
-        toolType: t.tool_type,
-        displayName: t.display_name,
-        isEnabled: t.is_enabled,
-      })),
+      agentTools.map((t) => {
+        const cfg = t.tool_type === "composio"
+          ? (t.config as { toolkit_icon?: string; toolkit?: string })
+          : null;
+        return {
+          toolId: t.id,
+          agentId: agent.id,
+          toolType: t.tool_type,
+          displayName: t.display_name,
+          isEnabled: t.is_enabled,
+          toolkitIcon: cfg?.toolkit_icon,
+          toolkitSlug: cfg?.toolkit,
+        };
+      }),
     [agentTools, agent.id]
   );
 
