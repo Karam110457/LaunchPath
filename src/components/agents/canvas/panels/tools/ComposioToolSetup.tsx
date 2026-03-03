@@ -184,7 +184,15 @@ export function ComposioToolSetup({
       <DialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-6 pt-5 pb-3">
           <DialogTitle className="flex items-center gap-2.5">
-            <span className="text-xl">{toolkitIcon}</span>
+            {toolkitIcon.startsWith("http") ? (
+              <img
+                src={toolkitIcon}
+                alt={toolkitName}
+                className="w-6 h-6 object-contain rounded"
+              />
+            ) : (
+              <span className="text-xl">{toolkitIcon}</span>
+            )}
             <span>{existing ? `Edit ${toolkitName}` : `Add ${toolkitName}`}</span>
           </DialogTitle>
           <p className="text-sm text-muted-foreground">

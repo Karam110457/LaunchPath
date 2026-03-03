@@ -2,7 +2,7 @@
  * GET /api/composio/apps
  *
  * Returns available Composio app integrations.
- * Fetches real-time data from Composio SDK with fallback to curated list.
+ * Fetches from Composio SDK with in-memory cache (5 min TTL).
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -41,6 +41,52 @@ const CATEGORY_LABELS: Record<string, string> = {
   other: "Other",
 };
 
+// ─── In-memory cache ─────────────────────────────────────────────────────────
+// Avoids re-fetching 900+ toolkits from Composio on every modal open.
+// TTL: 5 minutes. Shared across requests on the same serverless instance.
+
+let _cachedApps: ComposioApp[] | null = null;
+let _cacheExpiry = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function getCachedApps(): Promise<ComposioApp[]> {
+  if (_cachedApps && Date.now() < _cacheExpiry) {
+    return _cachedApps;
+  }
+
+  const composio = getComposioClient();
+
+  const toolkits = await composio.toolkits.get({
+    sortBy: "usage",
+    limit: 200,
+  });
+
+  const apps: ComposioApp[] = (toolkits as unknown as ComposioToolkitItem[])
+    .filter((t) => !t.isLocalToolkit)
+    .map((t) => {
+      const primaryCategory = t.meta?.categories?.[0]?.slug ?? "other";
+
+      return {
+        toolkit: t.slug,
+        name: t.name,
+        icon: t.meta?.logo ?? t.name.charAt(0),
+        logo: t.meta?.logo ?? null,
+        category: primaryCategory,
+        description: t.meta?.description ?? "",
+        authSchemes: t.authSchemes ?? [],
+        noAuth: t.noAuth ?? false,
+        toolsCount: t.meta?.toolsCount ?? 0,
+      };
+    });
+
+  _cachedApps = apps;
+  _cacheExpiry = Date.now() + CACHE_TTL_MS;
+
+  return apps;
+}
+
+// ─── Route handler ───────────────────────────────────────────────────────────
+
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const {
@@ -53,39 +99,11 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const category = searchParams.get("category") || undefined;
   const searchQuery = searchParams.get("search") || undefined;
 
   try {
-    const composio = getComposioClient();
+    const apps = await getCachedApps();
 
-    // Fetch real toolkit data from Composio
-    const toolkits = await composio.toolkits.get({
-      sortBy: "usage",
-      ...(category ? { category } : {}),
-    });
-
-    // Transform to our app format
-    const apps: ComposioApp[] = (toolkits as unknown as ComposioToolkitItem[])
-      .filter((t) => !t.isLocalToolkit)
-      .map((t) => {
-        const primaryCategory =
-          t.meta?.categories?.[0]?.slug ?? "other";
-
-        return {
-          toolkit: t.slug,
-          name: t.name,
-          icon: t.meta?.logo ?? t.name.charAt(0),
-          logo: t.meta?.logo ?? null,
-          category: primaryCategory,
-          description: t.meta?.description ?? "",
-          authSchemes: t.authSchemes ?? [],
-          noAuth: t.noAuth ?? false,
-          toolsCount: t.meta?.toolsCount ?? 0,
-        };
-      });
-
-    // Client-side search filtering (Composio SDK doesn't have search param on list)
     let filtered = apps;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -106,7 +124,6 @@ export async function GET(request: NextRequest) {
       error: err instanceof Error ? err.message : String(err),
     });
 
-    // Return empty list on failure — UI can show appropriate message
     return NextResponse.json({
       apps: [],
       categories: CATEGORY_LABELS,

@@ -1,7 +1,8 @@
 /**
  * GET /api/composio/tools?toolkit=gmail
  *
- * Returns the available actions for a connected Composio toolkit.
+ * Returns the available actions for a Composio toolkit.
+ * Uses the direct tools API (not session) to avoid meta tools.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -39,30 +40,34 @@ export async function GET(request: NextRequest) {
   try {
     const composio = getComposioClient();
 
-    // Create session scoped to this toolkit — filtering happens at creation
-    const session = await composio.create(user.id, {
+    // Use getRawComposioTools to get actual toolkit actions (not session meta tools).
+    // Session.tools() includes MANAGE_CONNECTIONS, MULTI_EXECUTE_TOOL etc.
+    // which are Composio internal tools, not what we want here.
+    const rawTools = await composio.tools.getRawComposioTools({
       toolkits: [toolkit],
+      important: true,
+      limit: 50,
     });
 
-    // session.tools() returns VercelToolCollection (Record<string, Tool>)
-    const sessionTools = await session.tools();
-
-    // Extract metadata for the UI
-    const tools: ComposioToolAction[] = Object.entries(sessionTools).map(
-      ([slug, def]) => {
-        const toolDef = def as { description?: string } | undefined;
-        // Format slug for display: GMAIL_SEND_EMAIL → Send Email
-        const displayName = slug
-          .replace(/^[A-Z]+_/, "") // remove toolkit prefix
-          .replace(/_/g, " ")
-          .replace(/\b\w/g, (c) => c.toUpperCase());
-        return {
-          slug,
-          name: displayName,
-          description: toolDef?.description ?? "",
-        };
-      }
-    );
+    // rawTools is Tool[] with { slug, name, description, toolkit }
+    const tools: ComposioToolAction[] = (
+      rawTools as unknown as Array<{
+        slug: string;
+        name: string;
+        description?: string;
+      }>
+    ).map((t) => {
+      // Format slug for display: GOOGLECALENDAR_CREATE_EVENT → Create Event
+      const displayName = t.name || t.slug
+        .replace(/^[A-Z]+_/, "") // remove toolkit prefix
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+      return {
+        slug: t.slug,
+        name: displayName,
+        description: t.description ?? "",
+      };
+    });
 
     return NextResponse.json({ tools });
   } catch (err) {

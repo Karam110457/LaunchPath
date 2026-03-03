@@ -51,7 +51,13 @@ export async function buildComposioTools(
     const sessionTools = await session.tools();
 
     if (sessionTools && typeof sessionTools === "object") {
-      Object.assign(tools, sessionTools);
+      // Filter out Composio internal/meta tools (COMPOSIO_MANAGE_CONNECTIONS,
+      // COMPOSIO_MULTI_EXECUTE_TOOL, etc.) — the agent only needs toolkit actions
+      for (const [key, value] of Object.entries(sessionTools)) {
+        if (!key.startsWith("COMPOSIO_")) {
+          tools[key] = value;
+        }
+      }
     }
   } catch (err) {
     logger.error("Failed to build Composio tools", {

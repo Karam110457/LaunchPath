@@ -39,6 +39,34 @@ export async function POST(request: NextRequest) {
   try {
     const composio = getComposioClient();
 
+    // Check if user already has an active connection for this toolkit.
+    // Avoids creating duplicate connected accounts (Composio warns about this).
+    type AccountItem = { id: string; toolkit: { slug: string }; status: string };
+    const existing = await composio.connectedAccounts.list({
+      userIds: [user.id],
+      toolkitSlugs: [toolkit],
+    });
+    const items = (existing as unknown as { items: AccountItem[] }).items ?? [];
+    const active = items.find(
+      (a) => a.toolkit?.slug === toolkit && a.status === "ACTIVE"
+    );
+
+    if (active) {
+      // Already connected — update our DB and return immediately
+      await supabase.from("user_composio_connections").upsert(
+        {
+          user_id: user.id,
+          toolkit,
+          toolkit_name: toolkitName,
+          toolkit_icon: toolkitIcon ?? null,
+          status: "active",
+          composio_account_id: active.id,
+        },
+        { onConflict: "user_id,toolkit" }
+      );
+      return NextResponse.json({ redirectUrl: null, status: "active" });
+    }
+
     // Authorize the user for this toolkit via Composio SDK.
     // This handles both OAuth and API key flows — Composio returns
     // a hosted auth page URL for both.
