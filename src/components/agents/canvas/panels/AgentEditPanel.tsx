@@ -29,13 +29,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ToolsTab } from "./tools/ToolsTab";
+import type { AgentToolResponse } from "@/lib/tools/types";
 import type { AgentFormState, WizardConfig } from "../canvas-types";
 
 interface AgentEditPanelProps {
   agentId: string;
   formState: AgentFormState;
   setFormState: React.Dispatch<React.SetStateAction<AgentFormState>>;
+  tools?: AgentToolResponse[];
 }
 
 const MODEL_OPTIONS = [
@@ -65,6 +66,7 @@ export function AgentEditPanel({
   agentId,
   formState,
   setFormState,
+  tools = [],
 }: AgentEditPanelProps) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
@@ -114,9 +116,6 @@ export function AgentEditPanel({
         <TabsList className="w-full">
           <TabsTrigger value="basics" className="flex-1 text-xs">
             Basics
-          </TabsTrigger>
-          <TabsTrigger value="tools" className="flex-1 text-xs">
-            Tools
           </TabsTrigger>
           <TabsTrigger value="advanced" className="flex-1 text-xs">
             Advanced
@@ -315,11 +314,6 @@ export function AgentEditPanel({
         </div>
       </TabsContent>
 
-      {/* ═══════════════════════ TOOLS TAB ═══════════════════════ */}
-      <TabsContent value="tools">
-        <ToolsTab agentId={agentId} />
-      </TabsContent>
-
       {/* ═══════════════════════ ADVANCED TAB ═══════════════════════ */}
       <TabsContent value="advanced">
         <div className="p-5 space-y-5">
@@ -340,6 +334,48 @@ export function AgentEditPanel({
               placeholder="Instructions for how the agent should behave..."
             />
           </section>
+
+          {/* Tool Instructions (read-only, auto-generated) */}
+          {tools.filter((t) => t.is_enabled).length > 0 && (
+            <>
+              <hr className="border-border" />
+              <section className="space-y-3">
+                <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Tool Instructions
+                  <span className="ml-1.5 text-[10px] font-normal normal-case tracking-normal text-primary/70">
+                    auto-generated
+                  </span>
+                </h3>
+                <p className="text-[11px] text-muted-foreground">
+                  This is automatically appended to the system prompt at chat time.
+                  Do not duplicate these instructions above — click a tool on the
+                  canvas to edit its trigger.
+                </p>
+                <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    ## Tools Available
+                  </p>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    You have the following tools. Use them proactively — if the
+                    user&apos;s request matches a tool&apos;s purpose, use the tool rather
+                    than just describing what you would do.
+                  </p>
+                  {tools
+                    .filter((t) => t.is_enabled)
+                    .map((t) => (
+                      <p key={t.id} className="text-[11px] text-foreground/80 leading-relaxed">
+                        - <span className="font-medium">{t.display_name}</span>:{" "}
+                        {t.description || (
+                          <span className="italic text-amber-400/70">
+                            No trigger set — click the tool on the canvas to add one
+                          </span>
+                        )}
+                      </p>
+                    ))}
+                </div>
+              </section>
+            </>
+          )}
 
           <hr className="border-border" />
 

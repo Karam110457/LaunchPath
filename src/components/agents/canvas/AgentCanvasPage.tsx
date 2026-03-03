@@ -390,6 +390,13 @@ function AgentCanvasInner({
       if (node.type === "knowledgeNode") {
         setModal({ type: "knowledge" });
       }
+    },
+    []
+  );
+
+  const onNodeDoubleClick: NodeMouseHandler = useCallback(
+    (_event, node) => {
+      if (node.type === "agentNode") setModal({ type: "edit-agent" });
       if (node.type === "toolNode") {
         const d = node.data as unknown as ToolNodeData;
         const existing = agentTools.find((t) => t.id === d.toolId);
@@ -398,10 +405,6 @@ function AgentCanvasInner({
     },
     [agentTools]
   );
-
-  const onNodeDoubleClick: NodeMouseHandler = useCallback((_event, node) => {
-    if (node.type === "agentNode") setModal({ type: "edit-agent" });
-  }, []);
 
   const handleToggleTest = useCallback(() => {
     setTestMode((prev) => {
@@ -489,6 +492,7 @@ function AgentCanvasInner({
             agentId={agent.id}
             formState={formState}
             setFormState={setFormState}
+            tools={agentTools}
           />
         )}
         {modal.type === "knowledge" && (
