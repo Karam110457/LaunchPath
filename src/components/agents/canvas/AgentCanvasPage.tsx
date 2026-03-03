@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -26,11 +27,12 @@ import { BottomBar } from "./BottomBar";
 import { NodeModal } from "./panels/NodeModal";
 import { AgentEditPanel } from "./panels/AgentEditPanel";
 import { KnowledgeDetailPanel } from "./panels/KnowledgeDetailPanel";
-import { AgentChatPanel } from "@/components/agents/AgentChatPanel";
+import { FloatingChatWidget } from "./FloatingChatWidget";
 import { ToolCatalogModal } from "./panels/tools/ToolCatalogModal";
 import { ToolSetupDialog } from "./panels/tools/ToolSetupDialog";
 import { SaveDialog } from "./SaveDialog";
 import { VersionHistoryModal } from "./VersionHistoryModal";
+import { CanvasHelperOverlay } from "./CanvasHelperOverlay";
 import { useCanvasLayout, type SavedPositions } from "./useCanvasLayout";
 import type {
   PanelState,
@@ -108,6 +110,8 @@ function AgentCanvasInner({
   const [isSaving, setIsSaving] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [versionCount, setVersionCount] = useState<number>(0);
 
   const isDirty = useMemo(() => {
     return (Object.keys(originalFormState) as (keyof AgentFormState)[]).some(
@@ -126,6 +130,65 @@ function AgentCanvasInner({
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty]);
+
+  // ─── Autosave (5s debounce) ─────────────────────────────────────────────
+  const autosaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!isDirty || !formState.name.trim()) return;
+    if (autosaveRef.current) clearTimeout(autosaveRef.current);
+    autosaveRef.current = setTimeout(async () => {
+      setSaveStatus("saving");
+      try {
+        const res = await fetch(`/api/agents/${agent.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: formState.name.trim(),
+            description: formState.description.trim() || null,
+            system_prompt: formState.systemPrompt,
+            personality: {
+              tone: formState.tone.trim() || undefined,
+              greeting_message: formState.greetingMessage.trim() || undefined,
+              avatar_emoji: formState.avatarEmoji.trim() || "🤖",
+            },
+            model: formState.model,
+            status: formState.status,
+            wizard_config: formState.wizardConfig,
+          }),
+        });
+        if (res.ok) {
+          setSaveStatus("saved");
+          router.refresh();
+          setTimeout(() => setSaveStatus("idle"), 2000);
+        } else {
+          toast.error("Autosave failed");
+          setSaveStatus("idle");
+        }
+      } catch {
+        toast.error("Autosave failed");
+        setSaveStatus("idle");
+      }
+    }, 5000);
+    return () => {
+      if (autosaveRef.current) clearTimeout(autosaveRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDirty, formState]);
+
+  // ─── Fetch version count ────────────────────────────────────────────────
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch(`/api/agents/${agent.id}/versions`);
+        if (res.ok) {
+          const data = await res.json();
+          setVersionCount((data.versions ?? []).length);
+        }
+      } catch {
+        // non-critical
+      }
+    })();
+  }, [agent.id]);
 
   const handleSave = useCallback(
     async (title: string, description: string) => {
@@ -156,9 +219,10 @@ function AgentCanvasInner({
           throw new Error(data.error || "Update failed");
         }
         setShowSaveDialog(false);
+        toast.success(title ? `Saved: ${title}` : "Changes saved");
         router.refresh();
       } catch (err) {
-        console.error("Save failed:", err);
+        toast.error(err instanceof Error ? err.message : "Failed to save");
       } finally {
         setIsSaving(false);
       }
@@ -199,7 +263,6 @@ function AgentCanvasInner({
       name: formState.name,
       description: formState.description || null,
       model: formState.model,
-      status: formState.status as "draft" | "active" | "paused",
       avatarEmoji: formState.avatarEmoji,
       tone: formState.tone || null,
       greetingMessage: formState.greetingMessage || null,
@@ -209,7 +272,7 @@ function AgentCanvasInner({
     [
       agent.id,
       formState.name, formState.description, formState.model,
-      formState.status, formState.avatarEmoji, formState.tone,
+      formState.avatarEmoji, formState.tone,
       formState.greetingMessage, formState.systemPrompt,
     ]
   );
@@ -365,7 +428,7 @@ function AgentCanvasInner({
 
   // ─── Interaction ─────────────────────────────────────────────────────────
   const [modal, setModal] = useState<PanelState>({ type: "none" });
-  const [testMode, setTestMode] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   // Tool dialog state
   const [catalogOpen, setCatalogOpen] = useState(false);
@@ -385,18 +448,10 @@ function AgentCanvasInner({
     await fetchTools();
   }, [fetchTools]);
 
-  const onNodeClick: NodeMouseHandler = useCallback(
-    (_event, node) => {
-      if (node.type === "knowledgeNode") {
-        setModal({ type: "knowledge" });
-      }
-    },
-    []
-  );
-
   const onNodeDoubleClick: NodeMouseHandler = useCallback(
     (_event, node) => {
       if (node.type === "agentNode") setModal({ type: "edit-agent" });
+      if (node.type === "knowledgeNode") setModal({ type: "knowledge" });
       if (node.type === "toolNode") {
         const d = node.data as unknown as ToolNodeData;
         const existing = agentTools.find((t) => t.id === d.toolId);
@@ -407,33 +462,28 @@ function AgentCanvasInner({
   );
 
   const handleToggleTest = useCallback(() => {
-    setTestMode((prev) => {
-      if (!prev) setModal({ type: "chat" });
-      else setModal({ type: "none" });
-      return !prev;
-    });
+    setChatOpen((prev) => !prev);
   }, []);
 
   const handleCloseModal = useCallback(() => {
     setModal({ type: "none" });
-    setTestMode(false);
   }, []);
 
   let modalTitle = "";
   if (modal.type === "edit-agent") modalTitle = "Edit Agent";
   else if (modal.type === "knowledge") modalTitle = "Knowledge Base";
-  else if (modal.type === "chat") modalTitle = `Test ${agent.name}`;
 
   return (
     <div className="relative w-full h-[calc(100vh-3.5rem)] overflow-hidden bg-[#0a0a0a]">
       <TopBar
         agentName={formState.name}
-        status={formState.status as "draft" | "active" | "paused"}
         avatarEmoji={formState.avatarEmoji}
         onSave={() => setShowSaveDialog(true)}
         onVersionHistory={() => setShowVersionHistory(true)}
         isSaving={isSaving}
         isDirty={isDirty}
+        saveStatus={saveStatus}
+        versionCount={versionCount}
       />
 
       {/* Fixed "Add Tool" button */}
@@ -451,7 +501,6 @@ function AgentCanvasInner({
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
-          onNodeClick={onNodeClick}
           onNodeDoubleClick={onNodeDoubleClick}
           onNodeDragStop={onNodeDragStop}
           nodeTypes={nodeTypes}
@@ -479,13 +528,14 @@ function AgentCanvasInner({
         </div>
       )}
 
-      <BottomBar testMode={testMode} onToggleTest={handleToggleTest} />
+      <CanvasHelperOverlay />
+
+      <BottomBar testMode={chatOpen} onToggleTest={handleToggleTest} />
 
       <NodeModal
         open={modal.type !== "none"}
         onClose={handleCloseModal}
         title={modalTitle}
-        size={modal.type === "chat" ? "chat" : "default"}
       >
         {modal.type === "edit-agent" && (
           <AgentEditPanel
@@ -502,15 +552,16 @@ function AgentCanvasInner({
             onDocumentsChange={handleDocumentsChange}
           />
         )}
-        {modal.type === "chat" && (
-          <AgentChatPanel
-            agentId={agent.id}
-            agentName={agent.name}
-            greetingMessage={personality?.greeting_message}
-            embedded
-          />
-        )}
       </NodeModal>
+
+      {chatOpen && (
+        <FloatingChatWidget
+          agentId={agent.id}
+          agentName={agent.name}
+          greetingMessage={personality?.greeting_message}
+          onClose={() => setChatOpen(false)}
+        />
+      )}
 
       <ToolCatalogModal
         open={catalogOpen}

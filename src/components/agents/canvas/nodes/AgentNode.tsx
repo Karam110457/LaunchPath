@@ -12,16 +12,6 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
     <div className="group relative flex flex-col items-center">
       <div className="relative w-[240px] bg-[#1a1a1a] border border-[#333] rounded-xl shadow-xl cursor-pointer transition-all duration-200 hover:border-[#555] overflow-visible z-10 flex items-center px-4 py-4">
 
-        {/* Active status pulse */}
-        {d.status === "active" && (
-          <div className="absolute -top-1.5 -right-1.5 z-10">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
-            </span>
-          </div>
-        )}
-
         <div className="w-10 h-10 flex items-center justify-center text-zinc-100 mr-3">
           <Bot strokeWidth={2} className="w-8 h-8" />
         </div>

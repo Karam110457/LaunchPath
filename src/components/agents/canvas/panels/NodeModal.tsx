@@ -9,8 +9,6 @@ interface NodeModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  /** Use a wider modal for the chat panel */
-  size?: "default" | "chat";
 }
 
 export function NodeModal({
@@ -18,7 +16,6 @@ export function NodeModal({
   onClose,
   title,
   children,
-  size = "default",
 }: NodeModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -50,9 +47,7 @@ export function NodeModal({
             "pointer-events-auto bg-background border border-border rounded-2xl shadow-2xl",
             "animate-in fade-in zoom-in-95 duration-200",
             "flex flex-col overflow-hidden",
-            size === "chat"
-              ? "w-full max-w-lg h-[75vh]"
-              : "w-full max-w-lg max-h-[80vh]",
+            "w-full max-w-lg max-h-[80vh]",
           )}
         >
           {/* Header */}

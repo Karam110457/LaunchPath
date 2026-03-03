@@ -44,12 +44,6 @@ const MODEL_OPTIONS = [
   { value: "claude-haiku-3-5-20241022", label: "Claude Haiku 3.5" },
 ];
 
-const STATUS_OPTIONS = [
-  { value: "draft", label: "Draft", color: "bg-amber-500/15 text-amber-400 border-amber-500/30", desc: "Work in progress" },
-  { value: "active", label: "Active", color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", desc: "Ready for testing" },
-  { value: "paused", label: "Paused", color: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30", desc: "Temporarily disabled" },
-];
-
 const TONE_PRESETS = [
   { value: "friendly and approachable", label: "Friendly", emoji: "\u{1F60A}", desc: "Warm, gets to the point" },
   { value: "professional and polished", label: "Professional", emoji: "\u{1F454}", desc: "Formal, trustworthy" },
@@ -131,27 +125,15 @@ export function AgentEditPanel({
             <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Identity
             </h3>
-            <div className="grid grid-cols-[3rem_1fr] gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-emoji" className="text-xs">Emoji</Label>
-                <Input
-                  id="edit-emoji"
-                  value={formState.avatarEmoji}
-                  onChange={(e) => update("avatarEmoji", e.target.value)}
-                  className="h-9 text-center text-lg"
-                  maxLength={2}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-name" className="text-xs">Name</Label>
-                <Input
-                  id="edit-name"
-                  value={formState.name}
-                  onChange={(e) => update("name", e.target.value)}
-                  className="h-9 text-sm"
-                  placeholder="Agent name"
-                />
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-name" className="text-xs">Name</Label>
+              <Input
+                id="edit-name"
+                value={formState.name}
+                onChange={(e) => update("name", e.target.value)}
+                className="h-9 text-sm"
+                placeholder="Agent name"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="edit-description" className="text-xs">Description</Label>
@@ -246,36 +228,6 @@ export function AgentEditPanel({
                 placeholder="First message shown to visitors"
               />
             </div>
-          </section>
-
-          <hr className="border-border" />
-
-          {/* ── Status ── */}
-          <section className="space-y-3">
-            <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Status
-            </h3>
-            <div className="flex gap-2">
-              {STATUS_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => update("status", opt.value)}
-                  className={cn(
-                    "px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
-                    formState.status === opt.value
-                      ? opt.color
-                      : "border-border text-muted-foreground hover:border-border/80"
-                  )}
-                  title={opt.desc}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-            <p className="text-[11px] text-muted-foreground">
-              Status is for your own tracking. Deployment is coming soon.
-            </p>
           </section>
 
           {/* ── Behavior (wizard agents only) ── */}

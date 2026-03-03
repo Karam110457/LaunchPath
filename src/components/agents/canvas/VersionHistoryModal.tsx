@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Loader2, RotateCcw, FileText, Globe, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -245,19 +244,6 @@ export function VersionHistoryModal({
                               Model
                             </p>
                             <p className="text-xs">{v.model}</p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">
-                              Status
-                            </p>
-                            <Badge
-                              variant={
-                                v.status === "active" ? "default" : "secondary"
-                              }
-                              className="text-[10px]"
-                            >
-                              {v.status}
-                            </Badge>
                           </div>
                           {(v.personality as { tone?: string })?.tone && (
                             <div>

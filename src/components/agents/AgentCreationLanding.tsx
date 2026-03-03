@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Wand2, Zap, Wrench, ArrowLeft } from "lucide-react";
+import { Wand2, Zap, ArrowLeft } from "lucide-react";
 import { NewAgentForm } from "./NewAgentForm";
 import { AgentWizard } from "./wizard/AgentWizard";
 
@@ -55,7 +54,7 @@ export function AgentCreationLanding({
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         {/* Guided Setup */}
         <button
           type="button"
@@ -100,28 +99,6 @@ export function AgentCreationLanding({
           </Card>
         </button>
 
-        {/* Manual Builder (Coming Soon) */}
-        <div className="opacity-60 cursor-not-allowed">
-          <Card className="h-full">
-            <CardContent className="pt-6 space-y-3">
-              <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
-                <Wrench className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <h3 className="font-medium text-sm flex items-center gap-2">
-                  Manual Builder
-                  <Badge variant="secondary" className="text-[10px]">
-                    Coming Soon
-                  </Badge>
-                </h3>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Full control with a visual node editor. Build exactly what
-                  you need.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   );

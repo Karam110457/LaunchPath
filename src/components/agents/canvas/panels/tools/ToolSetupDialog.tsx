@@ -171,6 +171,21 @@ export function ToolSetupDialog({
         </DialogHeader>
 
         <div className="space-y-5 mt-1">
+          {/* When to use — lead with intent, not credentials */}
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">When should your agent use this?</Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              className="text-sm resize-none"
+              placeholder={`e.g. "Use this when the visitor asks to book a call, schedule a meeting, or wants to talk to someone."`}
+            />
+            <p className="text-xs text-muted-foreground">
+              This tells your agent exactly when to trigger this tool. Be specific about the phrases or situations that should activate it.
+            </p>
+          </div>
+
           {/* Setup fields */}
           {entry.setupFields.length > 0 && (
             <section className="space-y-4">
@@ -259,21 +274,6 @@ export function ToolSetupDialog({
               </div>
             </div>
           )}
-
-          {/* When to use — always visible, prominent */}
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium">When should your agent use this?</Label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="text-sm resize-none"
-              placeholder={`e.g. "Use this when the visitor asks to book a call, schedule a meeting, or wants to talk to someone."`}
-            />
-            <p className="text-xs text-muted-foreground">
-              This tells your agent exactly when to trigger this tool. Be specific about the phrases or situations that should activate it.
-            </p>
-          </div>
 
           {/* Test connection */}
           <div className="space-y-2">

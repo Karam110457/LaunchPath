@@ -4,7 +4,6 @@ export interface AgentNodeData {
   name: string;
   description: string | null;
   model: string;
-  status: "draft" | "active" | "paused";
   avatarEmoji: string;
   tone: string | null;
   greetingMessage: string | null;
@@ -59,5 +58,4 @@ export interface AgentFormState {
 export type PanelState =
   | { type: "none" }
   | { type: "knowledge" }
-  | { type: "edit-agent" }
-  | { type: "chat" };
+  | { type: "edit-agent" };

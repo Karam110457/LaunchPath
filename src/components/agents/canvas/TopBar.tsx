@@ -1,28 +1,29 @@
 "use client";
 
-import { ArrowLeft, Save, Loader2, History } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Save, Loader2, History, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 interface TopBarProps {
   agentName: string;
-  status: "draft" | "active" | "paused";
   avatarEmoji: string;
   onSave: () => void;
   onVersionHistory: () => void;
   isSaving: boolean;
   isDirty: boolean;
+  saveStatus?: "idle" | "saving" | "saved";
+  versionCount?: number;
 }
 
 export function TopBar({
   agentName,
-  status,
   avatarEmoji,
   onSave,
   onVersionHistory,
   isSaving,
   isDirty,
+  saveStatus = "idle",
+  versionCount,
 }: TopBarProps) {
   return (
     <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-background/80 backdrop-blur-sm border-b border-border/50">
@@ -37,22 +38,35 @@ export function TopBar({
         <span className="text-sm font-semibold text-foreground">
           {agentName}
         </span>
-        <Badge
-          variant={status === "active" ? "default" : "secondary"}
-          className="text-[10px]"
-        >
-          {status}
-        </Badge>
       </div>
       <div className="flex items-center gap-2">
+        {/* Autosave indicator */}
+        {saveStatus === "saving" && (
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground animate-in fade-in duration-200">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Saving...
+          </span>
+        )}
+        {saveStatus === "saved" && (
+          <span className="flex items-center gap-1.5 text-xs text-emerald-400 animate-in fade-in duration-200">
+            <Check className="w-3 h-3" />
+            Saved
+          </span>
+        )}
+
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           onClick={onVersionHistory}
           className="text-muted-foreground"
         >
           <History className="w-3.5 h-3.5 mr-1.5" />
           Versions
+          {typeof versionCount === "number" && versionCount > 0 && (
+            <span className="ml-1.5 text-[10px] font-semibold bg-muted px-1.5 py-0.5 rounded-full">
+              {versionCount}
+            </span>
+          )}
         </Button>
         <Button
           variant={isDirty ? "default" : "outline"}
