@@ -304,32 +304,51 @@ function AgentCanvasInner({
     savedPositions,
   });
 
+  // Start empty — set correctly before first paint via useLayoutEffect
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
-  // Single unified sync: merge layoutNodes into state, preserving DOM identity.
-  // - Existing nodes update position + data in-place (no unmount → no re-animation,
-  //   and CSS transition smoothly interpolates the transform change).
-  // - Genuinely new nodes get the "node-new" class for the entrance animation.
-  // - Deleted nodes are dropped automatically (we map over layoutNodes, not prev).
-  // Runs on every layoutNodes change: agent edits, knowledge updates, tool add/remove.
+  // When toolsReady flips true: set the correct layout synchronously before
+  // the browser paints, so ReactFlow never renders with a stale/empty layout
   useLayoutEffect(() => {
     if (!toolsReady) return;
-
-    setNodes((prev) => {
-      const prevMap = new Map(prev.map((n) => [n.id, n]));
-      return layoutNodes.map((ln) => {
-        const existing = prevMap.get(ln.id);
-        if (existing) {
-          // Preserve object identity where possible — only update what changed
-          return { ...existing, position: ln.position, data: ln.data };
-        }
-        // Genuinely new node: mark for CSS entrance animation
-        return { ...ln, className: "node-new" };
-      });
-    });
+    setNodes(layoutNodes);
     setEdges(layoutEdges);
-  }, [layoutNodes, layoutEdges, toolsReady]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toolsReady]);
+
+  // Update agent node data in-place (preserves position)
+  useEffect(() => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.type === "agentNode"
+          ? { ...n, data: agentData as unknown as Record<string, unknown> }
+          : n
+      )
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentData]);
+
+  // Update knowledge node data in-place (preserves position)
+  useEffect(() => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.type === "knowledgeNode"
+          ? { ...n, data: knowledgeData as unknown as Record<string, unknown> }
+          : n
+      )
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docCounts]);
+
+  // When tools change after initial load: rebuild layout with saved positions
+  // New tool nodes get default positions; existing nodes keep their saved spot
+  useEffect(() => {
+    if (!toolsReady) return;
+    setNodes(layoutNodes);
+    setEdges(layoutEdges);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentTools]);
 
   // ─── Drag end: capture new position and persist ───────────────────────────
   const onNodeDragStop: OnNodeDrag = useCallback(
