@@ -10,6 +10,8 @@ export interface AgentChatMessage {
   content: string;
   isStreaming?: boolean;
   timestamp: string;
+  /** Persisted tool call activities that occurred before this assistant message. */
+  toolActivities?: import("@/hooks/useAgentChat").ToolActivity[];
 }
 
 /** Persisted message format stored in agent_conversations.messages jsonb. */

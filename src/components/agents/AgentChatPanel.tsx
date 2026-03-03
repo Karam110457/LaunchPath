@@ -242,10 +242,18 @@ export function AgentChatPanel({
       >
         <div className="max-w-3xl mx-auto w-full px-4 space-y-4">
           {messages.map((msg) => (
-            <AgentMessage key={msg.id} message={msg} />
+            <div key={msg.id}>
+              {/* Persisted tool activities shown above the assistant response */}
+              {msg.toolActivities && msg.toolActivities.length > 0 && (
+                <div className="mb-2">
+                  <ToolActivityDisplay activities={msg.toolActivities} />
+                </div>
+              )}
+              <AgentMessage message={msg} />
+            </div>
           ))}
 
-          {/* Tool activity */}
+          {/* Live tool activity (while streaming) */}
           {toolActivity.length > 0 && (
             <ToolActivityDisplay activities={toolActivity} />
           )}

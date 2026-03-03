@@ -88,6 +88,7 @@ export function useAgentChat({
   const [thinkingText, setThinkingText] = useState("");
 
   const [toolActivity, setToolActivity] = useState<ToolActivity[]>([]);
+  const toolActivityRef = useRef<ToolActivity[]>([]);
 
   const historyRef = useRef<AgentConversationMessage[]>([]);
   const streamingIdRef = useRef<string | null>(null);
@@ -277,6 +278,7 @@ export function useAgentChat({
       setIsTyping(true);
       setIsThinking(false);
       setThinkingText("");
+      toolActivityRef.current = [];
       setToolActivity([]);
       streamingIdRef.current = null;
 
@@ -359,28 +361,26 @@ export function useAgentChat({
                   streamingIdRef.current = null;
                 } else if (event.type === "tool-call") {
                   setIsTyping(false);
-                  setToolActivity((prev) => [
-                    ...prev,
-                    {
-                      toolName: event.toolName,
-                      displayName: event.displayName,
-                      status: "running" as const,
-                      args: event.args,
-                    },
-                  ]);
+                  const entry: ToolActivity = {
+                    toolName: event.toolName,
+                    displayName: event.displayName,
+                    status: "running" as const,
+                    args: event.args,
+                  };
+                  toolActivityRef.current = [...toolActivityRef.current, entry];
+                  setToolActivity(toolActivityRef.current);
                 } else if (event.type === "tool-result") {
-                  setToolActivity((prev) =>
-                    prev.map((t) =>
-                      t.toolName === event.toolName
-                        ? {
-                            ...t,
-                            status: event.success ? ("done" as const) : ("failed" as const),
-                            message: event.message,
-                            result: event.result,
-                          }
-                        : t
-                    )
+                  toolActivityRef.current = toolActivityRef.current.map((t) =>
+                    t.toolName === event.toolName
+                      ? {
+                          ...t,
+                          status: event.success ? ("done" as const) : ("failed" as const),
+                          message: event.message,
+                          result: event.result,
+                        }
+                      : t
                   );
+                  setToolActivity(toolActivityRef.current);
                 } else if (event.type === "thinking") {
                   setIsTyping(false);
                   setIsThinking(true);
@@ -405,10 +405,26 @@ export function useAgentChat({
                     void fetchConversations();
                   }
 
+                  // Persist tool activities onto the assistant message
+                  const finishedTools = toolActivityRef.current;
+                  if (finishedTools.length > 0) {
+                    setMessages((prev) => {
+                      const updated = [...prev];
+                      for (let i = updated.length - 1; i >= 0; i--) {
+                        if (updated[i].role === "assistant") {
+                          updated[i] = { ...updated[i], toolActivities: [...finishedTools] };
+                          break;
+                        }
+                      }
+                      return updated;
+                    });
+                  }
+                  toolActivityRef.current = [];
+                  setToolActivity([]);
+
                   setIsStreaming(false);
                   setIsTyping(false);
                   setIsThinking(false);
-                  setToolActivity([]);
                 } else if (event.type === "error") {
                   setIsStreaming(false);
                   setIsTyping(false);
