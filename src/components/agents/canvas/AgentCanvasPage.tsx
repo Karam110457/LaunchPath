@@ -32,7 +32,7 @@ import { ToolCatalogModal } from "./panels/tools/ToolCatalogModal";
 import { ToolSetupDialog } from "./panels/tools/ToolSetupDialog";
 import { SaveDialog } from "./SaveDialog";
 import { VersionHistoryModal } from "./VersionHistoryModal";
-import { CanvasHelperOverlay } from "./CanvasHelperOverlay";
+import { NodeHelperTip } from "./nodes/NodeHelperTip";
 import { useCanvasLayout, type SavedPositions } from "./useCanvasLayout";
 import type {
   PanelState,
@@ -487,13 +487,21 @@ function AgentCanvasInner({
       />
 
       {/* Fixed "Add Tool" button */}
-      <button
-        onClick={() => setCatalogOpen(true)}
-        className="absolute top-[60px] right-4 z-20 flex items-center gap-2 px-3 py-2 bg-card/90 backdrop-blur-sm border border-border/50 rounded-lg text-sm font-medium text-muted-foreground hover:text-amber-400 hover:border-amber-500/40 hover:bg-amber-500/5 transition-all shadow-sm"
-      >
-        <Plus className="w-4 h-4 text-amber-400" />
-        Add Tool
-      </button>
+      <div className="absolute top-[60px] right-4 z-20">
+        <button
+          onClick={() => setCatalogOpen(true)}
+          className="flex items-center gap-2 px-3 py-2 bg-card/90 backdrop-blur-sm border border-border/50 rounded-lg text-sm font-medium text-muted-foreground hover:text-amber-400 hover:border-amber-500/40 hover:bg-amber-500/5 transition-all shadow-sm"
+        >
+          <Plus className="w-4 h-4 text-amber-400" />
+          Add Tool
+        </button>
+        <NodeHelperTip
+          tipId="tools"
+          icon={<Plus className="w-3.5 h-3.5 text-amber-400" />}
+          text="Connect Calendly, CRM, webhooks, and more"
+          position="right-0 top-full mt-2"
+        />
+      </div>
 
       {toolsReady ? (
         <ReactFlow
@@ -527,8 +535,6 @@ function AgentCanvasInner({
           <div className="w-5 h-5 rounded-full border-2 border-zinc-700 border-t-zinc-400 animate-spin" />
         </div>
       )}
-
-      <CanvasHelperOverlay />
 
       <BottomBar testMode={chatOpen} onToggleTest={handleToggleTest} />
 

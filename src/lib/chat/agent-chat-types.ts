@@ -34,7 +34,7 @@ export type AgentServerEvent =
   | { type: "text-done" }
   | { type: "thinking"; text: string }
   | { type: "thinking-done" }
-  | { type: "tool-call"; toolName: string; displayName: string }
-  | { type: "tool-result"; toolName: string; success: boolean; message?: string }
+  | { type: "tool-call"; toolName: string; displayName: string; args?: Record<string, unknown> }
+  | { type: "tool-result"; toolName: string; success: boolean; message?: string; result?: unknown }
   | { type: "done"; assistantContent?: string; conversationId?: string }
   | { type: "error"; message: string };

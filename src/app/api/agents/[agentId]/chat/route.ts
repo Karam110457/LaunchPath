@@ -290,6 +290,7 @@ export async function POST(
             type: "tool-call",
             toolName: chunk.toolName,
             displayName: toolDisplayNames[chunk.toolName] ?? chunk.toolName,
+            args: chunk.input as Record<string, unknown> | undefined,
           });
         } else if (chunk.type === "tool-result") {
           const output = chunk.output as { success?: boolean; message?: string } | null;
@@ -298,6 +299,7 @@ export async function POST(
             toolName: chunk.toolName,
             success: output?.success !== false,
             message: output?.message,
+            result: chunk.output,
           });
         }
       }

@@ -10,6 +10,7 @@ import {
   Plus,
   Trash2,
   ChevronDown,
+  ChevronRight,
   MessageSquare,
   Loader2,
   CheckCircle2,
@@ -270,37 +271,101 @@ export function AgentChatPanel({
   );
 }
 
-/** Tool activity pills shown during tool execution. */
+/** Tool activity cards with expandable request/response for debugging. */
 function ToolActivityDisplay({ activities }: { activities: ToolActivity[] }) {
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+
+  const toggle = (i: number) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+
   return (
-    <div className="flex flex-col gap-1.5 py-1">
-      {activities.map((activity, i) => (
-        <div
-          key={`${activity.toolName}-${i}`}
-          className={cn(
-            "inline-flex items-center gap-1.5 self-start rounded-full px-3 py-1.5 text-xs border transition-all",
-            activity.status === "running"
-              ? "bg-primary/8 border-primary/20 text-primary/80"
-              : activity.status === "done"
-              ? "bg-emerald-500/8 border-emerald-500/20 text-emerald-500/80"
-              : "bg-destructive/8 border-destructive/20 text-destructive/80"
-          )}
-        >
-          {activity.status === "running" ? (
-            <Loader2 className="w-3 h-3 animate-spin shrink-0" />
-          ) : activity.status === "done" ? (
-            <CheckCircle2 className="w-3 h-3 shrink-0" />
-          ) : (
-            <XCircle className="w-3 h-3 shrink-0" />
-          )}
-          <Wrench className="w-2.5 h-2.5 shrink-0 opacity-60" />
-          <span>
-            {activity.status === "running"
-              ? activity.displayName + "…"
-              : activity.message ?? activity.displayName}
-          </span>
-        </div>
-      ))}
+    <div className="flex flex-col gap-2 py-1">
+      {activities.map((activity, i) => {
+        const isOpen = expanded.has(i);
+        const hasDetails = !!(activity.args || activity.result !== undefined);
+        const isDone = activity.status !== "running";
+
+        return (
+          <div
+            key={`${activity.toolName}-${i}`}
+            className={cn(
+              "self-start rounded-xl border text-xs transition-all overflow-hidden",
+              activity.status === "running"
+                ? "bg-primary/5 border-primary/20"
+                : activity.status === "done"
+                ? "bg-emerald-500/5 border-emerald-500/20"
+                : "bg-destructive/5 border-destructive/20"
+            )}
+          >
+            {/* Header row — always visible */}
+            <button
+              type="button"
+              onClick={() => hasDetails && isDone && toggle(i)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 w-full text-left",
+                hasDetails && isDone ? "cursor-pointer hover:bg-white/[0.03]" : "cursor-default",
+                activity.status === "running"
+                  ? "text-primary/80"
+                  : activity.status === "done"
+                  ? "text-emerald-500/80"
+                  : "text-destructive/80"
+              )}
+            >
+              {activity.status === "running" ? (
+                <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+              ) : activity.status === "done" ? (
+                <CheckCircle2 className="w-3 h-3 shrink-0" />
+              ) : (
+                <XCircle className="w-3 h-3 shrink-0" />
+              )}
+              <Wrench className="w-2.5 h-2.5 shrink-0 opacity-60" />
+              <span className="flex-1">
+                {activity.status === "running"
+                  ? activity.displayName + "…"
+                  : activity.message ?? activity.displayName}
+              </span>
+              {hasDetails && isDone ? (
+                isOpen
+                  ? <ChevronDown className="w-3 h-3 shrink-0 opacity-50" />
+                  : <ChevronRight className="w-3 h-3 shrink-0 opacity-50" />
+              ) : null}
+            </button>
+
+            {/* Expanded details */}
+            {isOpen && hasDetails && (
+              <div className="border-t border-border/30 px-3 py-2 space-y-2 text-[11px] text-muted-foreground">
+                {activity.args && Object.keys(activity.args).length > 0 && (
+                  <div>
+                    <p className="font-semibold text-muted-foreground/70 mb-1 uppercase tracking-wider text-[9px]">
+                      Request
+                    </p>
+                    <pre className="bg-black/30 rounded-lg px-2.5 py-2 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[11px] text-zinc-400 max-h-[200px] overflow-y-auto">
+                      {JSON.stringify(activity.args, null, 2)}
+                    </pre>
+                  </div>
+                )}
+                {activity.result !== undefined && (
+                  <div>
+                    <p className="font-semibold text-muted-foreground/70 mb-1 uppercase tracking-wider text-[9px]">
+                      Response
+                    </p>
+                    <pre className="bg-black/30 rounded-lg px-2.5 py-2 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[11px] text-zinc-400 max-h-[200px] overflow-y-auto">
+                      {typeof activity.result === "string"
+                        ? activity.result
+                        : JSON.stringify(activity.result, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

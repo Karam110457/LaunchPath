@@ -31,6 +31,8 @@ export interface ToolActivity {
   displayName: string;
   status: "running" | "done" | "failed";
   message?: string;
+  args?: Record<string, unknown>;
+  result?: unknown;
 }
 
 interface UseAgentChatReturn {
@@ -363,6 +365,7 @@ export function useAgentChat({
                       toolName: event.toolName,
                       displayName: event.displayName,
                       status: "running" as const,
+                      args: event.args,
                     },
                   ]);
                 } else if (event.type === "tool-result") {
@@ -373,6 +376,7 @@ export function useAgentChat({
                             ...t,
                             status: event.success ? ("done" as const) : ("failed" as const),
                             message: event.message,
+                            result: event.result,
                           }
                         : t
                     )

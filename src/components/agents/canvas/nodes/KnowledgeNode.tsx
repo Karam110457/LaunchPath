@@ -4,6 +4,7 @@ import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { Database, Loader2 } from "lucide-react";
 import type { KnowledgeNodeData } from "../canvas-types";
+import { NodeHelperTip } from "./NodeHelperTip";
 
 export const KnowledgeNode = memo(function KnowledgeNode({ data }: NodeProps) {
   const d = data as unknown as KnowledgeNodeData;
@@ -40,6 +41,14 @@ export const KnowledgeNode = memo(function KnowledgeNode({ data }: NodeProps) {
           {d.documentCount === 1 ? "1 source" : `${d.documentCount} sources`}
         </p>
       </div>
+
+      {/* Helper tip */}
+      <NodeHelperTip
+        tipId="knowledge"
+        icon={<Database className="w-3.5 h-3.5 text-violet-400" />}
+        text="Double-click to add documents, FAQs, and website content"
+        position="left-[calc(100%+12px)] top-1/2 -translate-y-1/2"
+      />
     </div>
   );
 });

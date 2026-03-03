@@ -2,8 +2,9 @@
 
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { Bot } from "lucide-react";
+import { Bot, MousePointerClick } from "lucide-react";
 import type { AgentNodeData } from "../canvas-types";
+import { NodeHelperTip } from "./NodeHelperTip";
 
 export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
   const d = data as unknown as AgentNodeData;
@@ -35,6 +36,14 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
           id="bottom-right"
           style={{ left: "75%", bottom: "-7px" }}
           className="!bg-[#111] !w-3 !h-3 !border-[1.5px] !border-[#555] !rounded-[2px] !rotate-45 z-20"
+        />
+
+        {/* Helper tip */}
+        <NodeHelperTip
+          tipId="agent"
+          icon={<MousePointerClick className="w-3.5 h-3.5 text-primary" />}
+          text="Double-click to edit personality, tone, and behavior"
+          position="left-1/2 -translate-x-1/2 bottom-full mb-3"
         />
       </div>
 
