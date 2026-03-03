@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCatalogEntry } from "@/lib/tools/catalog";
 import { maskConfig } from "@/lib/tools/mask-config";
+import { logger } from "@/lib/security/logger";
 import type { CreateToolPayload } from "@/lib/tools/types";
 
 const ALLOWED_TOOL_TYPES = new Set([
@@ -143,6 +144,12 @@ export async function POST(
     .single();
 
   if (error) {
+    logger.error("Failed to create agent tool", {
+      agentId,
+      tool_type,
+      error: error.message,
+      code: error.code,
+    });
     return NextResponse.json({ error: "Failed to create tool" }, { status: 500 });
   }
 

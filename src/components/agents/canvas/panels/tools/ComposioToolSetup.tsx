@@ -108,8 +108,11 @@ export function ComposioToolSetup({
     });
   }, []);
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const handleSave = useCallback(async () => {
     setSaving(true);
+    setSaveError(null);
 
     const config = {
       toolkit,
@@ -119,9 +122,10 @@ export function ComposioToolSetup({
     };
 
     try {
+      let res: Response;
       if (existing) {
         // Update existing
-        await fetch(`/api/agents/${agentId}/tools/${existing.id}`, {
+        res = await fetch(`/api/agents/${agentId}/tools/${existing.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -131,7 +135,7 @@ export function ComposioToolSetup({
         });
       } else {
         // Create new
-        await fetch(`/api/agents/${agentId}/tools`, {
+        res = await fetch(`/api/agents/${agentId}/tools`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -142,9 +146,16 @@ export function ComposioToolSetup({
           }),
         });
       }
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setSaveError((data as { error?: string }).error ?? "Failed to save tool. Please try again.");
+        return;
+      }
+
       onSaved();
     } catch {
-      // error handled silently
+      setSaveError("Network error. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -348,6 +359,13 @@ export function ComposioToolSetup({
             </div>
           )}
         </div>
+
+        {/* Error */}
+        {saveError && (
+          <div className="mx-6 mb-2 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400">
+            {saveError}
+          </div>
+        )}
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-border/30 flex items-center justify-between">

@@ -12,6 +12,8 @@ import { getComposioClient } from "@/lib/composio/client";
 import { logger } from "@/lib/security/logger";
 
 // ─── GET: list connections ────────────────────────────────────────────────────
+// Reads from our local DB, then verifies against Composio's live state.
+// Stale connections (deleted on Composio dashboard) are removed automatically.
 
 export async function GET() {
   const supabase = await createClient();
@@ -30,7 +32,67 @@ export async function GET() {
     .eq("user_id", user.id)
     .order("connected_at", { ascending: false });
 
-  return NextResponse.json({ connections: connections ?? [] });
+  const localConnections = connections ?? [];
+
+  // If no connections, skip verification
+  if (localConnections.length === 0) {
+    return NextResponse.json({ connections: [] });
+  }
+
+  // Verify active connections against Composio's live state.
+  // This catches connections deleted/revoked from the Composio dashboard.
+  try {
+    const composio = getComposioClient();
+
+    type AccountItem = {
+      id: string;
+      toolkit: { slug: string };
+      status: string;
+    };
+
+    const result = await composio.connectedAccounts.list({
+      userIds: [user.id],
+    });
+
+    const liveItems =
+      (result as unknown as { items: AccountItem[] }).items ?? [];
+
+    // Build a set of toolkit slugs that are actually ACTIVE on Composio
+    const liveActiveToolkits = new Set(
+      liveItems
+        .filter((a) => a.status === "ACTIVE")
+        .map((a) => a.toolkit?.slug)
+        .filter(Boolean)
+    );
+
+    // Find stale connections (marked active locally but not active on Composio)
+    const staleIds: string[] = [];
+    const verified = localConnections.filter((c) => {
+      if (c.status === "active" && !liveActiveToolkits.has(c.toolkit)) {
+        staleIds.push(c.id);
+        return false;
+      }
+      return true;
+    });
+
+    // Remove stale connections from our DB
+    if (staleIds.length > 0) {
+      await supabase
+        .from("user_composio_connections")
+        .delete()
+        .in("id", staleIds)
+        .eq("user_id", user.id);
+    }
+
+    return NextResponse.json({ connections: verified });
+  } catch (err) {
+    // If Composio verification fails, return local data (graceful degradation)
+    logger.error("Failed to verify connections with Composio", {
+      userId: user.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return NextResponse.json({ connections: localConnections });
+  }
 }
 
 // ─── POST: verify connection after OAuth ──────────────────────────────────────
