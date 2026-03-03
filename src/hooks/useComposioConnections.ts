@@ -98,36 +98,73 @@ export function useComposioConnections(): UseComposioConnectionsReturn {
           "width=600,height=700,scrollbars=yes"
         );
 
-        // 3. Poll for completion
+        // 3. Poll continuously for connection completion.
+        //    Verifies while popup is open (user may have completed auth)
+        //    AND after popup closes. Gives up after max attempts.
         if (pollRef.current) clearInterval(pollRef.current);
-        pollRef.current = setInterval(async () => {
-          // Check if popup was closed
-          if (popup && popup.closed) {
-            // Verify the connection status
-            try {
-              const verifyRes = await fetch("/api/composio/connections", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ toolkit }),
-              });
+        let attempts = 0;
+        let isVerifying = false;
+        const maxAttempts = 60; // ~2 minutes at 2s intervals
+        let popupClosedAt = 0;
 
-              if (verifyRes.ok) {
-                const verifyData = (await verifyRes.json()) as {
-                  status: string;
-                };
-                if (verifyData.status === "active") {
-                  await fetchConnections();
-                }
-              }
-            } catch {
-              // Will be retried on next poll or manual refresh
+        pollRef.current = setInterval(async () => {
+          // Prevent overlapping async verification calls
+          if (isVerifying) return;
+          isVerifying = true;
+
+          try {
+            attempts++;
+
+            // Safety timeout — stop polling after max attempts
+            if (attempts >= maxAttempts) {
+              if (pollRef.current) clearInterval(pollRef.current);
+              pollRef.current = null;
+              await fetchConnections();
+              setConnecting(null);
+              return;
             }
 
-            if (pollRef.current) clearInterval(pollRef.current);
-            pollRef.current = null;
-            setConnecting(null);
+            // Track when popup closes
+            const popupClosed = !popup || popup.closed;
+            if (popupClosed && popupClosedAt === 0) {
+              popupClosedAt = attempts;
+            }
+
+            // Verify connection status with Composio
+            const verifyRes = await fetch("/api/composio/connections", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ toolkit }),
+            });
+
+            if (verifyRes.ok) {
+              const verifyData = (await verifyRes.json()) as {
+                status: string;
+              };
+              if (verifyData.status === "active") {
+                // Success — close popup, stop polling, refresh connections
+                try { popup?.close(); } catch { /* cross-origin may block */ }
+                if (pollRef.current) clearInterval(pollRef.current);
+                pollRef.current = null;
+                await fetchConnections();
+                setConnecting(null);
+                return;
+              }
+            }
+
+            // If popup has been closed for a while and still not active, stop
+            if (popupClosed && attempts - popupClosedAt > 5) {
+              if (pollRef.current) clearInterval(pollRef.current);
+              pollRef.current = null;
+              await fetchConnections();
+              setConnecting(null);
+            }
+          } catch {
+            // Non-critical — will retry on next interval
+          } finally {
+            isVerifying = false;
           }
-        }, 1500);
+        }, 2000);
       } catch {
         setConnecting(null);
       }

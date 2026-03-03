@@ -59,29 +59,50 @@ export async function POST(request: NextRequest) {
   try {
     const composio = getComposioClient();
 
-    // Check if the user has an active connection for this toolkit
+    // Check for any non-failed connection for this toolkit.
+    // Right after OAuth, the status may be INITIATED before transitioning to ACTIVE.
     const result = await composio.connectedAccounts.list({
       userIds: [user.id],
       toolkitSlugs: [toolkit],
-      statuses: ["ACTIVE"],
     });
 
-    // The response has { items: [...] } where each item has toolkit.slug
-    const items = (result as unknown as { items: Array<{ id: string; toolkit: { slug: string } }> }).items ?? [];
-    const match = items.find((a) => a.toolkit?.slug === toolkit);
+    // The response has { items: [...] } where each item has toolkit.slug and status
+    type AccountItem = {
+      id: string;
+      toolkit: { slug: string };
+      status: string;
+    };
+    const items =
+      (result as unknown as { items: AccountItem[] }).items ?? [];
+
+    // Prefer ACTIVE, fall back to INITIATED (connection still propagating)
+    const active = items.find(
+      (a) => a.toolkit?.slug === toolkit && a.status === "ACTIVE"
+    );
+    const initiated = items.find(
+      (a) =>
+        a.toolkit?.slug === toolkit &&
+        (a.status === "INITIATED" || a.status === "INITIALIZING")
+    );
+    const match = active ?? initiated;
 
     if (match) {
-      // Update our record to active
+      const isActive = match.status === "ACTIVE";
+
+      // Update our record
       await supabase
         .from("user_composio_connections")
         .update({
-          status: "active",
+          status: isActive ? "active" : "pending",
           composio_account_id: match.id,
         })
         .eq("user_id", user.id)
         .eq("toolkit", toolkit);
 
-      return NextResponse.json({ status: "active", accountId: match.id });
+      return NextResponse.json({
+        status: isActive ? "active" : "pending",
+        accountId: match.id,
+      });
     }
 
     return NextResponse.json({ status: "pending" });
