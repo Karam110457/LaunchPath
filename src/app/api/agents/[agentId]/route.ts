@@ -54,6 +54,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
 
+  const skipVersion = body.skip_version === true;
   const changeTitle = body.version_title as string | undefined;
   const changeDescription = body.version_description as string | undefined;
 
@@ -68,50 +69,56 @@ export async function PATCH(
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 
-  // Snapshot the NEW state after update (versioning)
-  // Wrapped in try/catch so versioning failures don't block the response
-  try {
-    const { data: updated } = await supabase
-      .from("ai_agents")
-      .select("name, description, system_prompt, personality, model, status, wizard_config")
-      .eq("id", agentId)
-      .eq("user_id", user.id)
-      .single();
+  // Create a version snapshot (only for manual saves, not autosave)
+  let versionNumber: number | undefined;
+  if (!skipVersion) {
+    try {
+      const { data: updated } = await supabase
+        .from("ai_agents")
+        .select("name, description, system_prompt, personality, model, status, wizard_config")
+        .eq("id", agentId)
+        .eq("user_id", user.id)
+        .single();
 
-    if (updated) {
-      const { data: knowledgeDocs } = await supabase
-        .from("agent_knowledge_documents")
-        .select("id, source_type, source_name, status")
-        .eq("agent_id", agentId);
+      if (updated) {
+        const { data: knowledgeDocs } = await supabase
+          .from("agent_knowledge_documents")
+          .select("id, source_type, source_name, status")
+          .eq("agent_id", agentId);
 
-      const { count } = await supabase
-        .from("agent_versions")
-        .select("id", { count: "exact", head: true })
-        .eq("agent_id", agentId);
+        // Use max(version_number) + 1 to avoid race-condition duplicates
+        const { data: maxRow } = await supabase
+          .from("agent_versions")
+          .select("version_number")
+          .eq("agent_id", agentId)
+          .order("version_number", { ascending: false })
+          .limit(1)
+          .single();
 
-      const versionNumber = (count ?? 0) + 1;
+        versionNumber = ((maxRow?.version_number as number) ?? 0) + 1;
 
-      await supabase.from("agent_versions").insert({
-        agent_id: agentId,
-        user_id: user.id,
-        version_number: versionNumber,
-        name: updated.name,
-        description: updated.description,
-        system_prompt: updated.system_prompt,
-        personality: updated.personality ?? {},
-        model: updated.model,
-        status: updated.status,
-        wizard_config: updated.wizard_config ?? null,
-        change_title: changeTitle?.trim() || null,
-        change_description: changeDescription?.trim() || null,
-        knowledge_snapshot: knowledgeDocs ?? [],
-      });
+        await supabase.from("agent_versions").insert({
+          agent_id: agentId,
+          user_id: user.id,
+          version_number: versionNumber,
+          name: updated.name,
+          description: updated.description,
+          system_prompt: updated.system_prompt,
+          personality: updated.personality ?? {},
+          model: updated.model,
+          status: updated.status,
+          wizard_config: updated.wizard_config ?? null,
+          change_title: changeTitle?.trim() || null,
+          change_description: changeDescription?.trim() || null,
+          knowledge_snapshot: knowledgeDocs ?? [],
+        });
+      }
+    } catch (err) {
+      console.error("Version snapshot failed:", err instanceof Error ? err.message : err);
     }
-  } catch (err) {
-    console.error("Version snapshot failed:", err instanceof Error ? err.message : err);
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, versionNumber });
 }
 
 export async function DELETE(

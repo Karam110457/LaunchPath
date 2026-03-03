@@ -2,7 +2,7 @@
 
 import { ArrowLeft, Save, Loader2, History, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface TopBarProps {
   agentName: string;
@@ -25,15 +25,28 @@ export function TopBar({
   saveStatus = "idle",
   versionCount,
 }: TopBarProps) {
+  const router = useRouter();
+
+  const handleBack = () => {
+    if (isDirty) {
+      const confirmed = window.confirm(
+        "You have unsaved changes. Leave without saving?"
+      );
+      if (!confirmed) return;
+    }
+    router.push("/dashboard/agents");
+  };
+
   return (
     <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-background/80 backdrop-blur-sm border-b border-border/50">
       <div className="flex items-center gap-3">
-        <Link
-          href="/dashboard/agents"
+        <button
+          type="button"
+          onClick={handleBack}
           className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-        </Link>
+        </button>
         <span className="text-lg">{avatarEmoji}</span>
         <span className="text-sm font-semibold text-foreground">
           {agentName}

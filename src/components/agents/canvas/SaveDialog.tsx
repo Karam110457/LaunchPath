@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,19 +29,24 @@ export function SaveDialog({
 }: SaveDialogProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const prevOpen = useRef(open);
+
+  // Clear fields only when the dialog closes (after a successful save or cancel)
+  useEffect(() => {
+    if (prevOpen.current && !open) {
+      setTitle("");
+      setDescription("");
+    }
+    prevOpen.current = open;
+  }, [open]);
 
   const handleSave = () => {
     onSave(title.trim(), description.trim());
-    setTitle("");
-    setDescription("");
+    // Fields are cleared by the useEffect above when `open` flips to false
   };
 
   const handleClose = () => {
-    if (!isSaving) {
-      setTitle("");
-      setDescription("");
-      onClose();
-    }
+    if (!isSaving) onClose();
   };
 
   return (

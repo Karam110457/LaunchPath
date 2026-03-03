@@ -131,10 +131,26 @@ function AgentCanvasInner({
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty]);
 
-  // ─── Autosave (5s debounce) ─────────────────────────────────────────────
+  // ─── Shared payload builder ─────────────────────────────────────────────
+  const buildPayload = useCallback(() => ({
+    name: formState.name.trim(),
+    description: formState.description.trim() || null,
+    system_prompt: formState.systemPrompt,
+    personality: {
+      tone: formState.tone.trim() || undefined,
+      greeting_message: formState.greetingMessage.trim() || undefined,
+      avatar_emoji: formState.avatarEmoji.trim() || "🤖",
+    },
+    model: formState.model,
+    status: formState.status,
+    wizard_config: formState.wizardConfig,
+  }), [formState]);
+
+  // ─── Autosave (5s debounce, no version creation) ──────────────────────
   const autosaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (!isDirty || !formState.name.trim()) return;
+    // Don't autosave while the save dialog is open (manual save pending)
+    if (!isDirty || !formState.name.trim() || showSaveDialog) return;
     if (autosaveRef.current) clearTimeout(autosaveRef.current);
     autosaveRef.current = setTimeout(async () => {
       setSaveStatus("saving");
@@ -142,30 +158,16 @@ function AgentCanvasInner({
         const res = await fetch(`/api/agents/${agent.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: formState.name.trim(),
-            description: formState.description.trim() || null,
-            system_prompt: formState.systemPrompt,
-            personality: {
-              tone: formState.tone.trim() || undefined,
-              greeting_message: formState.greetingMessage.trim() || undefined,
-              avatar_emoji: formState.avatarEmoji.trim() || "🤖",
-            },
-            model: formState.model,
-            status: formState.status,
-            wizard_config: formState.wizardConfig,
-          }),
+          body: JSON.stringify({ ...buildPayload(), skip_version: true }),
         });
         if (res.ok) {
           setSaveStatus("saved");
           router.refresh();
           setTimeout(() => setSaveStatus("idle"), 2000);
         } else {
-          toast.error("Autosave failed");
           setSaveStatus("idle");
         }
       } catch {
-        toast.error("Autosave failed");
         setSaveStatus("idle");
       }
     }, 5000);
@@ -173,43 +175,36 @@ function AgentCanvasInner({
       if (autosaveRef.current) clearTimeout(autosaveRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDirty, formState]);
+  }, [isDirty, formState, showSaveDialog]);
 
   // ─── Fetch version count ────────────────────────────────────────────────
-  useEffect(() => {
-    void (async () => {
-      try {
-        const res = await fetch(`/api/agents/${agent.id}/versions`);
-        if (res.ok) {
-          const data = await res.json();
-          setVersionCount((data.versions ?? []).length);
-        }
-      } catch {
-        // non-critical
+  const refreshVersionCount = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/agents/${agent.id}/versions`);
+      if (res.ok) {
+        const data = await res.json();
+        setVersionCount((data.versions ?? []).length);
       }
-    })();
+    } catch {
+      // non-critical
+    }
   }, [agent.id]);
 
+  useEffect(() => { void refreshVersionCount(); }, [refreshVersionCount]);
+
+  // ─── Manual save (creates a version) ──────────────────────────────────
   const handleSave = useCallback(
     async (title: string, description: string) => {
       if (!formState.name.trim()) return;
+      // Cancel any pending autosave so it doesn't race with manual save
+      if (autosaveRef.current) { clearTimeout(autosaveRef.current); autosaveRef.current = null; }
       setIsSaving(true);
       try {
         const res = await fetch(`/api/agents/${agent.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name: formState.name.trim(),
-            description: formState.description.trim() || null,
-            system_prompt: formState.systemPrompt,
-            personality: {
-              tone: formState.tone.trim() || undefined,
-              greeting_message: formState.greetingMessage.trim() || undefined,
-              avatar_emoji: formState.avatarEmoji.trim() || "🤖",
-            },
-            model: formState.model,
-            status: formState.status,
-            wizard_config: formState.wizardConfig,
+            ...buildPayload(),
             version_title: title || undefined,
             version_description: description || undefined,
           }),
@@ -221,13 +216,14 @@ function AgentCanvasInner({
         setShowSaveDialog(false);
         toast.success(title ? `Saved: ${title}` : "Changes saved");
         router.refresh();
+        void refreshVersionCount();
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Failed to save");
       } finally {
         setIsSaving(false);
       }
     },
-    [agent.id, formState, router]
+    [agent.id, formState, router, buildPayload, refreshVersionCount]
   );
 
   const handleReverted = useCallback(
@@ -252,8 +248,9 @@ function AgentCanvasInner({
         wizardConfig: (revertedAgent.wizard_config as unknown as WizardConfig) ?? null,
       }));
       router.refresh();
+      void refreshVersionCount();
     },
-    [router]
+    [router, refreshVersionCount]
   );
 
   // ─── Node data ────────────────────────────────────────────────────────────

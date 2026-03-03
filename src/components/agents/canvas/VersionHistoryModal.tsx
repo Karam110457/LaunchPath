@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { Loader2, RotateCcw, FileText, Globe, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -108,6 +109,9 @@ export function VersionHistoryModal({
         const data = await res.json();
         onReverted(data.agent);
         onClose();
+      } else {
+        const data = await res.json().catch(() => null);
+        toast.error(data?.error ?? "Failed to revert");
       }
     } finally {
       setReverting(null);

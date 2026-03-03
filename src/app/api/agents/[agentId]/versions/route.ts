@@ -80,6 +80,52 @@ export async function POST(
     return NextResponse.json({ error: "Version not found" }, { status: 404 });
   }
 
+  // Create a safety snapshot of the CURRENT state before reverting
+  try {
+    const { data: current } = await supabase
+      .from("ai_agents")
+      .select("name, description, system_prompt, personality, model, status, wizard_config")
+      .eq("id", agentId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (current) {
+      const { data: knowledgeDocs } = await supabase
+        .from("agent_knowledge_documents")
+        .select("id, source_type, source_name, status")
+        .eq("agent_id", agentId);
+
+      const { data: maxRow } = await supabase
+        .from("agent_versions")
+        .select("version_number")
+        .eq("agent_id", agentId)
+        .order("version_number", { ascending: false })
+        .limit(1)
+        .single();
+
+      const nextVersion = ((maxRow?.version_number as number) ?? 0) + 1;
+
+      await supabase.from("agent_versions").insert({
+        agent_id: agentId,
+        user_id: user.id,
+        version_number: nextVersion,
+        name: current.name,
+        description: current.description,
+        system_prompt: current.system_prompt,
+        personality: current.personality ?? {},
+        model: current.model,
+        status: current.status,
+        wizard_config: current.wizard_config ?? null,
+        change_title: `Before revert to v${version.version_number}`,
+        change_description: null,
+        knowledge_snapshot: knowledgeDocs ?? [],
+      });
+    }
+  } catch (err) {
+    console.error("Pre-revert snapshot failed:", err instanceof Error ? err.message : err);
+    // Continue with revert even if snapshot fails
+  }
+
   // Apply the snapshot as an update to the agent
   const { error: updateError } = await supabase
     .from("ai_agents")
