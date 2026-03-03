@@ -27,6 +27,10 @@ interface ComposioApp {
   icon: string;
   category: string;
   description: string;
+  authSchemes?: string[];
+  noAuth?: boolean;
+  toolsCount?: number;
+  logo?: string | null;
 }
 
 interface AppLibraryModalProps {
@@ -43,16 +47,17 @@ const CATEGORY_LABELS: Record<string, string> = {
   communication: "Communication",
   scheduling: "Scheduling",
   productivity: "Productivity",
-  project_management: "Project Management",
+  "project-management": "Project Management",
   social: "Social Media",
-  developer: "Developer Tools",
+  "developer-tools": "Developer Tools",
   finance: "Finance",
-  support: "Customer Support",
+  "customer-support": "Customer Support",
   storage: "File Storage",
   ecommerce: "E-commerce",
   marketing: "Marketing",
   analytics: "Analytics",
   automation: "Automation",
+  other: "Other",
 };
 
 export function AppLibraryModal({
@@ -133,8 +138,11 @@ export function AppLibraryModal({
       if (conn) {
         onSelectApp(app, conn);
       }
+    } else if (app.noAuth) {
+      // No-auth apps don't need OAuth — connect directly
+      void connect(app.toolkit, app.name, app.logo ?? app.icon);
     } else {
-      void connect(app.toolkit, app.name, app.icon);
+      void connect(app.toolkit, app.name, app.logo ?? app.icon);
     }
   };
 
@@ -240,9 +248,23 @@ export function AppLibraryModal({
                     )}
                   >
                     {/* App icon */}
-                    <span className="text-xl leading-none mt-0.5 shrink-0">
-                      {app.icon}
-                    </span>
+                    <div className="w-8 h-8 rounded-lg bg-muted/40 flex items-center justify-center shrink-0 mt-0.5 overflow-hidden">
+                      {app.logo && app.logo.startsWith("http") ? (
+                        <img
+                          src={app.logo}
+                          alt={app.name}
+                          className="w-5 h-5 object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none";
+                            (e.target as HTMLImageElement).parentElement!.textContent = app.name.charAt(0);
+                          }}
+                        />
+                      ) : (
+                        <span className="text-base leading-none font-medium text-muted-foreground">
+                          {app.icon?.length <= 2 ? app.icon : app.name.charAt(0)}
+                        </span>
+                      )}
+                    </div>
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
@@ -258,7 +280,7 @@ export function AppLibraryModal({
                       </p>
 
                       {/* Action label */}
-                      <div className="mt-2">
+                      <div className="mt-2 flex items-center gap-2">
                         {isConnecting ? (
                           <span className="inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
                             <Loader2 className="w-3 h-3 animate-spin" />
@@ -268,6 +290,10 @@ export function AppLibraryModal({
                           <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-medium">
                             <Check className="w-3 h-3" />
                             Connected — click to add
+                          </span>
+                        ) : app.noAuth ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground group-hover:text-primary transition-colors">
+                            No auth needed
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground group-hover:text-primary transition-colors">

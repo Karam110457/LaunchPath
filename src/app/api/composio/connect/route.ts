@@ -39,12 +39,10 @@ export async function POST(request: NextRequest) {
   try {
     const composio = getComposioClient();
 
-    // Initiate the OAuth connection via Composio SDK.
-    // The user.id is used as the Composio entity/user identifier.
-    const connection = await composio.connectedAccounts.link(
-      user.id,
-      toolkit
-    );
+    // Authorize the user for this toolkit via Composio SDK.
+    // This handles both OAuth and API key flows — Composio returns
+    // a hosted auth page URL for both.
+    const connection = await composio.toolkits.authorize(user.id, toolkit);
 
     // Upsert the connection record in our DB
     await supabase.from("user_composio_connections").upsert(
@@ -54,10 +52,21 @@ export async function POST(request: NextRequest) {
         toolkit_name: toolkitName,
         toolkit_icon: toolkitIcon ?? null,
         status: "pending",
-        composio_account_id: null,
+        composio_account_id: connection.id ?? null,
       },
       { onConflict: "user_id,toolkit" }
     );
+
+    // For no-auth apps, redirectUrl may be null — mark active immediately
+    if (!connection.redirectUrl) {
+      await supabase
+        .from("user_composio_connections")
+        .update({ status: "active" })
+        .eq("user_id", user.id)
+        .eq("toolkit", toolkit);
+
+      return NextResponse.json({ redirectUrl: null, status: "active" });
+    }
 
     return NextResponse.json({
       redirectUrl: connection.redirectUrl,

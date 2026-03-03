@@ -60,17 +60,15 @@ export async function POST(request: NextRequest) {
     const composio = getComposioClient();
 
     // Check if the user has an active connection for this toolkit
-    const accounts = await composio.connectedAccounts.list({
+    const result = await composio.connectedAccounts.list({
       userIds: [user.id],
+      toolkitSlugs: [toolkit],
       statuses: ["ACTIVE"],
     });
 
-    // Find the matching toolkit connection
-    const match = (accounts as unknown as Array<{ id: string; toolkitSlug?: string; toolkit_slug?: string }>)
-      ?.find(
-        (a) =>
-          (a.toolkitSlug ?? a.toolkit_slug) === toolkit
-      );
+    // The response has { items: [...] } where each item has toolkit.slug
+    const items = (result as unknown as { items: Array<{ id: string; toolkit: { slug: string } }> }).items ?? [];
+    const match = items.find((a) => a.toolkit?.slug === toolkit);
 
     if (match) {
       // Update our record to active

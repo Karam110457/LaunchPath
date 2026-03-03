@@ -68,7 +68,7 @@ export function useComposioConnections(): UseComposioConnectionsReturn {
       setConnecting(toolkit);
 
       try {
-        // 1. Get the OAuth redirect URL
+        // 1. Get the auth redirect URL (OAuth or hosted API key page)
         const res = await fetch("/api/composio/connect", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -79,9 +79,19 @@ export function useComposioConnections(): UseComposioConnectionsReturn {
           throw new Error("Failed to initiate connection");
         }
 
-        const data = (await res.json()) as { redirectUrl: string };
+        const data = (await res.json()) as {
+          redirectUrl: string | null;
+          status?: string;
+        };
 
-        // 2. Open OAuth popup
+        // No-auth apps are connected immediately — no popup needed
+        if (!data.redirectUrl || data.status === "active") {
+          await fetchConnections();
+          setConnecting(null);
+          return;
+        }
+
+        // 2. Open auth popup (works for both OAuth and API key hosted pages)
         const popup = window.open(
           data.redirectUrl,
           `composio_connect_${toolkit}`,
@@ -102,7 +112,9 @@ export function useComposioConnections(): UseComposioConnectionsReturn {
               });
 
               if (verifyRes.ok) {
-                const verifyData = (await verifyRes.json()) as { status: string };
+                const verifyData = (await verifyRes.json()) as {
+                  status: string;
+                };
                 if (verifyData.status === "active") {
                   await fetchConnections();
                 }

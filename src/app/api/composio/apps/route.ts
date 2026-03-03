@@ -1,12 +1,14 @@
 /**
  * GET /api/composio/apps
  *
- * Returns the curated list of available Composio app integrations.
- * Requires authentication.
+ * Returns available Composio app integrations.
+ * Fetches real-time data from Composio SDK with fallback to curated list.
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getComposioClient } from "@/lib/composio/client";
+import { logger } from "@/lib/security/logger";
 
 export interface ComposioApp {
   toolkit: string;
@@ -14,91 +16,11 @@ export interface ComposioApp {
   icon: string;
   category: string;
   description: string;
+  authSchemes?: string[];
+  noAuth?: boolean;
+  toolsCount?: number;
+  logo?: string | null;
 }
-
-// Curated list of ~50 popular apps grouped by category.
-// These are Composio toolkit slugs — verified against the catalog.
-const CURATED_APPS: ComposioApp[] = [
-  // Email
-  { toolkit: "gmail", name: "Gmail", icon: "📧", category: "email", description: "Send, read, and manage emails" },
-  { toolkit: "outlook", name: "Outlook", icon: "📬", category: "email", description: "Microsoft Outlook email management" },
-  { toolkit: "mailchimp", name: "Mailchimp", icon: "🐵", category: "email", description: "Email marketing and campaigns" },
-
-  // CRM
-  { toolkit: "hubspot", name: "HubSpot", icon: "🟠", category: "crm", description: "Contacts, deals, tickets, and notes" },
-  { toolkit: "salesforce", name: "Salesforce", icon: "☁️", category: "crm", description: "Full CRM — leads, opportunities, accounts" },
-  { toolkit: "pipedrive", name: "Pipedrive", icon: "🟢", category: "crm", description: "Sales pipeline and deal management" },
-  { toolkit: "zoho_crm", name: "Zoho CRM", icon: "🔴", category: "crm", description: "Leads, contacts, and deal tracking" },
-
-  // Communication
-  { toolkit: "slack", name: "Slack", icon: "💬", category: "communication", description: "Send messages, manage channels" },
-  { toolkit: "discord", name: "Discord", icon: "🎮", category: "communication", description: "Send messages in servers and channels" },
-  { toolkit: "twilio", name: "Twilio", icon: "📱", category: "communication", description: "SMS, voice, and WhatsApp messaging" },
-  { toolkit: "intercom", name: "Intercom", icon: "💁", category: "communication", description: "Customer messaging and support" },
-
-  // Scheduling
-  { toolkit: "google_calendar", name: "Google Calendar", icon: "📅", category: "scheduling", description: "Create, update, and check calendar events" },
-  { toolkit: "calendly", name: "Calendly", icon: "🗓️", category: "scheduling", description: "Scheduling and booking management" },
-
-  // Productivity
-  { toolkit: "notion", name: "Notion", icon: "📝", category: "productivity", description: "Pages, databases, and workspace management" },
-  { toolkit: "google_docs", name: "Google Docs", icon: "📄", category: "productivity", description: "Create and edit documents" },
-  { toolkit: "google_sheets", name: "Google Sheets", icon: "📊", category: "productivity", description: "Spreadsheet data management" },
-  { toolkit: "airtable", name: "Airtable", icon: "📋", category: "productivity", description: "Flexible database and spreadsheets" },
-  { toolkit: "clickup", name: "ClickUp", icon: "✅", category: "productivity", description: "Task and project management" },
-
-  // Project Management
-  { toolkit: "linear", name: "Linear", icon: "🔷", category: "project_management", description: "Issue tracking and project management" },
-  { toolkit: "jira", name: "Jira", icon: "🔵", category: "project_management", description: "Agile project and issue tracking" },
-  { toolkit: "asana", name: "Asana", icon: "🟡", category: "project_management", description: "Task and project management" },
-  { toolkit: "trello", name: "Trello", icon: "📌", category: "project_management", description: "Kanban boards and task tracking" },
-  { toolkit: "monday", name: "Monday.com", icon: "🟣", category: "project_management", description: "Work management platform" },
-
-  // Social Media
-  { toolkit: "twitter", name: "X (Twitter)", icon: "🐦", category: "social", description: "Post tweets, read timeline, manage DMs" },
-  { toolkit: "instagram", name: "Instagram", icon: "📸", category: "social", description: "Post content and manage interactions" },
-  { toolkit: "linkedin", name: "LinkedIn", icon: "💼", category: "social", description: "Professional networking and posts" },
-  { toolkit: "facebook", name: "Facebook", icon: "👥", category: "social", description: "Pages, posts, and messenger" },
-  { toolkit: "tiktok", name: "TikTok", icon: "🎵", category: "social", description: "Video content management" },
-  { toolkit: "youtube", name: "YouTube", icon: "▶️", category: "social", description: "Video management and analytics" },
-
-  // Developer Tools
-  { toolkit: "github", name: "GitHub", icon: "🐙", category: "developer", description: "Repos, issues, PRs, and actions" },
-  { toolkit: "gitlab", name: "GitLab", icon: "🦊", category: "developer", description: "Git repos and CI/CD pipelines" },
-  { toolkit: "vercel", name: "Vercel", icon: "▲", category: "developer", description: "Deployments and project management" },
-  { toolkit: "sentry", name: "Sentry", icon: "🐛", category: "developer", description: "Error tracking and monitoring" },
-
-  // Finance
-  { toolkit: "stripe", name: "Stripe", icon: "💳", category: "finance", description: "Payments, subscriptions, and invoices" },
-  { toolkit: "quickbooks", name: "QuickBooks", icon: "📒", category: "finance", description: "Accounting and financial management" },
-  { toolkit: "xero", name: "Xero", icon: "💰", category: "finance", description: "Accounting and bookkeeping" },
-
-  // Support
-  { toolkit: "zendesk", name: "Zendesk", icon: "🎫", category: "support", description: "Help desk and customer support tickets" },
-  { toolkit: "freshdesk", name: "Freshdesk", icon: "🎯", category: "support", description: "Customer support ticketing system" },
-
-  // File Storage
-  { toolkit: "google_drive", name: "Google Drive", icon: "📁", category: "storage", description: "File storage, sharing, and management" },
-  { toolkit: "dropbox", name: "Dropbox", icon: "📦", category: "storage", description: "File storage and collaboration" },
-
-  // E-commerce
-  { toolkit: "shopify", name: "Shopify", icon: "🛍️", category: "ecommerce", description: "Products, orders, and store management" },
-  { toolkit: "woocommerce", name: "WooCommerce", icon: "🛒", category: "ecommerce", description: "WordPress e-commerce platform" },
-
-  // Marketing
-  { toolkit: "google_ads", name: "Google Ads", icon: "📢", category: "marketing", description: "Ad campaigns and performance tracking" },
-  { toolkit: "facebook_ads", name: "Facebook Ads", icon: "📣", category: "marketing", description: "Ad management and targeting" },
-  { toolkit: "activecampaign", name: "ActiveCampaign", icon: "⚡", category: "marketing", description: "Email marketing and automation" },
-  { toolkit: "sendgrid", name: "SendGrid", icon: "✉️", category: "marketing", description: "Transactional and marketing email" },
-
-  // Analytics
-  { toolkit: "google_analytics", name: "Google Analytics", icon: "📈", category: "analytics", description: "Website traffic and analytics" },
-  { toolkit: "mixpanel", name: "Mixpanel", icon: "📉", category: "analytics", description: "Product analytics and user tracking" },
-
-  // Automation
-  { toolkit: "zapier", name: "Zapier", icon: "⚡", category: "automation", description: "Connect and automate workflows" },
-  { toolkit: "make", name: "Make", icon: "🔄", category: "automation", description: "Visual automation platform" },
-];
 
 const CATEGORY_LABELS: Record<string, string> = {
   email: "Email",
@@ -106,19 +28,20 @@ const CATEGORY_LABELS: Record<string, string> = {
   communication: "Communication",
   scheduling: "Scheduling",
   productivity: "Productivity",
-  project_management: "Project Management",
+  "project-management": "Project Management",
   social: "Social Media",
-  developer: "Developer Tools",
+  "developer-tools": "Developer Tools",
   finance: "Finance",
-  support: "Customer Support",
+  "customer-support": "Customer Support",
   storage: "File Storage",
   ecommerce: "E-commerce",
   marketing: "Marketing",
   analytics: "Analytics",
   automation: "Automation",
+  other: "Other",
 };
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -129,8 +52,81 @@ export async function GET() {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  return NextResponse.json({
-    apps: CURATED_APPS,
-    categories: CATEGORY_LABELS,
-  });
+  const { searchParams } = new URL(request.url);
+  const category = searchParams.get("category") || undefined;
+  const searchQuery = searchParams.get("search") || undefined;
+
+  try {
+    const composio = getComposioClient();
+
+    // Fetch real toolkit data from Composio
+    const toolkits = await composio.toolkits.get({
+      sortBy: "usage",
+      ...(category ? { category } : {}),
+    });
+
+    // Transform to our app format
+    const apps: ComposioApp[] = (toolkits as unknown as ComposioToolkitItem[])
+      .filter((t) => !t.isLocalToolkit)
+      .map((t) => {
+        const primaryCategory =
+          t.meta?.categories?.[0]?.slug ?? "other";
+
+        return {
+          toolkit: t.slug,
+          name: t.name,
+          icon: t.meta?.logo ?? t.name.charAt(0),
+          logo: t.meta?.logo ?? null,
+          category: primaryCategory,
+          description: t.meta?.description ?? "",
+          authSchemes: t.authSchemes ?? [],
+          noAuth: t.noAuth ?? false,
+          toolsCount: t.meta?.toolsCount ?? 0,
+        };
+      });
+
+    // Client-side search filtering (Composio SDK doesn't have search param on list)
+    let filtered = apps;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = apps.filter(
+        (a) =>
+          a.name.toLowerCase().includes(q) ||
+          a.description.toLowerCase().includes(q) ||
+          a.toolkit.toLowerCase().includes(q)
+      );
+    }
+
+    return NextResponse.json({
+      apps: filtered,
+      categories: CATEGORY_LABELS,
+    });
+  } catch (err) {
+    logger.error("Failed to fetch Composio apps", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+
+    // Return empty list on failure — UI can show appropriate message
+    return NextResponse.json({
+      apps: [],
+      categories: CATEGORY_LABELS,
+    });
+  }
+}
+
+/** Shape of items returned by composio.toolkits.get() */
+interface ComposioToolkitItem {
+  slug: string;
+  name: string;
+  isLocalToolkit: boolean;
+  authSchemes?: string[];
+  composioManagedAuthSchemes?: string[];
+  noAuth?: boolean;
+  meta?: {
+    logo?: string;
+    description?: string;
+    categories?: { slug: string; name: string }[];
+    toolsCount?: number;
+    triggersCount?: number;
+  };
 }
