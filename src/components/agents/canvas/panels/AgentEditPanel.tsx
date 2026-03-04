@@ -29,6 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { DEFAULT_TOOL_GUIDELINES } from "@/lib/agents/assemble-prompt";
 import type { AgentToolResponse } from "@/lib/tools/types";
 import type { AgentFormState, WizardConfig } from "../canvas-types";
 
@@ -67,6 +68,7 @@ export function AgentEditPanel({
   const [error, setError] = useState<string | null>(null);
 
   const hasWizard = formState.wizardConfig !== null;
+  const enabledTools = tools.filter((t) => t.is_enabled);
   const currentPreset = matchesPreset(formState.tone);
   const [showCustomTone, setShowCustomTone] = useState(
     !currentPreset && formState.tone.length > 0
@@ -287,44 +289,67 @@ export function AgentEditPanel({
             />
           </section>
 
-          {/* Tool Instructions (read-only, auto-generated) */}
-          {tools.filter((t) => t.is_enabled).length > 0 && (
+          {/* Tools Available (read-only preview — auto-generated from tool descriptions) */}
+          {enabledTools.length > 0 && (
             <>
               <hr className="border-border" />
               <section className="space-y-3">
                 <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Tool Instructions
+                  Tools Available
                   <span className="ml-1.5 text-[10px] font-normal normal-case tracking-normal text-primary/70">
                     auto-generated
                   </span>
                 </h3>
                 <p className="text-[11px] text-muted-foreground">
-                  This is automatically appended to the system prompt at chat time.
-                  Do not duplicate these instructions above — click a tool on the
-                  canvas to edit its trigger.
+                  This section is built from your connected tools and appended to
+                  the system prompt. Click a tool on the canvas to edit its trigger.
                 </p>
-                <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    ## Tools Available
-                  </p>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    You have the following tools. Use them proactively — if the
-                    user&apos;s request matches a tool&apos;s purpose, use the tool rather
-                    than just describing what you would do.
-                  </p>
-                  {tools
-                    .filter((t) => t.is_enabled)
-                    .map((t) => (
-                      <p key={t.id} className="text-[11px] text-foreground/80 leading-relaxed">
-                        - <span className="font-medium">{t.display_name}</span>:{" "}
-                        {t.description || (
-                          <span className="italic text-amber-400/70">
-                            No trigger set — click the tool on the canvas to add one
-                          </span>
-                        )}
-                      </p>
-                    ))}
+                <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-1.5">
+                  {enabledTools.map((t) => (
+                    <p key={t.id} className="text-[11px] text-foreground/80 leading-relaxed">
+                      <span className="font-medium">{t.display_name}</span>:{" "}
+                      {t.description || (
+                        <span className="italic text-amber-400/70">
+                          No trigger set — click the tool to add one
+                        </span>
+                      )}
+                    </p>
+                  ))}
                 </div>
+              </section>
+            </>
+          )}
+
+          {/* Tool Guidelines (editable — controls how the agent handles tool results) */}
+          {enabledTools.length > 0 && (
+            <>
+              <hr className="border-border" />
+              <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Tool Guidelines
+                  </h3>
+                  {formState.toolGuidelines !== null && (
+                    <button
+                      type="button"
+                      onClick={() => update("toolGuidelines", null)}
+                      className="text-[10px] text-primary/70 hover:text-primary transition-colors"
+                    >
+                      Reset to defaults
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  How your agent handles tool results, errors, and multi-step tasks.
+                  These are appended after the tool list.
+                </p>
+                <Textarea
+                  value={formState.toolGuidelines ?? DEFAULT_TOOL_GUIDELINES}
+                  onChange={(e) => update("toolGuidelines", e.target.value)}
+                  rows={5}
+                  className="text-sm font-mono text-xs"
+                  placeholder="Instructions for how the agent should handle tool results..."
+                />
               </section>
             </>
           )}

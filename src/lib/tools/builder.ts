@@ -2,7 +2,8 @@
  * buildAgentTools
  *
  * Given the agent's enabled tool records from the DB, returns a
- * Vercel AI SDK–compatible tools map to pass to streamText().
+ * Vercel AI SDK–compatible tools map to pass to streamText(),
+ * plus a list of any tools that failed to load (for degradation messaging).
  *
  * Errors from individual tools are caught and logged — one failing
  * tool never prevents the others from working.
@@ -12,17 +13,24 @@ import { logger } from "@/lib/security/logger";
 import { buildWebhookTool } from "./integrations/webhook";
 import { buildMCPTools } from "./integrations/mcp";
 import { buildComposioTools } from "./integrations/composio";
+import type { ToolFailure } from "./integrations/composio";
 import type {
   AgentToolRecord,
   WebhookConfig,
   MCPConfig,
 } from "./types";
 
+export interface BuildToolsResult {
+  tools: Record<string, unknown>;
+  failures: ToolFailure[];
+}
+
 export async function buildAgentTools(
   agentTools: AgentToolRecord[],
   userId?: string
-): Promise<Record<string, unknown>> {
+): Promise<BuildToolsResult> {
   const tools: Record<string, unknown> = {};
+  const failures: ToolFailure[] = [];
   const composioRecords: AgentToolRecord[] = [];
 
   for (const agentTool of agentTools) {
@@ -71,15 +79,16 @@ export async function buildAgentTools(
     }
   }
 
-  // Build all Composio tools in one batch (single session)
+  // Build all Composio tools in one batch
   if (composioRecords.length > 0 && userId) {
     try {
-      const composioTools = await buildComposioTools(userId, composioRecords);
-      Object.assign(tools, composioTools);
+      const result = await buildComposioTools(userId, composioRecords);
+      Object.assign(tools, result.tools);
+      failures.push(...result.failures);
     } catch (err) {
       logger.error("Failed to build Composio tools", { userId, err });
     }
   }
 
-  return tools;
+  return { tools, failures };
 }

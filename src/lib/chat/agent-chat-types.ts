@@ -14,11 +14,21 @@ export interface AgentChatMessage {
   toolActivities?: import("@/hooks/useAgentChat").ToolActivity[];
 }
 
-/** Persisted message format stored in agent_conversations.messages jsonb. */
+/**
+ * Persisted message format stored in agent_conversations.messages jsonb.
+ * Supports text messages and tool call/result entries so agents retain
+ * tool context across conversation turns.
+ */
 export interface AgentConversationMessage {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "tool-call" | "tool-result";
   content: string;
   timestamp: string;
+  /** Tool name — only for tool-call / tool-result roles. */
+  toolName?: string;
+  /** Tool arguments — only for tool-call role. */
+  toolArgs?: Record<string, unknown>;
+  /** Whether the tool succeeded — only for tool-result role. */
+  toolSuccess?: boolean;
 }
 
 /** Lightweight summary for the conversation list. */

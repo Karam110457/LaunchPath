@@ -38,6 +38,7 @@ interface VersionEntry {
   personality: Record<string, unknown>;
   model: string;
   status: string;
+  tool_guidelines: string | null;
   change_title: string | null;
   change_description: string | null;
   knowledge_snapshot: KnowledgeSnapshotItem[];
@@ -52,6 +53,7 @@ interface RevertedAgent {
   model: string;
   status: string;
   wizard_config?: Record<string, unknown> | null;
+  tool_guidelines?: string | null;
 }
 
 interface VersionHistoryModalProps {

@@ -22,6 +22,9 @@ export function getComposioClient(): Composio<VercelProvider> {
 
   _client = new Composio<VercelProvider>({
     apiKey,
+    // "latest" ensures users see all available actions — without this the SDK
+    // defaults to the base version (00000000_00) which has fewer tools.
+    toolkitVersions: "latest",
     // strict: true strips non-required parameters from tool schemas.
     // This dramatically reduces token usage and prevents the LLM from
     // hallucinating values for optional fields it doesn't need.

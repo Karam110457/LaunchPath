@@ -179,6 +179,7 @@ export type Database = {
           model: string
           template_id: string | null
           status: string
+          tool_guidelines: string | null
           created_at: string
           updated_at: string
         }
@@ -195,6 +196,7 @@ export type Database = {
           model?: string
           template_id?: string | null
           status?: string
+          tool_guidelines?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -211,6 +213,7 @@ export type Database = {
           model?: string
           template_id?: string | null
           status?: string
+          tool_guidelines?: string | null
           created_at?: string
           updated_at?: string
         }

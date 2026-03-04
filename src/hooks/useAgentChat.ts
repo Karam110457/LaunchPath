@@ -153,16 +153,19 @@ export function useAgentChat({
           : [];
 
         historyRef.current = msgs as AgentConversationMessage[];
+        // Only display user/assistant messages — tool-call/tool-result
+        // entries are stored for LLM context but not shown in the chat UI
+        const displayMsgs = (msgs as AgentConversationMessage[]).filter(
+          (m) => m.role === "user" || m.role === "assistant"
+        );
         setMessages(
-          (msgs as AgentConversationMessage[]).map(
-            (m: AgentConversationMessage) => ({
-              id: generateId(),
-              role: m.role,
-              content: m.content,
-              isStreaming: false,
-              timestamp: m.timestamp,
-            })
-          )
+          displayMsgs.map((m) => ({
+            id: generateId(),
+            role: m.role as "user" | "assistant",
+            content: m.content,
+            isStreaming: false,
+            timestamp: m.timestamp,
+          }))
         );
       } catch {
         // Network error

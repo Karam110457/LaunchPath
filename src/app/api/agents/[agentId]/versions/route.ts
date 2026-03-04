@@ -26,7 +26,7 @@ export async function GET(
   const { data: versions, error } = await supabase
     .from("agent_versions")
     .select(
-      "id, version_number, name, description, system_prompt, personality, model, status, wizard_config, change_title, change_description, knowledge_snapshot, created_at"
+      "id, version_number, name, description, system_prompt, personality, model, status, wizard_config, tool_guidelines, change_title, change_description, knowledge_snapshot, created_at"
     )
     .eq("agent_id", agentId)
     .eq("user_id", user.id)
@@ -84,7 +84,7 @@ export async function POST(
   try {
     const { data: current } = await supabase
       .from("ai_agents")
-      .select("name, description, system_prompt, personality, model, status, wizard_config")
+      .select("name, description, system_prompt, personality, model, status, wizard_config, tool_guidelines")
       .eq("id", agentId)
       .eq("user_id", user.id)
       .single();
@@ -116,6 +116,7 @@ export async function POST(
         model: current.model,
         status: current.status,
         wizard_config: current.wizard_config ?? null,
+        tool_guidelines: current.tool_guidelines ?? null,
         change_title: `Before revert to v${version.version_number}`,
         change_description: null,
         knowledge_snapshot: knowledgeDocs ?? [],
@@ -137,6 +138,7 @@ export async function POST(
       model: version.model,
       status: version.status,
       wizard_config: version.wizard_config ?? null,
+      tool_guidelines: version.tool_guidelines ?? null,
     })
     .eq("id", agentId)
     .eq("user_id", user.id);
@@ -157,6 +159,7 @@ export async function POST(
       model: version.model,
       status: version.status,
       wizard_config: version.wizard_config ?? null,
+      tool_guidelines: version.tool_guidelines ?? null,
     },
   });
 }

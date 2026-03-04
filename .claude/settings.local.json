@@ -18,7 +18,8 @@
       "WebFetch(domain:composio.dev)",
       "Bash(npx next build)",
       "Bash(npx tsc --noEmit --pretty)",
-      "Bash(node scripts/debug-composio-tools.mjs)"
+      "Bash(node scripts/debug-composio-tools.mjs)",
+      "Bash(xargs cat)"
     ]
   }
 }

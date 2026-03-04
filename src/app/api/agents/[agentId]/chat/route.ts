@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/security/logger";
 import { retrieveContext } from "@/lib/knowledge/rag";
 import { buildAgentTools } from "@/lib/tools/builder";
+import { assemblePrompt } from "@/lib/agents/assemble-prompt";
 import { makeWebhookToolKey } from "@/lib/tools/integrations/webhook";
 import type { AgentToolRecord } from "@/lib/tools/types";
 import type {
@@ -85,12 +86,12 @@ export async function POST(
     // MCP + composio: tool names resolved after buildAgentTools()
   }
 
-  const tools = await buildAgentTools(agentToolRecords, user.id);
+  const { tools, failures } = await buildAgentTools(agentToolRecords, user.id);
   const hasTools = Object.keys(tools).length > 0;
 
   // Map composio tool keys (e.g. GMAIL_SEND_EMAIL) to friendly display names.
-  // Tool keys are only available after buildAgentTools() runs — they come from the
-  // Composio session, not from our config. We match keys by toolkit prefix.
+  // Tool keys are only available after buildAgentTools() runs — they come from
+  // Composio, not from our config. We match keys by toolkit prefix.
   for (const t of agentToolRecords) {
     if (t.tool_type !== "composio") continue;
     const cfg = t.config as { toolkit?: string; toolkit_name?: string };
@@ -118,13 +119,13 @@ export async function POST(
   // RAG: retrieve relevant knowledge if the agent has documents
   // ---------------------------------------------------------------------------
 
+  let ragContext = "";
+
   const { count: docCount } = await supabase
     .from("agent_knowledge_documents")
     .select("id", { count: "exact", head: true })
     .eq("agent_id", agentId)
     .eq("status", "ready");
-
-  let systemPrompt = agent.system_prompt;
 
   if (docCount && docCount > 0) {
     const recentUserMsgs = conversationHistory
@@ -134,56 +135,21 @@ export async function POST(
     recentUserMsgs.push(userMessage);
     const retrievalQuery = recentUserMsgs.join("\n");
 
-    const ragContext = await retrieveContext(agentId, retrievalQuery, supabase);
-    if (ragContext) {
-      systemPrompt = `${agent.system_prompt}\n\n${ragContext}`;
-    }
+    ragContext = (await retrieveContext(agentId, retrievalQuery, supabase)) ?? "";
   }
 
-  // Auto-inject tool instructions so the agent knows when and how to use tools.
-  // For Composio tools, we also list the specific action names (tool keys) so
-  // the agent can map user requests to the correct tool call.
-  if (hasTools && agentToolRecords.length > 0) {
-    const toolSections: string[] = [];
+  // ---------------------------------------------------------------------------
+  // Assemble final system prompt (shared, channel-agnostic utility)
+  // ---------------------------------------------------------------------------
 
-    for (const t of agentToolRecords) {
-      if (t.tool_type === "composio") {
-        const cfg = t.config as { toolkit?: string; toolkit_name?: string; enabled_actions?: string[] };
-        const prefix = (cfg.toolkit ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-
-        // List actual tool keys this toolkit contributes so the agent knows
-        // the exact function names it can call
-        const actionKeys = Object.keys(tools).filter(
-          (k) => k.startsWith(prefix + "_") && !k.startsWith("COMPOSIO_")
-        );
-
-        if (actionKeys.length > 0) {
-          const actionList = actionKeys
-            .map((k) => {
-              const friendly = k.slice(prefix.length + 1).toLowerCase().replace(/_/g, " ");
-              return `  - \`${k}\` — ${friendly}`;
-            })
-            .join("\n");
-          toolSections.push(
-            `- **${t.display_name}** (${cfg.toolkit_name ?? cfg.toolkit}): ${t.description}\n  Available actions:\n${actionList}`
-          );
-        } else {
-          toolSections.push(`- **${t.display_name}**: ${t.description}`);
-        }
-      } else {
-        toolSections.push(`- **${t.display_name}**: ${t.description}`);
-      }
-    }
-
-    systemPrompt +=
-      `\n\n## Tools Available\n` +
-      `You have the following tools. Use them proactively — if the user's request matches a tool's purpose, call the tool rather than just describing what you would do.\n\n` +
-      toolSections.join("\n") +
-      `\n\n### Tool Usage Guidelines\n` +
-      `- When a tool returns a result, check the \`successful\` field (not \`success\`). If \`successful\` is false, tell the user what went wrong using the \`error\` field.\n` +
-      `- Tool results are in \`data\` — summarize the key information for the user in natural language.\n` +
-      `- If a tool fails with an authentication error, tell the user they may need to reconnect the app in their settings.`;
-  }
+  const { systemPrompt } = assemblePrompt({
+    systemPrompt: agent.system_prompt,
+    ragContext,
+    toolRecords: agentToolRecords,
+    resolvedToolKeys: Object.keys(tools),
+    failures,
+    toolGuidelines: (agent.tool_guidelines as string | null) ?? null,
+  });
 
   // ---------------------------------------------------------------------------
   // Set up SSE stream
@@ -207,15 +173,28 @@ export async function POST(
 
   type AIMessage = { role: "user" | "assistant"; content: string };
 
-  const MAX_HISTORY_MESSAGES = 20;
-  const recentHistory = conversationHistory
-    .filter((m) => m.role === "user" || m.role === "assistant")
-    .slice(-MAX_HISTORY_MESSAGES);
+  const MAX_HISTORY_MESSAGES = 30;
+  const recentHistory = conversationHistory.slice(-MAX_HISTORY_MESSAGES);
 
-  const aiMessages: AIMessage[] = recentHistory.map((m) => ({
-    role: m.role as "user" | "assistant",
-    content: m.content,
-  }));
+  const aiMessages: AIMessage[] = [];
+  for (const m of recentHistory) {
+    if (m.role === "user" || m.role === "assistant") {
+      aiMessages.push({ role: m.role, content: m.content });
+    } else if (m.role === "tool-call") {
+      // Reconstruct tool context as assistant text so the LLM has continuity
+      aiMessages.push({
+        role: "assistant",
+        content: `[Used tool \`${m.toolName}\`${m.toolArgs ? ` with ${JSON.stringify(m.toolArgs)}` : ""}]`,
+      });
+    } else if (m.role === "tool-result") {
+      // Reconstruct tool result as assistant text
+      const status = m.toolSuccess === false ? "failed" : "succeeded";
+      aiMessages.push({
+        role: "assistant",
+        content: `[Tool \`${m.toolName}\` ${status}: ${m.content}]`,
+      });
+    }
+  }
 
   aiMessages.push({ role: "user", content: userMessage });
 
@@ -224,6 +203,9 @@ export async function POST(
   // ---------------------------------------------------------------------------
 
   void (async () => {
+    // Collect tool events during streaming for conversation history
+    const toolEvents: AgentConversationMessage[] = [];
+
     try {
       const streamOptions: Parameters<typeof streamText>[0] = {
         model: anthropic(agent.model),
@@ -254,18 +236,13 @@ export async function POST(
 
           const fullContent = assistantText.trim() || "";
 
+          // Build updated history with tool events interleaved
+          const now = new Date().toISOString();
           const updatedHistory: AgentConversationMessage[] = [
             ...conversationHistory,
-            {
-              role: "user",
-              content: userMessage,
-              timestamp: new Date().toISOString(),
-            },
-            {
-              role: "assistant",
-              content: fullContent,
-              timestamp: new Date().toISOString(),
-            },
+            { role: "user", content: userMessage, timestamp: now },
+            ...toolEvents,
+            { role: "assistant", content: fullContent, timestamp: now },
           ];
 
           let finalConversationId = conversationId;
@@ -336,6 +313,15 @@ export async function POST(
           hasUnfinishedText = true;
           emit({ type: "text-delta", delta: chunk.text });
         } else if (chunk.type === "tool-call") {
+          // Record tool call for conversation history
+          toolEvents.push({
+            role: "tool-call",
+            content: `Called ${chunk.toolName}`,
+            timestamp: new Date().toISOString(),
+            toolName: chunk.toolName,
+            toolArgs: chunk.input as Record<string, unknown> | undefined,
+          });
+
           emit({
             type: "tool-call",
             toolName: chunk.toolName,
@@ -344,8 +330,7 @@ export async function POST(
           });
         } else if (chunk.type === "tool-result") {
           // Composio tools return { successful: bool, error: string|null, data: {...} }
-          // Our wrapToolExecute returns { success: bool, error: string }
-          // Handle both shapes for compatibility
+          // Our wrapToolExecute returns { successful: bool, error: string }
           const output = chunk.output as {
             success?: boolean;
             successful?: boolean;
@@ -356,6 +341,18 @@ export async function POST(
 
           const isSuccess = output?.successful !== false && output?.success !== false;
           const resultMessage = output?.error ?? output?.message ?? undefined;
+
+          // Record tool result for conversation history
+          const resultSummary = isSuccess
+            ? resultMessage ?? "Completed successfully"
+            : resultMessage ?? "Failed";
+          toolEvents.push({
+            role: "tool-result",
+            content: resultSummary,
+            timestamp: new Date().toISOString(),
+            toolName: chunk.toolName,
+            toolSuccess: isSuccess,
+          });
 
           emit({
             type: "tool-result",

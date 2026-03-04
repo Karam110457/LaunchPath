@@ -15,6 +15,7 @@ const ALLOWED_FIELDS = [
   "model",
   "status",
   "wizard_config",
+  "tool_guidelines",
 ] as const;
 
 const VALID_STATUSES = new Set(["draft", "active", "paused"]);
@@ -75,7 +76,7 @@ export async function PATCH(
     try {
       const { data: updated } = await supabase
         .from("ai_agents")
-        .select("name, description, system_prompt, personality, model, status, wizard_config")
+        .select("name, description, system_prompt, personality, model, status, wizard_config, tool_guidelines")
         .eq("id", agentId)
         .eq("user_id", user.id)
         .single();
@@ -108,6 +109,7 @@ export async function PATCH(
           model: updated.model,
           status: updated.status,
           wizard_config: updated.wizard_config ?? null,
+          tool_guidelines: updated.tool_guidelines ?? null,
           change_title: changeTitle?.trim() || null,
           change_description: changeDescription?.trim() || null,
           knowledge_snapshot: knowledgeDocs ?? [],
