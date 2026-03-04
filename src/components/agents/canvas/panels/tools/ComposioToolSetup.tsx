@@ -11,6 +11,8 @@ import {
   AlertTriangle,
   Bot,
   Lock,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import {
   Dialog,
@@ -71,28 +73,80 @@ function humanLabel(name: string, prop: JsonSchemaProperty): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+const INPUT_BASE =
+  "w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30";
+
 // ---------------------------------------------------------------------------
-// "Determined by AI" chip — dismissable badge
+// ArrayInput — add/remove items UI (like screenshot)
 // ---------------------------------------------------------------------------
 
-function AiChip({ onRemove }: { onRemove: () => void }) {
+function ArrayInput({
+  value,
+  onChange,
+  label,
+  itemType,
+}: {
+  value: unknown;
+  onChange: (v: unknown) => void;
+  label: string;
+  itemType?: JsonSchemaProperty;
+}) {
+  const items: unknown[] = Array.isArray(value) ? value : [];
+
+  const addItem = () => {
+    const defaultVal =
+      itemType?.type === "number" || itemType?.type === "integer"
+        ? 0
+        : itemType?.type === "boolean"
+          ? false
+          : "";
+    onChange([...items, defaultVal]);
+  };
+
+  const removeItem = (index: number) => {
+    onChange(items.filter((_, i) => i !== index));
+  };
+
+  const updateItem = (index: number, val: unknown) => {
+    const next = [...items];
+    next[index] = val;
+    onChange(next);
+  };
+
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-medium">
-      <Bot className="w-3 h-3" />
-      Determined by AI
+    <div className="space-y-1.5">
+      {items.map((item, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <input
+            type="text"
+            value={String(item ?? "")}
+            onChange={(e) => updateItem(i, e.target.value)}
+            className={cn(INPUT_BASE, "flex-1")}
+            placeholder={`Item ${i + 1}`}
+          />
+          <button
+            type="button"
+            onClick={() => removeItem(i)}
+            className="p-1.5 rounded-md text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ))}
       <button
         type="button"
-        onClick={onRemove}
-        className="ml-0.5 rounded-full hover:bg-primary/20 p-0.5 transition-colors"
+        onClick={addItem}
+        className="flex items-center gap-1.5 w-full px-3 py-2 text-xs text-muted-foreground/60 hover:text-muted-foreground border border-dashed border-border/40 hover:border-border/60 rounded-lg transition-colors"
       >
-        <X className="w-2.5 h-2.5" />
+        <Plus className="w-3.5 h-3.5" />
+        Add {label.toLowerCase()}
       </button>
-    </span>
+    </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// ValueInput — renders type-specific inputs, each visually distinct
+// ValueInput — renders type-specific inputs
 // ---------------------------------------------------------------------------
 
 function ValueInput({
@@ -100,23 +154,34 @@ function ValueInput({
   value,
   onChange,
   fieldName,
+  label,
 }: {
   prop: JsonSchemaProperty;
   value: unknown;
   onChange: (v: unknown) => void;
   fieldName?: string;
+  label?: string;
 }) {
+  const displayLabel = label ?? fieldName ?? "";
   const placeholder =
     placeholderFromExamples(prop) ??
-    (prop.default !== undefined ? String(prop.default) : "");
+    (prop.default !== undefined
+      ? String(prop.default)
+      : displayLabel
+        ? `Enter ${displayLabel.toLowerCase()}`
+        : "");
 
   // const → readonly chip
   if (prop.const !== undefined) {
     return (
       <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border/30 rounded-lg">
         <Lock className="w-3 h-3 text-muted-foreground/50" />
-        <span className="text-xs text-muted-foreground">{String(prop.const)}</span>
-        <span className="text-[9px] text-muted-foreground/40 italic">locked</span>
+        <span className="text-xs text-muted-foreground">
+          {String(prop.const)}
+        </span>
+        <span className="text-[9px] text-muted-foreground/40 italic">
+          locked
+        </span>
       </div>
     );
   }
@@ -127,9 +192,9 @@ function ValueInput({
       <select
         value={String(value ?? "")}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 appearance-none cursor-pointer"
+        className={cn(INPUT_BASE, "appearance-none cursor-pointer")}
       >
-        <option value="">Select an option...</option>
+        <option value="">Select...</option>
         {prop.enum.map((v) => (
           <option key={String(v)} value={String(v)}>
             {String(v)}
@@ -143,11 +208,16 @@ function ValueInput({
   const variants = prop.oneOf ?? prop.anyOf;
   if (variants && variants.length > 1) {
     return (
-      <VariantSelector variants={variants} value={value} onChange={onChange} />
+      <VariantSelector
+        variants={variants}
+        value={value}
+        onChange={onChange}
+        label={displayLabel}
+      />
     );
   }
 
-  // boolean → large clear toggle with label
+  // boolean → toggle next to label
   if (prop.type === "boolean") {
     const isOn = !!value;
     return (
@@ -169,26 +239,23 @@ function ValueInput({
             )}
           />
         </div>
-        <span className="text-xs text-muted-foreground">
-          {isOn ? "On" : "Off"}
-        </span>
       </button>
     );
   }
 
-  // number / integer → slider + number display
+  // number / integer → slider + number
   if (prop.type === "number" || prop.type === "integer") {
     const numVal =
       value === undefined || value === null || value === ""
-        ? (prop.default as number) ?? 0
+        ? ((prop.default as number) ?? 0)
         : Number(value);
     const min = prop.minimum ?? 0;
     const max = prop.maximum ?? 100;
     const step = prop.type === "integer" ? 1 : 0.1;
 
     return (
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
+      <div className="space-y-1">
+        <div className="flex items-center gap-3">
           <input
             type="range"
             value={numVal}
@@ -207,27 +274,21 @@ function ValueInput({
             min={min}
             max={max}
             step={step}
-            className="w-16 ml-3 px-2 py-1 text-xs text-center bg-muted/30 border border-border/40 rounded-md focus:outline-none focus:ring-1 focus:ring-primary/30"
+            className="w-16 px-2 py-1 text-xs text-center bg-muted/30 border border-border/40 rounded-md focus:outline-none focus:ring-1 focus:ring-primary/30"
           />
         </div>
-        {(prop.minimum !== undefined || prop.maximum !== undefined) && (
-          <div className="flex justify-between text-[9px] text-muted-foreground/40 px-0.5">
-            <span>{min}</span>
-            <span>{max}</span>
-          </div>
-        )}
       </div>
     );
   }
 
-  // format: date-time
+  // format-specific inputs
   if (prop.format === "date-time") {
     return (
       <input
         type="datetime-local"
         value={String(value ?? "")}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+        className={INPUT_BASE}
       />
     );
   }
@@ -237,7 +298,7 @@ function ValueInput({
         type="date"
         value={String(value ?? "")}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+        className={INPUT_BASE}
       />
     );
   }
@@ -247,7 +308,7 @@ function ValueInput({
         type="time"
         value={String(value ?? "")}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+        className={INPUT_BASE}
       />
     );
   }
@@ -257,7 +318,7 @@ function ValueInput({
         type="email"
         value={String(value ?? "")}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+        className={INPUT_BASE}
         placeholder={placeholder || "user@example.com"}
       />
     );
@@ -268,31 +329,20 @@ function ValueInput({
         type="url"
         value={String(value ?? "")}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+        className={INPUT_BASE}
         placeholder={placeholder || "https://"}
       />
     );
   }
 
-  // array → JSON textarea
+  // array → add/remove items list
   if (prop.type === "array") {
     return (
-      <textarea
-        value={
-          typeof value === "string"
-            ? value
-            : JSON.stringify(value ?? [], null, 2)
-        }
-        onChange={(e) => {
-          try {
-            onChange(JSON.parse(e.target.value));
-          } catch {
-            onChange(e.target.value);
-          }
-        }}
-        rows={3}
-        className="w-full px-3 py-2 text-xs font-mono bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-        placeholder={placeholder || "[]"}
+      <ArrayInput
+        value={value}
+        onChange={onChange}
+        label={displayLabel || "item"}
+        itemType={prop.items}
       />
     );
   }
@@ -319,18 +369,18 @@ function ValueInput({
           }
         }}
         rows={3}
-        className="w-full px-3 py-2 text-xs font-mono bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+        className={cn(INPUT_BASE, "font-mono resize-none")}
         placeholder="{}"
       />
     );
   }
 
-  // Default: text input with character counter
+  // Default: text input
   const strVal = String(value ?? "");
   const hasLengthConstraint =
     prop.minLength !== undefined || prop.maxLength !== undefined;
 
-  // Use textarea for string fields that look like they need multi-line
+  // Auto-detect long text fields
   const nameLower = (fieldName ?? "").toLowerCase();
   const isLongText =
     nameLower.includes("body") ||
@@ -347,8 +397,8 @@ function ValueInput({
           value={strVal}
           onChange={(e) => onChange(e.target.value)}
           rows={3}
-          className="w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-          placeholder={placeholder || "Enter text..."}
+          className={cn(INPUT_BASE, "resize-none")}
+          placeholder={placeholder}
           maxLength={prop.maxLength}
         />
         {hasLengthConstraint && (
@@ -368,8 +418,8 @@ function ValueInput({
         type="text"
         value={strVal}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
-        placeholder={placeholder || "Enter value..."}
+        className={INPUT_BASE}
+        placeholder={placeholder}
         maxLength={prop.maxLength}
       />
       {hasLengthConstraint && (
@@ -427,10 +477,12 @@ function VariantSelector({
   variants,
   value,
   onChange,
+  label,
 }: {
   variants: JsonSchemaProperty[];
   value: unknown;
   onChange: (v: unknown) => void;
+  label?: string;
 }) {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const selected = variants[selectedIdx];
@@ -447,16 +499,21 @@ function VariantSelector({
           setSelectedIdx(Number(e.target.value));
           onChange(getDefaultForType(variants[Number(e.target.value)]?.type));
         }}
-        className="w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+        className={cn(INPUT_BASE, "appearance-none cursor-pointer")}
       >
-        {labels.map((label, i) => (
+        {labels.map((l, i) => (
           <option key={i} value={i}>
-            {label}
+            {l}
           </option>
         ))}
       </select>
       {selected && !selected.oneOf && !selected.anyOf && (
-        <ValueInput prop={selected} value={value} onChange={onChange} />
+        <ValueInput
+          prop={selected}
+          value={value}
+          onChange={onChange}
+          label={label}
+        />
       )}
     </div>
   );
@@ -498,7 +555,7 @@ function ObjectInput({
           }
         }}
         rows={3}
-        className="w-full px-3 py-2 text-xs font-mono bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+        className={cn(INPUT_BASE, "font-mono resize-none")}
         placeholder="{}"
       />
     );
@@ -525,13 +582,16 @@ function ObjectInput({
               }
               onChange={(e) => {
                 try {
-                  onChange({ ...obj, [fieldName]: JSON.parse(e.target.value) });
+                  onChange({
+                    ...obj,
+                    [fieldName]: JSON.parse(e.target.value),
+                  });
                 } catch {
                   onChange({ ...obj, [fieldName]: e.target.value });
                 }
               }}
               rows={2}
-              className="w-full px-3 py-2 text-xs font-mono bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+              className={cn(INPUT_BASE, "font-mono resize-none")}
               placeholder="{}"
             />
           ) : (
@@ -540,6 +600,7 @@ function ObjectInput({
               value={obj[fieldName]}
               onChange={(v) => onChange({ ...obj, [fieldName]: v })}
               fieldName={fieldName}
+              label={subProp.title || fieldName}
             />
           )}
         </div>
@@ -549,7 +610,7 @@ function ObjectInput({
 }
 
 // ---------------------------------------------------------------------------
-// ParameterConfigPanel — two-mode: "Determined by AI" or "Hardcoded"
+// ParameterConfigPanel — BuildMyAgent-style: input with AI overlay
 // ---------------------------------------------------------------------------
 
 function ParameterConfigPanel({
@@ -602,105 +663,174 @@ function ParameterConfigPanel({
 
   return (
     <div className="px-3 pb-3 pt-2 border-t border-border/20">
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         {entries.map(([name, prop]) => {
           const hardcoded = isHardcoded(name);
           const isConst = prop.const !== undefined;
           const label = humanLabel(name, prop);
+          const isBool = prop.type === "boolean";
 
           return (
-            <div
-              key={name}
-              className="rounded-lg border border-border/30 bg-muted/[0.02] overflow-hidden"
-            >
-              {/* Parameter header */}
-              <div className="flex items-center justify-between gap-2 px-3 py-2">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-[11px] font-semibold text-foreground/90 truncate">
-                    {label}
+            <div key={name}>
+              {/* Label row */}
+              <div className="flex items-center gap-1 mb-1">
+                <span className="text-[11px] font-medium text-foreground/80">
+                  {label}
+                </span>
+                {requiredSet.has(name) && (
+                  <span className="text-[9px] text-red-400/80 font-medium">
+                    *
                   </span>
-                  {requiredSet.has(name) && (
-                    <span className="text-[9px] text-red-400/80 font-medium shrink-0">
-                      *
-                    </span>
-                  )}
-                  {prop.description && (
-                    <button
-                      type="button"
-                      className="text-muted-foreground/30 hover:text-muted-foreground/70 transition-colors shrink-0"
-                      title={prop.description}
-                    >
-                      <Info className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                  {prop.deprecated && (
-                    <span className="text-[9px] text-orange-400/80 shrink-0">
-                      deprecated
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Parameter body */}
-              <div className="px-3 pb-3">
-                {isConst ? (
-                  <ValueInput
-                    prop={prop}
-                    value={prop.const}
-                    onChange={() => {}}
-                    fieldName={name}
-                  />
-                ) : hardcoded ? (
-                  <div className="space-y-2">
-                    {/* Nullable toggle */}
-                    {prop.nullable && (
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={pinnedParams[name] === null}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              updateValue(name, null);
-                            } else {
-                              updateValue(
-                                name,
-                                prop.default ?? getDefaultForType(prop.type)
-                              );
-                            }
-                          }}
-                          className="w-3.5 h-3.5 rounded border-border/50 accent-primary"
-                        />
-                        <span className="text-[10px] text-muted-foreground/60">
-                          Set to null
-                        </span>
-                      </label>
-                    )}
-                    {/* Value input (hidden if nullable and null) */}
-                    {!(prop.nullable && pinnedParams[name] === null) && (
-                      <ValueInput
-                        prop={prop}
-                        value={pinnedParams[name]}
-                        onChange={(v) => updateValue(name, v)}
-                        fieldName={name}
-                      />
-                    )}
-                    {/* Switch to AI button */}
-                    <button
-                      type="button"
-                      onClick={() => setAi(name)}
-                      className="flex items-center gap-1.5 text-[10px] text-primary/60 hover:text-primary transition-colors"
-                    >
-                      <Bot className="w-3 h-3" />
-                      Let AI decide instead
-                    </button>
-                  </div>
-                ) : (
-                  /* AI mode */
-                  <div className="flex items-center justify-between">
-                    <AiChip onRemove={() => setHardcoded(name)} />
-                  </div>
+                )}
+                {prop.description && (
+                  <button
+                    type="button"
+                    className="text-muted-foreground/30 hover:text-muted-foreground/70 transition-colors"
+                    title={prop.description}
+                  >
+                    <Info className="w-3 h-3" />
+                  </button>
+                )}
+                {prop.deprecated && (
+                  <span className="text-[9px] text-orange-400/80">
+                    deprecated
+                  </span>
                 )}
               </div>
+
+              {/* Input area */}
+              {isConst ? (
+                <ValueInput
+                  prop={prop}
+                  value={prop.const}
+                  onChange={() => {}}
+                  fieldName={name}
+                  label={label}
+                />
+              ) : hardcoded ? (
+                <div>
+                  {/* Nullable toggle */}
+                  {prop.nullable && (
+                    <label className="flex items-center gap-2 mb-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={pinnedParams[name] === null}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            updateValue(name, null);
+                          } else {
+                            updateValue(
+                              name,
+                              prop.default ?? getDefaultForType(prop.type)
+                            );
+                          }
+                        }}
+                        className="w-3.5 h-3.5 rounded border-border/50 accent-primary"
+                      />
+                      <span className="text-[10px] text-muted-foreground/60">
+                        Set to null
+                      </span>
+                    </label>
+                  )}
+                  {/* Value input (hidden if nullable and null) */}
+                  {!(prop.nullable && pinnedParams[name] === null) && (
+                    <ValueInput
+                      prop={prop}
+                      value={pinnedParams[name]}
+                      onChange={(v) => updateValue(name, v)}
+                      fieldName={name}
+                      label={label}
+                    />
+                  )}
+                </div>
+              ) : isBool ? (
+                /* Boolean AI mode: chip + toggle side by side */
+                <div className="flex items-center justify-between gap-2 px-3 py-2 bg-background border border-border/50 rounded-lg">
+                  <span className="inline-flex items-center gap-1.5 text-[10px] text-primary/70 font-medium">
+                    <Bot className="w-3 h-3" />
+                    Determined by AI
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setHardcoded(name)}
+                    className="p-0.5 rounded-full text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/50 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : prop.type === "number" || prop.type === "integer" ? (
+                /* Number AI mode: chip overlaying a dimmed slider area */
+                <div className="relative">
+                  <div className="px-3 py-2 bg-background border border-border/50 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1.5 text-[10px] text-primary/70 font-medium">
+                        <Bot className="w-3 h-3" />
+                        Determined by AI
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setHardcoded(name)}
+                        className="p-0.5 rounded-full text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/50 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : prop.type === "array" ? (
+                /* Array AI mode */
+                <div className="px-3 py-2 bg-background border border-border/50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 text-[10px] text-primary/70 font-medium">
+                      <Bot className="w-3 h-3" />
+                      Determined by AI
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setHardcoded(name)}
+                      className="p-0.5 rounded-full text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/50 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Default AI mode: input-shaped container with chip overlay */
+                <div className="relative">
+                  <div
+                    className={cn(
+                      "flex items-center gap-2 bg-background border border-border/50 rounded-lg overflow-hidden",
+                      isLongTextField(name)
+                        ? "px-3 pt-8 pb-2 min-h-[80px] items-end"
+                        : "px-3 py-2"
+                    )}
+                  >
+                    {/* Faded placeholder text */}
+                    {!isLongTextField(name) && (
+                      <span className="text-xs text-muted-foreground/20 flex-1 truncate">
+                        {placeholderFromExamples(prop) ||
+                          `Enter ${label.toLowerCase()}`}
+                      </span>
+                    )}
+                    {isLongTextField(name) && (
+                      <span className="absolute top-2 left-3 text-xs text-muted-foreground/20">
+                        {`Enter ${label.toLowerCase()}`}
+                      </span>
+                    )}
+                    <span className="inline-flex items-center gap-1.5 text-[10px] text-primary/70 font-medium whitespace-nowrap shrink-0">
+                      <Bot className="w-3 h-3" />
+                      Determined by AI
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setHardcoded(name)}
+                      className="p-0.5 rounded-full text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/50 transition-colors shrink-0"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
@@ -709,8 +839,19 @@ function ParameterConfigPanel({
   );
 }
 
+function isLongTextField(name: string): boolean {
+  const n = name.toLowerCase();
+  return (
+    n.includes("body") ||
+    n.includes("description") ||
+    n.includes("content") ||
+    n.includes("message") ||
+    n.includes("text")
+  );
+}
+
 // ---------------------------------------------------------------------------
-// ActionMetadata — output schema only (tags/scopes removed)
+// ActionMetadata — output schema only
 // ---------------------------------------------------------------------------
 
 function ActionMetadata({ action }: { action: ComposioActionSchema }) {
@@ -811,7 +952,6 @@ export function ComposioToolSetup({
           const data = (await res.json()) as { tools: ComposioActionSchema[] };
           setActions(data.tools);
 
-          // Initialize enabled actions
           if (existing) {
             const cfg = existing.config as unknown as ComposioToolConfig;
             if (cfg.enabled_actions && cfg.enabled_actions.length > 0) {
@@ -834,7 +974,7 @@ export function ComposioToolSetup({
           }
         }
       } catch {
-        // Non-critical — show empty list
+        // Non-critical
       } finally {
         if (!cancelled) setActionsLoading(false);
       }
@@ -845,8 +985,6 @@ export function ComposioToolSetup({
       cancelled = true;
     };
   }, [toolkit, existing]);
-
-  // -- Handlers --
 
   const handleToggleAction = useCallback((slug: string) => {
     setEnabledActions((prev) => {
@@ -881,7 +1019,6 @@ export function ComposioToolSetup({
 
     const enabledArray = Array.from(enabledActions);
 
-    // Only include action_configs for enabled actions with non-empty pinned params
     const cleanedConfigs: Record<string, ActionConfig> = {};
     for (const [slug, cfg] of Object.entries(actionConfigs)) {
       if (!enabledActions.has(slug)) continue;
@@ -1053,7 +1190,6 @@ export function ComposioToolSetup({
                     >
                       {/* Action row */}
                       <div className="flex items-center gap-2.5 p-2.5">
-                        {/* Toggle */}
                         <button
                           type="button"
                           onClick={() => handleToggleAction(action.slug)}
@@ -1115,23 +1251,27 @@ export function ComposioToolSetup({
                           )}
                         </div>
 
-                        {/* Expand chevron */}
-                        {enabled && (action.inputSchema || action.outputSchema || action.noAuth) && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setExpandedAction(expanded ? null : action.slug)
-                            }
-                            className="p-1 rounded hover:bg-muted/50 shrink-0"
-                          >
-                            <ChevronDown
-                              className={cn(
-                                "w-3.5 h-3.5 text-muted-foreground transition-transform",
-                                expanded && "rotate-180"
-                              )}
-                            />
-                          </button>
-                        )}
+                        {enabled &&
+                          (action.inputSchema ||
+                            action.outputSchema ||
+                            action.noAuth) && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedAction(
+                                  expanded ? null : action.slug
+                                )
+                              }
+                              className="p-1 rounded hover:bg-muted/50 shrink-0"
+                            >
+                              <ChevronDown
+                                className={cn(
+                                  "w-3.5 h-3.5 text-muted-foreground transition-transform",
+                                  expanded && "rotate-180"
+                                )}
+                              />
+                            </button>
+                          )}
                       </div>
 
                       {/* Expanded details */}
@@ -1191,14 +1331,12 @@ export function ComposioToolSetup({
           )}
         </div>
 
-        {/* Error */}
         {saveError && (
           <div className="mx-6 mb-2 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400">
             {saveError}
           </div>
         )}
 
-        {/* Footer */}
         <div className="px-6 py-4 border-t border-border/30 flex items-center justify-between">
           <button
             onClick={onClose}
