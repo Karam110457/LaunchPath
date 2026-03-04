@@ -24,14 +24,22 @@ export interface ComposioConnection {
   updated_at: string;
 }
 
+export interface ComposioConnectError {
+  toolkit: string;
+  code?: string;
+  message: string;
+  requiredFields?: { name: string; displayName: string; description: string }[];
+  availableSchemes?: { mode: string; needsDevSetup: boolean }[];
+}
+
 interface UseComposioConnectionsReturn {
   connections: ComposioConnection[];
   loading: boolean;
   connecting: string | null; // toolkit currently being connected
-  connectError: { toolkit: string; code?: string; message: string } | null;
+  connectError: ComposioConnectError | null;
   clearConnectError: () => void;
   refresh: () => Promise<void>;
-  connect: (toolkit: string, toolkitName: string, toolkitIcon?: string) => Promise<void>;
+  connect: (toolkit: string, toolkitName: string, toolkitIcon?: string, authScheme?: string, customCredentials?: Record<string, string>) => Promise<void>;
   disconnect: (connectionId: string) => Promise<void>;
   isConnected: (toolkit: string) => boolean;
   getConnection: (toolkit: string) => ComposioConnection | undefined;
@@ -103,7 +111,7 @@ export function useComposioConnections(): UseComposioConnectionsReturn {
   const [connections, setConnections] = useState<ComposioConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState<string | null>(null);
-  const [connectError, setConnectError] = useState<{ toolkit: string; code?: string; message: string } | null>(null);
+  const [connectError, setConnectError] = useState<ComposioConnectError | null>(null);
   // AbortController lets us cleanly cancel any in-flight polling
   const abortRef = useRef<AbortController | null>(null);
 
@@ -133,7 +141,7 @@ export function useComposioConnections(): UseComposioConnectionsReturn {
   }, []);
 
   const connect = useCallback(
-    async (toolkit: string, toolkitName: string, toolkitIcon?: string) => {
+    async (toolkit: string, toolkitName: string, toolkitIcon?: string, authScheme?: string, customCredentials?: Record<string, string>) => {
       // Cancel any previous polling (prevents race condition if user clicks
       // another app before the first one finishes)
       abortRef.current?.abort();
@@ -146,15 +154,22 @@ export function useComposioConnections(): UseComposioConnectionsReturn {
         const res = await fetch("/api/composio/connect", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ toolkit, toolkitName, toolkitIcon }),
+          body: JSON.stringify({ toolkit, toolkitName, toolkitIcon, authScheme, customCredentials }),
         });
 
         if (!res.ok) {
-          const errData = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
+          const errData = (await res.json().catch(() => ({}))) as {
+            error?: string;
+            code?: string;
+            requiredFields?: { name: string; displayName: string; description: string }[];
+            availableSchemes?: { mode: string; needsDevSetup: boolean }[];
+          };
           setConnectError({
             toolkit,
             code: errData.code,
             message: errData.error ?? "Failed to initiate connection",
+            requiredFields: errData.requiredFields,
+            availableSchemes: errData.availableSchemes,
           });
           setConnecting(null);
           return;

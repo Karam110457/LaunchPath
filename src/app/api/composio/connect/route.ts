@@ -10,49 +10,164 @@ import { createClient } from "@/lib/supabase/server";
 import { getComposioClient, flushComposio } from "@/lib/composio/client";
 import { logger } from "@/lib/security/logger";
 /**
+ * Result from ensureAuthConfig — either an auth config ID or a description
+ * of what credentials are needed so the frontend can inform the user.
+ */
+type AuthConfigResult =
+  | { ok: true; authConfigId: string; authScheme?: string }
+  | {
+      ok: false;
+      reason: string;
+      requiredFields?: { name: string; displayName: string; description: string }[];
+      availableSchemes?: { mode: string; needsDevSetup: boolean }[];
+    };
+
+/** Fields needed to create an auth config for a specific scheme. */
+type AuthField = { name: string; displayName: string; description: string };
+type AuthDetail = { mode: string; fields?: { authConfigCreation?: { required?: AuthField[] } } };
+type ToolkitInfo = {
+  authConfigDetails?: AuthDetail[];
+  composioManagedAuthSchemes?: string[];
+};
+
+/** Schemes that don't require developer app registration — user enters credentials directly. */
+const SIMPLE_AUTH_SCHEMES = new Set(["API_KEY", "BEARER_TOKEN", "BASIC"]);
+
+/**
  * Ensures an auth config exists for a toolkit, creating one if needed.
  *
- * The SDK's authorize() only tries "use_composio_managed_auth", which fails
- * for API key / bearer token tools (returns 400). This helper:
- * 1. Checks for an existing auth config
- * 2. If none, tries Composio-managed auth (works for most OAuth tools)
- * 3. If that fails, fetches toolkit metadata and creates a custom auth config
- *    with the correct auth scheme (API_KEY, BEARER_TOKEN, etc.)
+ * Tries multiple strategies in order:
+ * 1. Reuse an existing auth config
+ * 2. Create a Composio-managed auth config (works when Composio hosts
+ *    the developer credentials, e.g. Google, GitHub)
+ * 3. If a preferred scheme is specified, attempt that scheme directly
+ * 4. For apps with multiple schemes (e.g. Shopify has OAuth2 + API_KEY),
+ *    find a "simple" scheme (API_KEY, BEARER_TOKEN, BASIC) that works
+ *    without developer app registration
+ * 5. If all schemes require custom credentials, return an error with
+ *    the required fields so the frontend can inform the user
  */
 async function ensureAuthConfig(
   composio: ReturnType<typeof getComposioClient>,
   toolkit: string,
-  toolkitName: string
-): Promise<string | undefined> {
+  toolkitName: string,
+  preferredScheme?: string,
+  customCredentials?: Record<string, string>
+): Promise<AuthConfigResult> {
+  // 1. Check for an existing auth config
   type ConfigItem = { id: string };
   const existing = await composio.authConfigs.list({ toolkit });
   const existingId = ((existing as unknown as { items: ConfigItem[] }).items ?? [])[0]?.id;
-  if (existingId) return existingId;
+  if (existingId) return { ok: true, authConfigId: existingId };
 
-  // No auth config exists — try managed auth first (works for OAuth tools)
+  // 1b. If custom credentials were provided, create a custom auth config
+  //     immediately — this handles the case where the user filled in a
+  //     credentials form (e.g. Shopify OAuth client_id/secret).
+  if (customCredentials && preferredScheme && Object.keys(customCredentials).length > 0) {
+    const config = await composio.authConfigs.create(toolkit, {
+      type: "use_custom_auth" as const,
+      authScheme: preferredScheme as "OAUTH2" | "OAUTH1" | "API_KEY" | "BASIC" | "BEARER_TOKEN",
+      name: `${toolkitName} Auth Config`,
+      credentials: customCredentials as Record<string, string | number | boolean>,
+    });
+    return { ok: true, authConfigId: config.id, authScheme: preferredScheme };
+  }
+
+  // 2. Try Composio-managed auth (works for OAuth tools where Composio
+  //    provides its own developer credentials)
   try {
     const config = await composio.authConfigs.create(toolkit, {
       type: "use_composio_managed_auth" as const,
       name: `${toolkitName} Auth Config`,
     });
-    return config.id;
+    return { ok: true, authConfigId: config.id };
   } catch {
-    // Managed auth not available — fall through to custom
+    // Managed auth not available for this toolkit
   }
 
-  // Fetch toolkit metadata to determine the correct auth scheme
-  type ToolkitInfo = { authConfigDetails?: { mode: string }[] };
+  // 3. Fetch toolkit metadata to inspect all available auth schemes
   const toolkitInfo = (await composio.toolkits.get(toolkit)) as unknown as ToolkitInfo;
-  const authScheme = toolkitInfo.authConfigDetails?.[0]?.mode ?? "API_KEY";
+  const allSchemes = toolkitInfo.authConfigDetails ?? [];
 
-  const config = await composio.authConfigs.create(toolkit, {
-    type: "use_custom_auth" as const,
-    // Cast to the SDK's expected union — runtime value is the actual scheme string
-    authScheme: authScheme as "API_KEY" | "BEARER_TOKEN" | "BASIC" | "OAUTH2",
-    credentials: {},
-    name: `${toolkitName} Auth Config`,
+  if (allSchemes.length === 0) {
+    // No auth details at all — let authorize() figure it out
+    return { ok: true, authConfigId: "" };
+  }
+
+  // 4. If a preferred scheme was specified, honor the user's choice
+  if (preferredScheme) {
+    const preferred = allSchemes.find(
+      (s) => s.mode.toUpperCase() === preferredScheme.toUpperCase()
+    );
+    if (preferred) {
+      const requiredFields = preferred.fields?.authConfigCreation?.required ?? [];
+      if (requiredFields.length === 0 || SIMPLE_AUTH_SCHEMES.has(preferred.mode.toUpperCase())) {
+        // Simple scheme — authorize() will show a hosted page for the user
+        return { ok: true, authConfigId: "", authScheme: preferred.mode };
+      }
+
+      // The user explicitly chose a scheme that requires custom credentials
+      // (e.g. OAuth2 for Shopify). Return an error with the required fields
+      // so the frontend can collect them via a form.
+      const fieldNames = requiredFields.length > 0
+        ? requiredFields.map((f) => f.displayName || f.name).join(", ")
+        : "developer credentials (client ID, client secret)";
+
+      return {
+        ok: false,
+        reason: `${toolkitName} OAuth requires custom ${fieldNames}. You'll need to register a developer application with ${toolkitName} and provide your own credentials.`,
+        requiredFields: requiredFields.map((f) => ({
+          name: f.name,
+          displayName: f.displayName,
+          description: f.description,
+        })),
+        availableSchemes: allSchemes.map((s) => ({
+          mode: s.mode,
+          needsDevSetup: !SIMPLE_AUTH_SCHEMES.has(s.mode.toUpperCase()) &&
+            (s.fields?.authConfigCreation?.required ?? []).length > 0,
+        })),
+      };
+    }
+  }
+
+  // 5. Look for any simple auth scheme that works without dev credentials.
+  //    For API_KEY / BEARER_TOKEN / BASIC, authorize() shows a hosted page
+  //    where the user enters their credentials directly — no developer app
+  //    registration needed.
+  const simpleScheme = allSchemes.find((s) => {
+    const mode = s.mode.toUpperCase();
+    if (!SIMPLE_AUTH_SCHEMES.has(mode)) return false;
+    // Double-check it doesn't have unusual required fields for config creation
+    const required = s.fields?.authConfigCreation?.required ?? [];
+    return required.length === 0;
   });
-  return config.id;
+
+  if (simpleScheme) {
+    return { ok: true, authConfigId: "", authScheme: simpleScheme.mode };
+  }
+
+  // 6. All schemes require custom developer credentials.
+  //    Return information about available schemes so the frontend can inform the user.
+  const primaryScheme = allSchemes[0];
+  const requiredFields = primaryScheme?.fields?.authConfigCreation?.required ?? [];
+  const fieldNames = requiredFields.length > 0
+    ? requiredFields.map((f) => f.displayName || f.name).join(", ")
+    : "developer credentials (client ID, client secret)";
+
+  return {
+    ok: false,
+    reason: `${toolkitName} requires custom ${fieldNames}. This app needs you to register a developer application with ${toolkitName} and provide your own credentials. Composio does not provide managed authentication for this app.`,
+    requiredFields: requiredFields.map((f) => ({
+      name: f.name,
+      displayName: f.displayName,
+      description: f.description,
+    })),
+    availableSchemes: allSchemes.map((s) => ({
+      mode: s.mode,
+      needsDevSetup: !SIMPLE_AUTH_SCHEMES.has(s.mode.toUpperCase()) &&
+        (s.fields?.authConfigCreation?.required ?? []).length > 0,
+    })),
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -70,9 +185,13 @@ export async function POST(request: NextRequest) {
     toolkit: string;
     toolkitName: string;
     toolkitIcon?: string;
+    /** Optional preferred auth scheme (e.g. "API_KEY", "OAUTH2") */
+    authScheme?: string;
+    /** Custom developer credentials for OAuth (e.g. { client_id, client_secret }) */
+    customCredentials?: Record<string, string>;
   };
 
-  const { toolkit, toolkitName, toolkitIcon } = body;
+  const { toolkit, toolkitName, toolkitIcon, authScheme, customCredentials } = body;
 
   if (!toolkit || !toolkitName) {
     return NextResponse.json(
@@ -115,11 +234,31 @@ export async function POST(request: NextRequest) {
     // Ensure an auth config exists for the toolkit before authorizing.
     // The SDK's authorize() only tries "use_composio_managed_auth" by default,
     // which fails for API key / bearer token tools. We handle that here.
-    const authConfigId = await ensureAuthConfig(composio, toolkit, toolkitName);
+    const authResult = await ensureAuthConfig(composio, toolkit, toolkitName, authScheme, customCredentials);
+
+    if (!authResult.ok) {
+      // The toolkit requires custom credentials the user hasn't provided.
+      // Return a specific error so the frontend can show a helpful message.
+      void flushComposio();
+      return NextResponse.json(
+        {
+          error: authResult.reason,
+          code: "CUSTOM_CREDENTIALS_REQUIRED",
+          requiredFields: authResult.requiredFields,
+          availableSchemes: authResult.availableSchemes,
+        },
+        { status: 400 }
+      );
+    }
 
     // Authorize the user for this toolkit via Composio SDK.
     // Composio returns a hosted auth page URL for both OAuth and API key flows.
-    const connection = await composio.toolkits.authorize(user.id, toolkit, authConfigId);
+    // Pass authConfigId if we have one — empty string means let authorize() auto-resolve.
+    const connection = await composio.toolkits.authorize(
+      user.id,
+      toolkit,
+      authResult.authConfigId || undefined
+    );
 
     // The SDK may return `id` or `connected_account_id` depending on version
     const connResult = connection as unknown as {
@@ -167,9 +306,15 @@ export async function POST(request: NextRequest) {
       error: message,
     });
 
+    // Extract a more specific error message from Composio API errors
+    let userError = "Failed to initiate connection. Please try again.";
+    if (message.includes("Missing required field") || message.includes("Auth_Config_ValidationError")) {
+      userError = `${toolkitName} requires developer credentials that aren't available. This app may need custom OAuth setup.`;
+    }
+
     void flushComposio();
     return NextResponse.json(
-      { error: "Failed to initiate connection. Please try again." },
+      { error: userError },
       { status: 500 }
     );
   }
