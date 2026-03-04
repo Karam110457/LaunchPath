@@ -348,6 +348,7 @@ export function AppLibraryModal({
         {showCredentialsForm && connectError && credentialsContext && (
           <div className="mx-6 mb-3 px-4 py-4 rounded-lg bg-muted/30 border border-border/50">
             <OAuthCredentialsForm
+              key={`${credentialsContext.toolkit}-${credentialsContext.authScheme}`}
               toolkitName={credentialsContext.toolkitName}
               authScheme={connectError.authScheme ?? credentialsContext.authScheme}
               requiredFields={connectError.requiredFields!}

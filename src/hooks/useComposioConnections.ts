@@ -48,8 +48,13 @@ interface UseComposioConnectionsReturn {
 }
 
 /**
- * Polls the verify endpoint until the connection is active or the abort signal fires.
- * Returns true if the connection became active, false otherwise.
+ * Polls the verify endpoint until the connection is active or we give up.
+ *
+ * Returns:
+ *  - "active" if the connection became active
+ *  - "popup_closed" if the popup was closed without completing
+ *  - "timeout" if we exceeded max attempts
+ *  - "aborted" if the signal was aborted (e.g. user started a new connection)
  */
 async function pollUntilActive(
   toolkit: string,
@@ -57,7 +62,7 @@ async function pollUntilActive(
   signal: AbortSignal,
   maxAttempts = 60,
   intervalMs = 2000
-): Promise<boolean> {
+): Promise<"active" | "popup_closed" | "timeout" | "aborted"> {
   let attempts = 0;
   let popupClosedAt = 0;
 
@@ -67,11 +72,10 @@ async function pollUntilActive(
     // Wait before each check (except the first — give a moment for redirect)
     await new Promise((resolve) => {
       const timer = setTimeout(resolve, intervalMs);
-      // If aborted while waiting, resolve immediately
       signal.addEventListener("abort", () => { clearTimeout(timer); resolve(undefined); }, { once: true });
     });
 
-    if (signal.aborted) return false;
+    if (signal.aborted) return "aborted";
 
     // Track when popup closes
     const popupClosed = !popup || popup.closed;
@@ -79,9 +83,11 @@ async function pollUntilActive(
       popupClosedAt = attempts;
     }
 
-    // If popup has been closed for a while and still not active, give up
-    if (popupClosed && popupClosedAt > 0 && attempts - popupClosedAt > 5) {
-      return false;
+    // If popup has been closed for 2 polls (~4 seconds), give up.
+    // This gives enough time for the OAuth callback to process while
+    // not making the user wait 10+ seconds staring at "Connecting...".
+    if (popupClosed && popupClosedAt > 0 && attempts - popupClosedAt > 2) {
+      return "popup_closed";
     }
 
     try {
@@ -96,17 +102,16 @@ async function pollUntilActive(
         const verifyData = (await verifyRes.json()) as { status: string };
         if (verifyData.status === "active") {
           try { popup?.close(); } catch { /* cross-origin may block */ }
-          return true;
+          return "active";
         }
       }
     } catch (err) {
-      // AbortError is expected — stop the loop
-      if (err instanceof DOMException && err.name === "AbortError") return false;
+      if (err instanceof DOMException && err.name === "AbortError") return "aborted";
       // Other fetch errors — retry on next interval
     }
   }
 
-  return false;
+  return signal.aborted ? "aborted" : "timeout";
 }
 
 export function useComposioConnections(): UseComposioConnectionsReturn {
@@ -114,7 +119,6 @@ export function useComposioConnections(): UseComposioConnectionsReturn {
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState<string | null>(null);
   const [connectError, setConnectError] = useState<ComposioConnectError | null>(null);
-  // AbortController lets us cleanly cancel any in-flight polling
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchConnections = useCallback(async () => {
@@ -144,15 +148,13 @@ export function useComposioConnections(): UseComposioConnectionsReturn {
 
   const connect = useCallback(
     async (toolkit: string, toolkitName: string, toolkitIcon?: string, authScheme?: string, customCredentials?: Record<string, string>) => {
-      // Cancel any previous polling (prevents race condition if user clicks
-      // another app before the first one finishes)
+      // Cancel any previous polling
       abortRef.current?.abort();
 
       setConnecting(toolkit);
       setConnectError(null);
 
       try {
-        // 1. Get the auth redirect URL (OAuth or hosted API key page)
         const res = await fetch("/api/composio/connect", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -184,38 +186,72 @@ export function useComposioConnections(): UseComposioConnectionsReturn {
           status?: string;
         };
 
-        // No-auth apps are connected immediately — no popup needed
+        // No-auth or API_KEY apps connected immediately — no popup needed
         if (!data.redirectUrl || data.status === "active") {
           await fetchConnections();
           setConnecting(null);
           return;
         }
 
-        // 2. Open auth popup (works for both OAuth and API key hosted pages)
+        // Open auth popup
         const popup = window.open(
           data.redirectUrl,
           `composio_connect_${toolkit}`,
           "width=600,height=700,scrollbars=yes"
         );
 
-        // 3. Poll for connection completion using AbortController for clean cancellation
+        // Popup blocked by browser
+        if (!popup) {
+          setConnectError({
+            toolkit,
+            message: "Popup was blocked by your browser. Please allow popups for this site and try again.",
+          });
+          setConnecting(null);
+          return;
+        }
+
+        // Poll for connection completion
         const controller = new AbortController();
         abortRef.current = controller;
 
-        const connected = await pollUntilActive(toolkit, popup, controller.signal);
+        const result = await pollUntilActive(toolkit, popup, controller.signal);
 
         // Only update state if this controller wasn't replaced by a newer connect() call
         if (!controller.signal.aborted) {
           await fetchConnections();
           setConnecting(null);
 
-          if (!connected) {
-            // Popup closed without completing — not necessarily an error,
-            // but reset the connecting state so user can try again
+          if (result === "popup_closed") {
+            // Check one final time if the connection actually succeeded
+            // (the OAuth callback might have processed right as the popup closed)
+            const finalCheck = await fetch("/api/composio/connections", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ toolkit }),
+            }).then((r) => r.ok ? r.json() as Promise<{ status: string }> : null).catch(() => null);
+
+            if (finalCheck?.status !== "active") {
+              setConnectError({
+                toolkit,
+                message: "Connection window was closed before completing. Please try again.",
+              });
+            } else {
+              // Actually succeeded — refresh connections
+              await fetchConnections();
+            }
+          } else if (result === "timeout") {
+            setConnectError({
+              toolkit,
+              message: "Connection timed out. Please try again.",
+            });
           }
         }
-      } catch {
+      } catch (err) {
         setConnecting(null);
+        setConnectError({
+          toolkit,
+          message: err instanceof Error ? err.message : "An unexpected error occurred. Please try again.",
+        });
       }
     },
     [fetchConnections]
@@ -223,10 +259,13 @@ export function useComposioConnections(): UseComposioConnectionsReturn {
 
   const disconnect = useCallback(
     async (connectionId: string) => {
-      await fetch(`/api/composio/connections?id=${connectionId}`, {
+      const res = await fetch(`/api/composio/connections?id=${connectionId}`, {
         method: "DELETE",
       });
-      setConnections((prev) => prev.filter((c) => c.id !== connectionId));
+      if (res.ok) {
+        setConnections((prev) => prev.filter((c) => c.id !== connectionId));
+      }
+      // If delete failed, don't remove from local state — user will see it persists
     },
     []
   );

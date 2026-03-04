@@ -57,6 +57,12 @@ export async function GET() {
     const liveItems =
       (result as unknown as { items: AccountItem[] }).items ?? [];
 
+    // Guard: if Composio returns an empty list (transient API issue),
+    // don't wipe all local connections — return local data as-is.
+    if (liveItems.length === 0 && localConnections.some((c) => c.status === "active")) {
+      return NextResponse.json({ connections: localConnections });
+    }
+
     // Build a set of toolkit slugs that are actually ACTIVE on Composio
     const liveActiveToolkits = new Set(
       liveItems

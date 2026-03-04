@@ -124,7 +124,10 @@ async function ensureAuthConfig(
   }
 
   if (allSchemes.length === 0) {
-    return { ok: true, authConfigId: "" };
+    return {
+      ok: false,
+      reason: `${toolkitName} has no authentication schemes configured in Composio.`,
+    };
   }
 
   // 3. Determine the target scheme
@@ -134,7 +137,10 @@ async function ensureAuthConfig(
       ?? allSchemes[0];
 
   if (!targetScheme) {
-    return { ok: true, authConfigId: "" };
+    return {
+      ok: false,
+      reason: `No matching auth scheme found for ${toolkitName}.`,
+    };
   }
 
   const mode = targetScheme.mode.toUpperCase();
@@ -157,12 +163,10 @@ async function ensureAuthConfig(
         authScheme: targetScheme.mode,
         connectionFields: getConnectionFields(targetScheme),
       };
-    } catch {
+    } catch (e) {
       return {
-        ok: true,
-        authConfigId: "",
-        authScheme: targetScheme.mode,
-        connectionFields: getConnectionFields(targetScheme),
+        ok: false,
+        reason: `Failed to create auth config for ${toolkitName}: ${e instanceof Error ? e.message : "Unknown error"}`,
       };
     }
   }
@@ -197,8 +201,11 @@ async function ensureAuthConfig(
       credentials: {} as Record<string, string | number | boolean>,
     });
     return { ok: true, authConfigId: config.id, authScheme: targetScheme.mode };
-  } catch {
-    return { ok: true, authConfigId: "", authScheme: targetScheme.mode };
+  } catch (e) {
+    return {
+      ok: false,
+      reason: `Failed to create auth config for ${toolkitName}: ${e instanceof Error ? e.message : "Unknown error"}`,
+    };
   }
 }
 
@@ -307,20 +314,15 @@ export async function POST(request: NextRequest) {
       (resolvedScheme === "OAUTH2" || resolvedScheme === "OAUTH1");
 
     if (isOAuthWithCustomCreds) {
-      // Check for existing auth config first
-      type ConfigItem = { id: string };
-      const existingConfigs = await composio.authConfigs.list({ toolkit });
-      let authConfigId = ((existingConfigs as unknown as { items: ConfigItem[] }).items ?? [])[0]?.id;
-
-      if (!authConfigId) {
-        const config = await composio.authConfigs.create(toolkit, {
-          type: "use_custom_auth" as const,
-          authScheme: resolvedScheme as "OAUTH2" | "OAUTH1",
-          name: `${toolkitName} Auth Config`,
-          credentials: customCredentials as Record<string, string | number | boolean>,
-        });
-        authConfigId = config.id;
-      }
+      // Always create a fresh auth config with the user's custom OAuth credentials.
+      // Don't reuse existing configs — they may belong to a different user/app registration.
+      const config = await composio.authConfigs.create(toolkit, {
+        type: "use_custom_auth" as const,
+        authScheme: resolvedScheme as "OAUTH2" | "OAUTH1",
+        name: `${toolkitName} Auth Config`,
+        credentials: customCredentials as Record<string, string | number | boolean>,
+      });
+      const authConfigId = config.id;
 
       // Proceed to OAuth redirect flow
       const connection = await composio.toolkits.authorize(
@@ -423,7 +425,16 @@ export async function POST(request: NextRequest) {
         redirectUrl?: string;
       };
       const composioAccountId = connResult.id ?? connResult.connected_account_id ?? null;
-      const isActive = connResult.status === "ACTIVE" || !connResult.redirectUrl;
+      const isFailed = connResult.status === "FAILED" || connResult.status === "EXPIRED";
+      const isActive = !isFailed && (connResult.status === "ACTIVE" || !connResult.redirectUrl);
+
+      if (isFailed) {
+        void flushComposio();
+        return NextResponse.json(
+          { error: `${toolkitName} connection failed. The credentials may be invalid.` },
+          { status: 400 }
+        );
+      }
 
       await supabase.from("user_composio_connections").upsert(
         {
@@ -450,7 +461,7 @@ export async function POST(request: NextRequest) {
     const connection = await composio.toolkits.authorize(
       user.id,
       toolkit,
-      authResult.authConfigId || undefined
+      authResult.authConfigId,
     );
 
     const connResult = connection as unknown as {
