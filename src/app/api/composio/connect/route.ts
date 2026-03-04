@@ -102,8 +102,21 @@ async function ensureAuthConfig(
     if (preferred) {
       const requiredFields = preferred.fields?.authConfigCreation?.required ?? [];
       if (requiredFields.length === 0 || SIMPLE_AUTH_SCHEMES.has(preferred.mode.toUpperCase())) {
-        // Simple scheme — authorize() will show a hosted page for the user
-        return { ok: true, authConfigId: "", authScheme: preferred.mode };
+        // Simple scheme (API_KEY, BEARER_TOKEN, BASIC) — create an explicit
+        // auth config so authorize() knows which scheme to use. Without this,
+        // authorize() defaults to OAuth2 which fails for apps like Shopify.
+        try {
+          const config = await composio.authConfigs.create(toolkit, {
+            type: "use_custom_auth" as const,
+            authScheme: preferred.mode as "OAUTH2" | "OAUTH1" | "API_KEY" | "BASIC" | "BEARER_TOKEN",
+            name: `${toolkitName} ${preferred.mode} Auth Config`,
+            credentials: {} as Record<string, string | number | boolean>,
+          });
+          return { ok: true, authConfigId: config.id, authScheme: preferred.mode };
+        } catch {
+          // If config creation fails, return empty — authorize() will try to resolve
+          return { ok: true, authConfigId: "", authScheme: preferred.mode };
+        }
       }
 
       // The user explicitly chose a scheme that requires custom credentials
@@ -143,7 +156,19 @@ async function ensureAuthConfig(
   });
 
   if (simpleScheme) {
-    return { ok: true, authConfigId: "", authScheme: simpleScheme.mode };
+    // Create an explicit auth config for the simple scheme so authorize()
+    // doesn't default to OAuth2. See step 4 comment for details.
+    try {
+      const config = await composio.authConfigs.create(toolkit, {
+        type: "use_custom_auth" as const,
+        authScheme: simpleScheme.mode as "API_KEY" | "BASIC" | "BEARER_TOKEN",
+        name: `${toolkitName} ${simpleScheme.mode} Auth Config`,
+        credentials: {} as Record<string, string | number | boolean>,
+      });
+      return { ok: true, authConfigId: config.id, authScheme: simpleScheme.mode };
+    } catch {
+      return { ok: true, authConfigId: "", authScheme: simpleScheme.mode };
+    }
   }
 
   // 6. All schemes require custom developer credentials.

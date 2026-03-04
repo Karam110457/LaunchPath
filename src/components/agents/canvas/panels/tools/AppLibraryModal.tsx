@@ -155,6 +155,10 @@ export function AppLibraryModal({
     const schemes = app.authSchemes ?? [];
     if (schemes.length === 0) return "managed"; // no info, assume connectable
     const hasSimple = schemes.some((s) => SIMPLE_SCHEMES.has(s.toUpperCase()));
+    const hasOAuth = schemes.some((s) => s.toUpperCase() === "OAUTH2" || s.toUpperCase() === "OAUTH1");
+    // Apps with BOTH OAuth and a simple scheme (e.g. Shopify: OAuth2 + API_KEY)
+    // should show a picker so the user can choose their preferred method.
+    if (hasOAuth && hasSimple) return "devSetup";
     if (hasSimple) return "simple";
     return "devSetup";
   };
