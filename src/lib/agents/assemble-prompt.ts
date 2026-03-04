@@ -1,15 +1,19 @@
 /**
  * assemblePrompt — shared, channel-agnostic system prompt assembly.
  *
- * Combines the agent's base system prompt with tool instructions, tool
- * guidelines, degradation messages, and RAG context into a single string.
+ * Combines the agent's base system prompt with tool instructions,
+ * degradation messages, and RAG context into a single string.
  *
  * This is a PURE function — no DB calls, no side effects. Any channel
  * (chat, WhatsApp, widget, etc.) calls it with the same inputs and gets
  * the same output.
  */
 
-import type { AgentToolRecord, ComposioToolConfig } from "@/lib/tools/types";
+import type {
+  AgentToolRecord,
+  ComposioToolConfig,
+  ActionConfig,
+} from "@/lib/tools/types";
 import type { ToolFailure } from "@/lib/tools/integrations/composio";
 
 // ---------------------------------------------------------------------------
@@ -27,8 +31,6 @@ export interface AssemblePromptInput {
   resolvedToolKeys: string[];
   /** Tool failures from buildAgentTools() */
   failures: ToolFailure[];
-  /** Custom tool guidelines from ai_agents.tool_guidelines. null = defaults. */
-  toolGuidelines: string | null;
 }
 
 export interface AssemblePromptResult {
@@ -40,7 +42,7 @@ export interface AssemblePromptResult {
 
 export interface PromptSection {
   /** Section identifier */
-  id: "base" | "rag" | "tools" | "guidelines" | "unavailable";
+  id: "base" | "rag" | "tools" | "unavailable";
   /** Human-readable label */
   label: string;
   /** The raw text content of this section */
@@ -48,16 +50,6 @@ export interface PromptSection {
   /** Whether this was user-written or auto-generated */
   source: "user" | "auto";
 }
-
-// ---------------------------------------------------------------------------
-// Default tool guidelines — visible in the UI, editable by users
-// ---------------------------------------------------------------------------
-
-export const DEFAULT_TOOL_GUIDELINES =
-  `- When a tool returns a result, check the \`successful\` field. If \`successful\` is false, explain what went wrong to the user using the \`error\` field and suggest they reconnect the app in their settings.\n` +
-  `- Tool results are in the \`data\` field — summarize the key information conversationally. Never dump raw JSON to the user.\n` +
-  `- If a tool fails, explain the issue clearly and suggest next steps. Do not retry the same call unless you change the parameters.\n` +
-  `- You can call multiple tools in sequence to complete complex tasks (e.g., search for contacts then send an email to the result).`;
 
 // ---------------------------------------------------------------------------
 // Main assembly function
@@ -70,7 +62,6 @@ export function assemblePrompt(input: AssemblePromptInput): AssemblePromptResult
     toolRecords,
     resolvedToolKeys,
     failures,
-    toolGuidelines,
   } = input;
 
   const sections: PromptSection[] = [];
@@ -121,7 +112,24 @@ export function assemblePrompt(input: AssemblePromptInput): AssemblePromptResult
                 .slice(prefix.length + 1)
                 .toLowerCase()
                 .replace(/_/g, " ");
-              return `  - \`${k}\` — ${friendly}`;
+
+              // Note pinned params so agent knows about constraints
+              const actionCfg = cfg.action_configs?.[k];
+              const pinnedEntries =
+                actionCfg &&
+                typeof actionCfg === "object" &&
+                (actionCfg as ActionConfig).pinned_params
+                  ? Object.entries((actionCfg as ActionConfig).pinned_params)
+                  : [];
+
+              const pinnedNote =
+                pinnedEntries.length > 0
+                  ? ` (pre-configured: ${pinnedEntries
+                      .map(([pName, pVal]) => `${pName}="${pVal}"`)
+                      .join(", ")})`
+                  : "";
+
+              return `  - \`${k}\` — ${friendly}${pinnedNote}`;
             })
             .join("\n");
           toolLines.push(
@@ -147,21 +155,9 @@ export function assemblePrompt(input: AssemblePromptInput): AssemblePromptResult
       source: "auto",
     });
     parts.push(toolsSection);
-
-    // ── Section 4: Tool Guidelines ─────────────────────────────────────
-    const guidelinesText = toolGuidelines ?? DEFAULT_TOOL_GUIDELINES;
-    const guidelinesSection = `### Tool Usage Guidelines\n${guidelinesText}`;
-
-    sections.push({
-      id: "guidelines",
-      label: "Tool Guidelines",
-      content: guidelinesText,
-      source: toolGuidelines !== null ? "user" : "auto",
-    });
-    parts.push(guidelinesSection);
   }
 
-  // ── Section 5: Unavailable Tools ────────────────────────────────────
+  // ── Section 4: Unavailable Tools ────────────────────────────────────
   if (failures.length > 0) {
     const failureLines = failures
       .map((f) => `- **${f.displayName}** (${f.toolkit}): ${f.reason}`)

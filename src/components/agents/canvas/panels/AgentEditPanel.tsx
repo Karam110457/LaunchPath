@@ -29,7 +29,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { DEFAULT_TOOL_GUIDELINES } from "@/lib/agents/assemble-prompt";
 import type { AgentToolResponse } from "@/lib/tools/types";
 import type { AgentFormState, WizardConfig } from "../canvas-types";
 
@@ -316,40 +315,6 @@ export function AgentEditPanel({
                     </p>
                   ))}
                 </div>
-              </section>
-            </>
-          )}
-
-          {/* Tool Guidelines (editable — controls how the agent handles tool results) */}
-          {enabledTools.length > 0 && (
-            <>
-              <hr className="border-border" />
-              <section className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Tool Guidelines
-                  </h3>
-                  {formState.toolGuidelines !== null && (
-                    <button
-                      type="button"
-                      onClick={() => update("toolGuidelines", null)}
-                      className="text-[10px] text-primary/70 hover:text-primary transition-colors"
-                    >
-                      Reset to defaults
-                    </button>
-                  )}
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  How your agent handles tool results, errors, and multi-step tasks.
-                  These are appended after the tool list.
-                </p>
-                <Textarea
-                  value={formState.toolGuidelines ?? DEFAULT_TOOL_GUIDELINES}
-                  onChange={(e) => update("toolGuidelines", e.target.value)}
-                  rows={5}
-                  className="text-sm font-mono text-xs"
-                  placeholder="Instructions for how the agent should handle tool results..."
-                />
               </section>
             </>
           )}

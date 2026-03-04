@@ -148,7 +148,6 @@ export async function POST(
     toolRecords: agentToolRecords,
     resolvedToolKeys: Object.keys(tools),
     failures,
-    toolGuidelines: (agent.tool_guidelines as string | null) ?? null,
   });
 
   // ---------------------------------------------------------------------------

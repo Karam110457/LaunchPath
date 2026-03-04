@@ -13,7 +13,7 @@
 
 import { getComposioClient } from "@/lib/composio/client";
 import { logger } from "@/lib/security/logger";
-import type { AgentToolRecord, ComposioToolConfig } from "../types";
+import type { AgentToolRecord, ComposioToolConfig, ActionConfig } from "../types";
 
 type AccountItem = {
   id: string;
@@ -248,23 +248,107 @@ function wrapToolExecute(
 }
 
 /**
- * Schema modifier passed to tools.get() — cleans up tool descriptions
- * for better LLM comprehension. Cast to `unknown` when passing because
- * the SDK uses an internal Tool type we can't import.
+ * Creates a schema modifier that cleans descriptions AND strips pinned
+ * parameter fields so the LLM never sees them.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function cleanSchema(context: { toolSlug: string; toolkitSlug: string; schema: any }): any {
-  const schema = context.schema;
+function makeSchemaModifier(
+  pinnedParamsMap: Map<string, Record<string, unknown>>
+) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return function modifySchema(context: { toolSlug: string; toolkitSlug: string; schema: any }): any {
+    const schema = context.schema;
 
-  // Clean up description whitespace
-  if (typeof schema.description === "string") {
-    schema.description = schema.description
-      .replace(/\n{3,}/g, "\n\n")
-      .replace(/\s{2,}/g, " ")
-      .trim();
-  }
+    // Clean up description whitespace
+    if (typeof schema.description === "string") {
+      schema.description = schema.description
+        .replace(/\n{3,}/g, "\n\n")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+    }
 
-  return schema;
+    // Strip pinned fields from input schema so LLM doesn't try to fill them
+    const pinned = pinnedParamsMap.get(context.toolSlug);
+    if (pinned) {
+      // The schema object shape may vary — check common locations
+      const inputSchema =
+        schema.inputSchema ?? schema.parameters ?? schema.input;
+      if (inputSchema && typeof inputSchema === "object" && inputSchema.properties) {
+        for (const paramName of Object.keys(pinned)) {
+          delete inputSchema.properties[paramName];
+          if (Array.isArray(inputSchema.required)) {
+            inputSchema.required = inputSchema.required.filter(
+              (r: string) => r !== paramName
+            );
+          }
+        }
+      }
+    }
+
+    return schema;
+  };
+}
+
+/**
+ * Creates a tool execute wrapper that injects pinned params and trims results.
+ */
+function makeToolWrapper(
+  pinnedParamsMap: Map<string, Record<string, unknown>>
+) {
+  return function wrapTool(
+    toolKey: string,
+    toolDef: Record<string, unknown>
+  ): Record<string, unknown> {
+    const originalExecute = toolDef.execute;
+    if (typeof originalExecute !== "function") return toolDef;
+
+    const pinned = pinnedParamsMap.get(toolKey);
+
+    return {
+      ...toolDef,
+      execute: async (...args: unknown[]) => {
+        // Merge pinned values into args — pinned values always win
+        if (pinned && args[0] && typeof args[0] === "object") {
+          args[0] = { ...(args[0] as Record<string, unknown>), ...pinned };
+        }
+
+        try {
+          const result = await (
+            originalExecute as (...a: unknown[]) => Promise<unknown>
+          )(...args);
+          return trimToolResult(result);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          const isAuthError =
+            message.includes("401") ||
+            message.includes("403") ||
+            message.includes("auth") ||
+            message.includes("token") ||
+            message.includes("expired") ||
+            message.includes("unauthorized");
+
+          if (isAuthError) {
+            logger.error("Composio tool auth failure", {
+              toolKey,
+              error: message,
+            });
+            return {
+              successful: false,
+              error: `Authentication failed for ${toolKey}. The user may need to reconnect this app in their tool settings.`,
+            };
+          }
+
+          logger.error("Composio tool execution failed", {
+            toolKey,
+            error: message,
+          });
+          return {
+            successful: false,
+            error: `Tool ${toolKey} failed: ${message}`,
+          };
+        }
+      },
+    };
+  };
 }
 
 export async function buildComposioTools(
@@ -279,11 +363,12 @@ export async function buildComposioTools(
   try {
     const composio = getComposioClient();
 
-    // Collect toolkit slugs, action slugs, and display names
+    // Collect toolkit slugs, action slugs, display names, and pinned params
     const toolkitSlugs: string[] = [];
     const specificActions: string[] = [];
     const toolkitsWithAllActions: string[] = [];
     const displayNameMap = new Map<string, string>();
+    const pinnedParamsMap = new Map<string, Record<string, unknown>>();
 
     for (const record of records) {
       const cfg = record.config as unknown as ComposioToolConfig;
@@ -301,6 +386,20 @@ export async function buildComposioTools(
           toolkitsWithAllActions.push(cfg.toolkit);
         }
       }
+
+      // Collect pinned params from action_configs
+      if (cfg.action_configs) {
+        for (const [actionSlug, actionCfg] of Object.entries(cfg.action_configs)) {
+          if (
+            actionCfg &&
+            typeof actionCfg === "object" &&
+            (actionCfg as ActionConfig).pinned_params &&
+            Object.keys((actionCfg as ActionConfig).pinned_params).length > 0
+          ) {
+            pinnedParamsMap.set(actionSlug, (actionCfg as ActionConfig).pinned_params);
+          }
+        }
+      }
     }
 
     // Validate connections are still active
@@ -310,9 +409,7 @@ export async function buildComposioTools(
 
     // Filter to only active toolkits
     const validSpecificActions = specificActions.filter((action) => {
-      // Action slug format: TOOLKIT_ACTION — extract toolkit prefix
       const toolkitPrefix = action.split("_")[0].toLowerCase();
-      // Match against active toolkit slugs
       return [...activeToolkits].some(
         (slug) => slug.toLowerCase().replace(/[^a-z0-9]/g, "") === toolkitPrefix
       );
@@ -330,13 +427,12 @@ export async function buildComposioTools(
       return { tools, failures };
     }
 
-    // modifySchema options — cleans descriptions for better LLM comprehension
-    const options = {
-      modifySchema: cleanSchema,
-    };
+    // Build schema modifier and tool wrapper with pinned params
+    const modifySchema = makeSchemaModifier(pinnedParamsMap);
+    const wrapTool = makeToolWrapper(pinnedParamsMap);
+    const options = { modifySchema };
 
     // Fetch tools — SDK requires either `tools` or `toolkits`, not both.
-    // Make separate calls if we have both specific actions and "all actions" toolkits.
     const fetchPromises: Promise<Record<string, unknown> | null>[] = [];
 
     if (validSpecificActions.length > 0) {
@@ -380,10 +476,9 @@ export async function buildComposioTools(
     for (const result of results) {
       if (!result || typeof result !== "object") continue;
       for (const [key, value] of Object.entries(result)) {
-        // Wrap execute with error context + result trimming
         tools[key] =
           value && typeof value === "object"
-            ? wrapToolExecute(key, value as Record<string, unknown>)
+            ? wrapTool(key, value as Record<string, unknown>)
             : value;
       }
     }

@@ -56,8 +56,6 @@ export interface AgentFormState {
   status: string;
   systemPrompt: string;
   wizardConfig: WizardConfig | null;
-  /** Custom tool guidelines. null = use auto-generated defaults. */
-  toolGuidelines: string | null;
 }
 
 // Panel state: which panel is open and what data it needs

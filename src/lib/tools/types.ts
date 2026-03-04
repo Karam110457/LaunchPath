@@ -42,6 +42,39 @@ export interface ComposioToolConfig {
   toolkit_icon?: string;      // Logo URL or single char fallback
   connection_id: string;      // FK to user_composio_connections.id
   enabled_actions?: string[]; // e.g. ["GMAIL_SEND_EMAIL"] — undefined = all important actions
+  /** Per-action parameter pinning. Keys are action slugs. */
+  action_configs?: Record<string, ActionConfig>;
+  /** Which preset was selected (UI metadata only, not used at runtime). */
+  selected_preset?: string;
+}
+
+/** Configuration for a single Composio action — pinned parameter values. */
+export interface ActionConfig {
+  pinned_params: Record<string, unknown>;
+}
+
+// ------------------------------------------------------------------
+// Composio action schemas (enriched API response)
+// ------------------------------------------------------------------
+
+export interface ComposioActionSchema {
+  slug: string;
+  name: string;
+  description: string;
+  isImportant: boolean;
+  inputSchema?: {
+    type: "object";
+    properties: Record<string, JsonSchemaProperty>;
+    required?: string[];
+  };
+}
+
+export interface JsonSchemaProperty {
+  type: string;
+  description?: string;
+  enum?: unknown[];
+  default?: unknown;
+  title?: string;
 }
 
 // ------------------------------------------------------------------

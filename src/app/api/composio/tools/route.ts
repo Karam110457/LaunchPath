@@ -1,20 +1,28 @@
 /**
- * GET /api/composio/tools?toolkit=gmail
+ * GET /api/composio/tools?toolkit=gmail[&include_schemas=true]
  *
  * Returns the available actions for a Composio toolkit.
- * Uses the direct tools API (not session) to avoid meta tools.
+ * All actions are returned with an `isImportant` flag.
+ * When `include_schemas=true`, each action includes its full inputSchema
+ * for parameter pinning UI.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getComposioClient } from "@/lib/composio/client";
 import { logger } from "@/lib/security/logger";
+import type { ComposioActionSchema, JsonSchemaProperty } from "@/lib/tools/types";
 
-export interface ComposioToolAction {
+type RawTool = {
   slug: string;
   name: string;
-  description: string;
-}
+  description?: string;
+  inputParameters?: {
+    type?: string;
+    properties?: Record<string, JsonSchemaProperty>;
+    required?: string[];
+  };
+};
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -29,6 +37,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const toolkit = searchParams.get("toolkit");
+  const includeSchemas = searchParams.get("include_schemas") === "true";
 
   if (!toolkit) {
     return NextResponse.json(
@@ -40,39 +49,57 @@ export async function GET(request: NextRequest) {
   try {
     const composio = getComposioClient();
 
-    // Use getRawComposioTools to get actual toolkit actions (not session meta tools).
-    // Session.tools() includes MANAGE_CONNECTIONS, MULTI_EXECUTE_TOOL etc.
-    // which are Composio internal tools, not what we want here.
-    type RawTool = { slug: string; name: string; description?: string };
+    // Fetch important and all actions in parallel
+    const [importantRaw, allRaw] = await Promise.all([
+      composio.tools
+        .getRawComposioTools({ toolkits: [toolkit], important: true, limit: 50 })
+        .then((r) => (r ?? []) as unknown as RawTool[])
+        .catch(() => [] as RawTool[]),
+      composio.tools
+        .getRawComposioTools({ toolkits: [toolkit], limit: 100 })
+        .then((r) => (r ?? []) as unknown as RawTool[])
+        .catch(() => [] as RawTool[]),
+    ]);
 
-    let rawTools = await composio.tools.getRawComposioTools({
-      toolkits: [toolkit],
-      important: true,
-      limit: 50,
-    });
+    const importantSlugs = new Set(importantRaw.map((t) => t.slug));
 
-    // Some toolkits have no "important" actions — fall back to all actions
-    if (!rawTools || (rawTools as unknown as RawTool[]).length === 0) {
-      rawTools = await composio.tools.getRawComposioTools({
-        toolkits: [toolkit],
-        limit: 50,
-      });
-    }
+    // Use allRaw as the base. If it's empty (some toolkits only return
+    // results with important: true), fall back to importantRaw.
+    const base = allRaw.length > 0 ? allRaw : importantRaw;
 
-    // rawTools is Tool[] with { slug, name, description, toolkit }
-    const tools: ComposioToolAction[] = (
-      rawTools as unknown as RawTool[]
-    ).map((t) => {
-      // Format slug for display: GOOGLECALENDAR_CREATE_EVENT → Create Event
-      const displayName = t.name || t.slug
-        .replace(/^[A-Z]+_/, "") // remove toolkit prefix
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (c) => c.toUpperCase());
-      return {
+    const tools: ComposioActionSchema[] = base.map((t) => {
+      const displayName =
+        t.name ||
+        t.slug
+          .replace(/^[A-Z]+_/, "")
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+
+      const result: ComposioActionSchema = {
         slug: t.slug,
         name: displayName,
         description: t.description ?? "",
+        isImportant: importantSlugs.has(t.slug),
       };
+
+      if (includeSchemas && t.inputParameters) {
+        result.inputSchema = {
+          type: "object",
+          properties: (t.inputParameters.properties ?? {}) as Record<
+            string,
+            JsonSchemaProperty
+          >,
+          required: t.inputParameters.required,
+        };
+      }
+
+      return result;
+    });
+
+    // Sort: important actions first, then alphabetical
+    tools.sort((a, b) => {
+      if (a.isImportant !== b.isImportant) return a.isImportant ? -1 : 1;
+      return a.name.localeCompare(b.name);
     });
 
     return NextResponse.json({ tools });

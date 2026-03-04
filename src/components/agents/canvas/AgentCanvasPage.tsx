@@ -66,7 +66,6 @@ export interface AgentCanvasPageProps {
     status: string;
     created_at: string;
     wizard_config?: WizardConfig | null;
-    tool_guidelines?: string | null;
     canvas_layout?: SavedPositions | null;
   };
   personality: {
@@ -105,7 +104,6 @@ function AgentCanvasInner({
       status: agent.status,
       systemPrompt: agent.system_prompt,
       wizardConfig: (agent.wizard_config as WizardConfig) ?? null,
-      toolGuidelines: (agent.tool_guidelines as string | null) ?? null,
     }),
     [agent, personality]
   );
@@ -148,7 +146,6 @@ function AgentCanvasInner({
     model: formState.model,
     status: formState.status,
     wizard_config: formState.wizardConfig,
-    tool_guidelines: formState.toolGuidelines,
   }), [formState]);
 
   // ─── Autosave (5s debounce, no version creation) ──────────────────────
@@ -240,7 +237,6 @@ function AgentCanvasInner({
       model: string;
       status: string;
       wizard_config?: Record<string, unknown> | null;
-      tool_guidelines?: string | null;
     }) => {
       setFormState(() => ({
         name: revertedAgent.name,
@@ -252,7 +248,6 @@ function AgentCanvasInner({
         status: revertedAgent.status,
         systemPrompt: revertedAgent.system_prompt,
         wizardConfig: (revertedAgent.wizard_config as unknown as WizardConfig) ?? null,
-        toolGuidelines: (revertedAgent.tool_guidelines as string | null) ?? null,
       }));
       router.refresh();
       void refreshVersionCount();

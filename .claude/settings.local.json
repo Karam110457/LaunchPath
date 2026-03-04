@@ -19,7 +19,8 @@
       "Bash(npx next build)",
       "Bash(npx tsc --noEmit --pretty)",
       "Bash(node scripts/debug-composio-tools.mjs)",
-      "Bash(xargs cat)"
+      "Bash(xargs cat)",
+      "Bash(ls c:/Dev/LaunchPath/src/app/api/agents/[agentId]/tools/)"
     ]
   }
 }
