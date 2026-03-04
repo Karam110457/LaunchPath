@@ -216,8 +216,15 @@ export function AppLibraryModal({
       });
       void connect(app.toolkit, app.name, app.logo ?? app.icon, "OAUTH2");
     } else if (category === "simple") {
-      // Connect using the simple scheme (e.g. API_KEY)
+      // Connect using the simple scheme (e.g. API_KEY).
+      // Backend will return CREDENTIALS_REQUIRED with the fields the user needs to fill.
       const simpleSchemes = getSimpleSchemes(app);
+      setCredentialsContext({
+        toolkit: app.toolkit,
+        toolkitName: app.name,
+        toolkitIcon: app.logo ?? app.icon,
+        authScheme: simpleSchemes[0],
+      });
       void connect(app.toolkit, app.name, app.logo ?? app.icon, simpleSchemes[0]);
     } else {
       // Managed or noAuth — connect normally
@@ -239,9 +246,11 @@ export function AppLibraryModal({
     authScheme: string;
   } | null>(null);
 
-  // When connectError changes, capture context for the credentials form
+  // When connectError changes, capture context for the credentials form.
+  // CREDENTIALS_REQUIRED = simple scheme (API_KEY/BEARER_TOKEN/BASIC) needs user credentials.
+  // CUSTOM_CREDENTIALS_REQUIRED = OAuth scheme needs developer credentials.
   const showCredentialsForm =
-    connectError?.code === "CUSTOM_CREDENTIALS_REQUIRED" &&
+    (connectError?.code === "CREDENTIALS_REQUIRED" || connectError?.code === "CUSTOM_CREDENTIALS_REQUIRED") &&
     (connectError.requiredFields ?? []).length > 0;
 
   const handleCredentialsSubmit = (credentials: Record<string, string>) => {
@@ -335,12 +344,12 @@ export function AppLibraryModal({
           ))}
         </div>
 
-        {/* Custom credentials form — shown when an app needs developer credentials */}
+        {/* Custom credentials form — shown when an app needs credentials */}
         {showCredentialsForm && connectError && credentialsContext && (
           <div className="mx-6 mb-3 px-4 py-4 rounded-lg bg-muted/30 border border-border/50">
             <OAuthCredentialsForm
               toolkitName={credentialsContext.toolkitName}
-              authScheme={credentialsContext.authScheme}
+              authScheme={connectError.authScheme ?? credentialsContext.authScheme}
               requiredFields={connectError.requiredFields!}
               submitting={connecting === credentialsContext.toolkit}
               onSubmit={handleCredentialsSubmit}

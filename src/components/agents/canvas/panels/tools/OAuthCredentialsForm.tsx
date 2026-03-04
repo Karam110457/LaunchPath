@@ -21,10 +21,12 @@ interface OAuthCredentialsFormProps {
   onCancel: () => void;
 }
 
+const SIMPLE_SCHEMES = new Set(["API_KEY", "BEARER_TOKEN", "BASIC"]);
+
 /** Whether a field name suggests it holds a secret value. */
 function isSensitiveField(name: string): boolean {
   const lower = name.toLowerCase();
-  return lower.includes("secret") || lower.includes("password") || lower.includes("token");
+  return lower.includes("secret") || lower.includes("password") || lower.includes("token") || lower.includes("api_key") || lower.includes("key");
 }
 
 export function OAuthCredentialsForm({
@@ -45,23 +47,26 @@ export function OAuthCredentialsForm({
     onSubmit(values);
   };
 
-  const schemeLabel =
-    authScheme.toUpperCase() === "OAUTH2" ? "OAuth" :
-    authScheme.toUpperCase() === "OAUTH1" ? "OAuth" :
-    authScheme;
+  const isSimple = SIMPLE_SCHEMES.has(authScheme.toUpperCase());
+  const schemeLabel = isSimple
+    ? ""
+    : authScheme.toUpperCase() === "OAUTH2" || authScheme.toUpperCase() === "OAUTH1"
+      ? "OAuth "
+      : `${authScheme} `;
 
   return (
     <div className="flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
       <div className="flex items-center gap-2 mb-1">
         <KeyRound className="w-4 h-4 text-primary" />
         <span className="text-sm font-medium text-foreground">
-          {toolkitName} {schemeLabel} Credentials
+          Connect {toolkitName}
         </span>
       </div>
 
       <p className="text-xs text-muted-foreground leading-relaxed">
-        This app requires your own developer credentials. Register an application
-        with {toolkitName} and enter your credentials below.
+        {isSimple
+          ? `Enter your ${toolkitName} credentials below to connect.`
+          : `This app requires your own ${schemeLabel}developer credentials. Register an application with ${toolkitName} and enter your credentials below.`}
       </p>
 
       {requiredFields.map((field) => {

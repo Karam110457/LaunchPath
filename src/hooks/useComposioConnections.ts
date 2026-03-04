@@ -30,6 +30,8 @@ export interface ComposioConnectError {
   message: string;
   requiredFields?: { name: string; displayName: string; description: string }[];
   availableSchemes?: { mode: string; needsDevSetup: boolean }[];
+  /** The auth scheme detected by the backend (e.g. "API_KEY", "OAUTH2") */
+  authScheme?: string;
 }
 
 interface UseComposioConnectionsReturn {
@@ -163,6 +165,7 @@ export function useComposioConnections(): UseComposioConnectionsReturn {
             code?: string;
             requiredFields?: { name: string; displayName: string; description: string }[];
             availableSchemes?: { mode: string; needsDevSetup: boolean }[];
+            authScheme?: string;
           };
           setConnectError({
             toolkit,
@@ -170,6 +173,7 @@ export function useComposioConnections(): UseComposioConnectionsReturn {
             message: errData.error ?? "Failed to initiate connection",
             requiredFields: errData.requiredFields,
             availableSchemes: errData.availableSchemes,
+            authScheme: errData.authScheme,
           });
           setConnecting(null);
           return;
