@@ -113,14 +113,16 @@ export function assemblePrompt(input: AssemblePromptInput): AssemblePromptResult
                 .toLowerCase()
                 .replace(/_/g, " ");
 
-              // Note pinned params so agent knows about constraints
+              // Note pinned and default params so agent knows about constraints
               const actionCfg = cfg.action_configs?.[k];
-              const pinnedEntries =
-                actionCfg &&
-                typeof actionCfg === "object" &&
-                (actionCfg as ActionConfig).pinned_params
-                  ? Object.entries((actionCfg as ActionConfig).pinned_params)
-                  : [];
+              const typed = actionCfg as ActionConfig | undefined;
+
+              const pinnedEntries = typed?.pinned_params
+                ? Object.entries(typed.pinned_params)
+                : [];
+              const defaultEntries = typed?.default_params
+                ? Object.entries(typed.default_params)
+                : [];
 
               const pinnedNote =
                 pinnedEntries.length > 0
@@ -128,8 +130,14 @@ export function assemblePrompt(input: AssemblePromptInput): AssemblePromptResult
                       .map(([pName, pVal]) => `${pName}="${pVal}"`)
                       .join(", ")})`
                   : "";
+              const defaultNote =
+                defaultEntries.length > 0
+                  ? ` (defaults: ${defaultEntries
+                      .map(([pName, pVal]) => `${pName}="${pVal}"`)
+                      .join(", ")})`
+                  : "";
 
-              return `  - \`${k}\` — ${friendly}${pinnedNote}`;
+              return `  - \`${k}\` — ${friendly}${pinnedNote}${defaultNote}`;
             })
             .join("\n");
           toolLines.push(

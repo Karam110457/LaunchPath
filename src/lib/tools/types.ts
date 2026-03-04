@@ -42,15 +42,16 @@ export interface ComposioToolConfig {
   toolkit_icon?: string;      // Logo URL or single char fallback
   connection_id: string;      // FK to user_composio_connections.id
   enabled_actions?: string[]; // e.g. ["GMAIL_SEND_EMAIL"] — undefined = all important actions
-  /** Per-action parameter pinning. Keys are action slugs. */
+  /** Per-action parameter configuration. Keys are action slugs. */
   action_configs?: Record<string, ActionConfig>;
-  /** Which preset was selected (UI metadata only, not used at runtime). */
-  selected_preset?: string;
 }
 
-/** Configuration for a single Composio action — pinned parameter values. */
+/** Configuration for a single Composio action — fixed and default parameter values. */
 export interface ActionConfig {
+  /** Hardcoded: stripped from schema, always injected. AI never sees these. */
   pinned_params: Record<string, unknown>;
+  /** Defaults: kept in schema, injected only if AI doesn't provide a value. */
+  default_params?: Record<string, unknown>;
 }
 
 // ------------------------------------------------------------------
@@ -67,6 +68,12 @@ export interface ComposioActionSchema {
     properties: Record<string, JsonSchemaProperty>;
     required?: string[];
   };
+  // Action-level metadata from Composio API
+  isDeprecated?: boolean;
+  noAuth?: boolean;
+  scopes?: string[];
+  tags?: string[];
+  outputSchema?: Record<string, JsonSchemaProperty>;
 }
 
 export interface JsonSchemaProperty {
@@ -75,6 +82,26 @@ export interface JsonSchemaProperty {
   enum?: unknown[];
   default?: unknown;
   title?: string;
+  // Format hints
+  format?: string;              // "date-time", "date", "time", "email", "uri"
+  // Array / object
+  items?: JsonSchemaProperty;
+  properties?: Record<string, JsonSchemaProperty>;
+  required?: string[];
+  // Validation constraints
+  examples?: unknown[];
+  minimum?: number;
+  maximum?: number;
+  minLength?: number;
+  maxLength?: number;
+  pattern?: string;
+  // Special
+  const?: unknown;              // fixed value — not editable
+  nullable?: boolean;
+  deprecated?: boolean;
+  // Composition
+  oneOf?: JsonSchemaProperty[];
+  anyOf?: JsonSchemaProperty[];
 }
 
 // ------------------------------------------------------------------

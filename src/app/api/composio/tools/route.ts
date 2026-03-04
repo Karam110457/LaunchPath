@@ -22,6 +22,12 @@ type RawTool = {
     properties?: Record<string, JsonSchemaProperty>;
     required?: string[];
   };
+  // Additional metadata from Composio API
+  outputParameters?: Record<string, unknown>;
+  isDeprecated?: boolean;
+  noAuth?: boolean;
+  scopes?: string[];
+  tags?: string[];
 };
 
 export async function GET(request: NextRequest) {
@@ -91,6 +97,19 @@ export async function GET(request: NextRequest) {
           >,
           required: t.inputParameters.required,
         };
+      }
+
+      // Action-level metadata
+      if (t.isDeprecated) result.isDeprecated = true;
+      if (t.noAuth) result.noAuth = true;
+      if (t.scopes?.length) result.scopes = t.scopes;
+      if (t.tags?.length) result.tags = t.tags;
+      if (includeSchemas && t.outputParameters) {
+        const outProps = (t.outputParameters as { properties?: Record<string, unknown> })
+          .properties;
+        if (outProps && Object.keys(outProps).length > 0) {
+          result.outputSchema = outProps as Record<string, JsonSchemaProperty>;
+        }
       }
 
       return result;

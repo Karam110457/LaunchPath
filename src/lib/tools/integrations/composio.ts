@@ -248,11 +248,12 @@ function wrapToolExecute(
 }
 
 /**
- * Creates a schema modifier that cleans descriptions AND strips pinned
- * parameter fields so the LLM never sees them.
+ * Creates a schema modifier that cleans descriptions, strips pinned (fixed)
+ * parameter fields, and annotates default parameter fields.
  */
 function makeSchemaModifier(
-  pinnedParamsMap: Map<string, Record<string, unknown>>
+  pinnedParamsMap: Map<string, Record<string, unknown>>,
+  defaultParamsMap: Map<string, Record<string, unknown>>
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return function modifySchema(context: { toolSlug: string; toolkitSlug: string; schema: any }): any {
@@ -266,20 +267,34 @@ function makeSchemaModifier(
         .trim();
     }
 
-    // Strip pinned fields from input schema so LLM doesn't try to fill them
+    const inputSchema =
+      schema.inputSchema ?? schema.parameters ?? schema.input;
+    if (!inputSchema || typeof inputSchema !== "object" || !inputSchema.properties) {
+      return schema;
+    }
+
+    // Strip pinned (fixed) fields — LLM never sees them
     const pinned = pinnedParamsMap.get(context.toolSlug);
     if (pinned) {
-      // The schema object shape may vary — check common locations
-      const inputSchema =
-        schema.inputSchema ?? schema.parameters ?? schema.input;
-      if (inputSchema && typeof inputSchema === "object" && inputSchema.properties) {
-        for (const paramName of Object.keys(pinned)) {
-          delete inputSchema.properties[paramName];
-          if (Array.isArray(inputSchema.required)) {
-            inputSchema.required = inputSchema.required.filter(
-              (r: string) => r !== paramName
-            );
-          }
+      for (const paramName of Object.keys(pinned)) {
+        delete inputSchema.properties[paramName];
+        if (Array.isArray(inputSchema.required)) {
+          inputSchema.required = inputSchema.required.filter(
+            (r: string) => r !== paramName
+          );
+        }
+      }
+    }
+
+    // Annotate default fields — LLM sees the field but knows about the fallback
+    const defaults = defaultParamsMap.get(context.toolSlug);
+    if (defaults) {
+      for (const [paramName, defaultValue] of Object.entries(defaults)) {
+        const prop = inputSchema.properties[paramName];
+        if (prop) {
+          const valStr = JSON.stringify(defaultValue);
+          prop.description = (prop.description ?? paramName) +
+            ` (default: ${valStr})`;
         }
       }
     }
@@ -289,10 +304,12 @@ function makeSchemaModifier(
 }
 
 /**
- * Creates a tool execute wrapper that injects pinned params and trims results.
+ * Creates a tool execute wrapper that injects default and pinned params,
+ * and trims results. Merge order: defaults < AI args < pinned.
  */
 function makeToolWrapper(
-  pinnedParamsMap: Map<string, Record<string, unknown>>
+  pinnedParamsMap: Map<string, Record<string, unknown>>,
+  defaultParamsMap: Map<string, Record<string, unknown>>
 ) {
   return function wrapTool(
     toolKey: string,
@@ -302,13 +319,18 @@ function makeToolWrapper(
     if (typeof originalExecute !== "function") return toolDef;
 
     const pinned = pinnedParamsMap.get(toolKey);
+    const defaults = defaultParamsMap.get(toolKey);
 
     return {
       ...toolDef,
       execute: async (...args: unknown[]) => {
-        // Merge pinned values into args — pinned values always win
-        if (pinned && args[0] && typeof args[0] === "object") {
-          args[0] = { ...(args[0] as Record<string, unknown>), ...pinned };
+        // Merge: defaults fill gaps, AI args override defaults, pinned always wins
+        if ((pinned || defaults) && args[0] && typeof args[0] === "object") {
+          args[0] = {
+            ...(defaults ?? {}),
+            ...(args[0] as Record<string, unknown>),
+            ...(pinned ?? {}),
+          };
         }
 
         try {
@@ -369,6 +391,7 @@ export async function buildComposioTools(
     const toolkitsWithAllActions: string[] = [];
     const displayNameMap = new Map<string, string>();
     const pinnedParamsMap = new Map<string, Record<string, unknown>>();
+    const defaultParamsMap = new Map<string, Record<string, unknown>>();
 
     for (const record of records) {
       const cfg = record.config as unknown as ComposioToolConfig;
@@ -387,16 +410,17 @@ export async function buildComposioTools(
         }
       }
 
-      // Collect pinned params from action_configs
+      // Collect pinned and default params from action_configs
       if (cfg.action_configs) {
         for (const [actionSlug, actionCfg] of Object.entries(cfg.action_configs)) {
-          if (
-            actionCfg &&
-            typeof actionCfg === "object" &&
-            (actionCfg as ActionConfig).pinned_params &&
-            Object.keys((actionCfg as ActionConfig).pinned_params).length > 0
-          ) {
-            pinnedParamsMap.set(actionSlug, (actionCfg as ActionConfig).pinned_params);
+          if (!actionCfg || typeof actionCfg !== "object") continue;
+          const typed = actionCfg as ActionConfig;
+
+          if (typed.pinned_params && Object.keys(typed.pinned_params).length > 0) {
+            pinnedParamsMap.set(actionSlug, typed.pinned_params);
+          }
+          if (typed.default_params && Object.keys(typed.default_params).length > 0) {
+            defaultParamsMap.set(actionSlug, typed.default_params);
           }
         }
       }
@@ -427,9 +451,9 @@ export async function buildComposioTools(
       return { tools, failures };
     }
 
-    // Build schema modifier and tool wrapper with pinned params
-    const modifySchema = makeSchemaModifier(pinnedParamsMap);
-    const wrapTool = makeToolWrapper(pinnedParamsMap);
+    // Build schema modifier and tool wrapper with pinned + default params
+    const modifySchema = makeSchemaModifier(pinnedParamsMap, defaultParamsMap);
+    const wrapTool = makeToolWrapper(pinnedParamsMap, defaultParamsMap);
     const options = { modifySchema };
 
     // Fetch tools — SDK requires either `tools` or `toolkits`, not both.

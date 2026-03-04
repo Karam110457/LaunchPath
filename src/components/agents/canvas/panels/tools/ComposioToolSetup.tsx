@@ -6,8 +6,11 @@ import {
   Wrench,
   X,
   ChevronDown,
-  Pin,
-  Sparkles,
+  ChevronRight,
+  Info,
+  AlertTriangle,
+  Shield,
+  Tag,
 } from "lucide-react";
 import {
   Dialog,
@@ -16,7 +19,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { getPresetsForToolkit, generateToolDescription } from "@/lib/tools/presets";
 import type {
   AgentToolResponse,
   ComposioToolConfig,
@@ -24,7 +26,6 @@ import type {
   ActionConfig,
   JsonSchemaProperty,
 } from "@/lib/tools/types";
-import type { ToolkitPreset } from "@/lib/tools/presets";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -42,6 +43,12 @@ interface ComposioToolSetupProps {
 }
 
 // ---------------------------------------------------------------------------
+// Parameter mode type
+// ---------------------------------------------------------------------------
+
+type ParamMode = "ai" | "default" | "fixed";
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -57,11 +64,98 @@ function getDefaultForType(type?: string): unknown {
   }
 }
 
+function placeholderFromExamples(prop: JsonSchemaProperty): string | undefined {
+  if (!prop.examples || prop.examples.length === 0) return undefined;
+  return `e.g. ${String(prop.examples[0])}`;
+}
+
+const INPUT_CLASS =
+  "w-full px-2 py-1 text-xs bg-background border border-border/50 rounded focus:outline-none focus:ring-1 focus:ring-primary/40";
+
 // ---------------------------------------------------------------------------
-// PinnedValueInput — renders the right input for a JSON Schema property
+// CharCounter — shows min/max length constraints
 // ---------------------------------------------------------------------------
 
-function PinnedValueInput({
+function CharCounter({
+  value,
+  minLength,
+  maxLength,
+}: {
+  value: string;
+  minLength?: number;
+  maxLength?: number;
+}) {
+  if (minLength === undefined && maxLength === undefined) return null;
+  const len = value.length;
+  const outOfBounds =
+    (minLength !== undefined && len < minLength) ||
+    (maxLength !== undefined && len > maxLength);
+
+  const parts: string[] = [];
+  if (maxLength !== undefined) parts.push(`${len}/${maxLength}`);
+  else parts.push(`${len} chars`);
+  if (minLength !== undefined) parts.push(`min ${minLength}`);
+
+  return (
+    <span
+      className={cn(
+        "text-[9px] mt-0.5 block",
+        outOfBounds ? "text-red-400/70" : "text-muted-foreground/40"
+      )}
+    >
+      {parts.join(" · ")}
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// VariantSelector — oneOf / anyOf support
+// ---------------------------------------------------------------------------
+
+function VariantSelector({
+  variants,
+  value,
+  onChange,
+}: {
+  variants: JsonSchemaProperty[];
+  value: unknown;
+  onChange: (v: unknown) => void;
+}) {
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const selected = variants[selectedIdx];
+
+  const labels = variants.map(
+    (v, i) => v.title ?? v.type ?? `Option ${i + 1}`
+  );
+
+  return (
+    <div className="space-y-1">
+      <select
+        value={selectedIdx}
+        onChange={(e) => {
+          setSelectedIdx(Number(e.target.value));
+          onChange(getDefaultForType(variants[Number(e.target.value)]?.type));
+        }}
+        className={INPUT_CLASS}
+      >
+        {labels.map((label, i) => (
+          <option key={i} value={i}>
+            {label}
+          </option>
+        ))}
+      </select>
+      {selected && !selected.oneOf && !selected.anyOf && (
+        <ValueInput prop={selected} value={value} onChange={onChange} />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ObjectInput — renders sub-properties for nested objects (1 level)
+// ---------------------------------------------------------------------------
+
+function ObjectInput({
   prop,
   value,
   onChange,
@@ -70,12 +164,114 @@ function PinnedValueInput({
   value: unknown;
   onChange: (v: unknown) => void;
 }) {
+  const properties = prop.properties ?? {};
+  const entries = Object.entries(properties);
+  const obj = (value && typeof value === "object" ? value : {}) as Record<
+    string,
+    unknown
+  >;
+
+  // > 6 fields → JSON textarea fallback
+  if (entries.length === 0 || entries.length > 6) {
+    return (
+      <textarea
+        value={
+          typeof value === "string"
+            ? value
+            : JSON.stringify(value ?? {}, null, 2)
+        }
+        onChange={(e) => {
+          try {
+            onChange(JSON.parse(e.target.value));
+          } catch {
+            onChange(e.target.value);
+          }
+        }}
+        rows={3}
+        className={cn(INPUT_CLASS, "font-mono resize-none")}
+        placeholder="{}"
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-1.5 pl-2 border-l border-border/20">
+      {entries.map(([name, subProp]) => (
+        <div key={name}>
+          <span className="text-[9px] text-muted-foreground/60 font-medium">
+            {subProp.title || name}
+            {subProp.type ? (
+              <span className="text-muted-foreground/30 ml-1">
+                {subProp.type}
+              </span>
+            ) : null}
+          </span>
+          {/* Sub-objects fall back to JSON textarea */}
+          {subProp.type === "object" ? (
+            <textarea
+              value={
+                typeof obj[name] === "string"
+                  ? (obj[name] as string)
+                  : JSON.stringify(obj[name] ?? {}, null, 2)
+              }
+              onChange={(e) => {
+                try {
+                  onChange({ ...obj, [name]: JSON.parse(e.target.value) });
+                } catch {
+                  onChange({ ...obj, [name]: e.target.value });
+                }
+              }}
+              rows={2}
+              className={cn(INPUT_CLASS, "font-mono resize-none")}
+              placeholder="{}"
+            />
+          ) : (
+            <ValueInput
+              prop={subProp}
+              value={obj[name]}
+              onChange={(v) => onChange({ ...obj, [name]: v })}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ValueInput — renders the right input for a JSON Schema property
+// ---------------------------------------------------------------------------
+
+function ValueInput({
+  prop,
+  value,
+  onChange,
+}: {
+  prop: JsonSchemaProperty;
+  value: unknown;
+  onChange: (v: unknown) => void;
+}) {
+  const placeholder =
+    placeholderFromExamples(prop) ??
+    (prop.default !== undefined ? String(prop.default) : "");
+
+  // const → readonly display
+  if (prop.const !== undefined) {
+    return (
+      <div className="px-2 py-1 text-xs bg-muted/50 border border-border/30 rounded text-muted-foreground">
+        {String(prop.const)}{" "}
+        <span className="text-[9px] italic">(fixed)</span>
+      </div>
+    );
+  }
+
+  // enum → <select>
   if (prop.enum && prop.enum.length > 0) {
     return (
       <select
         value={String(value ?? "")}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-2 py-1 text-xs bg-background border border-border/50 rounded focus:outline-none focus:ring-1 focus:ring-primary/40"
+        className={INPUT_CLASS}
       >
         <option value="">Select...</option>
         {prop.enum.map((v) => (
@@ -87,6 +283,15 @@ function PinnedValueInput({
     );
   }
 
+  // oneOf / anyOf → variant selector
+  const variants = prop.oneOf ?? prop.anyOf;
+  if (variants && variants.length > 1) {
+    return (
+      <VariantSelector variants={variants} value={value} onChange={onChange} />
+    );
+  }
+
+  // boolean → toggle
   if (prop.type === "boolean") {
     return (
       <button
@@ -107,6 +312,7 @@ function PinnedValueInput({
     );
   }
 
+  // number / integer → with min/max
   if (prop.type === "number" || prop.type === "integer") {
     return (
       <input
@@ -115,36 +321,162 @@ function PinnedValueInput({
         onChange={(e) =>
           onChange(e.target.value === "" ? "" : Number(e.target.value))
         }
-        className="w-full px-2 py-1 text-xs bg-background border border-border/50 rounded focus:outline-none focus:ring-1 focus:ring-primary/40"
-        placeholder={prop.default !== undefined ? String(prop.default) : ""}
+        min={prop.minimum}
+        max={prop.maximum}
+        step={prop.type === "integer" ? 1 : undefined}
+        className={INPUT_CLASS}
+        placeholder={placeholder}
       />
     );
   }
 
-  // Default: text input
+  // format-specific inputs
+  if (prop.format === "date-time") {
+    return (
+      <input
+        type="datetime-local"
+        value={String(value ?? "")}
+        onChange={(e) => onChange(e.target.value)}
+        className={INPUT_CLASS}
+      />
+    );
+  }
+  if (prop.format === "date") {
+    return (
+      <input
+        type="date"
+        value={String(value ?? "")}
+        onChange={(e) => onChange(e.target.value)}
+        className={INPUT_CLASS}
+      />
+    );
+  }
+  if (prop.format === "time") {
+    return (
+      <input
+        type="time"
+        value={String(value ?? "")}
+        onChange={(e) => onChange(e.target.value)}
+        className={INPUT_CLASS}
+      />
+    );
+  }
+  if (prop.format === "email") {
+    return (
+      <input
+        type="email"
+        value={String(value ?? "")}
+        onChange={(e) => onChange(e.target.value)}
+        className={INPUT_CLASS}
+        placeholder={placeholder || "user@example.com"}
+      />
+    );
+  }
+  if (prop.format === "uri") {
+    return (
+      <input
+        type="url"
+        value={String(value ?? "")}
+        onChange={(e) => onChange(e.target.value)}
+        className={INPUT_CLASS}
+        placeholder={placeholder || "https://"}
+      />
+    );
+  }
+
+  // array → JSON textarea
+  if (prop.type === "array") {
+    return (
+      <textarea
+        value={
+          typeof value === "string"
+            ? value
+            : JSON.stringify(value ?? [], null, 2)
+        }
+        onChange={(e) => {
+          try {
+            onChange(JSON.parse(e.target.value));
+          } catch {
+            onChange(e.target.value);
+          }
+        }}
+        rows={3}
+        className={cn(INPUT_CLASS, "font-mono resize-none")}
+        placeholder={placeholder || "[]"}
+      />
+    );
+  }
+
+  // object with properties → nested input
+  if (prop.type === "object" && prop.properties) {
+    return <ObjectInput prop={prop} value={value} onChange={onChange} />;
+  }
+
+  // object without properties → JSON textarea
+  if (prop.type === "object") {
+    return (
+      <textarea
+        value={
+          typeof value === "string"
+            ? value
+            : JSON.stringify(value ?? {}, null, 2)
+        }
+        onChange={(e) => {
+          try {
+            onChange(JSON.parse(e.target.value));
+          } catch {
+            onChange(e.target.value);
+          }
+        }}
+        rows={3}
+        className={cn(INPUT_CLASS, "font-mono resize-none")}
+        placeholder="{}"
+      />
+    );
+  }
+
+  // Default: text input with optional character counter
+  const strVal = String(value ?? "");
+  const hasLengthConstraint =
+    prop.minLength !== undefined || prop.maxLength !== undefined;
+
   return (
-    <input
-      type="text"
-      value={String(value ?? "")}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full px-2 py-1 text-xs bg-background border border-border/50 rounded focus:outline-none focus:ring-1 focus:ring-primary/40"
-      placeholder={prop.default !== undefined ? String(prop.default) : ""}
-    />
+    <div>
+      <input
+        type="text"
+        value={strVal}
+        onChange={(e) => onChange(e.target.value)}
+        className={INPUT_CLASS}
+        placeholder={placeholder}
+        maxLength={prop.maxLength}
+      />
+      {hasLengthConstraint && (
+        <CharCounter
+          value={strVal}
+          minLength={prop.minLength}
+          maxLength={prop.maxLength}
+        />
+      )}
+    </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// ParameterPinningPanel — expanded per-action field configuration
+// ParameterConfigPanel — three-state per-parameter configuration
 // ---------------------------------------------------------------------------
 
-function ParameterPinningPanel({
+function ParameterConfigPanel({
   schema,
   pinnedParams,
-  onUpdate,
+  defaultParams,
+  onPinnedUpdate,
+  onDefaultUpdate,
 }: {
   schema: NonNullable<ComposioActionSchema["inputSchema"]>;
   pinnedParams: Record<string, unknown>;
-  onUpdate: (params: Record<string, unknown>) => void;
+  defaultParams: Record<string, unknown>;
+  onPinnedUpdate: (params: Record<string, unknown>) => void;
+  onDefaultUpdate: (params: Record<string, unknown>) => void;
 }) {
   const properties = schema.properties ?? {};
   const requiredSet = useMemo(
@@ -164,78 +496,260 @@ function ParameterPinningPanel({
     );
   }
 
-  const togglePin = (fieldName: string, currentlyPinned: boolean) => {
-    const next = { ...pinnedParams };
-    if (currentlyPinned) {
-      delete next[fieldName];
-    } else {
-      const prop = properties[fieldName];
-      next[fieldName] = prop?.default ?? getDefaultForType(prop?.type);
+  const getMode = (name: string): ParamMode =>
+    name in pinnedParams ? "fixed" : name in defaultParams ? "default" : "ai";
+
+  const handleModeChange = (fieldName: string, newMode: ParamMode) => {
+    const prop = properties[fieldName];
+    const currentValue =
+      pinnedParams[fieldName] ??
+      defaultParams[fieldName] ??
+      prop?.default ??
+      getDefaultForType(prop?.type);
+
+    const nextPinned = { ...pinnedParams };
+    const nextDefault = { ...defaultParams };
+
+    delete nextPinned[fieldName];
+    delete nextDefault[fieldName];
+
+    if (newMode === "fixed") {
+      nextPinned[fieldName] = currentValue;
+    } else if (newMode === "default") {
+      nextDefault[fieldName] = currentValue;
     }
-    onUpdate(next);
+
+    onPinnedUpdate(nextPinned);
+    onDefaultUpdate(nextDefault);
   };
 
-  const updateValue = (fieldName: string, value: unknown) => {
-    onUpdate({ ...pinnedParams, [fieldName]: value });
+  const updateValue = (
+    fieldName: string,
+    value: unknown,
+    mode: ParamMode
+  ) => {
+    if (mode === "fixed") {
+      onPinnedUpdate({ ...pinnedParams, [fieldName]: value });
+    } else if (mode === "default") {
+      onDefaultUpdate({ ...defaultParams, [fieldName]: value });
+    }
   };
 
   return (
     <div className="px-2.5 pb-2.5 pt-1 border-t border-border/20">
       <p className="text-[10px] text-muted-foreground py-1.5">
-        Pin values so your agent always uses them. Unpinned fields are decided
-        by the AI at runtime.
+        <span className="font-medium text-foreground/70">AI</span>: model
+        decides.{" "}
+        <span className="font-medium text-blue-400">Default</span>: fallback if
+        AI omits.{" "}
+        <span className="font-medium text-amber-400">Fixed</span>: always used,
+        hidden from AI.
       </p>
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         {entries.map(([name, prop]) => {
-          const isPinned = name in pinnedParams;
+          const mode = getMode(name);
+          const isConst = prop.const !== undefined;
+
           return (
-            <div key={name} className="flex items-start gap-2">
-              <button
-                type="button"
-                onClick={() => togglePin(name, isPinned)}
-                className={cn(
-                  "mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0",
-                  isPinned
-                    ? "border-amber-400 bg-amber-500/20"
-                    : "border-muted-foreground/30 hover:border-muted-foreground/50"
-                )}
-                title={isPinned ? "Unpin — let AI decide" : "Pin — use fixed value"}
-              >
-                {isPinned && <Pin className="w-2.5 h-2.5 text-amber-400" />}
-              </button>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-medium">{prop.title || name}</span>
-                  {requiredSet.has(name) && (
-                    <span className="text-[9px] text-red-400">required</span>
-                  )}
-                  <span className="text-[9px] text-muted-foreground/50">
-                    {prop.type}
+            <div key={name}>
+              {/* Header row */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-[11px] font-medium truncate">
+                    {prop.title || name}
                   </span>
+                  {requiredSet.has(name) && (
+                    <span className="text-[9px] text-red-400 shrink-0">
+                      required
+                    </span>
+                  )}
+                  <span className="text-[9px] text-muted-foreground/50 shrink-0">
+                    {prop.type}
+                    {prop.format ? ` (${prop.format})` : ""}
+                  </span>
+                  {prop.description && (
+                    <button
+                      type="button"
+                      className="text-muted-foreground/40 hover:text-muted-foreground transition-colors shrink-0"
+                      title={prop.description}
+                    >
+                      <Info className="w-3 h-3" />
+                    </button>
+                  )}
+                  {prop.deprecated && (
+                    <span className="text-[9px] text-orange-400 shrink-0">
+                      deprecated
+                    </span>
+                  )}
                 </div>
-                {prop.description && (
-                  <p className="text-[10px] text-muted-foreground/60 line-clamp-1">
-                    {prop.description}
-                  </p>
-                )}
-                {isPinned ? (
-                  <div className="mt-1">
-                    <PinnedValueInput
-                      prop={prop}
-                      value={pinnedParams[name]}
-                      onChange={(v) => updateValue(name, v)}
-                    />
+
+                {/* Mode selector */}
+                {!isConst && (
+                  <div className="flex items-center gap-0 rounded border border-border/30 overflow-hidden shrink-0">
+                    {(["ai", "default", "fixed"] as const).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => handleModeChange(name, m)}
+                        className={cn(
+                          "px-1.5 py-0.5 text-[9px] font-medium transition-colors",
+                          mode === m
+                            ? m === "fixed"
+                              ? "bg-amber-500/20 text-amber-400"
+                              : m === "default"
+                                ? "bg-blue-500/20 text-blue-400"
+                                : "bg-muted text-muted-foreground"
+                            : "text-muted-foreground/40 hover:text-muted-foreground"
+                        )}
+                      >
+                        {m === "ai"
+                          ? "AI"
+                          : m === "default"
+                            ? "Default"
+                            : "Fixed"}
+                      </button>
+                    ))}
                   </div>
-                ) : (
-                  <p className="text-[10px] text-muted-foreground/40 italic mt-0.5">
-                    AI decides
-                  </p>
                 )}
               </div>
+
+              {/* Value input (for non-AI modes and const) */}
+              {isConst ? (
+                <div className="mt-1">
+                  <ValueInput prop={prop} value={prop.const} onChange={() => {}} />
+                </div>
+              ) : mode !== "ai" ? (
+                <div className="mt-1">
+                  {/* Nullable toggle */}
+                  {prop.nullable && (
+                    <label className="flex items-center gap-1.5 mb-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={
+                          (mode === "fixed" ? pinnedParams[name] : defaultParams[name]) === null
+                        }
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            updateValue(name, null, mode);
+                          } else {
+                            updateValue(
+                              name,
+                              prop.default ?? getDefaultForType(prop.type),
+                              mode
+                            );
+                          }
+                        }}
+                        className="w-3 h-3 rounded border-border/50"
+                      />
+                      <span className="text-[9px] text-muted-foreground/60">
+                        null
+                      </span>
+                    </label>
+                  )}
+                  {/* Actual value input (hidden when nullable and value is null) */}
+                  {!(
+                    prop.nullable &&
+                    (mode === "fixed" ? pinnedParams[name] : defaultParams[name]) === null
+                  ) && (
+                    <ValueInput
+                      prop={prop}
+                      value={
+                        mode === "fixed"
+                          ? pinnedParams[name]
+                          : defaultParams[name]
+                      }
+                      onChange={(v) => updateValue(name, v, mode)}
+                    />
+                  )}
+                </div>
+              ) : null}
             </div>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ActionMetadata — informational display for action-level metadata
+// ---------------------------------------------------------------------------
+
+function ActionMetadata({ action }: { action: ComposioActionSchema }) {
+  const [showOutput, setShowOutput] = useState(false);
+  const hasTags = action.tags && action.tags.length > 0;
+  const hasScopes = action.scopes && action.scopes.length > 0;
+  const hasOutput =
+    action.outputSchema && Object.keys(action.outputSchema).length > 0;
+
+  if (!hasTags && !hasScopes && !action.noAuth && !hasOutput) return null;
+
+  return (
+    <div className="px-2.5 pb-2 pt-1 border-t border-border/20 space-y-1.5">
+      {/* Tags */}
+      {hasTags && (
+        <div className="flex items-center gap-1 flex-wrap">
+          <Tag className="w-2.5 h-2.5 text-muted-foreground/40 shrink-0" />
+          {action.tags!.map((tag) => (
+            <span
+              key={tag}
+              className="text-[9px] px-1.5 py-0.5 bg-muted/50 text-muted-foreground/70 rounded"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Scopes */}
+      {hasScopes && (
+        <div className="flex items-start gap-1">
+          <Shield className="w-2.5 h-2.5 text-muted-foreground/40 shrink-0 mt-0.5" />
+          <span className="text-[10px] text-muted-foreground/60">
+            Permissions: {action.scopes!.join(", ")}
+          </span>
+        </div>
+      )}
+
+      {/* No auth */}
+      {action.noAuth && (
+        <p className="text-[10px] text-emerald-400/70">
+          No authentication required
+        </p>
+      )}
+
+      {/* Output schema */}
+      {hasOutput && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowOutput(!showOutput)}
+            className="flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+          >
+            {showOutput ? (
+              <ChevronDown className="w-2.5 h-2.5" />
+            ) : (
+              <ChevronRight className="w-2.5 h-2.5" />
+            )}
+            Returns
+          </button>
+          {showOutput && (
+            <div className="mt-1 pl-3.5 space-y-0.5">
+              {Object.entries(action.outputSchema!).map(([name, prop]) => (
+                <div key={name} className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-mono text-muted-foreground/70">
+                    {name}
+                  </span>
+                  <span className="text-[9px] text-muted-foreground/40">
+                    {prop.type}
+                    {prop.format ? ` (${prop.format})` : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -260,13 +774,12 @@ export function ComposioToolSetup({
 
   // -- Selection state --
   const [enabledActions, setEnabledActions] = useState<Set<string>>(new Set());
-  const [actionConfigs, setActionConfigs] = useState<Record<string, ActionConfig>>({});
-  const [selectedPreset, setSelectedPreset] = useState<string | undefined>(undefined);
+  const [actionConfigs, setActionConfigs] = useState<
+    Record<string, ActionConfig>
+  >({});
 
   // -- Description --
   const [description, setDescription] = useState("");
-  const [descriptionManuallyEdited, setDescriptionManuallyEdited] = useState(false);
-  const [aiGenerating, setAiGenerating] = useState(false);
 
   // -- UI state --
   const [expandedAction, setExpandedAction] = useState<string | null>(null);
@@ -274,16 +787,6 @@ export function ComposioToolSetup({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-
-  // -- Presets --
-  const presets = useMemo(() => getPresetsForToolkit(toolkit), [toolkit]);
-  const hasPresets = presets.length > 0;
-
-  // -- Derived --
-  const importantActions = useMemo(
-    () => actions.filter((a) => a.isImportant),
-    [actions]
-  );
 
   // Fetch actions on mount
   useEffect(() => {
@@ -314,16 +817,13 @@ export function ComposioToolSetup({
             if (cfg.action_configs) {
               setActionConfigs(cfg.action_configs);
             }
-            setSelectedPreset(cfg.selected_preset ?? "all_important");
             setDescription(existing.description);
-            setDescriptionManuallyEdited(true);
           } else {
             // New tool: default to all important
             const impSlugs = data.tools
               .filter((t) => t.isImportant)
               .map((t) => t.slug);
             setEnabledActions(new Set(impSlugs));
-            setSelectedPreset("all_important");
           }
         }
       } catch {
@@ -339,96 +839,38 @@ export function ComposioToolSetup({
     };
   }, [toolkit, existing]);
 
-  // Auto-generate description when actions change (unless manually edited)
-  useEffect(() => {
-    if (descriptionManuallyEdited || actions.length === 0) return;
-    const selected = actions.filter((a) => enabledActions.has(a.slug));
-    const generated = generateToolDescription(toolkitName, selected);
-    setDescription(generated);
-  }, [enabledActions, actions, toolkitName, descriptionManuallyEdited]);
-
   // -- Handlers --
 
-  const handleToggleAction = useCallback(
-    (slug: string) => {
-      setEnabledActions((prev) => {
-        const next = new Set(prev);
-        if (next.has(slug)) {
-          next.delete(slug);
-        } else {
-          next.add(slug);
-        }
-        return next;
-      });
-      // Any manual toggle switches to custom mode
-      setSelectedPreset("custom");
-    },
-    []
-  );
-
-  const handleSelectPreset = useCallback(
-    (preset: ToolkitPreset) => {
-      // Intersect preset actions with available actions
-      const available = new Set(actions.map((a) => a.slug));
-      const toEnable = preset.actions.filter((s) => available.has(s));
-      setEnabledActions(new Set(toEnable));
-      setSelectedPreset(preset.id);
-      if (!descriptionManuallyEdited) {
-        setDescription(preset.description);
+  const handleToggleAction = useCallback((slug: string) => {
+    setEnabledActions((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) {
+        next.delete(slug);
+      } else {
+        next.add(slug);
       }
-    },
-    [actions, descriptionManuallyEdited]
-  );
-
-  const handleSelectAllImportant = useCallback(() => {
-    const impSlugs = importantActions.map((a) => a.slug);
-    setEnabledActions(new Set(impSlugs));
-    setSelectedPreset("all_important");
-  }, [importantActions]);
-
-  const handleSelectCustom = useCallback(() => {
-    setSelectedPreset("custom");
+      return next;
+    });
   }, []);
 
-  const handleAiGenerate = useCallback(async () => {
-    setAiGenerating(true);
-    try {
-      const selectedActions = actions
-        .filter((a) => enabledActions.has(a.slug))
-        .map((a) => a.name);
-
-      const res = await fetch(
-        `/api/agents/${agentId}/tools/generate-description`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            appName: toolkitName,
-            actions: selectedActions,
-          }),
-        }
-      );
-
-      if (res.ok) {
-        const data = (await res.json()) as { description: string };
-        setDescription(data.description);
-        setDescriptionManuallyEdited(true);
-      }
-    } catch {
-      // Network error — keep current description
-    } finally {
-      setAiGenerating(false);
-    }
-  }, [agentId, toolkitName, actions, enabledActions]);
-
-  const handleUpdatePinnedParams = useCallback(
-    (actionSlug: string, params: Record<string, unknown>) => {
+  const handleUpdateActionConfig = useCallback(
+    (
+      actionSlug: string,
+      pinned: Record<string, unknown>,
+      defaults: Record<string, unknown>
+    ) => {
       setActionConfigs((prev) => {
         const next = { ...prev };
-        if (Object.keys(params).length === 0) {
+        const hasPinned = Object.keys(pinned).length > 0;
+        const hasDefaults = Object.keys(defaults).length > 0;
+
+        if (!hasPinned && !hasDefaults) {
           delete next[actionSlug];
         } else {
-          next[actionSlug] = { pinned_params: params };
+          next[actionSlug] = {
+            pinned_params: pinned,
+            ...(hasDefaults ? { default_params: defaults } : {}),
+          };
         }
         return next;
       });
@@ -442,11 +884,18 @@ export function ComposioToolSetup({
 
     const enabledArray = Array.from(enabledActions);
 
-    // Only include action_configs for enabled actions with non-empty pinned params
+    // Only include action_configs for enabled actions with non-empty params
     const cleanedConfigs: Record<string, ActionConfig> = {};
     for (const [slug, cfg] of Object.entries(actionConfigs)) {
-      if (enabledActions.has(slug) && Object.keys(cfg.pinned_params).length > 0) {
-        cleanedConfigs[slug] = cfg;
+      if (!enabledActions.has(slug)) continue;
+      const hasPinned = Object.keys(cfg.pinned_params).length > 0;
+      const hasDefaults =
+        cfg.default_params && Object.keys(cfg.default_params).length > 0;
+      if (hasPinned || hasDefaults) {
+        cleanedConfigs[slug] = {
+          pinned_params: cfg.pinned_params,
+          ...(hasDefaults ? { default_params: cfg.default_params } : {}),
+        };
       }
     }
 
@@ -458,7 +907,6 @@ export function ComposioToolSetup({
       enabled_actions: enabledArray.length > 0 ? enabledArray : undefined,
       action_configs:
         Object.keys(cleanedConfigs).length > 0 ? cleanedConfigs : undefined,
-      selected_preset: selectedPreset,
     };
 
     try {
@@ -505,7 +953,6 @@ export function ComposioToolSetup({
     connectionId,
     enabledActions,
     actionConfigs,
-    selectedPreset,
     description,
     existing,
     onSaved,
@@ -526,7 +973,7 @@ export function ComposioToolSetup({
     }
   }, [agentId, existing, onSaved]);
 
-  const canSave = description.trim().length > 0 && enabledActions.size > 0;
+  const canSave = enabledActions.size > 0;
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -554,100 +1001,20 @@ export function ComposioToolSetup({
         <div className="flex-1 overflow-y-auto px-6 pb-5 space-y-5">
           {/* ── Agent instructions ────────────────────────────────────── */}
           <div>
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Agent instructions
-              </label>
-              <div className="flex items-center gap-2">
-                {descriptionManuallyEdited && (
-                  <button
-                    type="button"
-                    onClick={() => setDescriptionManuallyEdited(false)}
-                    className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Reset
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={handleAiGenerate}
-                  disabled={aiGenerating || actionsLoading}
-                  className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {aiGenerating ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <Sparkles className="w-3 h-3" />
-                  )}
-                  {aiGenerating ? "Generating..." : "AI Generate"}
-                </button>
-              </div>
-            </div>
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Agent instructions
+            </label>
             <textarea
               value={description}
-              onChange={(e) => {
-                setDescription(e.target.value);
-                setDescriptionManuallyEdited(true);
-              }}
+              onChange={(e) => setDescription(e.target.value)}
               rows={2}
               className="mt-1.5 w-full px-3 py-2 bg-muted/30 border border-border/50 rounded-lg text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder:text-muted-foreground/50"
               placeholder={`e.g. Use ${toolkitName} when the user asks to send emails or check their inbox`}
             />
             <p className="text-[10px] text-muted-foreground/60 mt-1">
-              Tells your agent when and how to use {toolkitName}. Updates
-              automatically as you toggle actions.
+              Tells your agent when and how to use {toolkitName}.
             </p>
           </div>
-
-          {/* ── Use-case presets ──────────────────────────────────────── */}
-          {hasPresets && (
-            <div>
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Use case
-              </label>
-              <div className="flex flex-wrap gap-1.5 mt-1.5">
-                <button
-                  type="button"
-                  onClick={handleSelectAllImportant}
-                  className={cn(
-                    "px-2.5 py-1 text-[11px] rounded-full border transition-colors",
-                    selectedPreset === "all_important"
-                      ? "border-primary/40 bg-primary/10 text-primary"
-                      : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
-                  )}
-                >
-                  All important
-                </button>
-                {presets.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => handleSelectPreset(preset)}
-                    className={cn(
-                      "px-2.5 py-1 text-[11px] rounded-full border transition-colors",
-                      selectedPreset === preset.id
-                        ? "border-primary/40 bg-primary/10 text-primary"
-                        : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
-                    )}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={handleSelectCustom}
-                  className={cn(
-                    "px-2.5 py-1 text-[11px] rounded-full border transition-colors",
-                    selectedPreset === "custom"
-                      ? "border-primary/40 bg-primary/10 text-primary"
-                      : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
-                  )}
-                >
-                  Custom
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* ── Action toggle list ────────────────────────────────────── */}
           <div>
@@ -679,9 +1046,13 @@ export function ComposioToolSetup({
                   const enabled = enabledActions.has(action.slug);
                   const expanded = expandedAction === action.slug;
                   const cfg = actionConfigs[action.slug];
-                  const pinnedCount = cfg
+                  const fixedCount = cfg
                     ? Object.keys(cfg.pinned_params).length
                     : 0;
+                  const defaultCount =
+                    cfg?.default_params
+                      ? Object.keys(cfg.default_params).length
+                      : 0;
 
                   return (
                     <div
@@ -731,9 +1102,20 @@ export function ComposioToolSetup({
                                 important
                               </span>
                             )}
-                            {pinnedCount > 0 && (
+                            {fixedCount > 0 && (
                               <span className="text-[9px] text-amber-400 bg-amber-500/10 px-1 rounded">
-                                {pinnedCount} pinned
+                                {fixedCount} fixed
+                              </span>
+                            )}
+                            {defaultCount > 0 && (
+                              <span className="text-[9px] text-blue-400 bg-blue-500/10 px-1 rounded">
+                                {defaultCount} default
+                              </span>
+                            )}
+                            {action.isDeprecated && (
+                              <span className="flex items-center gap-0.5 text-[9px] text-orange-400 bg-orange-500/10 px-1 rounded">
+                                <AlertTriangle className="w-2.5 h-2.5" />
+                                deprecated
                               </span>
                             )}
                           </div>
@@ -751,8 +1133,8 @@ export function ComposioToolSetup({
                           )}
                         </div>
 
-                        {/* Expand chevron for parameter pinning */}
-                        {enabled && action.inputSchema && (
+                        {/* Expand chevron for details */}
+                        {enabled && (action.inputSchema || action.tags?.length || action.scopes?.length || action.outputSchema || action.noAuth) && (
                           <button
                             type="button"
                             onClick={() =>
@@ -770,15 +1152,32 @@ export function ComposioToolSetup({
                         )}
                       </div>
 
-                      {/* Parameter pinning panel */}
-                      {expanded && enabled && action.inputSchema && (
-                        <ParameterPinningPanel
-                          schema={action.inputSchema}
-                          pinnedParams={cfg?.pinned_params ?? {}}
-                          onUpdate={(params) =>
-                            handleUpdatePinnedParams(action.slug, params)
-                          }
-                        />
+                      {/* Expanded details */}
+                      {expanded && enabled && (
+                        <>
+                          <ActionMetadata action={action} />
+                          {action.inputSchema && (
+                            <ParameterConfigPanel
+                              schema={action.inputSchema}
+                              pinnedParams={cfg?.pinned_params ?? {}}
+                              defaultParams={cfg?.default_params ?? {}}
+                              onPinnedUpdate={(pinned) =>
+                                handleUpdateActionConfig(
+                                  action.slug,
+                                  pinned,
+                                  cfg?.default_params ?? {}
+                                )
+                              }
+                              onDefaultUpdate={(defaults) =>
+                                handleUpdateActionConfig(
+                                  action.slug,
+                                  cfg?.pinned_params ?? {},
+                                  defaults
+                                )
+                              }
+                            />
+                          )}
+                        </>
                       )}
                     </div>
                   );
