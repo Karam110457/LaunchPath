@@ -9,8 +9,8 @@ import {
   ChevronRight,
   Info,
   AlertTriangle,
-  Shield,
-  Tag,
+  Bot,
+  Lock,
 } from "lucide-react";
 import {
   Dialog,
@@ -43,12 +43,6 @@ interface ComposioToolSetupProps {
 }
 
 // ---------------------------------------------------------------------------
-// Parameter mode type
-// ---------------------------------------------------------------------------
-
-type ParamMode = "ai" | "default" | "fixed";
-
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -69,11 +63,328 @@ function placeholderFromExamples(prop: JsonSchemaProperty): string | undefined {
   return `e.g. ${String(prop.examples[0])}`;
 }
 
-const INPUT_CLASS =
-  "w-full px-2 py-1 text-xs bg-background border border-border/50 rounded focus:outline-none focus:ring-1 focus:ring-primary/40";
+function humanLabel(name: string, prop: JsonSchemaProperty): string {
+  if (prop.title) return prop.title;
+  return name
+    .replace(/_/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 // ---------------------------------------------------------------------------
-// CharCounter — shows min/max length constraints
+// "Determined by AI" chip — dismissable badge
+// ---------------------------------------------------------------------------
+
+function AiChip({ onRemove }: { onRemove: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-medium">
+      <Bot className="w-3 h-3" />
+      Determined by AI
+      <button
+        type="button"
+        onClick={onRemove}
+        className="ml-0.5 rounded-full hover:bg-primary/20 p-0.5 transition-colors"
+      >
+        <X className="w-2.5 h-2.5" />
+      </button>
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ValueInput — renders type-specific inputs, each visually distinct
+// ---------------------------------------------------------------------------
+
+function ValueInput({
+  prop,
+  value,
+  onChange,
+  fieldName,
+}: {
+  prop: JsonSchemaProperty;
+  value: unknown;
+  onChange: (v: unknown) => void;
+  fieldName?: string;
+}) {
+  const placeholder =
+    placeholderFromExamples(prop) ??
+    (prop.default !== undefined ? String(prop.default) : "");
+
+  // const → readonly chip
+  if (prop.const !== undefined) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border/30 rounded-lg">
+        <Lock className="w-3 h-3 text-muted-foreground/50" />
+        <span className="text-xs text-muted-foreground">{String(prop.const)}</span>
+        <span className="text-[9px] text-muted-foreground/40 italic">locked</span>
+      </div>
+    );
+  }
+
+  // enum → styled select
+  if (prop.enum && prop.enum.length > 0) {
+    return (
+      <select
+        value={String(value ?? "")}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 appearance-none cursor-pointer"
+      >
+        <option value="">Select an option...</option>
+        {prop.enum.map((v) => (
+          <option key={String(v)} value={String(v)}>
+            {String(v)}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
+  // oneOf / anyOf → variant selector
+  const variants = prop.oneOf ?? prop.anyOf;
+  if (variants && variants.length > 1) {
+    return (
+      <VariantSelector variants={variants} value={value} onChange={onChange} />
+    );
+  }
+
+  // boolean → large clear toggle with label
+  if (prop.type === "boolean") {
+    const isOn = !!value;
+    return (
+      <button
+        type="button"
+        onClick={() => onChange(!value)}
+        className="flex items-center gap-3"
+      >
+        <div
+          className={cn(
+            "w-11 h-6 rounded-full transition-colors relative",
+            isOn ? "bg-primary" : "bg-muted-foreground/20"
+          )}
+        >
+          <span
+            className={cn(
+              "absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white transition-transform shadow-sm",
+              isOn ? "left-[22px]" : "left-[3px]"
+            )}
+          />
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {isOn ? "On" : "Off"}
+        </span>
+      </button>
+    );
+  }
+
+  // number / integer → slider + number display
+  if (prop.type === "number" || prop.type === "integer") {
+    const numVal =
+      value === undefined || value === null || value === ""
+        ? (prop.default as number) ?? 0
+        : Number(value);
+    const min = prop.minimum ?? 0;
+    const max = prop.maximum ?? 100;
+    const step = prop.type === "integer" ? 1 : 0.1;
+
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <input
+            type="range"
+            value={numVal}
+            onChange={(e) => onChange(Number(e.target.value))}
+            min={min}
+            max={max}
+            step={step}
+            className="flex-1 h-1.5 rounded-full appearance-none bg-muted-foreground/20 accent-primary cursor-pointer [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:shadow-md"
+          />
+          <input
+            type="number"
+            value={numVal}
+            onChange={(e) =>
+              onChange(e.target.value === "" ? 0 : Number(e.target.value))
+            }
+            min={min}
+            max={max}
+            step={step}
+            className="w-16 ml-3 px-2 py-1 text-xs text-center bg-muted/30 border border-border/40 rounded-md focus:outline-none focus:ring-1 focus:ring-primary/30"
+          />
+        </div>
+        {(prop.minimum !== undefined || prop.maximum !== undefined) && (
+          <div className="flex justify-between text-[9px] text-muted-foreground/40 px-0.5">
+            <span>{min}</span>
+            <span>{max}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // format: date-time
+  if (prop.format === "date-time") {
+    return (
+      <input
+        type="datetime-local"
+        value={String(value ?? "")}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+      />
+    );
+  }
+  if (prop.format === "date") {
+    return (
+      <input
+        type="date"
+        value={String(value ?? "")}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+      />
+    );
+  }
+  if (prop.format === "time") {
+    return (
+      <input
+        type="time"
+        value={String(value ?? "")}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+      />
+    );
+  }
+  if (prop.format === "email") {
+    return (
+      <input
+        type="email"
+        value={String(value ?? "")}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+        placeholder={placeholder || "user@example.com"}
+      />
+    );
+  }
+  if (prop.format === "uri") {
+    return (
+      <input
+        type="url"
+        value={String(value ?? "")}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+        placeholder={placeholder || "https://"}
+      />
+    );
+  }
+
+  // array → JSON textarea
+  if (prop.type === "array") {
+    return (
+      <textarea
+        value={
+          typeof value === "string"
+            ? value
+            : JSON.stringify(value ?? [], null, 2)
+        }
+        onChange={(e) => {
+          try {
+            onChange(JSON.parse(e.target.value));
+          } catch {
+            onChange(e.target.value);
+          }
+        }}
+        rows={3}
+        className="w-full px-3 py-2 text-xs font-mono bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+        placeholder={placeholder || "[]"}
+      />
+    );
+  }
+
+  // object with sub-properties → nested fields
+  if (prop.type === "object" && prop.properties) {
+    return <ObjectInput prop={prop} value={value} onChange={onChange} />;
+  }
+
+  // object without properties → JSON textarea
+  if (prop.type === "object") {
+    return (
+      <textarea
+        value={
+          typeof value === "string"
+            ? value
+            : JSON.stringify(value ?? {}, null, 2)
+        }
+        onChange={(e) => {
+          try {
+            onChange(JSON.parse(e.target.value));
+          } catch {
+            onChange(e.target.value);
+          }
+        }}
+        rows={3}
+        className="w-full px-3 py-2 text-xs font-mono bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+        placeholder="{}"
+      />
+    );
+  }
+
+  // Default: text input with character counter
+  const strVal = String(value ?? "");
+  const hasLengthConstraint =
+    prop.minLength !== undefined || prop.maxLength !== undefined;
+
+  // Use textarea for string fields that look like they need multi-line
+  const nameLower = (fieldName ?? "").toLowerCase();
+  const isLongText =
+    nameLower.includes("body") ||
+    nameLower.includes("description") ||
+    nameLower.includes("content") ||
+    nameLower.includes("message") ||
+    nameLower.includes("text") ||
+    (prop.maxLength !== undefined && prop.maxLength > 200);
+
+  if (isLongText) {
+    return (
+      <div>
+        <textarea
+          value={strVal}
+          onChange={(e) => onChange(e.target.value)}
+          rows={3}
+          className="w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+          placeholder={placeholder || "Enter text..."}
+          maxLength={prop.maxLength}
+        />
+        {hasLengthConstraint && (
+          <CharCounter
+            value={strVal}
+            minLength={prop.minLength}
+            maxLength={prop.maxLength}
+          />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <input
+        type="text"
+        value={strVal}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+        placeholder={placeholder || "Enter value..."}
+        maxLength={prop.maxLength}
+      />
+      {hasLengthConstraint && (
+        <CharCounter
+          value={strVal}
+          minLength={prop.minLength}
+          maxLength={prop.maxLength}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// CharCounter
 // ---------------------------------------------------------------------------
 
 function CharCounter({
@@ -99,7 +410,7 @@ function CharCounter({
   return (
     <span
       className={cn(
-        "text-[9px] mt-0.5 block",
+        "text-[9px] mt-1 block text-right",
         outOfBounds ? "text-red-400/70" : "text-muted-foreground/40"
       )}
     >
@@ -109,7 +420,7 @@ function CharCounter({
 }
 
 // ---------------------------------------------------------------------------
-// VariantSelector — oneOf / anyOf support
+// VariantSelector — oneOf / anyOf
 // ---------------------------------------------------------------------------
 
 function VariantSelector({
@@ -129,14 +440,14 @@ function VariantSelector({
   );
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-2">
       <select
         value={selectedIdx}
         onChange={(e) => {
           setSelectedIdx(Number(e.target.value));
           onChange(getDefaultForType(variants[Number(e.target.value)]?.type));
         }}
-        className={INPUT_CLASS}
+        className="w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
       >
         {labels.map((label, i) => (
           <option key={i} value={i}>
@@ -152,7 +463,7 @@ function VariantSelector({
 }
 
 // ---------------------------------------------------------------------------
-// ObjectInput — renders sub-properties for nested objects (1 level)
+// ObjectInput — nested object fields (1 level)
 // ---------------------------------------------------------------------------
 
 function ObjectInput({
@@ -171,7 +482,6 @@ function ObjectInput({
     unknown
   >;
 
-  // > 6 fields → JSON textarea fallback
   if (entries.length === 0 || entries.length > 6) {
     return (
       <textarea
@@ -188,48 +498,48 @@ function ObjectInput({
           }
         }}
         rows={3}
-        className={cn(INPUT_CLASS, "font-mono resize-none")}
+        className="w-full px-3 py-2 text-xs font-mono bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
         placeholder="{}"
       />
     );
   }
 
   return (
-    <div className="space-y-1.5 pl-2 border-l border-border/20">
-      {entries.map(([name, subProp]) => (
-        <div key={name}>
-          <span className="text-[9px] text-muted-foreground/60 font-medium">
-            {subProp.title || name}
-            {subProp.type ? (
-              <span className="text-muted-foreground/30 ml-1">
+    <div className="space-y-2 pl-3 border-l-2 border-primary/10">
+      {entries.map(([fieldName, subProp]) => (
+        <div key={fieldName}>
+          <label className="text-[10px] font-medium text-muted-foreground/70 mb-1 block">
+            {subProp.title || fieldName}
+            {subProp.type && (
+              <span className="text-muted-foreground/30 ml-1 font-normal">
                 {subProp.type}
               </span>
-            ) : null}
-          </span>
-          {/* Sub-objects fall back to JSON textarea */}
+            )}
+          </label>
           {subProp.type === "object" ? (
             <textarea
               value={
-                typeof obj[name] === "string"
-                  ? (obj[name] as string)
-                  : JSON.stringify(obj[name] ?? {}, null, 2)
+                typeof obj[fieldName] === "string"
+                  ? (obj[fieldName] as string)
+                  : JSON.stringify(obj[fieldName] ?? {}, null, 2)
               }
               onChange={(e) => {
                 try {
-                  onChange({ ...obj, [name]: JSON.parse(e.target.value) });
+                  onChange({ ...obj, [fieldName]: JSON.parse(e.target.value) });
                 } catch {
-                  onChange({ ...obj, [name]: e.target.value });
+                  onChange({ ...obj, [fieldName]: e.target.value });
                 }
               }}
               rows={2}
-              className={cn(INPUT_CLASS, "font-mono resize-none")}
+              className="w-full px-3 py-2 text-xs font-mono bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
               placeholder="{}"
             />
           ) : (
             <ValueInput
               prop={subProp}
-              value={obj[name]}
-              onChange={(v) => onChange({ ...obj, [name]: v })}
+              value={obj[fieldName]}
+              onChange={(v) => onChange({ ...obj, [fieldName]: v })}
+              fieldName={fieldName}
             />
           )}
         </div>
@@ -239,244 +549,17 @@ function ObjectInput({
 }
 
 // ---------------------------------------------------------------------------
-// ValueInput — renders the right input for a JSON Schema property
-// ---------------------------------------------------------------------------
-
-function ValueInput({
-  prop,
-  value,
-  onChange,
-}: {
-  prop: JsonSchemaProperty;
-  value: unknown;
-  onChange: (v: unknown) => void;
-}) {
-  const placeholder =
-    placeholderFromExamples(prop) ??
-    (prop.default !== undefined ? String(prop.default) : "");
-
-  // const → readonly display
-  if (prop.const !== undefined) {
-    return (
-      <div className="px-2 py-1 text-xs bg-muted/50 border border-border/30 rounded text-muted-foreground">
-        {String(prop.const)}{" "}
-        <span className="text-[9px] italic">(fixed)</span>
-      </div>
-    );
-  }
-
-  // enum → <select>
-  if (prop.enum && prop.enum.length > 0) {
-    return (
-      <select
-        value={String(value ?? "")}
-        onChange={(e) => onChange(e.target.value)}
-        className={INPUT_CLASS}
-      >
-        <option value="">Select...</option>
-        {prop.enum.map((v) => (
-          <option key={String(v)} value={String(v)}>
-            {String(v)}
-          </option>
-        ))}
-      </select>
-    );
-  }
-
-  // oneOf / anyOf → variant selector
-  const variants = prop.oneOf ?? prop.anyOf;
-  if (variants && variants.length > 1) {
-    return (
-      <VariantSelector variants={variants} value={value} onChange={onChange} />
-    );
-  }
-
-  // boolean → toggle
-  if (prop.type === "boolean") {
-    return (
-      <button
-        type="button"
-        onClick={() => onChange(!value)}
-        className={cn(
-          "w-9 h-5 rounded-full transition-colors relative",
-          value ? "bg-primary" : "bg-muted-foreground/30"
-        )}
-      >
-        <span
-          className={cn(
-            "absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform",
-            value ? "left-[18px]" : "left-0.5"
-          )}
-        />
-      </button>
-    );
-  }
-
-  // number / integer → with min/max
-  if (prop.type === "number" || prop.type === "integer") {
-    return (
-      <input
-        type="number"
-        value={value === undefined || value === null ? "" : Number(value)}
-        onChange={(e) =>
-          onChange(e.target.value === "" ? "" : Number(e.target.value))
-        }
-        min={prop.minimum}
-        max={prop.maximum}
-        step={prop.type === "integer" ? 1 : undefined}
-        className={INPUT_CLASS}
-        placeholder={placeholder}
-      />
-    );
-  }
-
-  // format-specific inputs
-  if (prop.format === "date-time") {
-    return (
-      <input
-        type="datetime-local"
-        value={String(value ?? "")}
-        onChange={(e) => onChange(e.target.value)}
-        className={INPUT_CLASS}
-      />
-    );
-  }
-  if (prop.format === "date") {
-    return (
-      <input
-        type="date"
-        value={String(value ?? "")}
-        onChange={(e) => onChange(e.target.value)}
-        className={INPUT_CLASS}
-      />
-    );
-  }
-  if (prop.format === "time") {
-    return (
-      <input
-        type="time"
-        value={String(value ?? "")}
-        onChange={(e) => onChange(e.target.value)}
-        className={INPUT_CLASS}
-      />
-    );
-  }
-  if (prop.format === "email") {
-    return (
-      <input
-        type="email"
-        value={String(value ?? "")}
-        onChange={(e) => onChange(e.target.value)}
-        className={INPUT_CLASS}
-        placeholder={placeholder || "user@example.com"}
-      />
-    );
-  }
-  if (prop.format === "uri") {
-    return (
-      <input
-        type="url"
-        value={String(value ?? "")}
-        onChange={(e) => onChange(e.target.value)}
-        className={INPUT_CLASS}
-        placeholder={placeholder || "https://"}
-      />
-    );
-  }
-
-  // array → JSON textarea
-  if (prop.type === "array") {
-    return (
-      <textarea
-        value={
-          typeof value === "string"
-            ? value
-            : JSON.stringify(value ?? [], null, 2)
-        }
-        onChange={(e) => {
-          try {
-            onChange(JSON.parse(e.target.value));
-          } catch {
-            onChange(e.target.value);
-          }
-        }}
-        rows={3}
-        className={cn(INPUT_CLASS, "font-mono resize-none")}
-        placeholder={placeholder || "[]"}
-      />
-    );
-  }
-
-  // object with properties → nested input
-  if (prop.type === "object" && prop.properties) {
-    return <ObjectInput prop={prop} value={value} onChange={onChange} />;
-  }
-
-  // object without properties → JSON textarea
-  if (prop.type === "object") {
-    return (
-      <textarea
-        value={
-          typeof value === "string"
-            ? value
-            : JSON.stringify(value ?? {}, null, 2)
-        }
-        onChange={(e) => {
-          try {
-            onChange(JSON.parse(e.target.value));
-          } catch {
-            onChange(e.target.value);
-          }
-        }}
-        rows={3}
-        className={cn(INPUT_CLASS, "font-mono resize-none")}
-        placeholder="{}"
-      />
-    );
-  }
-
-  // Default: text input with optional character counter
-  const strVal = String(value ?? "");
-  const hasLengthConstraint =
-    prop.minLength !== undefined || prop.maxLength !== undefined;
-
-  return (
-    <div>
-      <input
-        type="text"
-        value={strVal}
-        onChange={(e) => onChange(e.target.value)}
-        className={INPUT_CLASS}
-        placeholder={placeholder}
-        maxLength={prop.maxLength}
-      />
-      {hasLengthConstraint && (
-        <CharCounter
-          value={strVal}
-          minLength={prop.minLength}
-          maxLength={prop.maxLength}
-        />
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// ParameterConfigPanel — three-state per-parameter configuration
+// ParameterConfigPanel — two-mode: "Determined by AI" or "Hardcoded"
 // ---------------------------------------------------------------------------
 
 function ParameterConfigPanel({
   schema,
   pinnedParams,
-  defaultParams,
   onPinnedUpdate,
-  onDefaultUpdate,
 }: {
   schema: NonNullable<ComposioActionSchema["inputSchema"]>;
   pinnedParams: Record<string, unknown>;
-  defaultParams: Record<string, unknown>;
   onPinnedUpdate: (params: Record<string, unknown>) => void;
-  onDefaultUpdate: (params: Record<string, unknown>) => void;
 }) {
   const properties = schema.properties ?? {};
   const requiredSet = useMemo(
@@ -488,181 +571,136 @@ function ParameterConfigPanel({
 
   if (entries.length === 0) {
     return (
-      <div className="px-2.5 pb-2.5 pt-1 border-t border-border/20">
-        <p className="text-[10px] text-muted-foreground/60 italic">
+      <div className="px-3 pb-3 pt-2 border-t border-border/20">
+        <p className="text-[11px] text-muted-foreground/50 italic">
           No configurable parameters.
         </p>
       </div>
     );
   }
 
-  const getMode = (name: string): ParamMode =>
-    name in pinnedParams ? "fixed" : name in defaultParams ? "default" : "ai";
+  const isHardcoded = (name: string) => name in pinnedParams;
 
-  const handleModeChange = (fieldName: string, newMode: ParamMode) => {
+  const setHardcoded = (fieldName: string) => {
     const prop = properties[fieldName];
     const currentValue =
       pinnedParams[fieldName] ??
-      defaultParams[fieldName] ??
       prop?.default ??
       getDefaultForType(prop?.type);
-
-    const nextPinned = { ...pinnedParams };
-    const nextDefault = { ...defaultParams };
-
-    delete nextPinned[fieldName];
-    delete nextDefault[fieldName];
-
-    if (newMode === "fixed") {
-      nextPinned[fieldName] = currentValue;
-    } else if (newMode === "default") {
-      nextDefault[fieldName] = currentValue;
-    }
-
-    onPinnedUpdate(nextPinned);
-    onDefaultUpdate(nextDefault);
+    onPinnedUpdate({ ...pinnedParams, [fieldName]: currentValue });
   };
 
-  const updateValue = (
-    fieldName: string,
-    value: unknown,
-    mode: ParamMode
-  ) => {
-    if (mode === "fixed") {
-      onPinnedUpdate({ ...pinnedParams, [fieldName]: value });
-    } else if (mode === "default") {
-      onDefaultUpdate({ ...defaultParams, [fieldName]: value });
-    }
+  const setAi = (fieldName: string) => {
+    const next = { ...pinnedParams };
+    delete next[fieldName];
+    onPinnedUpdate(next);
+  };
+
+  const updateValue = (fieldName: string, value: unknown) => {
+    onPinnedUpdate({ ...pinnedParams, [fieldName]: value });
   };
 
   return (
-    <div className="px-2.5 pb-2.5 pt-1 border-t border-border/20">
-      <p className="text-[10px] text-muted-foreground py-1.5">
-        <span className="font-medium text-foreground/70">AI</span>: model
-        decides.{" "}
-        <span className="font-medium text-blue-400">Default</span>: fallback if
-        AI omits.{" "}
-        <span className="font-medium text-amber-400">Fixed</span>: always used,
-        hidden from AI.
-      </p>
-      <div className="space-y-2.5">
+    <div className="px-3 pb-3 pt-2 border-t border-border/20">
+      <div className="space-y-3">
         {entries.map(([name, prop]) => {
-          const mode = getMode(name);
+          const hardcoded = isHardcoded(name);
           const isConst = prop.const !== undefined;
+          const label = humanLabel(name, prop);
 
           return (
-            <div key={name}>
-              {/* Header row */}
-              <div className="flex items-center justify-between gap-2">
+            <div
+              key={name}
+              className="rounded-lg border border-border/30 bg-muted/[0.02] overflow-hidden"
+            >
+              {/* Parameter header */}
+              <div className="flex items-center justify-between gap-2 px-3 py-2">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-[11px] font-medium truncate">
-                    {prop.title || name}
+                  <span className="text-[11px] font-semibold text-foreground/90 truncate">
+                    {label}
                   </span>
                   {requiredSet.has(name) && (
-                    <span className="text-[9px] text-red-400 shrink-0">
-                      required
+                    <span className="text-[9px] text-red-400/80 font-medium shrink-0">
+                      *
                     </span>
                   )}
-                  <span className="text-[9px] text-muted-foreground/50 shrink-0">
-                    {prop.type}
-                    {prop.format ? ` (${prop.format})` : ""}
-                  </span>
                   {prop.description && (
                     <button
                       type="button"
-                      className="text-muted-foreground/40 hover:text-muted-foreground transition-colors shrink-0"
+                      className="text-muted-foreground/30 hover:text-muted-foreground/70 transition-colors shrink-0"
                       title={prop.description}
                     >
-                      <Info className="w-3 h-3" />
+                      <Info className="w-3.5 h-3.5" />
                     </button>
                   )}
                   {prop.deprecated && (
-                    <span className="text-[9px] text-orange-400 shrink-0">
+                    <span className="text-[9px] text-orange-400/80 shrink-0">
                       deprecated
                     </span>
                   )}
                 </div>
+              </div>
 
-                {/* Mode selector */}
-                {!isConst && (
-                  <div className="flex items-center gap-0 rounded border border-border/30 overflow-hidden shrink-0">
-                    {(["ai", "default", "fixed"] as const).map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => handleModeChange(name, m)}
-                        className={cn(
-                          "px-1.5 py-0.5 text-[9px] font-medium transition-colors",
-                          mode === m
-                            ? m === "fixed"
-                              ? "bg-amber-500/20 text-amber-400"
-                              : m === "default"
-                                ? "bg-blue-500/20 text-blue-400"
-                                : "bg-muted text-muted-foreground"
-                            : "text-muted-foreground/40 hover:text-muted-foreground"
-                        )}
-                      >
-                        {m === "ai"
-                          ? "AI"
-                          : m === "default"
-                            ? "Default"
-                            : "Fixed"}
-                      </button>
-                    ))}
+              {/* Parameter body */}
+              <div className="px-3 pb-3">
+                {isConst ? (
+                  <ValueInput
+                    prop={prop}
+                    value={prop.const}
+                    onChange={() => {}}
+                    fieldName={name}
+                  />
+                ) : hardcoded ? (
+                  <div className="space-y-2">
+                    {/* Nullable toggle */}
+                    {prop.nullable && (
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={pinnedParams[name] === null}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              updateValue(name, null);
+                            } else {
+                              updateValue(
+                                name,
+                                prop.default ?? getDefaultForType(prop.type)
+                              );
+                            }
+                          }}
+                          className="w-3.5 h-3.5 rounded border-border/50 accent-primary"
+                        />
+                        <span className="text-[10px] text-muted-foreground/60">
+                          Set to null
+                        </span>
+                      </label>
+                    )}
+                    {/* Value input (hidden if nullable and null) */}
+                    {!(prop.nullable && pinnedParams[name] === null) && (
+                      <ValueInput
+                        prop={prop}
+                        value={pinnedParams[name]}
+                        onChange={(v) => updateValue(name, v)}
+                        fieldName={name}
+                      />
+                    )}
+                    {/* Switch to AI button */}
+                    <button
+                      type="button"
+                      onClick={() => setAi(name)}
+                      className="flex items-center gap-1.5 text-[10px] text-primary/60 hover:text-primary transition-colors"
+                    >
+                      <Bot className="w-3 h-3" />
+                      Let AI decide instead
+                    </button>
+                  </div>
+                ) : (
+                  /* AI mode */
+                  <div className="flex items-center justify-between">
+                    <AiChip onRemove={() => setHardcoded(name)} />
                   </div>
                 )}
               </div>
-
-              {/* Value input (for non-AI modes and const) */}
-              {isConst ? (
-                <div className="mt-1">
-                  <ValueInput prop={prop} value={prop.const} onChange={() => {}} />
-                </div>
-              ) : mode !== "ai" ? (
-                <div className="mt-1">
-                  {/* Nullable toggle */}
-                  {prop.nullable && (
-                    <label className="flex items-center gap-1.5 mb-1 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={
-                          (mode === "fixed" ? pinnedParams[name] : defaultParams[name]) === null
-                        }
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            updateValue(name, null, mode);
-                          } else {
-                            updateValue(
-                              name,
-                              prop.default ?? getDefaultForType(prop.type),
-                              mode
-                            );
-                          }
-                        }}
-                        className="w-3 h-3 rounded border-border/50"
-                      />
-                      <span className="text-[9px] text-muted-foreground/60">
-                        null
-                      </span>
-                    </label>
-                  )}
-                  {/* Actual value input (hidden when nullable and value is null) */}
-                  {!(
-                    prop.nullable &&
-                    (mode === "fixed" ? pinnedParams[name] : defaultParams[name]) === null
-                  ) && (
-                    <ValueInput
-                      prop={prop}
-                      value={
-                        mode === "fixed"
-                          ? pinnedParams[name]
-                          : defaultParams[name]
-                      }
-                      onChange={(v) => updateValue(name, v, mode)}
-                    />
-                  )}
-                </div>
-              ) : null}
             </div>
           );
         })}
@@ -672,75 +710,46 @@ function ParameterConfigPanel({
 }
 
 // ---------------------------------------------------------------------------
-// ActionMetadata — informational display for action-level metadata
+// ActionMetadata — output schema only (tags/scopes removed)
 // ---------------------------------------------------------------------------
 
 function ActionMetadata({ action }: { action: ComposioActionSchema }) {
   const [showOutput, setShowOutput] = useState(false);
-  const hasTags = action.tags && action.tags.length > 0;
-  const hasScopes = action.scopes && action.scopes.length > 0;
   const hasOutput =
     action.outputSchema && Object.keys(action.outputSchema).length > 0;
 
-  if (!hasTags && !hasScopes && !action.noAuth && !hasOutput) return null;
+  if (!action.noAuth && !hasOutput) return null;
 
   return (
-    <div className="px-2.5 pb-2 pt-1 border-t border-border/20 space-y-1.5">
-      {/* Tags */}
-      {hasTags && (
-        <div className="flex items-center gap-1 flex-wrap">
-          <Tag className="w-2.5 h-2.5 text-muted-foreground/40 shrink-0" />
-          {action.tags!.map((tag) => (
-            <span
-              key={tag}
-              className="text-[9px] px-1.5 py-0.5 bg-muted/50 text-muted-foreground/70 rounded"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Scopes */}
-      {hasScopes && (
-        <div className="flex items-start gap-1">
-          <Shield className="w-2.5 h-2.5 text-muted-foreground/40 shrink-0 mt-0.5" />
-          <span className="text-[10px] text-muted-foreground/60">
-            Permissions: {action.scopes!.join(", ")}
-          </span>
-        </div>
-      )}
-
-      {/* No auth */}
+    <div className="px-3 pb-2 pt-1.5 border-t border-border/20 space-y-1.5">
       {action.noAuth && (
         <p className="text-[10px] text-emerald-400/70">
           No authentication required
         </p>
       )}
 
-      {/* Output schema */}
       {hasOutput && (
         <div>
           <button
             type="button"
             onClick={() => setShowOutput(!showOutput)}
-            className="flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+            className="flex items-center gap-1 text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
           >
             {showOutput ? (
               <ChevronDown className="w-2.5 h-2.5" />
             ) : (
               <ChevronRight className="w-2.5 h-2.5" />
             )}
-            Returns
+            What this action returns
           </button>
           {showOutput && (
             <div className="mt-1 pl-3.5 space-y-0.5">
-              {Object.entries(action.outputSchema!).map(([name, prop]) => (
-                <div key={name} className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-mono text-muted-foreground/70">
-                    {name}
+              {Object.entries(action.outputSchema!).map(([fieldName, prop]) => (
+                <div key={fieldName} className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-mono text-muted-foreground/60">
+                    {fieldName}
                   </span>
-                  <span className="text-[9px] text-muted-foreground/40">
+                  <span className="text-[9px] text-muted-foreground/30">
                     {prop.type}
                     {prop.format ? ` (${prop.format})` : ""}
                   </span>
@@ -808,7 +817,6 @@ export function ComposioToolSetup({
             if (cfg.enabled_actions && cfg.enabled_actions.length > 0) {
               setEnabledActions(new Set(cfg.enabled_actions));
             } else {
-              // Existing tool with undefined enabled_actions = all important
               const impSlugs = data.tools
                 .filter((t) => t.isImportant)
                 .map((t) => t.slug);
@@ -819,7 +827,6 @@ export function ComposioToolSetup({
             }
             setDescription(existing.description);
           } else {
-            // New tool: default to all important
             const impSlugs = data.tools
               .filter((t) => t.isImportant)
               .map((t) => t.slug);
@@ -853,24 +860,14 @@ export function ComposioToolSetup({
     });
   }, []);
 
-  const handleUpdateActionConfig = useCallback(
-    (
-      actionSlug: string,
-      pinned: Record<string, unknown>,
-      defaults: Record<string, unknown>
-    ) => {
+  const handleUpdatePinnedParams = useCallback(
+    (actionSlug: string, pinned: Record<string, unknown>) => {
       setActionConfigs((prev) => {
         const next = { ...prev };
-        const hasPinned = Object.keys(pinned).length > 0;
-        const hasDefaults = Object.keys(defaults).length > 0;
-
-        if (!hasPinned && !hasDefaults) {
+        if (Object.keys(pinned).length === 0) {
           delete next[actionSlug];
         } else {
-          next[actionSlug] = {
-            pinned_params: pinned,
-            ...(hasDefaults ? { default_params: defaults } : {}),
-          };
+          next[actionSlug] = { pinned_params: pinned };
         }
         return next;
       });
@@ -884,18 +881,12 @@ export function ComposioToolSetup({
 
     const enabledArray = Array.from(enabledActions);
 
-    // Only include action_configs for enabled actions with non-empty params
+    // Only include action_configs for enabled actions with non-empty pinned params
     const cleanedConfigs: Record<string, ActionConfig> = {};
     for (const [slug, cfg] of Object.entries(actionConfigs)) {
       if (!enabledActions.has(slug)) continue;
-      const hasPinned = Object.keys(cfg.pinned_params).length > 0;
-      const hasDefaults =
-        cfg.default_params && Object.keys(cfg.default_params).length > 0;
-      if (hasPinned || hasDefaults) {
-        cleanedConfigs[slug] = {
-          pinned_params: cfg.pinned_params,
-          ...(hasDefaults ? { default_params: cfg.default_params } : {}),
-        };
+      if (Object.keys(cfg.pinned_params).length > 0) {
+        cleanedConfigs[slug] = { pinned_params: cfg.pinned_params };
       }
     }
 
@@ -999,7 +990,7 @@ export function ComposioToolSetup({
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 pb-5 space-y-5">
-          {/* ── Agent instructions ────────────────────────────────────── */}
+          {/* Agent instructions */}
           <div>
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Agent instructions
@@ -1016,7 +1007,7 @@ export function ComposioToolSetup({
             </p>
           </div>
 
-          {/* ── Action toggle list ────────────────────────────────────── */}
+          {/* Action toggle list */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -1046,13 +1037,9 @@ export function ComposioToolSetup({
                   const enabled = enabledActions.has(action.slug);
                   const expanded = expandedAction === action.slug;
                   const cfg = actionConfigs[action.slug];
-                  const fixedCount = cfg
+                  const hardcodedCount = cfg
                     ? Object.keys(cfg.pinned_params).length
                     : 0;
-                  const defaultCount =
-                    cfg?.default_params
-                      ? Object.keys(cfg.default_params).length
-                      : 0;
 
                   return (
                     <div
@@ -1102,14 +1089,9 @@ export function ComposioToolSetup({
                                 important
                               </span>
                             )}
-                            {fixedCount > 0 && (
+                            {hardcodedCount > 0 && (
                               <span className="text-[9px] text-amber-400 bg-amber-500/10 px-1 rounded">
-                                {fixedCount} fixed
-                              </span>
-                            )}
-                            {defaultCount > 0 && (
-                              <span className="text-[9px] text-blue-400 bg-blue-500/10 px-1 rounded">
-                                {defaultCount} default
+                                {hardcodedCount} hardcoded
                               </span>
                             )}
                             {action.isDeprecated && (
@@ -1133,8 +1115,8 @@ export function ComposioToolSetup({
                           )}
                         </div>
 
-                        {/* Expand chevron for details */}
-                        {enabled && (action.inputSchema || action.tags?.length || action.scopes?.length || action.outputSchema || action.noAuth) && (
+                        {/* Expand chevron */}
+                        {enabled && (action.inputSchema || action.outputSchema || action.noAuth) && (
                           <button
                             type="button"
                             onClick={() =>
@@ -1160,20 +1142,8 @@ export function ComposioToolSetup({
                             <ParameterConfigPanel
                               schema={action.inputSchema}
                               pinnedParams={cfg?.pinned_params ?? {}}
-                              defaultParams={cfg?.default_params ?? {}}
                               onPinnedUpdate={(pinned) =>
-                                handleUpdateActionConfig(
-                                  action.slug,
-                                  pinned,
-                                  cfg?.default_params ?? {}
-                                )
-                              }
-                              onDefaultUpdate={(defaults) =>
-                                handleUpdateActionConfig(
-                                  action.slug,
-                                  cfg?.pinned_params ?? {},
-                                  defaults
-                                )
+                                handleUpdatePinnedParams(action.slug, pinned)
                               }
                             />
                           )}
@@ -1186,7 +1156,7 @@ export function ComposioToolSetup({
             )}
           </div>
 
-          {/* ── Delete (edit mode only) ───────────────────────────────── */}
+          {/* Delete (edit mode only) */}
           {existing && (
             <div className="pt-2 border-t border-border/30">
               {confirmDelete ? (
@@ -1221,14 +1191,14 @@ export function ComposioToolSetup({
           )}
         </div>
 
-        {/* ── Error ──────────────────────────────────────────────────── */}
+        {/* Error */}
         {saveError && (
           <div className="mx-6 mb-2 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400">
             {saveError}
           </div>
         )}
 
-        {/* ── Footer ─────────────────────────────────────────────────── */}
+        {/* Footer */}
         <div className="px-6 py-4 border-t border-border/30 flex items-center justify-between">
           <button
             onClick={onClose}
