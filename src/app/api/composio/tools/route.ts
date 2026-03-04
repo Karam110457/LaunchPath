@@ -43,19 +43,25 @@ export async function GET(request: NextRequest) {
     // Use getRawComposioTools to get actual toolkit actions (not session meta tools).
     // Session.tools() includes MANAGE_CONNECTIONS, MULTI_EXECUTE_TOOL etc.
     // which are Composio internal tools, not what we want here.
-    const rawTools = await composio.tools.getRawComposioTools({
+    type RawTool = { slug: string; name: string; description?: string };
+
+    let rawTools = await composio.tools.getRawComposioTools({
       toolkits: [toolkit],
       important: true,
       limit: 50,
     });
 
+    // Some toolkits have no "important" actions — fall back to all actions
+    if (!rawTools || (rawTools as unknown as RawTool[]).length === 0) {
+      rawTools = await composio.tools.getRawComposioTools({
+        toolkits: [toolkit],
+        limit: 50,
+      });
+    }
+
     // rawTools is Tool[] with { slug, name, description, toolkit }
     const tools: ComposioToolAction[] = (
-      rawTools as unknown as Array<{
-        slug: string;
-        name: string;
-        description?: string;
-      }>
+      rawTools as unknown as RawTool[]
     ).map((t) => {
       // Format slug for display: GOOGLECALENDAR_CREATE_EVENT → Create Event
       const displayName = t.name || t.slug

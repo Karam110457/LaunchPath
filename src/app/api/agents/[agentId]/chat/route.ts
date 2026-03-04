@@ -140,14 +140,49 @@ export async function POST(
     }
   }
 
-  // Auto-inject tool instructions so Claude knows when to use each tool
+  // Auto-inject tool instructions so the agent knows when and how to use tools.
+  // For Composio tools, we also list the specific action names (tool keys) so
+  // the agent can map user requests to the correct tool call.
   if (hasTools && agentToolRecords.length > 0) {
-    const toolLines = agentToolRecords
-      .map((t) => `- **${t.display_name}**: ${t.description}`)
-      .join("\n");
-    systemPrompt =
-      `${systemPrompt}\n\n## Tools Available\nYou have the following tools. ` +
-      `Use them proactively — if the user's request matches a tool's purpose, use the tool rather than just describing what you would do.\n${toolLines}`;
+    const toolSections: string[] = [];
+
+    for (const t of agentToolRecords) {
+      if (t.tool_type === "composio") {
+        const cfg = t.config as { toolkit?: string; toolkit_name?: string; enabled_actions?: string[] };
+        const prefix = (cfg.toolkit ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+        // List actual tool keys this toolkit contributes so the agent knows
+        // the exact function names it can call
+        const actionKeys = Object.keys(tools).filter(
+          (k) => k.startsWith(prefix + "_") && !k.startsWith("COMPOSIO_")
+        );
+
+        if (actionKeys.length > 0) {
+          const actionList = actionKeys
+            .map((k) => {
+              const friendly = k.slice(prefix.length + 1).toLowerCase().replace(/_/g, " ");
+              return `  - \`${k}\` — ${friendly}`;
+            })
+            .join("\n");
+          toolSections.push(
+            `- **${t.display_name}** (${cfg.toolkit_name ?? cfg.toolkit}): ${t.description}\n  Available actions:\n${actionList}`
+          );
+        } else {
+          toolSections.push(`- **${t.display_name}**: ${t.description}`);
+        }
+      } else {
+        toolSections.push(`- **${t.display_name}**: ${t.description}`);
+      }
+    }
+
+    systemPrompt +=
+      `\n\n## Tools Available\n` +
+      `You have the following tools. Use them proactively — if the user's request matches a tool's purpose, call the tool rather than just describing what you would do.\n\n` +
+      toolSections.join("\n") +
+      `\n\n### Tool Usage Guidelines\n` +
+      `- When a tool returns a result, check the \`successful\` field (not \`success\`). If \`successful\` is false, tell the user what went wrong using the \`error\` field.\n` +
+      `- Tool results are in \`data\` — summarize the key information for the user in natural language.\n` +
+      `- If a tool fails with an authentication error, tell the user they may need to reconnect the app in their settings.`;
   }
 
   // ---------------------------------------------------------------------------
@@ -308,12 +343,25 @@ export async function POST(
             args: chunk.input as Record<string, unknown> | undefined,
           });
         } else if (chunk.type === "tool-result") {
-          const output = chunk.output as { success?: boolean; message?: string } | null;
+          // Composio tools return { successful: bool, error: string|null, data: {...} }
+          // Our wrapToolExecute returns { success: bool, error: string }
+          // Handle both shapes for compatibility
+          const output = chunk.output as {
+            success?: boolean;
+            successful?: boolean;
+            error?: string | null;
+            message?: string;
+            data?: unknown;
+          } | null;
+
+          const isSuccess = output?.successful !== false && output?.success !== false;
+          const resultMessage = output?.error ?? output?.message ?? undefined;
+
           emit({
             type: "tool-result",
             toolName: chunk.toolName,
-            success: output?.success !== false,
-            message: output?.message,
+            success: isSuccess,
+            message: resultMessage,
             result: chunk.output,
           });
         }

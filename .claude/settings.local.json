@@ -16,7 +16,9 @@
       "Bash(xargs grep -l \"agent_versions\")",
       "WebFetch(domain:docs.composio.dev)",
       "WebFetch(domain:composio.dev)",
-      "Bash(npx next build)"
+      "Bash(npx next build)",
+      "Bash(npx tsc --noEmit --pretty)",
+      "Bash(node scripts/debug-composio-tools.mjs)"
     ]
   }
 }

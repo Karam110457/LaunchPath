@@ -164,6 +164,7 @@ export function ComposioToolSetup({
     agentId,
     toolkit,
     toolkitName,
+    toolkitIcon,
     connectionId,
     useAllActions,
     selectedActions,

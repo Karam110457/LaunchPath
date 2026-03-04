@@ -22,8 +22,25 @@ export function getComposioClient(): Composio<VercelProvider> {
 
   _client = new Composio<VercelProvider>({
     apiKey,
-    provider: new VercelProvider(),
+    // strict: true strips non-required parameters from tool schemas.
+    // This dramatically reduces token usage and prevents the LLM from
+    // hallucinating values for optional fields it doesn't need.
+    provider: new VercelProvider({ strict: true }),
   });
 
   return _client;
+}
+
+/**
+ * Flush Composio telemetry. Important in serverless/edge environments
+ * where the process may terminate between requests.
+ * Non-blocking — errors are silently ignored.
+ */
+export async function flushComposio(): Promise<void> {
+  if (!_client) return;
+  try {
+    await _client.flush();
+  } catch {
+    // Non-critical — telemetry loss is acceptable
+  }
 }

@@ -17,6 +17,7 @@ export interface ComposioApp {
   category: string;
   description: string;
   authSchemes?: string[];
+  composioManagedAuthSchemes?: string[];
   noAuth?: boolean;
   toolsCount?: number;
   logo?: string | null;
@@ -74,6 +75,7 @@ async function getCachedApps(): Promise<ComposioApp[]> {
         category: primaryCategory,
         description: t.meta?.description ?? "",
         authSchemes: t.authSchemes ?? [],
+        composioManagedAuthSchemes: t.composioManagedAuthSchemes ?? [],
         noAuth: t.noAuth ?? false,
         toolsCount: t.meta?.toolsCount ?? 0,
       };

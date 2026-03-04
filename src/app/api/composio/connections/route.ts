@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getComposioClient } from "@/lib/composio/client";
+import { getComposioClient, flushComposio } from "@/lib/composio/client";
 import { logger } from "@/lib/security/logger";
 
 // ─── GET: list connections ────────────────────────────────────────────────────
@@ -204,12 +204,36 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
-  // Delete from our DB (Composio tokens are managed by them)
+  // Look up the Composio connected account ID before deleting locally
+  const { data: conn } = await supabase
+    .from("user_composio_connections")
+    .select("composio_account_id")
+    .eq("id", connectionId)
+    .eq("user_id", user.id)
+    .single();
+
+  // Revoke the connection on Composio's side (tokens, OAuth grants)
+  if (conn?.composio_account_id) {
+    try {
+      const composio = getComposioClient();
+      await composio.connectedAccounts.delete(conn.composio_account_id);
+    } catch (err) {
+      // Log but don't block — local cleanup should still proceed
+      logger.error("Failed to delete Composio connected account", {
+        userId: user.id,
+        composioAccountId: conn.composio_account_id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  // Delete from our DB
   await supabase
     .from("user_composio_connections")
     .delete()
     .eq("id", connectionId)
     .eq("user_id", user.id);
 
+  void flushComposio();
   return NextResponse.json({ success: true });
 }

@@ -8,6 +8,7 @@ import {
   Loader2,
   ExternalLink,
   ArrowLeft,
+  AlertCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -28,6 +29,7 @@ interface ComposioApp {
   category: string;
   description: string;
   authSchemes?: string[];
+  composioManagedAuthSchemes?: string[];
   noAuth?: boolean;
   toolsCount?: number;
   logo?: string | null;
@@ -74,6 +76,8 @@ export function AppLibraryModal({
     connections,
     loading: connectionsLoading,
     connecting,
+    connectError,
+    clearConnectError,
     connect,
     isConnected,
     getConnection,
@@ -133,14 +137,12 @@ export function AppLibraryModal({
   }, [apps]);
 
   const handleAppClick = (app: ComposioApp) => {
+    clearConnectError();
     if (isConnected(app.toolkit)) {
       const conn = getConnection(app.toolkit);
       if (conn) {
         onSelectApp(app, conn);
       }
-    } else if (app.noAuth) {
-      // No-auth apps don't need OAuth — connect directly
-      void connect(app.toolkit, app.name, app.logo ?? app.icon);
     } else {
       void connect(app.toolkit, app.name, app.logo ?? app.icon);
     }
@@ -213,6 +215,17 @@ export function AppLibraryModal({
             </button>
           ))}
         </div>
+
+        {/* Connection error banner */}
+        {connectError && (
+          <div className="mx-6 mb-3 px-3 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div className="text-xs text-amber-200/90">
+              Failed to connect <span className="font-medium">{connectError.toolkit}</span>:{" "}
+              {connectError.message}
+            </div>
+          </div>
+        )}
 
         {/* App grid */}
         <div className="flex-1 overflow-y-auto px-6 pb-5">
