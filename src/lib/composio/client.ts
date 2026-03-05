@@ -25,10 +25,12 @@ export function getComposioClient(): Composio<VercelProvider> {
     // "latest" ensures users see all available actions — without this the SDK
     // defaults to the base version (00000000_00) which has fewer tools.
     toolkitVersions: "latest",
-    // strict: true strips non-required parameters from tool schemas.
-    // This dramatically reduces token usage and prevents the LLM from
-    // hallucinating values for optional fields it doesn't need.
-    provider: new VercelProvider({ strict: true }),
+    // strict: false (default) keeps all parameters visible to the LLM.
+    // Our modifySchema callback already strips hardcoded (pinned) params —
+    // using strict: true on top of that hides optional-but-important fields
+    // like event_duration_hour, summary, timezone from the LLM, causing it
+    // to guess values or skip them entirely.
+    provider: new VercelProvider(),
   });
 
   return _client;
