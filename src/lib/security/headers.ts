@@ -17,7 +17,7 @@ const isProduction = process.env.NODE_ENV === "production";
  * - style-src: 'unsafe-inline' required for Tailwind/Next.js.
  * - frame-ancestors: 'none' prevents embedding (same as X-Frame-Options DENY).
  */
-function getCsp(options?: { allowEval?: boolean }): string {
+function getCsp(options?: { allowEval?: boolean; allowEmbed?: boolean }): string {
   const needsEval = !isProduction || options?.allowEval;
   const scriptSrc = [
     "'self'",
@@ -32,7 +32,8 @@ function getCsp(options?: { allowEval?: boolean }): string {
     "img-src 'self' data: https: blob:",
     "font-src 'self' data: https://fonts.gstatic.com",
     "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.vercel-insights.com",
-    "frame-ancestors 'none'",
+    // Channel routes must be embeddable (widgets in iframes)
+    options?.allowEmbed ? "frame-ancestors *" : "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",
@@ -48,11 +49,20 @@ function needsEval(pathname: string): boolean {
   return pathname.startsWith("/builder/") || pathname.startsWith("/demo/") || pathname.includes("/builder");
 }
 
+/** Public channel routes — must be embeddable (no frame-ancestors restriction). */
+function isChannelRoute(pathname: string): boolean {
+  return pathname.startsWith("/api/channels/") || pathname.startsWith("/try/");
+}
+
 export function applySecurityHeaders(
   response: NextResponse,
   pathname?: string
 ): NextResponse {
-  response.headers.set("X-Frame-Options", "DENY");
+  const embeddable = pathname ? isChannelRoute(pathname) : false;
+
+  if (!embeddable) {
+    response.headers.set("X-Frame-Options", "DENY");
+  }
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set(
@@ -60,7 +70,10 @@ export function applySecurityHeaders(
     "camera=(), microphone=(), geolocation=(), interest-cohort=()"
   );
   const allowEval = pathname ? needsEval(pathname) : false;
-  response.headers.set("Content-Security-Policy", getCsp({ allowEval }));
+  response.headers.set(
+    "Content-Security-Policy",
+    getCsp({ allowEval, allowEmbed: embeddable })
+  );
 
   if (isProduction) {
     response.headers.set(

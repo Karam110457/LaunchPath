@@ -4,6 +4,13 @@ import { getClientEnv } from "@/lib/env";
 import { applySecurityHeaders } from "@/lib/security/headers";
 
 export async function updateSession(request: NextRequest) {
+  // Skip session handling for public channel endpoints (token auth, no cookies)
+  if (request.nextUrl.pathname.startsWith("/api/channels/")) {
+    const response = NextResponse.next({ request });
+    applySecurityHeaders(response, request.nextUrl.pathname);
+    return response;
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });

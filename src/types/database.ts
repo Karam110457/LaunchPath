@@ -219,6 +219,81 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_channels: {
+        Row: {
+          id: string
+          agent_id: string
+          user_id: string
+          channel_type: string
+          name: string
+          token: string
+          allowed_origins: string[]
+          rate_limit_rpm: number | null
+          is_enabled: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          agent_id: string
+          user_id: string
+          channel_type: string
+          name: string
+          token: string
+          allowed_origins?: string[]
+          rate_limit_rpm?: number | null
+          is_enabled?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          agent_id?: string
+          user_id?: string
+          channel_type?: string
+          name?: string
+          token?: string
+          allowed_origins?: string[]
+          rate_limit_rpm?: number | null
+          is_enabled?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      channel_conversations: {
+        Row: {
+          id: string
+          channel_id: string
+          agent_id: string
+          session_id: string
+          messages: Json
+          metadata: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          channel_id: string
+          agent_id: string
+          session_id: string
+          messages?: Json
+          metadata?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          channel_id?: string
+          agent_id?: string
+          session_id?: string
+          messages?: Json
+          metadata?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_systems: {
         Row: {
           id: string

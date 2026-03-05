@@ -1,25 +1,18 @@
 /**
- * Agent Test Chat API route.
+ * Agent Test Chat API route (authenticated).
  * POST /api/agents/[agentId]/chat
  *
  * Accepts a user message + conversation history.
  * Returns SSE stream with text deltas, tool events, and conversation state.
+ *
+ * This is the dashboard/owner chat. For public channel chat, see
+ * /api/channels/[agentId]/chat which uses the same shared runAgentChat() logic.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { streamText, stepCountIs } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
 import { createClient } from "@/lib/supabase/server";
-import { logger } from "@/lib/security/logger";
-import { retrieveContext } from "@/lib/knowledge/rag";
-import { buildAgentTools } from "@/lib/tools/builder";
-import { assemblePrompt } from "@/lib/agents/assemble-prompt";
-import { makeWebhookToolKey } from "@/lib/tools/integrations/webhook";
-import type { AgentToolRecord } from "@/lib/tools/types";
-import type {
-  AgentServerEvent,
-  AgentConversationMessage,
-} from "@/lib/chat/agent-chat-types";
+import { runAgentChat } from "@/lib/chat/run-agent-chat";
+import type { AgentConversationMessage } from "@/lib/chat/agent-chat-types";
 
 export async function POST(
   request: NextRequest,
@@ -43,7 +36,11 @@ export async function POST(
     conversationId?: string;
   };
 
-  const { messages: conversationHistory = [], userMessage, conversationId } = body;
+  const {
+    messages: conversationHistory = [],
+    userMessage,
+    conversationId,
+  } = body;
 
   if (!userMessage || typeof userMessage !== "string") {
     return NextResponse.json(
@@ -52,10 +49,10 @@ export async function POST(
     );
   }
 
-  // Fetch agent with ownership check
+  // Verify ownership (RLS also enforces this, but explicit check gives a clear 404)
   const { data: agent } = await supabase
     .from("ai_agents")
-    .select("*")
+    .select("id")
     .eq("id", agentId)
     .eq("user_id", user.id)
     .single();
@@ -64,334 +61,46 @@ export async function POST(
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
   }
 
-  // ---------------------------------------------------------------------------
-  // Load enabled tools
-  // ---------------------------------------------------------------------------
+  return runAgentChat({
+    agentId,
+    userMessage,
+    conversationHistory,
+    supabase,
+    composioUserId: user.id,
+    onConversationSave: async ({ updatedHistory }) => {
+      let finalConversationId = conversationId;
 
-  const { data: toolRecords } = await supabase
-    .from("agent_tools")
-    .select("*")
-    .eq("agent_id", agentId)
-    .eq("is_enabled", true);
+      if (finalConversationId) {
+        await supabase
+          .from("agent_conversations")
+          .update({
+            messages:
+              updatedHistory as unknown as Record<string, unknown>[],
+          })
+          .eq("id", finalConversationId)
+          .eq("user_id", user.id);
+      } else {
+        const autoTitle =
+          userMessage.length > 50
+            ? userMessage.slice(0, 47) + "..."
+            : userMessage;
 
-  const agentToolRecords = (toolRecords ?? []) as AgentToolRecord[];
+        const { data: newConv } = await supabase
+          .from("agent_conversations")
+          .insert({
+            agent_id: agentId,
+            user_id: user.id,
+            title: autoTitle,
+            messages:
+              updatedHistory as unknown as Record<string, unknown>[],
+          })
+          .select("id")
+          .single();
 
-  // Build a display-name map for tool events (toolName → displayName).
-  // Keys must exactly match what buildAgentTools() registers in the tools map.
-  const toolDisplayNames: Record<string, string> = {};
-  for (const t of agentToolRecords) {
-    if (t.tool_type === "webhook") {
-      toolDisplayNames[makeWebhookToolKey(t.display_name)] = t.display_name;
-    }
-    // MCP + composio: tool names resolved after buildAgentTools()
-  }
-
-  const { tools, failures } = await buildAgentTools(agentToolRecords, user.id);
-  const hasTools = Object.keys(tools).length > 0;
-
-  // Map composio tool keys (e.g. GMAIL_SEND_EMAIL) to friendly display names.
-  // Tool keys are only available after buildAgentTools() runs — they come from
-  // Composio, not from our config. We match keys by toolkit prefix.
-  for (const t of agentToolRecords) {
-    if (t.tool_type !== "composio") continue;
-    const cfg = t.config as { toolkit?: string; toolkit_name?: string };
-    if (!cfg.toolkit) continue;
-
-    // Composio tool keys are UPPER_SNAKE_CASE with the toolkit slug as prefix
-    // e.g. toolkit "gmail" → keys like GMAIL_SEND_EMAIL, GMAIL_CREATE_DRAFT
-    const prefix = cfg.toolkit.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    const displayPrefix = cfg.toolkit_name ?? cfg.toolkit;
-
-    for (const toolKey of Object.keys(tools)) {
-      if (toolKey.startsWith(prefix + "_") && !toolDisplayNames[toolKey]) {
-        // GMAIL_SEND_EMAIL → Send Email
-        const actionPart = toolKey.slice(prefix.length + 1);
-        const friendlyName = actionPart
-          .toLowerCase()
-          .replace(/_/g, " ")
-          .replace(/\b\w/g, (c) => c.toUpperCase());
-        toolDisplayNames[toolKey] = `${displayPrefix}: ${friendlyName}`;
-      }
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // RAG: retrieve relevant knowledge if the agent has documents
-  // ---------------------------------------------------------------------------
-
-  let ragContext = "";
-
-  const { count: docCount } = await supabase
-    .from("agent_knowledge_documents")
-    .select("id", { count: "exact", head: true })
-    .eq("agent_id", agentId)
-    .eq("status", "ready");
-
-  if (docCount && docCount > 0) {
-    const recentUserMsgs = conversationHistory
-      .filter((m) => m.role === "user")
-      .slice(-2)
-      .map((m) => m.content);
-    recentUserMsgs.push(userMessage);
-    const retrievalQuery = recentUserMsgs.join("\n");
-
-    ragContext = (await retrieveContext(agentId, retrievalQuery, supabase)) ?? "";
-  }
-
-  // ---------------------------------------------------------------------------
-  // Assemble final system prompt (shared, channel-agnostic utility)
-  // ---------------------------------------------------------------------------
-
-  const { systemPrompt } = assemblePrompt({
-    systemPrompt: agent.system_prompt,
-    ragContext,
-    toolRecords: agentToolRecords,
-    resolvedToolKeys: Object.keys(tools),
-    failures,
-  });
-
-  // ---------------------------------------------------------------------------
-  // Set up SSE stream
-  // ---------------------------------------------------------------------------
-
-  const encoder = new TextEncoder();
-  const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
-  const writer = writable.getWriter();
-
-  const emit = (event: AgentServerEvent) => {
-    try {
-      writer.write(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
-    } catch {
-      // Writer may be closed if client disconnected
-    }
-  };
-
-  // ---------------------------------------------------------------------------
-  // Build AI messages from conversation history
-  // ---------------------------------------------------------------------------
-
-  type AIMessage = { role: "user" | "assistant"; content: string };
-
-  const MAX_HISTORY_MESSAGES = 30;
-  const recentHistory = conversationHistory.slice(-MAX_HISTORY_MESSAGES);
-
-  const aiMessages: AIMessage[] = [];
-  for (const m of recentHistory) {
-    if (m.role === "user" || m.role === "assistant") {
-      aiMessages.push({ role: m.role, content: m.content });
-    } else if (m.role === "tool-call") {
-      // Reconstruct tool context as assistant text so the LLM has continuity
-      aiMessages.push({
-        role: "assistant",
-        content: `[Used tool \`${m.toolName}\`${m.toolArgs ? ` with ${JSON.stringify(m.toolArgs)}` : ""}]`,
-      });
-    } else if (m.role === "tool-result") {
-      // Reconstruct tool result as assistant text
-      const status = m.toolSuccess === false ? "failed" : "succeeded";
-      aiMessages.push({
-        role: "assistant",
-        content: `[Tool \`${m.toolName}\` ${status}: ${m.content}]`,
-      });
-    }
-  }
-
-  aiMessages.push({ role: "user", content: userMessage });
-
-  // ---------------------------------------------------------------------------
-  // Run agent in background
-  // ---------------------------------------------------------------------------
-
-  void (async () => {
-    // Collect tool events during streaming for conversation history
-    const toolEvents: AgentConversationMessage[] = [];
-
-    try {
-      const streamOptions: Parameters<typeof streamText>[0] = {
-        model: anthropic(agent.model),
-        system: systemPrompt,
-        messages: aiMessages,
-        maxOutputTokens: 2048,
-        providerOptions: {
-          anthropic: {
-            thinking: { type: "disabled" },
-          },
-        },
-        async onFinish({ response }) {
-          const assistantText = response.messages
-            .filter((m) => m.role === "assistant")
-            .map((m) => {
-              if (typeof m.content === "string") return m.content;
-              if (Array.isArray(m.content)) {
-                return m.content
-                  .filter((p) => p.type === "text")
-                  .map((p) => (p as { type: "text"; text: string }).text)
-                  .join("");
-              }
-              return "";
-            })
-            .map((t) => t.trim())
-            .filter(Boolean)
-            .join(" ");
-
-          const fullContent = assistantText.trim() || "";
-
-          // Build updated history with tool events interleaved
-          const now = new Date().toISOString();
-          const updatedHistory: AgentConversationMessage[] = [
-            ...conversationHistory,
-            { role: "user", content: userMessage, timestamp: now },
-            ...toolEvents,
-            { role: "assistant", content: fullContent, timestamp: now },
-          ];
-
-          let finalConversationId = conversationId;
-
-          if (finalConversationId) {
-            await supabase
-              .from("agent_conversations")
-              .update({
-                messages:
-                  updatedHistory as unknown as Record<string, unknown>[],
-              })
-              .eq("id", finalConversationId)
-              .eq("user_id", user.id);
-          } else {
-            const autoTitle =
-              userMessage.length > 50
-                ? userMessage.slice(0, 47) + "..."
-                : userMessage;
-
-            const { data: newConv } = await supabase
-              .from("agent_conversations")
-              .insert({
-                agent_id: agentId,
-                user_id: user.id,
-                title: autoTitle,
-                messages:
-                  updatedHistory as unknown as Record<string, unknown>[],
-              })
-              .select("id")
-              .single();
-
-            finalConversationId = newConv?.id;
-          }
-
-          emit({
-            type: "done",
-            assistantContent: fullContent,
-            conversationId: finalConversationId,
-          });
-        },
-      };
-
-      // Add tools if any are configured
-      if (hasTools) {
-        streamOptions.tools = tools as Parameters<typeof streamText>[0]["tools"];
-        streamOptions.stopWhen = stepCountIs(10);
+        finalConversationId = newConv?.id;
       }
 
-      const result = streamText(streamOptions);
-
-      let wasThinking = false;
-      let hasUnfinishedText = false;
-
-      for await (const chunk of result.fullStream) {
-        if (chunk.type === "reasoning-delta") {
-          if (!wasThinking) wasThinking = true;
-          emit({ type: "thinking", text: chunk.text });
-        } else if (chunk.type === "reasoning-end") {
-          if (wasThinking) {
-            wasThinking = false;
-            emit({ type: "thinking-done" });
-          }
-        } else if (chunk.type === "text-delta") {
-          if (wasThinking) {
-            wasThinking = false;
-            emit({ type: "thinking-done" });
-          }
-          hasUnfinishedText = true;
-          emit({ type: "text-delta", delta: chunk.text });
-        } else if (chunk.type === "tool-call") {
-          // Record tool call for conversation history
-          toolEvents.push({
-            role: "tool-call",
-            content: `Called ${chunk.toolName}`,
-            timestamp: new Date().toISOString(),
-            toolName: chunk.toolName,
-            toolArgs: chunk.input as Record<string, unknown> | undefined,
-          });
-
-          emit({
-            type: "tool-call",
-            toolName: chunk.toolName,
-            displayName: toolDisplayNames[chunk.toolName] ?? chunk.toolName,
-            args: chunk.input as Record<string, unknown> | undefined,
-          });
-        } else if (chunk.type === "tool-result") {
-          // Composio tools return { successful: bool, error: string|null, data: {...} }
-          // Our wrapToolExecute returns { successful: bool, error: string }
-          const output = chunk.output as {
-            success?: boolean;
-            successful?: boolean;
-            error?: string | null;
-            message?: string;
-            data?: unknown;
-          } | null;
-
-          const isSuccess = output?.successful !== false && output?.success !== false;
-          const resultMessage = output?.error ?? output?.message ?? undefined;
-
-          // Record tool result for conversation history
-          const resultSummary = isSuccess
-            ? resultMessage ?? "Completed successfully"
-            : resultMessage ?? "Failed";
-          toolEvents.push({
-            role: "tool-result",
-            content: resultSummary,
-            timestamp: new Date().toISOString(),
-            toolName: chunk.toolName,
-            toolSuccess: isSuccess,
-          });
-
-          emit({
-            type: "tool-result",
-            toolName: chunk.toolName,
-            success: isSuccess,
-            message: resultMessage,
-            result: chunk.output,
-          });
-        }
-      }
-
-      if (hasUnfinishedText) {
-        emit({ type: "text-done" });
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      logger.error("Agent chat stream failed", {
-        agentId,
-        userId: user.id,
-        error: message,
-      });
-      emit({
-        type: "error",
-        message: "Something went wrong. Please try again.",
-      });
-    } finally {
-      try {
-        writer.close();
-      } catch {
-        // Already closed
-      }
-    }
-  })();
-
-  return new Response(readable, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no",
+      return finalConversationId;
     },
   });
 }
