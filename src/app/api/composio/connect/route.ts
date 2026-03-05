@@ -18,6 +18,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getComposioClient, flushComposio } from "@/lib/composio/client";
+import type { ComposioAccountItem } from "@/lib/composio/types";
 import { AuthScheme } from "@composio/core";
 import { logger } from "@/lib/security/logger";
 
@@ -230,6 +231,7 @@ function buildConnectionConfig(
     case "BASIC":
       return AuthScheme.Basic(credentials as { username: string; password: string });
     default:
+      logger.warn("Unknown auth scheme, falling back to APIKey", { scheme: mode });
       return AuthScheme.APIKey(credentials);
   }
 }
@@ -276,12 +278,11 @@ export async function POST(request: NextRequest) {
     const composio = getComposioClient();
 
     // Check if user already has an active connection for this toolkit
-    type AccountItem = { id: string; toolkit: { slug: string }; status: string };
     const existing = await composio.connectedAccounts.list({
       userIds: [user.id],
       toolkitSlugs: [toolkit],
     });
-    const items = (existing as unknown as { items: AccountItem[] }).items ?? [];
+    const items = (existing as unknown as { items: ComposioAccountItem[] }).items ?? [];
     const active = items.find(
       (a) => a.toolkit?.slug === toolkit && a.status === "ACTIVE"
     );

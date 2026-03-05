@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getComposioClient, flushComposio } from "@/lib/composio/client";
+import type { ComposioAccountItem } from "@/lib/composio/types";
 import { logger } from "@/lib/security/logger";
 
 // ─── GET: list connections ────────────────────────────────────────────────────
@@ -44,18 +45,12 @@ export async function GET() {
   try {
     const composio = getComposioClient();
 
-    type AccountItem = {
-      id: string;
-      toolkit: { slug: string };
-      status: string;
-    };
-
     const result = await composio.connectedAccounts.list({
       userIds: [user.id],
     });
 
     const liveItems =
-      (result as unknown as { items: AccountItem[] }).items ?? [];
+      (result as unknown as { items: ComposioAccountItem[] }).items ?? [];
 
     // Guard: if Composio returns an empty list (transient API issue),
     // don't wipe all local connections — return local data as-is.
@@ -63,25 +58,34 @@ export async function GET() {
       return NextResponse.json({ connections: localConnections });
     }
 
-    // Build a set of toolkit slugs that are actually ACTIVE on Composio
-    const liveActiveToolkits = new Set(
-      liveItems
-        .filter((a) => a.status === "ACTIVE")
-        .map((a) => a.toolkit?.slug)
-        .filter(Boolean)
-    );
+    // Build maps of live toolkit statuses for comparison
+    const liveActiveToolkits = new Set<string>();
+    const liveTransientToolkits = new Set<string>(); // INITIATED, INITIALIZING, EXPIRED
+    for (const a of liveItems) {
+      const slug = a.toolkit?.slug;
+      if (!slug) continue;
+      if (a.status === "ACTIVE") liveActiveToolkits.add(slug);
+      else if (a.status !== "FAILED") liveTransientToolkits.add(slug);
+    }
 
-    // Find stale connections (marked active locally but not active on Composio)
+    // Find stale connections (marked active locally but not active on Composio).
+    // Only delete if the connection is truly gone (FAILED or not found at all).
+    // Transient states (INITIATED, EXPIRED) may resolve — don't delete those.
     const staleIds: string[] = [];
     const verified = localConnections.filter((c) => {
       if (c.status === "active" && !liveActiveToolkits.has(c.toolkit)) {
+        if (liveTransientToolkits.has(c.toolkit)) {
+          // Transient state — keep the local record, just mark as pending
+          return true;
+        }
+        // Truly stale — no live connection found, or explicitly FAILED
         staleIds.push(c.id);
         return false;
       }
       return true;
     });
 
-    // Remove stale connections from our DB
+    // Remove truly stale connections from our DB
     if (staleIds.length > 0) {
       await supabase
         .from("user_composio_connections")
@@ -134,14 +138,8 @@ export async function POST(request: NextRequest) {
       toolkitSlugs: [toolkit],
     });
 
-    // The response has { items: [...] } where each item has toolkit.slug and status
-    type AccountItem = {
-      id: string;
-      toolkit: { slug: string };
-      status: string;
-    };
     const items =
-      (result as unknown as { items: AccountItem[] }).items ?? [];
+      (result as unknown as { items: ComposioAccountItem[] }).items ?? [];
 
     // Prefer ACTIVE, fall back to INITIATED (connection still propagating)
     const active = items.find(
@@ -167,12 +165,14 @@ export async function POST(request: NextRequest) {
         .eq("user_id", user.id)
         .eq("toolkit", toolkit);
 
+      void flushComposio();
       return NextResponse.json({
         status: isActive ? "active" : "pending",
         accountId: match.id,
       });
     }
 
+    void flushComposio();
     return NextResponse.json({ status: "pending" });
   } catch (err) {
     logger.error("Composio connection verify failed", {

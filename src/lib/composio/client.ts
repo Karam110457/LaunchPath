@@ -22,9 +22,15 @@ export function getComposioClient(): Composio<VercelProvider> {
 
   _client = new Composio<VercelProvider>({
     apiKey,
-    // "latest" ensures users see all available actions — without this the SDK
-    // defaults to the base version (00000000_00) which has fewer tools.
+    // "latest" fetches the newest toolkit schemas. The Composio docs recommend
+    // pinning to a specific version in production to avoid breaking changes.
+    // To pin, set toolkitVersions to a Record<string, string> mapping each
+    // toolkit slug to its version (e.g. { gmail: "20260301_01" }).
     toolkitVersions: "latest",
+    // Disable automatic file upload/download — in serverless environments
+    // the filesystem is ephemeral and file operations can create orphaned
+    // temp files or fail unpredictably.
+    autoUploadDownloadFiles: false,
     // strict: false (default) keeps all parameters visible to the LLM.
     // Our modifySchema callback already strips hardcoded (pinned) params —
     // using strict: true on top of that hides optional-but-important fields

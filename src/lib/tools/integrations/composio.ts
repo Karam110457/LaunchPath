@@ -12,14 +12,9 @@
  */
 
 import { getComposioClient } from "@/lib/composio/client";
+import type { ComposioAccountItem } from "@/lib/composio/types";
 import { logger } from "@/lib/security/logger";
 import type { AgentToolRecord, ComposioToolConfig, ActionConfig } from "../types";
-
-type AccountItem = {
-  id: string;
-  toolkit: { slug: string };
-  status: string;
-};
 
 /** A toolkit that failed to load — surfaced to the agent via system prompt. */
 export interface ToolFailure {
@@ -69,7 +64,7 @@ async function getActiveToolkits(
       toolkitSlugs: requestedToolkits,
     });
 
-    const items = (result as unknown as { items: AccountItem[] }).items ?? [];
+    const items = (result as unknown as { items: ComposioAccountItem[] }).items ?? [];
 
     // Track which toolkits we got results for
     const seen = new Set<string>();
@@ -194,60 +189,6 @@ function trimToolResult(result: unknown): unknown {
 }
 
 /**
- * Wraps a Composio tool's execute function with error context and result
- * trimming so auth failures produce a user-friendly message the agent can
- * relay, and large results don't blow up the context window.
- */
-function wrapToolExecute(
-  toolKey: string,
-  toolDef: Record<string, unknown>
-): Record<string, unknown> {
-  const originalExecute = toolDef.execute;
-  if (typeof originalExecute !== "function") return toolDef;
-
-  return {
-    ...toolDef,
-    execute: async (...args: unknown[]) => {
-      try {
-        const result = await (
-          originalExecute as (...a: unknown[]) => Promise<unknown>
-        )(...args);
-        return trimToolResult(result);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        const isAuthError =
-          message.includes("401") ||
-          message.includes("403") ||
-          message.includes("auth") ||
-          message.includes("token") ||
-          message.includes("expired") ||
-          message.includes("unauthorized");
-
-        if (isAuthError) {
-          logger.error("Composio tool auth failure", {
-            toolKey,
-            error: message,
-          });
-          return {
-            successful: false,
-            error: `Authentication failed for ${toolKey}. The user may need to reconnect this app in their tool settings.`,
-          };
-        }
-
-        logger.error("Composio tool execution failed", {
-          toolKey,
-          error: message,
-        });
-        return {
-          successful: false,
-          error: `Tool ${toolKey} failed: ${message}`,
-        };
-      }
-    },
-  };
-}
-
-/**
  * Creates a schema modifier that cleans descriptions, strips pinned (fixed)
  * parameter fields, and annotates default parameter fields.
  */
@@ -257,7 +198,8 @@ function makeSchemaModifier(
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return function modifySchema(context: { toolSlug: string; toolkitSlug: string; schema: any }): any {
-    const schema = context.schema;
+    // Clone to avoid mutating any SDK-cached schema objects
+    const schema = { ...context.schema };
 
     // Clean up description whitespace
     if (typeof schema.description === "string") {
@@ -267,11 +209,25 @@ function makeSchemaModifier(
         .trim();
     }
 
-    const inputSchema =
+    const origInputSchema =
       schema.inputSchema ?? schema.parameters ?? schema.input;
-    if (!inputSchema || typeof inputSchema !== "object" || !inputSchema.properties) {
+    if (!origInputSchema || typeof origInputSchema !== "object" || !origInputSchema.properties) {
       return schema;
     }
+
+    // Deep-clone input schema so we don't mutate the original
+    const inputSchema = {
+      ...origInputSchema,
+      properties: { ...origInputSchema.properties },
+      required: Array.isArray(origInputSchema.required)
+        ? [...origInputSchema.required]
+        : origInputSchema.required,
+    };
+
+    // Replace the reference in the cloned schema
+    if (schema.inputSchema) schema.inputSchema = inputSchema;
+    else if (schema.parameters) schema.parameters = inputSchema;
+    else if (schema.input) schema.input = inputSchema;
 
     // Strip pinned (fixed) fields — LLM never sees them
     const pinned = pinnedParamsMap.get(context.toolSlug);
@@ -292,9 +248,12 @@ function makeSchemaModifier(
       for (const [paramName, defaultValue] of Object.entries(defaults)) {
         const prop = inputSchema.properties[paramName];
         if (prop) {
+          // Clone the property to avoid mutating the original
+          const clonedProp = { ...prop };
           const valStr = JSON.stringify(defaultValue);
-          prop.description = (prop.description ?? paramName) +
+          clonedProp.description = (clonedProp.description ?? paramName) +
             ` (default: ${valStr})`;
+          inputSchema.properties[paramName] = clonedProp;
         }
       }
     }
@@ -388,6 +347,7 @@ export async function buildComposioTools(
     // Collect toolkit slugs, action slugs, display names, and pinned params
     const toolkitSlugs: string[] = [];
     const specificActions: string[] = [];
+    const actionToToolkit = new Map<string, string>();
     const toolkitsWithAllActions: string[] = [];
     const displayNameMap = new Map<string, string>();
     const pinnedParamsMap = new Map<string, Record<string, unknown>>();
@@ -403,7 +363,10 @@ export async function buildComposioTools(
       displayNameMap.set(cfg.toolkit, cfg.toolkit_name ?? cfg.toolkit);
 
       if (cfg.enabled_actions && cfg.enabled_actions.length > 0) {
-        specificActions.push(...cfg.enabled_actions);
+        for (const action of cfg.enabled_actions) {
+          specificActions.push(action);
+          actionToToolkit.set(action, cfg.toolkit);
+        }
       } else {
         if (!toolkitsWithAllActions.includes(cfg.toolkit)) {
           toolkitsWithAllActions.push(cfg.toolkit);
@@ -431,12 +394,10 @@ export async function buildComposioTools(
       await getActiveToolkits(composio, userId, toolkitSlugs, displayNameMap);
     failures.push(...connFailures);
 
-    // Filter to only active toolkits
+    // Filter to only active toolkits — uses exact mapping built during collection
     const validSpecificActions = specificActions.filter((action) => {
-      const toolkitPrefix = action.split("_")[0].toLowerCase();
-      return [...activeToolkits].some(
-        (slug) => slug.toLowerCase().replace(/[^a-z0-9]/g, "") === toolkitPrefix
-      );
+      const toolkit = actionToToolkit.get(action);
+      return toolkit ? activeToolkits.has(toolkit) : false;
     });
 
     const validToolkitsForAll = toolkitsWithAllActions.filter((t) =>
@@ -476,11 +437,13 @@ export async function buildComposioTools(
     }
 
     if (validToolkitsForAll.length > 0) {
+      // Fetch all actions (not just important) so the agent has full access.
+      // Users who want a subset should select specific actions in the tool setup.
       fetchPromises.push(
         composio.tools
           .get(
             userId,
-            { toolkits: validToolkitsForAll, important: true },
+            { toolkits: validToolkitsForAll, limit: 50 },
             options
           )
           .then((r) => r as unknown as Record<string, unknown>)
