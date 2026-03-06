@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,12 +25,14 @@ interface NewCampaignFormProps {
 
 export function NewCampaignForm({ agents }: NewCampaignFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preselectedClientId = searchParams.get("clientId") ?? "";
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [agentId, setAgentId] = useState(agents[0]?.id ?? "");
-  const [clientId, setClientId] = useState("");
+  const [clientId, setClientId] = useState(preselectedClientId);
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [clientName, setClientName] = useState("");
   const [clientWebsite, setClientWebsite] = useState("");
@@ -132,7 +134,7 @@ export function NewCampaignForm({ agents }: NewCampaignFormProps) {
 
           {clients.length > 0 && (
             <div className="space-y-1.5">
-              <Label htmlFor="client-select">Client (optional)</Label>
+              <Label htmlFor="client-select">Client</Label>
               <select
                 id="client-select"
                 value={clientId}
@@ -183,7 +185,7 @@ export function NewCampaignForm({ agents }: NewCampaignFormProps) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.push("/dashboard/campaigns")}
+              onClick={() => router.push(preselectedClientId ? `/dashboard/clients/${preselectedClientId}` : "/dashboard/clients")}
             >
               Cancel
             </Button>

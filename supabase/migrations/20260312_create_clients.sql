@@ -82,7 +82,7 @@ CREATE POLICY "Client members can view their client"
   USING (
     EXISTS (
       SELECT 1 FROM public.client_members cm
-      WHERE cm.client_id = id AND cm.user_id = auth.uid()
+      WHERE cm.client_id = clients.id AND cm.user_id = auth.uid()
     )
   );
 

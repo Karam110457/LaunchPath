@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { logger } from "@/lib/security/logger";
 
 export async function GET() {
   const supabase = await createClient();
@@ -25,6 +26,7 @@ export async function GET() {
     .order("name", { ascending: true });
 
   if (error) {
+    logger.error("Failed to fetch clients", { error });
     return NextResponse.json(
       { error: "Failed to fetch clients" },
       { status: 500 }
@@ -80,6 +82,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) {
+    logger.error("Failed to create client", { error, userId: user.id });
     return NextResponse.json(
       { error: "Failed to create client" },
       { status: 500 }

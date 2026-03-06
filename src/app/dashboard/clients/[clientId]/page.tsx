@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Send, Trash2 } from "lucide-react";
 
 interface Client {
   id: string;
@@ -149,12 +149,21 @@ export default function ClientDetailPage() {
 
       {/* Campaigns */}
       <div className="rounded-lg border bg-card p-5 space-y-3">
-        <h2 className="text-sm font-semibold">
-          Campaigns ({campaigns.length})
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold">
+            Campaigns ({campaigns.length})
+          </h2>
+          <Link
+            href={`/dashboard/campaigns/new?clientId=${clientId}`}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="size-3" />
+            New Campaign
+          </Link>
+        </div>
         {campaigns.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No campaigns linked. Link a campaign from the campaign builder.
+            No campaigns linked yet. Create one to deploy an agent for this client.
           </p>
         ) : (
           <div className="divide-y">

@@ -14,7 +14,6 @@ import {
   MessageSquare,
   Paintbrush,
   Bot,
-  Megaphone,
   Users,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -26,10 +25,9 @@ interface SidebarProps {
   user?: SidebarUser;
   agentCount?: number;
   clientCount?: number;
-  campaignCount?: number;
 }
 
-export function Sidebar({ systems, user, agentCount, clientCount, campaignCount }: SidebarProps) {
+export function Sidebar({ systems, user, agentCount, clientCount }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isCreating, startCreating] = useTransition();
@@ -210,23 +208,6 @@ export function Sidebar({ systems, user, agentCount, clientCount, campaignCount 
           {clientCount != null && clientCount > 0 && (
             <span className="ml-auto text-xs text-sidebar-foreground/40">
               {clientCount}
-            </span>
-          )}
-        </Link>
-        <Link
-          href="/dashboard/campaigns"
-          className={cn(
-            "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
-            pathname.startsWith("/dashboard/campaigns")
-              ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-              : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-          )}
-        >
-          <Megaphone className="size-4" />
-          Campaigns
-          {campaignCount != null && campaignCount > 0 && (
-            <span className="ml-auto text-xs text-sidebar-foreground/40">
-              {campaignCount}
             </span>
           )}
         </Link>
