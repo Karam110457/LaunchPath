@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,11 @@ interface Agent {
   personality: unknown;
 }
 
+interface ClientOption {
+  id: string;
+  name: string;
+}
+
 interface NewCampaignFormProps {
   agents: Agent[];
 }
@@ -25,8 +30,17 @@ export function NewCampaignForm({ agents }: NewCampaignFormProps) {
 
   const [name, setName] = useState("");
   const [agentId, setAgentId] = useState(agents[0]?.id ?? "");
+  const [clientId, setClientId] = useState("");
+  const [clients, setClients] = useState<ClientOption[]>([]);
   const [clientName, setClientName] = useState("");
   const [clientWebsite, setClientWebsite] = useState("");
+
+  useEffect(() => {
+    fetch("/api/clients")
+      .then((r) => r.json())
+      .then((data) => setClients(data.clients ?? []))
+      .catch(() => {});
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,6 +56,7 @@ export function NewCampaignForm({ agents }: NewCampaignFormProps) {
         body: JSON.stringify({
           name: name.trim(),
           agent_id: agentId,
+          client_id: clientId || null,
           client_name: clientName.trim() || null,
           client_website: clientWebsite.trim() || null,
         }),
@@ -114,6 +129,28 @@ export function NewCampaignForm({ agents }: NewCampaignFormProps) {
               The AI agent that will power this campaign&apos;s chat widget.
             </p>
           </div>
+
+          {clients.length > 0 && (
+            <div className="space-y-1.5">
+              <Label htmlFor="client-select">Client (optional)</Label>
+              <select
+                id="client-select"
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="">No client</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-muted-foreground">
+                Link this campaign to a client for portal access.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label htmlFor="client-name">Client Name (optional)</Label>

@@ -25,7 +25,7 @@ export async function GET(
 
   const { data: campaign, error } = await supabase
     .from("campaigns")
-    .select("*, ai_agents(id, name, personality)")
+    .select("*, ai_agents(id, name, personality), clients(id, name, website, logo_url)")
     .eq("id", campaignId)
     .eq("user_id", user.id)
     .single();
@@ -85,6 +85,7 @@ export async function PATCH(
     agent_id?: string;
     client_name?: string | null;
     client_website?: string | null;
+    client_id?: string | null;
     status?: string;
   };
 
@@ -121,6 +122,10 @@ export async function PATCH(
 
   if (body.client_website !== undefined) {
     updates.client_website = body.client_website?.trim() || null;
+  }
+
+  if (body.client_id !== undefined) {
+    updates.client_id = body.client_id || null;
   }
 
   if (body.status !== undefined) {

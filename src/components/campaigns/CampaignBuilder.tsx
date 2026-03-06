@@ -15,6 +15,8 @@ interface CampaignData {
   agent_id: string;
   client_name: string | null;
   client_website: string | null;
+  client_id: string | null;
+  clients: { id: string; name: string; website: string | null; logo_url: string | null } | null;
   status: string;
   ai_agents:
     | { id: string; name: string; personality: unknown }
@@ -208,7 +210,11 @@ export function CampaignBuilder({
             </h1>
             <p className="text-xs text-muted-foreground">
               {agentEmoji} {agentData?.name ?? "Unknown agent"}
-              {campaign.client_name && ` \u2022 ${campaign.client_name}`}
+              {campaign.clients?.name
+                ? ` \u2022 ${campaign.clients.name}`
+                : campaign.client_name
+                  ? ` \u2022 ${campaign.client_name}`
+                  : null}
             </p>
           </div>
         </div>

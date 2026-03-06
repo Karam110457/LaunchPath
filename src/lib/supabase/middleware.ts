@@ -49,6 +49,8 @@ export async function updateSession(request: NextRequest) {
     const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/signup");
     const isApiRoute = pathname.startsWith("/api");
     const isDemoRoute = pathname.startsWith("/demo");
+    const isPortalRoute = pathname.startsWith("/portal");
+    const isDashboardRoute = pathname.startsWith("/dashboard");
     const isPublicRoute =
       pathname === "/" ||
       pathname.startsWith("/terms") ||
@@ -56,15 +58,42 @@ export async function updateSession(request: NextRequest) {
 
     const onboardingCompleted =
       user.user_metadata?.onboarding_completed === true;
+    const isClientRole = user.user_metadata?.role === "client";
 
-    // Force onboarding before any protected route
+    // Client-role routing: redirect to/from portal
+    if (isClientRole && isDashboardRoute) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/portal";
+      return NextResponse.redirect(url);
+    }
+    if (!isClientRole && isPortalRoute) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
+
+    // Client users skip onboarding — they go straight to portal
+    if (isClientRole) {
+      if (isOnboardingRoute) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/portal";
+        return NextResponse.redirect(url);
+      }
+      // Let portal routes through without onboarding check
+      if (isPortalRoute) {
+        return supabaseResponse;
+      }
+    }
+
+    // Force onboarding before any protected route (agency users)
     if (
       !onboardingCompleted &&
       !isOnboardingRoute &&
       !isAuthRoute &&
       !isApiRoute &&
       !isPublicRoute &&
-      !isDemoRoute
+      !isDemoRoute &&
+      !isPortalRoute
     ) {
       const url = request.nextUrl.clone();
       url.pathname = "/onboarding";

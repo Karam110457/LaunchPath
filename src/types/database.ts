@@ -267,6 +267,69 @@ export type Database = {
         }
         Relationships: []
       }
+      clients: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          email: string | null
+          website: string | null
+          logo_url: string | null
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          email?: string | null
+          website?: string | null
+          logo_url?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          email?: string | null
+          website?: string | null
+          logo_url?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      client_members: {
+        Row: {
+          id: string
+          client_id: string
+          user_id: string
+          role: string
+          invited_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          client_id: string
+          user_id: string
+          role?: string
+          invited_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          client_id?: string
+          user_id?: string
+          role?: string
+          invited_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       campaigns: {
         Row: {
           id: string
@@ -275,6 +338,7 @@ export type Database = {
           name: string
           client_name: string | null
           client_website: string | null
+          client_id: string | null
           status: string
           created_at: string
           updated_at: string
@@ -286,6 +350,7 @@ export type Database = {
           name: string
           client_name?: string | null
           client_website?: string | null
+          client_id?: string | null
           status?: string
           created_at?: string
           updated_at?: string
@@ -297,6 +362,7 @@ export type Database = {
           name?: string
           client_name?: string | null
           client_website?: string | null
+          client_id?: string | null
           status?: string
           created_at?: string
           updated_at?: string

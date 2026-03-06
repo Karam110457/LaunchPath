@@ -20,7 +20,7 @@ export async function GET() {
 
   const { data: campaigns, error } = await supabase
     .from("campaigns")
-    .select("*, ai_agents(name, personality)")
+    .select("*, ai_agents(name, personality), clients(id, name)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
     agent_id?: string;
     client_name?: string;
     client_website?: string;
+    client_id?: string;
   };
 
   if (!body.name || typeof body.name !== "string" || !body.name.trim()) {
@@ -83,6 +84,7 @@ export async function POST(request: NextRequest) {
       name: body.name.trim(),
       client_name: body.client_name?.trim() || null,
       client_website: body.client_website?.trim() || null,
+      client_id: body.client_id || null,
     })
     .select("*")
     .single();

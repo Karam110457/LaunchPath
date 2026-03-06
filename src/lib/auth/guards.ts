@@ -32,7 +32,7 @@ export async function getOptionalUser(): Promise<User | null> {
 }
 
 /** Role names; extend when you add app_metadata.role in Supabase. */
-export type AppRole = "user" | "admin";
+export type AppRole = "user" | "admin" | "client";
 
 /**
  * Use in Server Components or Server Actions to require a specific role.
@@ -55,4 +55,42 @@ export async function requireRole(allowedRoles: AppRole[]): Promise<User> {
 export function hasRole(user: User, role: AppRole): boolean {
   const r = (user.app_metadata?.role as AppRole) ?? "user";
   return r === role;
+}
+
+/**
+ * Use in Portal Server Components to require a client member login.
+ * Redirects to /login if not signed in, or /login?error=no_access if not a client member.
+ */
+export async function requireClientAuth(): Promise<{
+  user: User;
+  clientId: string;
+  role: "admin" | "viewer";
+}> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    redirect("/login");
+  }
+
+  // Get client membership
+  const { data: membership } = await supabase
+    .from("client_members")
+    .select("client_id, role")
+    .eq("user_id", user.id)
+    .limit(1)
+    .single();
+
+  if (!membership) {
+    redirect("/login?error=no_access");
+  }
+
+  return {
+    user,
+    clientId: membership.client_id,
+    role: membership.role as "admin" | "viewer",
+  };
 }
