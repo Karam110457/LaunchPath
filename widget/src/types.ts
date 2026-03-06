@@ -12,7 +12,16 @@ export interface WidgetConfig {
   borderRadius?: "rounded" | "sharp";
   autoOpenDelay?: number;
   showBranding?: boolean;
+  greetingMessage?: string;
+  greetingDelay?: number;
+  widgetSize?: "compact" | "default" | "large";
 }
+
+export const SIZE_MAP = {
+  compact: { launcher: 48, panelW: 340, panelH: 460, fontSize: 13 },
+  default: { launcher: 56, panelW: 380, panelH: 520, fontSize: 14 },
+  large: { launcher: 64, panelW: 420, panelH: 580, fontSize: 15 },
+} as const;
 
 export interface Message {
   id: string;

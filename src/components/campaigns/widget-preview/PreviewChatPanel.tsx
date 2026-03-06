@@ -16,6 +16,9 @@ interface PreviewChatPanelProps {
   position: "right" | "left";
   onClose: () => void;
   canChat: boolean;
+  panelWidth?: number;
+  panelHeight?: number;
+  fontSize?: number;
 }
 
 function generateId(): string {
@@ -30,6 +33,9 @@ export function PreviewChatPanel({
   position,
   onClose,
   canChat,
+  panelWidth = 380,
+  panelHeight = 520,
+  fontSize = 14,
 }: PreviewChatPanelProps) {
   const [messages, setMessages] = useState<PreviewMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -214,10 +220,16 @@ export function PreviewChatPanel({
 
   return (
     <div
-      className={`absolute w-[380px] ${isSharp ? "rounded-lg" : "rounded-2xl"} shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 zoom-in-95 duration-300 ${
+      className={`absolute ${isSharp ? "rounded-lg" : "rounded-2xl"} shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 zoom-in-95 duration-300 ${
         isDark ? "bg-gray-900" : "bg-white"
       } ${position === "right" ? "right-5" : "left-5"}`}
-      style={{ bottom: "88px", maxHeight: "calc(100% - 104px)", height: "520px" }}
+      style={{
+        bottom: "88px",
+        maxHeight: "calc(100% - 104px)",
+        width: `${panelWidth}px`,
+        height: `${panelHeight}px`,
+        fontSize: `${fontSize}px`,
+      }}
     >
       {/* Header — primary color banner */}
       <div
@@ -241,7 +253,7 @@ export function PreviewChatPanel({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold leading-tight" style={{ color: contrastColor }}>
+          <div className="font-semibold leading-tight" style={{ color: contrastColor, fontSize: `${fontSize}px` }}>
             {agentName}
           </div>
           <div className="text-[11px] leading-tight flex items-center gap-1" style={{ color: contrastMuted }}>
@@ -273,7 +285,7 @@ export function PreviewChatPanel({
       {/* Messages */}
       <div className={`flex-1 overflow-y-auto p-4 flex flex-col gap-2 scroll-smooth [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded ${isDark ? "[&::-webkit-scrollbar-thumb]:bg-gray-600" : "[&::-webkit-scrollbar-thumb]:bg-gray-300"}`}>
         {messages.length === 0 && (
-          <div className={`self-start px-3.5 py-2.5 rounded-2xl rounded-bl-sm text-sm leading-relaxed ${isDark ? "bg-gray-800 text-gray-200" : "bg-gray-100 text-gray-900"}`}>
+          <div className={`self-start px-3.5 py-2.5 rounded-2xl rounded-bl-sm leading-relaxed ${isDark ? "bg-gray-800 text-gray-200" : "bg-gray-100 text-gray-900"}`}>
             {welcomeMessage}
           </div>
         )}
@@ -312,7 +324,7 @@ export function PreviewChatPanel({
               key={s}
               onClick={() => sendMessage(s)}
               disabled={isStreaming}
-              className={`px-3.5 py-1.5 rounded-full border text-[13px] transition-colors whitespace-nowrap ${
+              className={`px-3.5 py-1.5 rounded-full border transition-colors whitespace-nowrap ${
                 isDark
                   ? "border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700 hover:border-gray-600"
                   : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300"
@@ -343,7 +355,7 @@ export function PreviewChatPanel({
           placeholder={canChat ? "Type a message..." : "Save to enable chat..."}
           rows={1}
           disabled={isStreaming || !canChat}
-          className={`flex-1 resize-none border rounded-xl px-3 py-2 text-sm outline-none transition-colors min-h-[38px] max-h-[100px] disabled:opacity-60 ${
+          className={`flex-1 resize-none border rounded-xl px-3 py-2 outline-none transition-colors min-h-[38px] max-h-[100px] disabled:opacity-60 ${
             isDark
               ? "border-gray-700 bg-gray-800 text-gray-100 placeholder:text-gray-500 focus:border-indigo-400"
               : "border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:border-indigo-500"

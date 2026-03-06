@@ -12,6 +12,7 @@ interface ChatPanelProps {
   channelId: string;
   apiOrigin: string;
   onClose: () => void;
+  size?: { launcher: number; panelW: number; panelH: number; fontSize: number };
 }
 
 function generateId(): string {
@@ -59,7 +60,11 @@ export function ChatPanel({
   channelId,
   apiOrigin,
   onClose,
+  size,
 }: ChatPanelProps) {
+  const panelW = size?.panelW ?? 380;
+  const panelH = size?.panelH ?? 520;
+  const fontSize = size?.fontSize ?? 14;
   const [messages, setMessages] = useState<Message[]>(() =>
     loadHistory(channelId)
   );
@@ -262,7 +267,7 @@ export function ChatPanel({
   ].filter(Boolean).join(" ");
 
   return (
-    <div class={panelClass}>
+    <div class={panelClass} style={{ width: `${panelW}px`, height: `${panelH}px`, fontSize: `${fontSize}px` }}>
       {/* Header — primary color banner */}
       <div class="lp-header" style={{ backgroundColor: primaryColor }}>
         <div

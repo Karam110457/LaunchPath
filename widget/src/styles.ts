@@ -42,8 +42,6 @@ export const WIDGET_CSS = `
 .lp-launcher {
   position: fixed;
   bottom: 20px;
-  width: 56px;
-  height: 56px;
   border-radius: 50%;
   border: none;
   cursor: pointer;
@@ -78,8 +76,6 @@ export const WIDGET_CSS = `
 .lp-chat-panel {
   position: fixed;
   bottom: 88px;
-  width: 380px;
-  height: 520px;
   border-radius: 16px;
   background: #fff;
   box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
@@ -438,5 +434,109 @@ export const WIDGET_CSS = `
 
 .lp-dark .lp-powered a:hover {
   color: #6b7280;
+}
+
+/* ===== Greeting Bubble ===== */
+@keyframes lp-greeting-in {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.lp-greeting {
+  position: fixed;
+  bottom: 88px;
+  max-width: 240px;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  background: #fff;
+  color: #1a1a2e;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.06);
+  cursor: pointer;
+  animation: lp-greeting-in 0.3s ease forwards;
+  z-index: 2147483646;
+  transition: transform 0.15s ease;
+}
+
+.lp-greeting:hover {
+  transform: scale(1.02);
+}
+
+.lp-greeting-right {
+  right: 20px;
+}
+
+.lp-greeting-left {
+  left: 20px;
+}
+
+.lp-greeting-close {
+  position: absolute;
+  top: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: #f3f4f6;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.lp-greeting-close:hover {
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
+.lp-greeting-close-right {
+  left: -6px;
+}
+
+.lp-greeting-close-left {
+  right: -6px;
+}
+
+.lp-greeting-tail {
+  position: absolute;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  transform: rotate(45deg);
+}
+
+.lp-greeting-tail-right {
+  right: 24px;
+}
+
+.lp-greeting-tail-left {
+  left: 24px;
+}
+
+/* Dark greeting */
+.lp-dark .lp-greeting,
+.lp-position-right .lp-dark .lp-greeting,
+.lp-position-left .lp-dark .lp-greeting {
+  background: #1f2937;
+  color: #e5e7eb;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+.lp-dark .lp-greeting-close {
+  background: #374151;
+  color: #6b7280;
+}
+
+.lp-dark .lp-greeting-close:hover {
+  background: #4b5563;
+  color: #d1d5db;
+}
+
+.lp-dark .lp-greeting-tail {
+  background: #1f2937;
 }
 `;

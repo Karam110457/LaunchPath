@@ -13,6 +13,12 @@ export interface WidgetConfig {
   borderRadius?: "rounded" | "sharp";
   autoOpenDelay?: number;
   showBranding?: boolean;
+  /** Greeting bubble text shown next to launcher when chat is closed */
+  greetingMessage?: string;
+  /** Seconds before greeting bubble appears (default: 3) */
+  greetingDelay?: number;
+  /** Widget size preset */
+  widgetSize?: "compact" | "default" | "large";
 }
 
 /** Shape returned by the channel CRUD API */
