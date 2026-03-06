@@ -191,7 +191,7 @@ export function CampaignBuilder({
       ?.avatar_emoji ?? "\u{1F916}";
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)]">
+    <div className="flex flex-col h-screen">
       {/* Top bar */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-border shrink-0">
         <div className="flex items-center gap-3">

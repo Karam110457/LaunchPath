@@ -3,6 +3,7 @@ interface PreviewLauncherProps {
   onClick: () => void;
   primaryColor: string;
   position: "right" | "left";
+  launcherIcon?: string;
 }
 
 export function PreviewLauncher({
@@ -10,11 +11,15 @@ export function PreviewLauncher({
   onClick,
   primaryColor,
   position,
+  launcherIcon,
 }: PreviewLauncherProps) {
+  const isIconUrl = launcherIcon?.startsWith("http");
+  const isEmoji = launcherIcon && !isIconUrl && launcherIcon.length <= 4;
+
   return (
     <button
       onClick={onClick}
-      className={`absolute bottom-5 w-14 h-14 rounded-full border-none cursor-pointer flex items-center justify-center text-white shadow-lg hover:scale-105 active:scale-95 transition-all duration-200 animate-in zoom-in-50 duration-500 ${
+      className={`absolute bottom-5 w-14 h-14 rounded-full border-none cursor-pointer flex items-center justify-center text-white shadow-lg hover:scale-105 active:scale-95 transition-all duration-200 animate-in zoom-in-50 duration-500 overflow-hidden ${
         position === "right" ? "right-5" : "left-5"
       }`}
       style={{ backgroundColor: primaryColor }}
@@ -33,6 +38,14 @@ export function PreviewLauncher({
           <line x1="18" y1="6" x2="6" y2="18" />
           <line x1="6" y1="6" x2="18" y2="18" />
         </svg>
+      ) : isIconUrl ? (
+        <img
+          src={launcherIcon}
+          alt="Chat"
+          className="w-7 h-7 object-contain"
+        />
+      ) : isEmoji ? (
+        <span className="text-2xl leading-none">{launcherIcon}</span>
       ) : (
         <svg
           width="24"

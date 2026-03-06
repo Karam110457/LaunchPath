@@ -41,6 +41,7 @@ export function WidgetPreview({
         onClick={() => setIsOpen(!isOpen)}
         primaryColor={primaryColor}
         position={position}
+        launcherIcon={config.launcherIcon}
       />
     </>
   );

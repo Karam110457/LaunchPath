@@ -111,28 +111,37 @@ export function ConfigPanel({
           className="h-8 text-sm"
           placeholder="AI Assistant"
         />
-      </div>
-
-      {/* Header Text */}
-      <div className="space-y-1.5">
-        <Label className="text-xs">Header Text</Label>
-        <Input
-          value={config.headerText || ""}
-          onChange={(e) => updateConfig("headerText", e.target.value)}
-          className="h-8 text-sm"
-          placeholder="Same as display name"
-        />
+        <p className="text-[11px] text-muted-foreground">
+          Shown in the chat header and as the agent&apos;s name.
+        </p>
       </div>
 
       {/* Avatar */}
       <div className="space-y-1.5">
-        <Label className="text-xs">Avatar (URL or emoji)</Label>
+        <Label className="text-xs">Chat Avatar</Label>
         <Input
           value={config.agentAvatar || ""}
           onChange={(e) => updateConfig("agentAvatar", e.target.value)}
           className="h-8 text-sm"
           placeholder="https://... or emoji"
         />
+        <p className="text-[11px] text-muted-foreground">
+          Image shown next to the name in the chat header.
+        </p>
+      </div>
+
+      {/* Launcher Icon */}
+      <div className="space-y-1.5">
+        <Label className="text-xs">Button Icon</Label>
+        <Input
+          value={config.launcherIcon || ""}
+          onChange={(e) => updateConfig("launcherIcon", e.target.value)}
+          className="h-8 text-sm"
+          placeholder="https://... or emoji (default: chat bubble)"
+        />
+        <p className="text-[11px] text-muted-foreground">
+          Custom icon for the floating chat button. Leave empty for the default chat bubble.
+        </p>
       </div>
 
       {/* Welcome Message */}

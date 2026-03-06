@@ -43,7 +43,6 @@ export function PreviewChatPanel({
   const welcomeMessage =
     config.welcomeMessage || "Hi! How can I help you today?";
   const starters = config.conversationStarters ?? [];
-  const headerText = config.headerText || agentName;
   const isDark = config.theme === "dark";
   const isSharp = config.borderRadius === "sharp";
   const showBranding = config.showBranding !== false;
@@ -217,12 +216,12 @@ export function PreviewChatPanel({
       } ${position === "right" ? "right-5" : "left-5"}`}
       style={{ bottom: "88px", maxHeight: "calc(100% - 104px)", height: "520px" }}
     >
-      {/* Header */}
-      <div className={`px-4 py-3.5 flex items-center gap-2.5 border-b shrink-0 ${isDark ? "border-gray-700" : "border-gray-100"}`}>
-        <div
-          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm shrink-0 overflow-hidden"
-          style={{ backgroundColor: primaryColor }}
-        >
+      {/* Header — primary color banner */}
+      <div
+        className="px-4 py-3.5 flex items-center gap-2.5 shrink-0"
+        style={{ backgroundColor: primaryColor }}
+      >
+        <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0 overflow-hidden bg-white/20">
           {isAvatarUrl ? (
             <img
               src={avatarContent}
@@ -230,20 +229,23 @@ export function PreviewChatPanel({
               className="w-full h-full object-cover"
             />
           ) : (
-            <span>{avatarContent || agentName.charAt(0)}</span>
+            <span className="text-white">
+              {avatarContent || agentName.charAt(0)}
+            </span>
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className={`text-sm font-semibold leading-tight ${isDark ? "text-gray-100" : "text-gray-900"}`}>
-            {headerText}
+          <div className="text-sm font-semibold leading-tight text-white">
+            {agentName}
           </div>
-          <div className="text-[11px] text-green-500 leading-tight">
+          <div className="text-[11px] text-white/70 leading-tight flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
             Online
           </div>
         </div>
         <button
           onClick={onClose}
-          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${isDark ? "text-gray-500 hover:bg-gray-800 hover:text-gray-300" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"}`}
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-white/60 hover:bg-white/10 hover:text-white transition-colors"
           aria-label="Close chat"
         >
           <svg
