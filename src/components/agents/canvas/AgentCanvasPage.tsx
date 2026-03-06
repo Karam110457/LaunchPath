@@ -30,6 +30,8 @@ import { KnowledgeDetailPanel } from "./panels/KnowledgeDetailPanel";
 import { FloatingChatWidget } from "./FloatingChatWidget";
 import { ToolCatalogModal } from "./panels/tools/ToolCatalogModal";
 import { ToolSetupDialog } from "./panels/tools/ToolSetupDialog";
+import { HttpToolSetup } from "./panels/tools/HttpToolSetup";
+import { SubagentSetup } from "./panels/tools/SubagentSetup";
 import { AppLibraryModal } from "./panels/tools/AppLibraryModal";
 import { ComposioToolSetup } from "./panels/tools/ComposioToolSetup";
 import { SaveDialog } from "./SaveDialog";
@@ -633,16 +635,34 @@ function AgentCanvasInner({
         }}
       />
 
-      {setupTool && (
-        <ToolSetupDialog
+      {setupTool?.toolType === "http" && (
+        <HttpToolSetup
           agentId={agent.id}
-          toolType={setupTool.toolType}
           existing={setupTool.existing}
           onSaved={handleToolSaved}
-          onDeleted={handleToolDeleted}
           onClose={() => setSetupTool(null)}
         />
       )}
+      {setupTool?.toolType === "subagent" && (
+        <SubagentSetup
+          agentId={agent.id}
+          existing={setupTool.existing}
+          onSaved={handleToolSaved}
+          onClose={() => setSetupTool(null)}
+        />
+      )}
+      {setupTool &&
+        setupTool.toolType !== "http" &&
+        setupTool.toolType !== "subagent" && (
+          <ToolSetupDialog
+            agentId={agent.id}
+            toolType={setupTool.toolType}
+            existing={setupTool.existing}
+            onSaved={handleToolSaved}
+            onDeleted={handleToolDeleted}
+            onClose={() => setSetupTool(null)}
+          />
+        )}
 
       {composioSetup && (
         <ComposioToolSetup
