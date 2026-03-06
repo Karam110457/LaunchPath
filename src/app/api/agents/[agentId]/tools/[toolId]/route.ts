@@ -1,5 +1,6 @@
 /**
  * Agent Tool CRUD
+ * GET    /api/agents/[agentId]/tools/[toolId]  — fetch single tool
  * PATCH  /api/agents/[agentId]/tools/[toolId]  — update tool
  * DELETE /api/agents/[agentId]/tools/[toolId]  — delete tool
  */
@@ -10,6 +11,38 @@ import { maskConfig, mergeConfig } from "@/lib/tools/mask-config";
 import type { UpdateToolPayload } from "@/lib/tools/types";
 
 type RouteParams = { params: Promise<{ agentId: string; toolId: string }> };
+
+export async function GET(_request: NextRequest, { params }: RouteParams) {
+  const { agentId, toolId } = await params;
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const { data: tool, error } = await supabase
+    .from("agent_tools")
+    .select("*")
+    .eq("id", toolId)
+    .eq("agent_id", agentId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (error || !tool) {
+    return NextResponse.json({ error: "Tool not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    tool: {
+      ...tool,
+      config: maskConfig(tool.config as Record<string, unknown>),
+    },
+  });
+}
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const { agentId, toolId } = await params;

@@ -4,6 +4,7 @@ import type {
   AgentNodeData,
   KnowledgeNodeData,
   ToolNodeData,
+  SubagentNodeData,
 } from "./canvas-types";
 
 type CanvasNode = {
@@ -20,6 +21,7 @@ interface LayoutInput {
   agent: AgentNodeData;
   knowledge: KnowledgeNodeData;
   tools: ToolNodeData[];
+  subagents: SubagentNodeData[];
   savedPositions?: SavedPositions;
 }
 
@@ -27,6 +29,7 @@ interface LayoutInput {
 const AGENT_W = 240;
 const KNOWLEDGE_W = 96;   // KnowledgeNode circle diameter
 const TOOL_W = 84;        // ToolNode square side
+const SUBAGENT_W = 200;   // SubagentNode width
 
 // ─── Layout geometry ─────────────────────────────────────────────────────────
 // Agent handles at 25% and 75% of AGENT_W
@@ -35,6 +38,7 @@ const RIGHT_HANDLE_X = AGENT_W * 0.75;  // 180 — "Tools"
 
 const ROW_GAP = 260;           // vertical distance: agent top → children row top
 const TOOL_H_SPACING = 160;    // horizontal center-to-center spacing between tools
+const SUBAGENT_H_SPACING = 240; // wider spacing for subagent nodes
 
 // Place knowledge at x=0 so its center (48) aligns with the agent's left handle
 const KNOWLEDGE_X = 0;
@@ -52,11 +56,19 @@ const CHILDREN_Y = ROW_GAP;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function useCanvasLayout({ agent, knowledge, tools, savedPositions }: LayoutInput) {
+export function useCanvasLayout({ agent, knowledge, tools, subagents, savedPositions }: LayoutInput) {
   return useMemo(() => {
     // Helper: use saved position if available, otherwise default
     const pos = (id: string, defaultPos: { x: number; y: number }) =>
       savedPositions?.[id] ?? defaultPos;
+
+    // Calculate where subagent nodes start (after all regular tools)
+    const toolsEndX = tools.length > 0
+      ? FIRST_TOOL_X + (tools.length - 1) * TOOL_H_SPACING + TOOL_W
+      : FIRST_TOOL_CENTER_X;
+    const subagentStartX = tools.length > 0
+      ? toolsEndX + 80 // gap after last tool
+      : FIRST_TOOL_X;  // or start where tools would
 
     const nodes: CanvasNode[] = [
       // Agent — top, left handle → knowledge, right handle → tools
@@ -86,6 +98,17 @@ export function useCanvasLayout({ agent, knowledge, tools, savedPositions }: Lay
         data: tool as unknown as Record<string, unknown>,
         draggable: true,
       })),
+      // Subagents — after tools, wider nodes
+      ...subagents.map((sa, i) => ({
+        id: `subagent-${sa.subagentId}`,
+        type: "subagentNode",
+        position: pos(`subagent-${sa.subagentId}`, {
+          x: subagentStartX + i * SUBAGENT_H_SPACING,
+          y: CHILDREN_Y,
+        }),
+        data: sa as unknown as Record<string, unknown>,
+        draggable: true,
+      })),
     ];
 
     const edges: Edge[] = [
@@ -105,8 +128,16 @@ export function useCanvasLayout({ agent, knowledge, tools, savedPositions }: Lay
         target: `tool-${tool.toolId}`,
         type: "dashedEdge",
       })),
+      // Agent → each subagent node
+      ...subagents.map((sa) => ({
+        id: `agent-subagent-${sa.subagentId}`,
+        source: "agent",
+        sourceHandle: "bottom-right",
+        target: `subagent-${sa.subagentId}`,
+        type: "dashedEdge",
+      })),
     ];
 
     return { nodes, edges };
-  }, [agent, knowledge, tools, savedPositions]);
+  }, [agent, knowledge, tools, subagents, savedPositions]);
 }

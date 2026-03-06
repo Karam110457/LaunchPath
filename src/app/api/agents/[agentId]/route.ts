@@ -1,11 +1,42 @@
 /**
  * Agent CRUD API route.
- * PATCH /api/agents/[agentId] — Update agent fields
+ * GET    /api/agents/[agentId] — Fetch single agent
+ * PATCH  /api/agents/[agentId] — Update agent fields
  * DELETE /api/agents/[agentId] — Delete agent and clean up storage
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ agentId: string }> }
+) {
+  const { agentId } = await params;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const { data: agent, error } = await supabase
+    .from("ai_agents")
+    .select("id, name, description, system_prompt, personality, model, status, wizard_config, tool_guidelines, created_at")
+    .eq("id", agentId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (error || !agent) {
+    return NextResponse.json({ error: "Agent not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ agent });
+}
 
 const ALLOWED_FIELDS = [
   "name",

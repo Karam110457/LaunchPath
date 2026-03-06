@@ -31,6 +31,18 @@ export interface ToolNodeData {
   toolkitSlug?: string;
 }
 
+// Data payload for a subagent node on the canvas
+export interface SubagentNodeData {
+  subagentId: string;
+  parentAgentId: string;
+  /** The agent_tools.id linking parent → child */
+  toolRecordId: string;
+  name: string;
+  avatarEmoji: string;
+  description: string | null;
+  status: string;
+}
+
 // Data payload for the "Add Tool" button node
 export interface AddToolNodeData {
   agentId: string;
@@ -62,4 +74,5 @@ export interface AgentFormState {
 export type PanelState =
   | { type: "none" }
   | { type: "knowledge" }
-  | { type: "edit-agent" };
+  | { type: "edit-agent" }
+  | { type: "edit-subagent"; subagentId: string; toolRecordId: string };

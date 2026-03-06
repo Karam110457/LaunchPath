@@ -17,6 +17,7 @@ export default async function AgentsPage() {
       "id, name, description, status, personality, template_id, created_at",
     )
     .eq("user_id", user.id)
+    .is("parent_agent_id", null)
     .order("created_at", { ascending: false });
 
   const hasAgents = agents && agents.length > 0;

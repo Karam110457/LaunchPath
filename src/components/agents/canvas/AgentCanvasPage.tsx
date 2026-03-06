@@ -21,12 +21,14 @@ import "@xyflow/react/dist/style.css";
 import { AgentNode } from "./nodes/AgentNode";
 import { KnowledgeNode } from "./nodes/KnowledgeNode";
 import { ToolNode } from "./nodes/ToolNode";
+import { SubagentNode } from "./nodes/SubagentNode";
 import { DashedEdge } from "./edges/DashedEdge";
 import { TopBar } from "./TopBar";
 import { BottomBar } from "./BottomBar";
 import { NodeModal } from "./panels/NodeModal";
 import { AgentEditPanel } from "./panels/AgentEditPanel";
 import { KnowledgeDetailPanel } from "./panels/KnowledgeDetailPanel";
+import { SubagentEditPanel } from "./panels/SubagentEditPanel";
 import { FloatingChatWidget } from "./FloatingChatWidget";
 import { ToolCatalogModal } from "./panels/tools/ToolCatalogModal";
 import { ToolSetupDialog } from "./panels/tools/ToolSetupDialog";
@@ -43,6 +45,7 @@ import type {
   AgentNodeData,
   KnowledgeNodeData,
   ToolNodeData,
+  SubagentNodeData,
   AgentFormState,
   WizardConfig,
 } from "./canvas-types";
@@ -53,6 +56,7 @@ const nodeTypes = {
   agentNode: AgentNode,
   knowledgeNode: KnowledgeNode,
   toolNode: ToolNode,
+  subagentNode: SubagentNode,
 };
 const edgeTypes = {
   dashedEdge: DashedEdge,
@@ -324,25 +328,72 @@ function AgentCanvasInner({
     }
   }, [agent.id]);
 
-  useEffect(() => { void fetchTools(); }, [fetchTools]);
+  // ─── Subagent details state ─────────────────────────────────────────────
+  interface SubagentDetail {
+    id: string;
+    name: string;
+    description: string | null;
+    personality: { avatar_emoji?: string } | null;
+    status: string;
+  }
+  const [subagentDetails, setSubagentDetails] = useState<SubagentDetail[]>([]);
 
+  const fetchSubagents = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/agents/${agent.id}/subagents`);
+      if (res.ok) {
+        const data = (await res.json()) as { subagents: SubagentDetail[] };
+        setSubagentDetails(data.subagents);
+      }
+    } catch {
+      // non-critical
+    }
+  }, [agent.id]);
+
+  useEffect(() => { void fetchTools(); void fetchSubagents(); }, [fetchTools, fetchSubagents]);
+
+  // Regular tool nodes (exclude subagent tools — they render as SubagentNodes)
   const toolNodeItems = useMemo<ToolNodeData[]>(
     () =>
-      agentTools.map((t) => {
-        const cfg = t.tool_type === "composio"
-          ? (t.config as { toolkit_icon?: string; toolkit?: string })
-          : null;
-        return {
-          toolId: t.id,
-          agentId: agent.id,
-          toolType: t.tool_type,
-          displayName: t.display_name,
-          isEnabled: t.is_enabled,
-          toolkitIcon: cfg?.toolkit_icon,
-          toolkitSlug: cfg?.toolkit,
-        };
-      }),
+      agentTools
+        .filter((t) => t.tool_type !== "subagent")
+        .map((t) => {
+          const cfg = t.tool_type === "composio"
+            ? (t.config as { toolkit_icon?: string; toolkit?: string })
+            : null;
+          return {
+            toolId: t.id,
+            agentId: agent.id,
+            toolType: t.tool_type,
+            displayName: t.display_name,
+            isEnabled: t.is_enabled,
+            toolkitIcon: cfg?.toolkit_icon,
+            toolkitSlug: cfg?.toolkit,
+          };
+        }),
     [agentTools, agent.id]
+  );
+
+  // Subagent nodes — join agent_tools (subagent type) with subagent details
+  const subagentNodeItems = useMemo<SubagentNodeData[]>(
+    () =>
+      agentTools
+        .filter((t) => t.tool_type === "subagent")
+        .map((t) => {
+          const cfg = t.config as { target_agent_id?: string };
+          const detail = subagentDetails.find((s) => s.id === cfg.target_agent_id);
+          return {
+            subagentId: cfg.target_agent_id ?? "",
+            parentAgentId: agent.id,
+            toolRecordId: t.id,
+            name: detail?.name ?? t.display_name,
+            avatarEmoji: detail?.personality?.avatar_emoji ?? "🤖",
+            description: detail?.description ?? null,
+            status: detail?.status ?? "draft",
+          };
+        })
+        .filter((sa) => sa.subagentId),
+    [agentTools, subagentDetails, agent.id]
   );
 
   // ─── Canvas position persistence ─────────────────────────────────────────
@@ -372,6 +423,7 @@ function AgentCanvasInner({
     agent: agentData,
     knowledge: knowledgeData,
     tools: toolNodeItems,
+    subagents: subagentNodeItems,
     savedPositions,
   });
 
@@ -412,14 +464,14 @@ function AgentCanvasInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docCounts]);
 
-  // When tools change after initial load: rebuild layout with saved positions
-  // New tool nodes get default positions; existing nodes keep their saved spot
+  // When tools/subagents change after initial load: rebuild layout
+  // New nodes get default positions; existing nodes keep their saved spot
   useEffect(() => {
     if (!toolsReady) return;
     setNodes(layoutNodes);
     setEdges(layoutEdges);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentTools]);
+  }, [agentTools, subagentDetails]);
 
   // ─── Drag end: capture new position and persist ───────────────────────────
   const onNodeDragStop: OnNodeDrag = useCallback(
@@ -459,19 +511,28 @@ function AgentCanvasInner({
     setCatalogOpen(false);
     setComposioSetup(null);
     setAppLibraryOpen(false);
-    await fetchTools();
-  }, [fetchTools]);
+    await Promise.all([fetchTools(), fetchSubagents()]);
+  }, [fetchTools, fetchSubagents]);
 
   const handleToolDeleted = useCallback(async () => {
     setSetupTool(null);
     setComposioSetup(null);
-    await fetchTools();
-  }, [fetchTools]);
+    await Promise.all([fetchTools(), fetchSubagents()]);
+  }, [fetchTools, fetchSubagents]);
+
+  const handleSubagentDeleted = useCallback(async () => {
+    setModal({ type: "none" });
+    await Promise.all([fetchTools(), fetchSubagents()]);
+  }, [fetchTools, fetchSubagents]);
 
   const onNodeDoubleClick: NodeMouseHandler = useCallback(
     (_event, node) => {
       if (node.type === "agentNode") setModal({ type: "edit-agent" });
       if (node.type === "knowledgeNode") setModal({ type: "knowledge" });
+      if (node.type === "subagentNode") {
+        const d = node.data as unknown as SubagentNodeData;
+        setModal({ type: "edit-subagent", subagentId: d.subagentId, toolRecordId: d.toolRecordId });
+      }
       if (node.type === "toolNode") {
         const d = node.data as unknown as ToolNodeData;
         const existing = agentTools.find((t) => t.id === d.toolId);
@@ -510,6 +571,7 @@ function AgentCanvasInner({
   let modalTitle = "";
   if (modal.type === "edit-agent") modalTitle = "Edit Agent";
   else if (modal.type === "knowledge") modalTitle = "Knowledge Base";
+  else if (modal.type === "edit-subagent") modalTitle = "Edit Sub-Agent";
 
   return (
     <div className="relative w-full h-[calc(100vh-3.5rem)] overflow-hidden bg-[#0a0a0a]">
@@ -596,6 +658,14 @@ function AgentCanvasInner({
             onDocumentsChange={handleDocumentsChange}
           />
         )}
+        {modal.type === "edit-subagent" && (
+          <SubagentEditPanel
+            subagentId={modal.subagentId}
+            parentAgentId={agent.id}
+            toolRecordId={modal.toolRecordId}
+            onDeleted={handleSubagentDeleted}
+          />
+        )}
       </NodeModal>
 
       {chatOpen && (
@@ -612,9 +682,16 @@ function AgentCanvasInner({
         onClose={() => setCatalogOpen(false)}
         onSelect={(toolType) => {
           setCatalogOpen(false);
-          setSetupTool({ toolType });
+          if (toolType === "subagent") {
+            // Subagent creation uses the reworked SubagentSetup dialog
+            setSetupTool({ toolType: "subagent" });
+          } else {
+            setSetupTool({ toolType });
+          }
         }}
-        existingTypes={agentTools.map((t) => t.tool_type as ToolType)}
+        existingTypes={agentTools
+          .filter((t) => t.tool_type !== "subagent")
+          .map((t) => t.tool_type as ToolType)}
         onAppLibrary={() => {
           setCatalogOpen(false);
           setAppLibraryOpen(true);
