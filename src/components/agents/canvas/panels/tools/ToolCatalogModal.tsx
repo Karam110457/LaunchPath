@@ -6,6 +6,7 @@ import {
   Globe,
   Users,
   Library,
+  Database,
   ChevronRight,
   type LucideIcon,
 } from "lucide-react";
@@ -60,6 +61,8 @@ interface ToolCatalogModalProps {
   onClose: () => void;
   onSelect: (toolType: string) => void;
   existingTypes: ToolType[];
+  /** Whether knowledge base is already enabled for this agent */
+  hasKnowledge?: boolean;
   /** Open the full app library */
   onAppLibrary?: () => void;
 }
@@ -69,6 +72,7 @@ export function ToolCatalogModal({
   onClose,
   onSelect,
   existingTypes,
+  hasKnowledge = false,
   onAppLibrary,
 }: ToolCatalogModalProps) {
   return (
@@ -109,6 +113,43 @@ export function ToolCatalogModal({
               </button>
             </div>
           )}
+
+          {/* Knowledge Base */}
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
+              Capabilities
+            </p>
+            <button
+              type="button"
+              disabled={hasKnowledge}
+              onClick={() => onSelect("knowledge")}
+              className={cn(
+                "w-full text-left rounded-xl border p-3.5 flex items-start gap-3.5 transition-all",
+                hasKnowledge
+                  ? "opacity-40 cursor-not-allowed border-border/50 bg-muted/20"
+                  : "border-border/60 hover:border-violet-500/40 hover:bg-violet-500/5 cursor-pointer"
+              )}
+            >
+              <div className="w-9 h-9 rounded-lg bg-violet-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                <Database className="w-4.5 h-4.5 text-violet-400" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-foreground">
+                    Knowledge Base
+                  </span>
+                  {hasKnowledge && (
+                    <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                      Added
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                  Upload documents, websites, and FAQs your agent can reference.
+                </p>
+              </div>
+            </button>
+          </div>
 
           {/* Divider */}
           <div className="flex items-center gap-3">

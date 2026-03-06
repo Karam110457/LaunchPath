@@ -1,11 +1,12 @@
 /**
  * Subagents API
- * GET  /api/agents/[agentId]/subagents — list child agents
+ * GET  /api/agents/[agentId]/subagents — list child agents with their tools + knowledge counts
  * POST /api/agents/[agentId]/subagents — create child agent + linking tool record
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { maskConfig } from "@/lib/tools/mask-config";
 import { logger } from "@/lib/security/logger";
 
 export async function GET(
@@ -25,12 +26,60 @@ export async function GET(
 
   const { data: subagents } = await supabase
     .from("ai_agents")
-    .select("id, name, description, personality, model, status")
+    .select("id, name, description, personality, model, status, knowledge_enabled")
     .eq("parent_agent_id", agentId)
     .eq("user_id", user.id)
     .order("created_at", { ascending: true });
 
-  return NextResponse.json({ subagents: subagents ?? [] });
+  const saList = subagents ?? [];
+  if (saList.length === 0) {
+    return NextResponse.json({ subagents: [] });
+  }
+
+  const saIds = saList.map((s) => s.id);
+
+  // Batch-fetch tools and knowledge docs for all sub-agents
+  const [toolsResult, kbResult] = await Promise.all([
+    supabase
+      .from("agent_tools")
+      .select("*")
+      .in("agent_id", saIds)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("agent_knowledge_documents")
+      .select("agent_id, status")
+      .in("agent_id", saIds),
+  ]);
+
+  // Group tools by agent_id
+  const toolsByAgent = new Map<string, typeof toolsResult.data>();
+  for (const t of toolsResult.data ?? []) {
+    const arr = toolsByAgent.get(t.agent_id) ?? [];
+    arr.push(t);
+    toolsByAgent.set(t.agent_id, arr);
+  }
+
+  // Group knowledge counts by agent_id
+  const kbByAgent = new Map<string, { total: number; ready: number; processing: number }>();
+  for (const d of kbResult.data ?? []) {
+    const counts = kbByAgent.get(d.agent_id) ?? { total: 0, ready: 0, processing: 0 };
+    counts.total++;
+    if (d.status === "ready") counts.ready++;
+    if (d.status === "processing") counts.processing++;
+    kbByAgent.set(d.agent_id, counts);
+  }
+
+  // Enrich each sub-agent with its tools and knowledge counts
+  const enriched = saList.map((sa) => ({
+    ...sa,
+    tools: (toolsByAgent.get(sa.id) ?? []).map((t) => ({
+      ...t,
+      config: maskConfig(t.config as Record<string, unknown>),
+    })),
+    knowledgeCounts: kbByAgent.get(sa.id) ?? { total: 0, ready: 0, processing: 0 },
+  }));
+
+  return NextResponse.json({ subagents: enriched });
 }
 
 export async function POST(

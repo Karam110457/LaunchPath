@@ -47,12 +47,18 @@ interface KnowledgeDetailPanelProps {
   agentId: string;
   initialDocuments: KnowledgeDocument[];
   onDocumentsChange?: (documents: KnowledgeDocument[]) => void;
+  /** When true, fetches documents from the API on mount instead of using initialDocuments */
+  fetchOnMount?: boolean;
+  /** Called when the user removes the entire knowledge base */
+  onRemoveKnowledge?: () => void;
 }
 
 export function KnowledgeDetailPanel({
   agentId,
   initialDocuments,
   onDocumentsChange,
+  fetchOnMount = false,
+  onRemoveKnowledge,
 }: KnowledgeDetailPanelProps) {
   const [documents, setDocumentsRaw] =
     useState<KnowledgeDocument[]>(initialDocuments);
@@ -85,6 +91,12 @@ export function KnowledgeDetailPanel({
       // Network error — will retry on next interval
     }
   }, [agentId]);
+
+  // Fetch on mount for sub-agent knowledge (no server-side initial data)
+  useEffect(() => {
+    if (fetchOnMount) void refreshDocuments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchOnMount]);
 
   // Poll every 3s while any document is still processing
   const hasProcessing = documents.some((d) => d.status === "processing");
@@ -281,6 +293,36 @@ export function KnowledgeDetailPanel({
               </span>
             )}
           </h3>
+          {onRemoveKnowledge && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button
+                  type="button"
+                  className="text-[11px] text-destructive/70 hover:text-destructive transition-colors"
+                >
+                  Remove Knowledge Base
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Remove Knowledge Base?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete all documents and embeddings, and
+                    remove the knowledge base from this agent.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={onRemoveKnowledge}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Remove
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
 
         {documents.length > 3 && (

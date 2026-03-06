@@ -39,6 +39,7 @@ import { ComposioToolSetup } from "./panels/tools/ComposioToolSetup";
 import { SaveDialog } from "./SaveDialog";
 import { VersionHistoryModal } from "./VersionHistoryModal";
 import { NodeHelperTip } from "./nodes/NodeHelperTip";
+import { CanvasActionsContext } from "./canvas-context";
 import { useCanvasLayout, type SavedPositions } from "./useCanvasLayout";
 import type {
   PanelState,
@@ -46,6 +47,7 @@ import type {
   KnowledgeNodeData,
   ToolNodeData,
   SubagentNodeData,
+  SubagentTreeData,
   AgentFormState,
   WizardConfig,
 } from "./canvas-types";
@@ -73,6 +75,7 @@ export interface AgentCanvasPageProps {
     created_at: string;
     wizard_config?: WizardConfig | null;
     canvas_layout?: SavedPositions | null;
+    knowledge_enabled?: boolean;
   };
   personality: {
     tone?: string;
@@ -282,6 +285,11 @@ function AgentCanvasInner({
     ]
   );
 
+  // ─── Knowledge enabled state ──────────────────────────────────────────────
+  const [hasKnowledge, setHasKnowledge] = useState(
+    () => agent.knowledge_enabled ?? initialDocuments.length > 0
+  );
+
   const [docCounts, setDocCounts] = useState({
     total: initialDocuments.length,
     ready: initialDocuments.filter((d) => d.status === "ready").length,
@@ -335,6 +343,9 @@ function AgentCanvasInner({
     description: string | null;
     personality: { avatar_emoji?: string } | null;
     status: string;
+    knowledge_enabled?: boolean;
+    tools: AgentToolResponse[];
+    knowledgeCounts: { total: number; ready: number; processing: number };
   }
   const [subagentDetails, setSubagentDetails] = useState<SubagentDetail[]>([]);
 
@@ -374,14 +385,32 @@ function AgentCanvasInner({
     [agentTools, agent.id]
   );
 
-  // Subagent nodes — join agent_tools (subagent type) with subagent details
-  const subagentNodeItems = useMemo<SubagentNodeData[]>(
+  // Subagent tree nodes — join agent_tools (subagent type) with enriched subagent details
+  const subagentNodeItems = useMemo<SubagentTreeData[]>(
     () =>
       agentTools
         .filter((t) => t.tool_type === "subagent")
         .map((t) => {
           const cfg = t.config as { target_agent_id?: string };
           const detail = subagentDetails.find((s) => s.id === cfg.target_agent_id);
+          const saTools: ToolNodeData[] = (detail?.tools ?? [])
+            .filter((st) => st.tool_type !== "subagent")
+            .map((st) => {
+              const stCfg = st.tool_type === "composio"
+                ? (st.config as { toolkit_icon?: string; toolkit?: string })
+                : null;
+              return {
+                toolId: st.id,
+                agentId: cfg.target_agent_id ?? "",
+                toolType: st.tool_type,
+                displayName: st.display_name,
+                isEnabled: st.is_enabled,
+                toolkitIcon: stCfg?.toolkit_icon,
+                toolkitSlug: stCfg?.toolkit,
+              };
+            });
+          const kbCounts = detail?.knowledgeCounts ?? { total: 0, ready: 0, processing: 0 };
+          const saHasKnowledge = detail?.knowledge_enabled ?? false;
           return {
             subagentId: cfg.target_agent_id ?? "",
             parentAgentId: agent.id,
@@ -390,6 +419,16 @@ function AgentCanvasInner({
             avatarEmoji: detail?.personality?.avatar_emoji ?? "🤖",
             description: detail?.description ?? null,
             status: detail?.status ?? "draft",
+            tools: saTools,
+            hasKnowledge: saHasKnowledge,
+            knowledgeData: saHasKnowledge
+              ? {
+                  agentId: cfg.target_agent_id ?? "",
+                  documentCount: kbCounts.total,
+                  readyCount: kbCounts.ready,
+                  processingCount: kbCounts.processing,
+                }
+              : null,
           };
         })
         .filter((sa) => sa.subagentId),
@@ -421,7 +460,7 @@ function AgentCanvasInner({
   // ─── Canvas layout ────────────────────────────────────────────────────────
   const { nodes: layoutNodes, edges: layoutEdges } = useCanvasLayout({
     agent: agentData,
-    knowledge: knowledgeData,
+    knowledge: hasKnowledge ? knowledgeData : null,
     tools: toolNodeItems,
     subagents: subagentNodeItems,
     savedPositions,
@@ -464,14 +503,14 @@ function AgentCanvasInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docCounts]);
 
-  // When tools/subagents change after initial load: rebuild layout
+  // When tools/subagents/knowledge change after initial load: rebuild layout
   // New nodes get default positions; existing nodes keep their saved spot
   useEffect(() => {
     if (!toolsReady) return;
     setNodes(layoutNodes);
     setEdges(layoutEdges);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentTools, subagentDetails]);
+  }, [agentTools, subagentDetails, hasKnowledge]);
 
   // ─── Drag end: capture new position and persist ───────────────────────────
   const onNodeDragStop: OnNodeDrag = useCallback(
@@ -490,15 +529,21 @@ function AgentCanvasInner({
   const [modal, setModal] = useState<PanelState>({ type: "none" });
   const [chatOpen, setChatOpen] = useState(false);
 
-  // Tool dialog state
-  const [catalogOpen, setCatalogOpen] = useState(false);
+  // Tool dialog state — scoped to a specific agent (parent or sub-agent)
+  const [catalogContext, setCatalogContext] = useState<{
+    agentId: string;
+    hasKnowledge: boolean;
+    existingToolTypes: string[];
+  } | null>(null);
   const [setupTool, setSetupTool] = useState<{
     toolType: string;
+    agentId: string;
     existing?: AgentToolResponse;
   } | null>(null);
   // Composio app library + tool setup state
   const [appLibraryOpen, setAppLibraryOpen] = useState(false);
   const [composioSetup, setComposioSetup] = useState<{
+    agentId: string;
     toolkit: string;
     toolkitName: string;
     toolkitIcon: string;
@@ -508,7 +553,7 @@ function AgentCanvasInner({
 
   const handleToolSaved = useCallback(async () => {
     setSetupTool(null);
-    setCatalogOpen(false);
+    setCatalogContext(null);
     setComposioSetup(null);
     setAppLibraryOpen(false);
     await Promise.all([fetchTools(), fetchSubagents()]);
@@ -525,39 +570,64 @@ function AgentCanvasInner({
     await Promise.all([fetchTools(), fetchSubagents()]);
   }, [fetchTools, fetchSubagents]);
 
+  // Helper: find a tool record by id across parent + all sub-agents
+  const findToolRecord = useCallback(
+    (toolId: string, ownerAgentId: string): AgentToolResponse | undefined => {
+      if (ownerAgentId === agent.id) {
+        return agentTools.find((t) => t.id === toolId);
+      }
+      const sa = subagentDetails.find((s) => s.id === ownerAgentId);
+      return sa?.tools.find((t) => t.id === toolId);
+    },
+    [agent.id, agentTools, subagentDetails]
+  );
+
+  const openToolSetup = useCallback(
+    (existing: AgentToolResponse, ownerAgentId: string) => {
+      if (existing.tool_type === "composio") {
+        const cfg = existing.config as {
+          toolkit?: string;
+          toolkit_name?: string;
+          toolkit_icon?: string;
+          connection_id?: string;
+        };
+        setComposioSetup({
+          agentId: ownerAgentId,
+          toolkit: cfg.toolkit ?? "",
+          toolkitName: cfg.toolkit_name ?? existing.display_name,
+          toolkitIcon: cfg.toolkit_icon ?? existing.display_name.charAt(0),
+          connectionId: cfg.connection_id ?? "",
+          existing,
+        });
+      } else {
+        setSetupTool({ toolType: existing.tool_type, agentId: ownerAgentId, existing });
+      }
+    },
+    []
+  );
+
   const onNodeDoubleClick: NodeMouseHandler = useCallback(
     (_event, node) => {
       if (node.type === "agentNode") setModal({ type: "edit-agent" });
-      if (node.type === "knowledgeNode") setModal({ type: "knowledge" });
+      if (node.type === "knowledgeNode") {
+        const d = node.data as unknown as KnowledgeNodeData;
+        if (d.agentId === agent.id) {
+          setModal({ type: "knowledge" });
+        } else {
+          setModal({ type: "subagent-knowledge", agentId: d.agentId });
+        }
+      }
       if (node.type === "subagentNode") {
         const d = node.data as unknown as SubagentNodeData;
         setModal({ type: "edit-subagent", subagentId: d.subagentId, toolRecordId: d.toolRecordId });
       }
       if (node.type === "toolNode") {
         const d = node.data as unknown as ToolNodeData;
-        const existing = agentTools.find((t) => t.id === d.toolId);
-        if (existing) {
-          if (existing.tool_type === "composio") {
-            const cfg = existing.config as {
-              toolkit?: string;
-              toolkit_name?: string;
-              toolkit_icon?: string;
-              connection_id?: string;
-            };
-            setComposioSetup({
-              toolkit: cfg.toolkit ?? "",
-              toolkitName: cfg.toolkit_name ?? existing.display_name,
-              toolkitIcon: cfg.toolkit_icon ?? existing.display_name.charAt(0),
-              connectionId: cfg.connection_id ?? "",
-              existing,
-            });
-          } else {
-            setSetupTool({ toolType: existing.tool_type, existing });
-          }
-        }
+        const existing = findToolRecord(d.toolId, d.agentId);
+        if (existing) openToolSetup(existing, d.agentId);
       }
     },
-    [agentTools]
+    [agent.id, findToolRecord, openToolSetup]
   );
 
   const handleToggleTest = useCallback(() => {
@@ -571,6 +641,7 @@ function AgentCanvasInner({
   let modalTitle = "";
   if (modal.type === "edit-agent") modalTitle = "Edit Agent";
   else if (modal.type === "knowledge") modalTitle = "Knowledge Base";
+  else if (modal.type === "subagent-knowledge") modalTitle = "Sub-Agent Knowledge Base";
   else if (modal.type === "edit-subagent") modalTitle = "Edit Sub-Agent";
 
   return (
@@ -589,7 +660,15 @@ function AgentCanvasInner({
       {/* Fixed "Add Tool" button */}
       <div className="absolute top-[60px] right-4 z-20">
         <button
-          onClick={() => setCatalogOpen(true)}
+          onClick={() =>
+            setCatalogContext({
+              agentId: agent.id,
+              hasKnowledge,
+              existingToolTypes: agentTools
+                .filter((t) => t.tool_type !== "subagent")
+                .map((t) => t.tool_type),
+            })
+          }
           className="flex items-center gap-2 px-3 py-2 bg-card/90 backdrop-blur-sm border border-border/50 rounded-lg text-sm font-medium text-muted-foreground hover:text-amber-400 hover:border-amber-500/40 hover:bg-amber-500/5 transition-all shadow-sm"
         >
           <Plus className="w-4 h-4 text-amber-400" />
@@ -604,31 +683,44 @@ function AgentCanvasInner({
       </div>
 
       {toolsReady ? (
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onNodeDoubleClick={onNodeDoubleClick}
-          onNodeDragStop={onNodeDragStop}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          fitView
-          fitViewOptions={{ padding: 0.4 }}
-          proOptions={{ hideAttribution: true }}
-          minZoom={0.3}
-          maxZoom={2}
-          className="!bg-transparent"
-          nodesConnectable={false}
-          elementsSelectable
+        <CanvasActionsContext.Provider
+          value={{
+            openCatalogForAgent: (saId: string) => {
+              const sa = subagentNodeItems.find((s) => s.subagentId === saId);
+              setCatalogContext({
+                agentId: saId,
+                hasKnowledge: sa?.hasKnowledge ?? false,
+                existingToolTypes: (sa?.tools ?? []).map((t) => t.toolType),
+              });
+            },
+          }}
         >
-          <Background
-            variant={BackgroundVariant.Dots}
-            gap={24}
-            size={1.2}
-            color="rgba(255, 255, 255, 0.15)"
-          />
-        </ReactFlow>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onNodeDoubleClick={onNodeDoubleClick}
+            onNodeDragStop={onNodeDragStop}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            fitView
+            fitViewOptions={{ padding: 0.4 }}
+            proOptions={{ hideAttribution: true }}
+            minZoom={0.3}
+            maxZoom={2}
+            className="!bg-transparent"
+            nodesConnectable={false}
+            elementsSelectable
+          >
+            <Background
+              variant={BackgroundVariant.Dots}
+              gap={24}
+              size={1.2}
+              color="rgba(255, 255, 255, 0.15)"
+            />
+          </ReactFlow>
+        </CanvasActionsContext.Provider>
       ) : (
         // Holds space while tools are fetched — no layout jump
         <div className="w-full h-full flex items-center justify-center">
@@ -656,6 +748,34 @@ function AgentCanvasInner({
             agentId={agent.id}
             initialDocuments={initialDocuments}
             onDocumentsChange={handleDocumentsChange}
+            onRemoveKnowledge={async () => {
+              await fetch(`/api/agents/${agent.id}/knowledge?all=true`, { method: "DELETE" });
+              await fetch(`/api/agents/${agent.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ knowledge_enabled: false, skip_version: true }),
+              });
+              setHasKnowledge(false);
+              handleDocumentsChange([]);
+              setModal({ type: "none" });
+            }}
+          />
+        )}
+        {modal.type === "subagent-knowledge" && (
+          <KnowledgeDetailPanel
+            agentId={modal.agentId}
+            initialDocuments={[]}
+            fetchOnMount
+            onRemoveKnowledge={async () => {
+              await fetch(`/api/agents/${modal.agentId}/knowledge?all=true`, { method: "DELETE" });
+              await fetch(`/api/agents/${modal.agentId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ knowledge_enabled: false, skip_version: true }),
+              });
+              await fetchSubagents();
+              setModal({ type: "none" });
+            }}
           />
         )}
         {modal.type === "edit-subagent" && (
@@ -678,22 +798,39 @@ function AgentCanvasInner({
       )}
 
       <ToolCatalogModal
-        open={catalogOpen}
-        onClose={() => setCatalogOpen(false)}
+        open={catalogContext !== null}
+        onClose={() => setCatalogContext(null)}
         onSelect={(toolType) => {
-          setCatalogOpen(false);
-          if (toolType === "subagent") {
-            // Subagent creation uses the reworked SubagentSetup dialog
-            setSetupTool({ toolType: "subagent" });
+          const ctx = catalogContext;
+          if (!ctx) return;
+          setCatalogContext(null);
+
+          if (toolType === "knowledge") {
+            // Enable knowledge base for the target agent
+            void (async () => {
+              await fetch(`/api/agents/${ctx.agentId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ knowledge_enabled: true, skip_version: true }),
+              });
+              if (ctx.agentId === agent.id) {
+                setHasKnowledge(true);
+                setModal({ type: "knowledge" });
+              } else {
+                await fetchSubagents();
+                setModal({ type: "subagent-knowledge", agentId: ctx.agentId });
+              }
+            })();
+          } else if (toolType === "subagent") {
+            setSetupTool({ toolType: "subagent", agentId: ctx.agentId });
           } else {
-            setSetupTool({ toolType });
+            setSetupTool({ toolType, agentId: ctx.agentId });
           }
         }}
-        existingTypes={agentTools
-          .filter((t) => t.tool_type !== "subagent")
-          .map((t) => t.tool_type as ToolType)}
+        existingTypes={(catalogContext?.existingToolTypes ?? []) as ToolType[]}
+        hasKnowledge={catalogContext?.hasKnowledge}
         onAppLibrary={() => {
-          setCatalogOpen(false);
+          setCatalogContext(null);
           setAppLibraryOpen(true);
         }}
       />
@@ -704,6 +841,7 @@ function AgentCanvasInner({
         onSelectApp={(app, connection) => {
           setAppLibraryOpen(false);
           setComposioSetup({
+            agentId: catalogContext?.agentId ?? agent.id,
             toolkit: app.toolkit,
             toolkitName: app.name,
             toolkitIcon: app.icon,
@@ -714,7 +852,7 @@ function AgentCanvasInner({
 
       {setupTool?.toolType === "http" && (
         <HttpToolSetup
-          agentId={agent.id}
+          agentId={setupTool.agentId}
           existing={setupTool.existing}
           onSaved={handleToolSaved}
           onClose={() => setSetupTool(null)}
@@ -722,7 +860,7 @@ function AgentCanvasInner({
       )}
       {setupTool?.toolType === "subagent" && (
         <SubagentSetup
-          agentId={agent.id}
+          agentId={setupTool.agentId}
           existing={setupTool.existing}
           onSaved={handleToolSaved}
           onClose={() => setSetupTool(null)}
@@ -732,7 +870,7 @@ function AgentCanvasInner({
         setupTool.toolType !== "http" &&
         setupTool.toolType !== "subagent" && (
           <ToolSetupDialog
-            agentId={agent.id}
+            agentId={setupTool.agentId}
             toolType={setupTool.toolType}
             existing={setupTool.existing}
             onSaved={handleToolSaved}
@@ -743,7 +881,7 @@ function AgentCanvasInner({
 
       {composioSetup && (
         <ComposioToolSetup
-          agentId={agent.id}
+          agentId={composioSetup.agentId}
           toolkit={composioSetup.toolkit}
           toolkitName={composioSetup.toolkitName}
           toolkitIcon={composioSetup.toolkitIcon}

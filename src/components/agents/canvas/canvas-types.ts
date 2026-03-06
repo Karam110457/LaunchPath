@@ -43,6 +43,13 @@ export interface SubagentNodeData {
   status: string;
 }
 
+// Subagent with its children data for the hierarchical layout
+export interface SubagentTreeData extends SubagentNodeData {
+  tools: ToolNodeData[];
+  knowledgeData: KnowledgeNodeData | null;
+  hasKnowledge: boolean;
+}
+
 // Data payload for the "Add Tool" button node
 export interface AddToolNodeData {
   agentId: string;
@@ -75,4 +82,5 @@ export type PanelState =
   | { type: "none" }
   | { type: "knowledge" }
   | { type: "edit-agent" }
-  | { type: "edit-subagent"; subagentId: string; toolRecordId: string };
+  | { type: "edit-subagent"; subagentId: string; toolRecordId: string }
+  | { type: "subagent-knowledge"; agentId: string };

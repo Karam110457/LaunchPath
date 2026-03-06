@@ -53,7 +53,34 @@ export async function DELETE(
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  const deleteAll = request.nextUrl.searchParams.get("all") === "true";
   const documentId = request.nextUrl.searchParams.get("documentId");
+
+  if (deleteAll) {
+    // Bulk delete: remove all documents for this agent
+    const { data: docs } = await supabase
+      .from("agent_knowledge_documents")
+      .select("id, file_path")
+      .eq("agent_id", agentId)
+      .eq("user_id", user.id);
+
+    if (docs && docs.length > 0) {
+      // Clean up storage files
+      const paths = docs.map((d) => d.file_path).filter(Boolean) as string[];
+      if (paths.length > 0) {
+        await supabase.storage.from("agent-knowledge").remove(paths);
+      }
+      // Delete all documents (chunks cascade automatically)
+      await supabase
+        .from("agent_knowledge_documents")
+        .delete()
+        .eq("agent_id", agentId)
+        .eq("user_id", user.id);
+    }
+
+    return NextResponse.json({ ok: true });
+  }
+
   if (!documentId) {
     return NextResponse.json({ error: "documentId is required" }, { status: 400 });
   }

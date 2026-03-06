@@ -47,6 +47,7 @@ const ALLOWED_FIELDS = [
   "status",
   "wizard_config",
   "tool_guidelines",
+  "knowledge_enabled",
 ] as const;
 
 const VALID_STATUSES = new Set(["draft", "active", "paused"]);

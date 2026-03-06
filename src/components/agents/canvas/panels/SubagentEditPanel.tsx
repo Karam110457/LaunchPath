@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ToolsTab } from "./tools/ToolsTab";
 
 interface SubagentEditPanelProps {
   subagentId: string;
@@ -85,13 +84,6 @@ export function SubagentEditPanel({
   const currentPreset = matchesPreset(tone);
   const [showCustomTone, setShowCustomTone] = useState(false);
   const [dirty, setDirty] = useState(false);
-
-  // Track tool count for display
-  const [toolCount, setToolCount] = useState(0);
-
-  const handleToolCountChange = useCallback((count: number) => {
-    setToolCount(count);
-  }, []);
 
   // Load subagent data + tool record config
   useEffect(() => {
@@ -215,14 +207,6 @@ export function SubagentEditPanel({
         <TabsList className="w-full">
           <TabsTrigger value="basics" className="flex-1 text-xs">
             Basics
-          </TabsTrigger>
-          <TabsTrigger value="tools" className="flex-1 text-xs">
-            Tools
-            {toolCount > 0 && (
-              <span className="ml-1.5 text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">
-                {toolCount}
-              </span>
-            )}
           </TabsTrigger>
           <TabsTrigger value="advanced" className="flex-1 text-xs">
             Advanced
@@ -359,11 +343,6 @@ export function SubagentEditPanel({
 
           {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
-      </TabsContent>
-
-      {/* ═══════════════════════ TOOLS TAB ═══════════════════════ */}
-      <TabsContent value="tools">
-        <ToolsTab agentId={subagentId} onToolCountChange={handleToolCountChange} />
       </TabsContent>
 
       {/* ═══════════════════════ ADVANCED TAB ═══════════════════════ */}
