@@ -90,6 +90,14 @@ export const WIDGET_CSS = `
   z-index: 2147483646;
 }
 
+.lp-chat-panel.lp-sharp {
+  border-radius: 8px;
+}
+
+.lp-chat-panel.lp-dark {
+  background: #111827;
+}
+
 .lp-position-right .lp-chat-panel {
   right: 20px;
 }
@@ -116,7 +124,6 @@ export const WIDGET_CSS = `
   display: flex;
   align-items: center;
   gap: 10px;
-  border-bottom: 1px solid #f0f0f0;
   flex-shrink: 0;
 }
 
@@ -373,6 +380,63 @@ export const WIDGET_CSS = `
 }
 
 .lp-powered a:hover {
+  color: #6b7280;
+}
+
+/* ===== Dark Mode ===== */
+.lp-dark .lp-messages::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+.lp-dark .lp-msg-assistant,
+.lp-dark .lp-welcome {
+  background: #1f2937;
+  color: #e5e7eb;
+}
+
+.lp-dark .lp-typing {
+  background: #1f2937;
+}
+
+.lp-dark .lp-typing span {
+  background: #6b7280;
+}
+
+.lp-dark .lp-starter-btn {
+  border-color: #374151;
+  background: #1f2937;
+  color: #d1d5db;
+}
+
+.lp-dark .lp-starter-btn:hover {
+  background: #374151;
+  border-color: #4b5563;
+}
+
+.lp-dark .lp-input-area {
+  border-top-color: #374151;
+}
+
+.lp-dark .lp-input {
+  border-color: #374151;
+  background: #1f2937;
+  color: #f3f4f6;
+}
+
+.lp-dark .lp-input::placeholder {
+  color: #6b7280;
+}
+
+.lp-dark .lp-input:focus {
+  border-color: #818cf8;
+}
+
+.lp-dark .lp-powered,
+.lp-dark .lp-powered a {
+  color: #4b5563;
+}
+
+.lp-dark .lp-powered a:hover {
   color: #6b7280;
 }
 `;

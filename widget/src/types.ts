@@ -2,10 +2,16 @@ export interface WidgetConfig {
   primaryColor?: string;
   agentName?: string;
   agentAvatar?: string;
+  launcherIcon?: string;
   welcomeMessage?: string;
   conversationStarters?: string[];
   position?: "right" | "left";
+  /** @deprecated Use agentName instead */
   headerText?: string;
+  theme?: "light" | "dark";
+  borderRadius?: "rounded" | "sharp";
+  autoOpenDelay?: number;
+  showBranding?: boolean;
 }
 
 export interface Message {

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "preact/hooks";
 import { MessageBubble } from "./MessageBubble";
 import { TypingDots } from "./TypingDots";
 import type { WidgetConfig, Message } from "../types";
+import { getContrastColor } from "../contrast";
 
 interface ChatPanelProps {
   config: WidgetConfig;
@@ -70,10 +71,14 @@ export function ChatPanel({
   const sessionId = useRef(getSessionId(channelId));
 
   const primaryColor = config.primaryColor || "#6366f1";
+  const contrastColor = getContrastColor(primaryColor);
+  const contrastMuted = contrastColor === "#ffffff" ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.5)";
   const agentName = config.agentName || "AI Assistant";
   const welcomeMessage = config.welcomeMessage || "Hi! How can I help you today?";
   const starters = config.conversationStarters ?? [];
-  const headerText = config.headerText || agentName;
+  const isDark = config.theme === "dark";
+  const isSharp = config.borderRadius === "sharp";
+  const showBranding = config.showBranding !== false;
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -164,7 +169,6 @@ export function ChatPanel({
                 );
               } else if (event.type === "done") {
                 if (!addedAssistant && accumulatedText === "") {
-                  // Agent responded but with no text (tool-only?)
                   accumulatedText =
                     event.assistantContent || "I processed your request.";
                   setMessages((prev) => [
@@ -241,7 +245,6 @@ export function ChatPanel({
   function handleInput(e: Event) {
     const target = e.target as HTMLTextAreaElement;
     setInputValue(target.value);
-    // Auto-resize
     target.style.height = "38px";
     target.style.height = Math.min(target.scrollHeight, 100) + "px";
   }
@@ -249,26 +252,42 @@ export function ChatPanel({
   const showStarters =
     starters.length > 0 && messages.filter((m) => m.role === "user").length === 0;
 
-  // Avatar rendering
   const avatarContent = config.agentAvatar;
   const isAvatarUrl = avatarContent?.startsWith("http");
 
+  const panelClass = [
+    "lp-chat-panel",
+    isDark ? "lp-dark" : "",
+    isSharp ? "lp-sharp" : "",
+  ].filter(Boolean).join(" ");
+
   return (
-    <div class="lp-chat-panel">
-      {/* Header */}
-      <div class="lp-header">
-        <div class="lp-header-avatar" style={{ backgroundColor: primaryColor }}>
+    <div class={panelClass}>
+      {/* Header — primary color banner */}
+      <div class="lp-header" style={{ backgroundColor: primaryColor }}>
+        <div
+          class="lp-header-avatar"
+          style={{ backgroundColor: contrastColor === "#ffffff" ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)" }}
+        >
           {isAvatarUrl ? (
             <img src={avatarContent} alt={agentName} />
           ) : (
-            <span>{avatarContent || agentName.charAt(0)}</span>
+            <span style={{ color: contrastColor }}>{avatarContent || agentName.charAt(0)}</span>
           )}
         </div>
         <div class="lp-header-info">
-          <div class="lp-header-name">{headerText}</div>
-          <div class="lp-header-status">Online</div>
+          <div class="lp-header-name" style={{ color: contrastColor }}>{agentName}</div>
+          <div class="lp-header-status" style={{ color: contrastMuted }}>
+            <span style={{ display: "inline-block", width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#22c55e", marginRight: "4px", verticalAlign: "middle" }} />
+            Online
+          </div>
         </div>
-        <button class="lp-close-btn" onClick={onClose} aria-label="Close chat">
+        <button
+          class="lp-close-btn"
+          onClick={onClose}
+          aria-label="Close chat"
+          style={{ color: contrastMuted }}
+        >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <line x1="18" y1="6" x2="6" y2="18" />
             <line x1="6" y1="6" x2="18" y2="18" />
@@ -278,7 +297,6 @@ export function ChatPanel({
 
       {/* Messages */}
       <div class="lp-messages">
-        {/* Welcome message */}
         {messages.length === 0 && (
           <div class="lp-welcome">{welcomeMessage}</div>
         )}
@@ -326,7 +344,7 @@ export function ChatPanel({
         />
         <button
           class="lp-send-btn"
-          style={{ backgroundColor: primaryColor }}
+          style={{ backgroundColor: primaryColor, color: contrastColor }}
           onClick={() => sendMessage(inputValue)}
           disabled={!inputValue.trim() || isStreaming}
           aria-label="Send message"
@@ -339,11 +357,13 @@ export function ChatPanel({
       </div>
 
       {/* Powered by */}
-      <div class="lp-powered">
-        <a href="https://launchpath.io" target="_blank" rel="noopener noreferrer">
-          Powered by LaunchPath
-        </a>
-      </div>
+      {showBranding && (
+        <div class="lp-powered">
+          <a href="https://launchpath.io" target="_blank" rel="noopener noreferrer">
+            Powered by LaunchPath
+          </a>
+        </div>
+      )}
     </div>
   );
 }
