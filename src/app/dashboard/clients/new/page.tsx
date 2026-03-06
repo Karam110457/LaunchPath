@@ -31,7 +31,10 @@ export default function NewClientPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error ?? "Failed to create client");
+        const msg = data.details
+          ? `${data.error}: ${data.details} (${data.code})`
+          : (data.error ?? "Failed to create client");
+        setError(msg);
         setSaving(false);
         return;
       }

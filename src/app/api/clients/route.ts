@@ -48,46 +48,56 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
 
-  const body = (await request.json()) as {
-    name?: string;
-    email?: string;
-    website?: string;
-    logo_url?: string;
-  };
+    const body = (await request.json()) as {
+      name?: string;
+      email?: string;
+      website?: string;
+      logo_url?: string;
+    };
 
-  if (!body.name || typeof body.name !== "string" || !body.name.trim()) {
-    return NextResponse.json({ error: "name is required" }, { status: 400 });
-  }
+    if (!body.name || typeof body.name !== "string" || !body.name.trim()) {
+      return NextResponse.json({ error: "name is required" }, { status: 400 });
+    }
 
-  const { data: client, error } = await supabase
-    .from("clients")
-    .insert({
-      user_id: user.id,
-      name: body.name.trim(),
-      email: body.email?.trim() || null,
-      website: body.website?.trim() || null,
-      logo_url: body.logo_url?.trim() || null,
-    })
-    .select("*")
-    .single();
+    const { data: client, error } = await supabase
+      .from("clients")
+      .insert({
+        user_id: user.id,
+        name: body.name.trim(),
+        email: body.email?.trim() || null,
+        website: body.website?.trim() || null,
+        logo_url: body.logo_url?.trim() || null,
+      })
+      .select("*")
+      .single();
 
-  if (error) {
-    logger.error("Failed to create client", { error, userId: user.id });
+    if (error) {
+      logger.error("Failed to create client", { error, userId: user.id });
+      return NextResponse.json(
+        { error: "Failed to create client", details: error.message, code: error.code },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ client }, { status: 201 });
+  } catch (err) {
+    logger.error("Unexpected error in POST /api/clients", {
+      message: err instanceof Error ? err.message : String(err),
+    });
     return NextResponse.json(
-      { error: "Failed to create client" },
+      { error: "Internal server error", details: err instanceof Error ? err.message : String(err) },
       { status: 500 }
     );
   }
-
-  return NextResponse.json({ client }, { status: 201 });
 }
