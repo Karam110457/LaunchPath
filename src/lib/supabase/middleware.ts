@@ -4,8 +4,11 @@ import { getClientEnv } from "@/lib/env";
 import { applySecurityHeaders } from "@/lib/security/headers";
 
 export async function updateSession(request: NextRequest) {
-  // Skip session handling for public channel endpoints (token auth, no cookies)
-  if (request.nextUrl.pathname.startsWith("/api/channels/")) {
+  // Skip session handling for public endpoints (token auth / no cookies)
+  if (
+    request.nextUrl.pathname.startsWith("/api/channels/") ||
+    request.nextUrl.pathname.startsWith("/api/widget/")
+  ) {
     const response = NextResponse.next({ request });
     applySecurityHeaders(response, request.nextUrl.pathname);
     return response;

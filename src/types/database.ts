@@ -229,6 +229,7 @@ export type Database = {
           token: string
           allowed_origins: string[]
           rate_limit_rpm: number | null
+          config: Json
           is_enabled: boolean
           created_at: string
           updated_at: string
@@ -242,6 +243,7 @@ export type Database = {
           token: string
           allowed_origins?: string[]
           rate_limit_rpm?: number | null
+          config?: Json
           is_enabled?: boolean
           created_at?: string
           updated_at?: string
@@ -255,6 +257,7 @@ export type Database = {
           token?: string
           allowed_origins?: string[]
           rate_limit_rpm?: number | null
+          config?: Json
           is_enabled?: boolean
           created_at?: string
           updated_at?: string

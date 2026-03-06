@@ -86,9 +86,10 @@ export async function POST(
     name?: string;
     allowed_origins?: string[];
     rate_limit_rpm?: number;
+    config?: Record<string, unknown>;
   };
 
-  const { channel_type, name, allowed_origins, rate_limit_rpm } = body;
+  const { channel_type, name, allowed_origins, rate_limit_rpm, config } = body;
 
   if (!channel_type || !ALLOWED_CHANNEL_TYPES.has(channel_type)) {
     return NextResponse.json(
@@ -125,6 +126,7 @@ export async function POST(
       token,
       allowed_origins: allowed_origins ?? [],
       rate_limit_rpm: rate_limit_rpm ?? null,
+      config: config ?? {},
     })
     .select("*")
     .single();

@@ -41,6 +41,7 @@ export async function PATCH(
     allowed_origins?: string[];
     rate_limit_rpm?: number | null;
     is_enabled?: boolean;
+    config?: Record<string, unknown>;
   };
 
   const updates: Record<string, unknown> = {};
@@ -75,6 +76,16 @@ export async function PATCH(
       );
     }
     updates.rate_limit_rpm = body.rate_limit_rpm;
+  }
+
+  if (body.config !== undefined) {
+    if (typeof body.config !== "object" || body.config === null || Array.isArray(body.config)) {
+      return NextResponse.json(
+        { error: "config must be a JSON object" },
+        { status: 400 }
+      );
+    }
+    updates.config = body.config;
   }
 
   if (body.is_enabled !== undefined) {
