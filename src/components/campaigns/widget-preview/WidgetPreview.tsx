@@ -21,10 +21,11 @@ export function WidgetPreview({
   const [isOpen, setIsOpen] = useState(false);
   const position = config.position || "right";
   const primaryColor = config.primaryColor || "#6366f1";
+  const canChat = Boolean(token && agentId);
 
   return (
     <>
-      {isOpen && token && agentId && (
+      {isOpen && (
         <PreviewChatPanel
           config={config}
           token={token}
@@ -32,6 +33,7 @@ export function WidgetPreview({
           apiOrigin={apiOrigin}
           position={position}
           onClose={() => setIsOpen(false)}
+          canChat={canChat}
         />
       )}
       <PreviewLauncher

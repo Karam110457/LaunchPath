@@ -14,6 +14,7 @@ interface PreviewChatPanelProps {
   apiOrigin: string;
   position: "right" | "left";
   onClose: () => void;
+  canChat: boolean;
 }
 
 function generateId(): string {
@@ -27,6 +28,7 @@ export function PreviewChatPanel({
   apiOrigin,
   position,
   onClose,
+  canChat,
 }: PreviewChatPanelProps) {
   const [messages, setMessages] = useState<PreviewMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -56,7 +58,7 @@ export function PreviewChatPanel({
 
   const sendMessage = useCallback(
     async (text: string) => {
-      if (!text.trim() || isStreaming) return;
+      if (!text.trim() || isStreaming || !canChat) return;
 
       const userMsg: PreviewMessage = {
         id: generateId(),
@@ -184,7 +186,7 @@ export function PreviewChatPanel({
         setIsTyping(false);
       }
     },
-    [agentId, apiOrigin, token, isStreaming]
+    [agentId, apiOrigin, token, isStreaming, canChat]
   );
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -305,6 +307,15 @@ export function PreviewChatPanel({
         </div>
       )}
 
+      {/* Deploy notice */}
+      {!canChat && (
+        <div className="px-4 py-2 bg-amber-50 border-t border-amber-100 shrink-0">
+          <p className="text-[11px] text-amber-700 text-center">
+            Click &ldquo;Save&rdquo; to enable live chat testing
+          </p>
+        </div>
+      )}
+
       {/* Input */}
       <div className="px-4 py-3 border-t border-gray-100 flex gap-2 items-end shrink-0">
         <textarea
@@ -312,14 +323,14 @@ export function PreviewChatPanel({
           value={inputValue}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
+          placeholder={canChat ? "Type a message..." : "Save to enable chat..."}
           rows={1}
-          disabled={isStreaming}
-          className="flex-1 resize-none border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 transition-colors min-h-[38px] max-h-[100px] text-gray-900 placeholder:text-gray-400 bg-white"
+          disabled={isStreaming || !canChat}
+          className="flex-1 resize-none border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 transition-colors min-h-[38px] max-h-[100px] text-gray-900 placeholder:text-gray-400 bg-white disabled:opacity-60"
         />
         <button
           onClick={() => sendMessage(inputValue)}
-          disabled={!inputValue.trim() || isStreaming}
+          disabled={!inputValue.trim() || isStreaming || !canChat}
           className="w-[38px] h-[38px] rounded-xl flex items-center justify-center text-white shrink-0 transition-opacity disabled:opacity-50 disabled:cursor-default hover:opacity-90"
           style={{ backgroundColor: primaryColor }}
           aria-label="Send message"
