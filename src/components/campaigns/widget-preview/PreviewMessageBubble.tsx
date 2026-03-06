@@ -1,3 +1,5 @@
+import { getContrastColor } from "./contrast";
+
 interface PreviewMessage {
   id: string;
   role: "user" | "assistant";
@@ -59,15 +61,16 @@ export function PreviewMessageBubble({
 }: PreviewMessageBubbleProps) {
   const isUser = message.role === "user";
   const lines = message.content.split("\n");
+  const contrastColor = getContrastColor(primaryColor);
 
   return (
     <div
       className={`max-w-[85%] px-3.5 py-2.5 text-sm leading-relaxed break-words animate-in fade-in slide-in-from-bottom-1 duration-200 ${
         isUser
-          ? "self-end text-white rounded-2xl rounded-br-sm"
+          ? "self-end rounded-2xl rounded-br-sm"
           : `self-start rounded-2xl rounded-bl-sm ${isDark ? "bg-gray-800 text-gray-200" : "bg-gray-100 text-gray-900"}`
       }`}
-      style={isUser ? { backgroundColor: primaryColor } : undefined}
+      style={isUser ? { backgroundColor: primaryColor, color: contrastColor } : undefined}
     >
       {lines.map((line, i) => (
         <span key={i}>

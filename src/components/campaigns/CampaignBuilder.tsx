@@ -54,6 +54,7 @@ export function CampaignBuilder({
   const [saving, setSaving] = useState(false);
   const [deploying, setDeploying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
 
   const agentId = campaign.agent_id;
   const token = channel?.token ?? "";
@@ -274,6 +275,8 @@ export function CampaignBuilder({
           token={token}
           agentId={agentId}
           clientWebsite={clientWebsite}
+          screenshotUrl={screenshotUrl}
+          onScreenshotChange={setScreenshotUrl}
         />
       </div>
     </div>

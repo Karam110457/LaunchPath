@@ -6,6 +6,7 @@ import {
   type PreviewMessage,
 } from "./PreviewMessageBubble";
 import type { WidgetConfig } from "@/lib/channels/types";
+import { getContrastColor } from "./contrast";
 
 interface PreviewChatPanelProps {
   config: WidgetConfig;
@@ -39,6 +40,8 @@ export function PreviewChatPanel({
   const sessionIdRef = useRef(generateId());
 
   const primaryColor = config.primaryColor || "#6366f1";
+  const contrastColor = getContrastColor(primaryColor);
+  const contrastMuted = contrastColor === "#ffffff" ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.5)";
   const agentName = config.agentName || "AI Assistant";
   const welcomeMessage =
     config.welcomeMessage || "Hi! How can I help you today?";
@@ -221,7 +224,10 @@ export function PreviewChatPanel({
         className="px-4 py-3.5 flex items-center gap-2.5 shrink-0"
         style={{ backgroundColor: primaryColor }}
       >
-        <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0 overflow-hidden bg-white/20">
+        <div
+          className="w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0 overflow-hidden"
+          style={{ backgroundColor: contrastColor === "#ffffff" ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)" }}
+        >
           {isAvatarUrl ? (
             <img
               src={avatarContent}
@@ -229,23 +235,24 @@ export function PreviewChatPanel({
               className="w-full h-full object-cover"
             />
           ) : (
-            <span className="text-white">
+            <span style={{ color: contrastColor }}>
               {avatarContent || agentName.charAt(0)}
             </span>
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold leading-tight text-white">
+          <div className="text-sm font-semibold leading-tight" style={{ color: contrastColor }}>
             {agentName}
           </div>
-          <div className="text-[11px] text-white/70 leading-tight flex items-center gap-1">
+          <div className="text-[11px] leading-tight flex items-center gap-1" style={{ color: contrastMuted }}>
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
             Online
           </div>
         </div>
         <button
           onClick={onClose}
-          className="w-7 h-7 rounded-lg flex items-center justify-center text-white/60 hover:bg-white/10 hover:text-white transition-colors"
+          className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+          style={{ color: contrastMuted }}
           aria-label="Close chat"
         >
           <svg
@@ -345,8 +352,8 @@ export function PreviewChatPanel({
         <button
           onClick={() => sendMessage(inputValue)}
           disabled={!inputValue.trim() || isStreaming || !canChat}
-          className="w-[38px] h-[38px] rounded-xl flex items-center justify-center text-white shrink-0 transition-opacity disabled:opacity-50 disabled:cursor-default hover:opacity-90"
-          style={{ backgroundColor: primaryColor }}
+          className="w-[38px] h-[38px] rounded-xl flex items-center justify-center shrink-0 transition-opacity disabled:opacity-50 disabled:cursor-default hover:opacity-90"
+          style={{ backgroundColor: primaryColor, color: contrastColor }}
           aria-label="Send message"
         >
           <svg

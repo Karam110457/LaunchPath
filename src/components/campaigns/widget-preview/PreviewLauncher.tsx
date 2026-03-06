@@ -1,3 +1,5 @@
+import { getContrastColor } from "./contrast";
+
 interface PreviewLauncherProps {
   isOpen: boolean;
   onClick: () => void;
@@ -15,14 +17,15 @@ export function PreviewLauncher({
 }: PreviewLauncherProps) {
   const isIconUrl = launcherIcon?.startsWith("http");
   const isEmoji = launcherIcon && !isIconUrl && launcherIcon.length <= 4;
+  const contrastColor = getContrastColor(primaryColor);
 
   return (
     <button
       onClick={onClick}
-      className={`absolute bottom-5 w-14 h-14 rounded-full border-none cursor-pointer flex items-center justify-center text-white shadow-lg hover:scale-105 active:scale-95 transition-all duration-200 animate-in zoom-in-50 duration-500 overflow-hidden ${
+      className={`absolute bottom-5 w-14 h-14 rounded-full border-none cursor-pointer flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all duration-200 animate-in zoom-in-50 duration-500 overflow-hidden ${
         position === "right" ? "right-5" : "left-5"
       }`}
-      style={{ backgroundColor: primaryColor }}
+      style={{ backgroundColor: primaryColor, color: contrastColor }}
       aria-label={isOpen ? "Close chat" : "Open chat"}
     >
       {isOpen ? (
