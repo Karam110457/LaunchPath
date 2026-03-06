@@ -8,13 +8,13 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const user = await requireAuth();
-  const { systems, user: sidebarUser, agentCount } = await getSidebarData(
+  const { systems, user: sidebarUser, agentCount, campaignCount } = await getSidebarData(
     user.id,
     user.email,
   );
 
   return (
-    <AppShell systems={systems} user={sidebarUser} agentCount={agentCount}>
+    <AppShell systems={systems} user={sidebarUser} agentCount={agentCount} campaignCount={campaignCount}>
       {children}
     </AppShell>
   );

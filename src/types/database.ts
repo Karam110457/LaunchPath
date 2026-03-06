@@ -230,6 +230,7 @@ export type Database = {
           allowed_origins: string[]
           rate_limit_rpm: number | null
           config: Json
+          campaign_id: string | null
           is_enabled: boolean
           created_at: string
           updated_at: string
@@ -244,6 +245,7 @@ export type Database = {
           allowed_origins?: string[]
           rate_limit_rpm?: number | null
           config?: Json
+          campaign_id?: string | null
           is_enabled?: boolean
           created_at?: string
           updated_at?: string
@@ -258,7 +260,44 @@ export type Database = {
           allowed_origins?: string[]
           rate_limit_rpm?: number | null
           config?: Json
+          campaign_id?: string | null
           is_enabled?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      campaigns: {
+        Row: {
+          id: string
+          user_id: string
+          agent_id: string
+          name: string
+          client_name: string | null
+          client_website: string | null
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          agent_id: string
+          name: string
+          client_name?: string | null
+          client_website?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          agent_id?: string
+          name?: string
+          client_name?: string | null
+          client_website?: string | null
+          status?: string
           created_at?: string
           updated_at?: string
         }

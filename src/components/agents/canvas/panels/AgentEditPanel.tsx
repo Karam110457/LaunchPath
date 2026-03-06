@@ -18,7 +18,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OptionCard } from "@/components/flows/OptionCard";
 import { cn } from "@/lib/utils";
-import { ChannelsTab } from "./channels/ChannelsTab";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -115,9 +114,6 @@ export function AgentEditPanel({
           </TabsTrigger>
           <TabsTrigger value="advanced" className="flex-1 text-xs">
             Advanced
-          </TabsTrigger>
-          <TabsTrigger value="channels" className="flex-1 text-xs">
-            Channels
           </TabsTrigger>
         </TabsList>
       </div>
@@ -393,13 +389,6 @@ export function AgentEditPanel({
               </AlertDialogContent>
             </AlertDialog>
           </section>
-        </div>
-      </TabsContent>
-
-      {/* ═══════════════════════ CHANNELS TAB ═══════════════════════ */}
-      <TabsContent value="channels">
-        <div className="p-5">
-          <ChannelsTab agentId={agentId} />
         </div>
       </TabsContent>
 
