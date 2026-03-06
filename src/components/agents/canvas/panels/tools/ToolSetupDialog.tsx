@@ -107,14 +107,19 @@ export function ToolSetupDialog({
       }
     }
 
-    const res = await fetch(`/api/agents/${agentId}/tools/test`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tool_type: toolType, config }),
-    });
-    const result = (await res.json()) as TestToolResult;
-    setTestResult(result);
-    setTesting(false);
+    try {
+      const res = await fetch(`/api/agents/${agentId}/tools/test`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tool_type: toolType, config }),
+      });
+      const result = (await res.json()) as TestToolResult;
+      setTestResult(result);
+    } catch {
+      setTestResult({ success: false, message: "Network error — could not reach the server." });
+    } finally {
+      setTesting(false);
+    }
   };
 
   const handleSave = async () => {

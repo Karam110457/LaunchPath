@@ -208,6 +208,19 @@ export function buildSubagentTool(
           clearTimeout(timer);
 
           const responseText = result.text?.trim() || "";
+
+          // If the sub-agent used tools but produced no text summary, provide a fallback
+          if (!responseText) {
+            const lastStepTools = result.steps?.at(-1)?.toolResults;
+            if (lastStepTools?.length) {
+              return {
+                success: true,
+                message: `[${targetAgent.name} completed the task using tools but did not provide a text summary.]`,
+                agent_name: targetAgent.name,
+              };
+            }
+          }
+
           const trimmed =
             responseText.length > MAX_RESPONSE_CHARS
               ? responseText.slice(0, MAX_RESPONSE_CHARS) + "... [truncated]"
@@ -215,7 +228,7 @@ export function buildSubagentTool(
 
           return {
             success: true,
-            message: trimmed,
+            message: trimmed || `[${targetAgent.name} returned an empty response.]`,
             agent_name: targetAgent.name,
           };
         } catch (err) {

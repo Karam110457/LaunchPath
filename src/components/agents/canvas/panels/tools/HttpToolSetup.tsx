@@ -87,6 +87,7 @@ export function HttpToolSetup({
   const [testResult, setTestResult] = useState<TestToolResult | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Reset test result when config changes
   useEffect(() => {
@@ -114,6 +115,7 @@ export function HttpToolSetup({
 
   const handleSave = async () => {
     setSaving(true);
+    setError(null);
     try {
       const payload = {
         tool_type: "http",
@@ -131,7 +133,14 @@ export function HttpToolSetup({
         body: JSON.stringify(payload),
       });
 
-      if (res.ok) onSaved();
+      if (res.ok) {
+        onSaved();
+      } else {
+        const body = await res.json().catch(() => null);
+        setError((body as { error?: string } | null)?.error || `Save failed (HTTP ${res.status})`);
+      }
+    } catch {
+      setError("Network error — could not save.");
     } finally {
       setSaving(false);
     }
@@ -148,7 +157,11 @@ export function HttpToolSetup({
       });
       if (res.ok) {
         setTestResult(await res.json());
+      } else {
+        setTestResult({ success: false, message: `Test failed (HTTP ${res.status})` });
       }
+    } catch {
+      setTestResult({ success: false, message: "Network error — could not reach the server." });
     } finally {
       setTesting(false);
     }
@@ -156,10 +169,20 @@ export function HttpToolSetup({
 
   const handleDelete = async () => {
     if (!existing) return;
-    await fetch(`/api/agents/${agentId}/tools/${existing.id}`, {
-      method: "DELETE",
-    });
-    onSaved();
+    try {
+      const res = await fetch(`/api/agents/${agentId}/tools/${existing.id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        onSaved();
+      } else {
+        setError(`Delete failed (HTTP ${res.status})`);
+        setConfirmDelete(false);
+      }
+    } catch {
+      setError("Network error — could not delete.");
+      setConfirmDelete(false);
+    }
   };
 
   return (
@@ -456,6 +479,10 @@ export function HttpToolSetup({
               </div>
             )}
           </div>
+
+          {error && (
+            <p className="text-xs text-destructive">{error}</p>
+          )}
 
           {/* Actions */}
           <div className="flex items-center justify-between pt-2 border-t border-border/40">

@@ -11,22 +11,11 @@ import { tool } from "ai";
 import { z } from "zod";
 import { logger } from "@/lib/security/logger";
 import { trimToolResult } from "../result-trim";
+import { isBlockedUrl } from "../ssrf";
 import type { HttpToolConfig, HttpAuthType, HttpAuthConfig } from "../types";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 const MAX_TIMEOUT_MS = 25_000;
-
-// Block internal network patterns to prevent SSRF
-const BLOCKED_URL_PATTERNS = [
-  /^https?:\/\/localhost/i,
-  /^https?:\/\/127\./,
-  /^https?:\/\/10\./,
-  /^https?:\/\/172\.(1[6-9]|2\d|3[01])\./,
-  /^https?:\/\/192\.168\./,
-  /^https?:\/\/0\.0\.0\.0/,
-  /^https?:\/\/\[::1\]/,
-  /^https?:\/\/169\.254\./, // AWS/cloud metadata endpoint
-];
 
 /**
  * Derive a stable Claude tool name from the display name.
@@ -43,17 +32,10 @@ export function makeHttpToolKey(displayName: string): string {
 }
 
 /**
- * Check if a URL targets an internal/private network address.
- */
-function isBlockedUrl(url: string): boolean {
-  return BLOCKED_URL_PATTERNS.some((p) => p.test(url));
-}
-
-/**
  * Apply authentication to the request headers (and possibly URL for query-based API keys).
  * Returns the potentially modified URL.
  */
-function applyAuth(
+export function applyAuth(
   headers: Record<string, string>,
   url: string,
   authType: HttpAuthType,
@@ -155,7 +137,7 @@ export function buildHttpTool(
         let url = config.url;
         for (const param of urlParams) {
           const value = (params as Record<string, unknown>)[`path_${param}`];
-          if (value != null) url = url.replace(`{${param}}`, String(value));
+          if (value != null) url = url.replace(`{${param}}`, encodeURIComponent(String(value)));
         }
 
         // Security: block internal network requests
@@ -175,9 +157,9 @@ export function buildHttpTool(
           url += (url.includes("?") ? "&" : "?") + searchParams.toString();
         }
 
-        // Build headers
+        // Build headers (no Content-Type for GET — some servers/CDNs reject it)
         const headers: Record<string, string> = {
-          "Content-Type": "application/json",
+          ...(method !== "GET" ? { "Content-Type": "application/json" } : {}),
           Accept: "application/json",
           ...(config.headers || {}),
         };
@@ -190,12 +172,13 @@ export function buildHttpTool(
           config.timeout_ms ?? DEFAULT_TIMEOUT_MS,
           MAX_TIMEOUT_MS
         );
-        const body =
-          method !== "GET"
-            ? JSON.stringify(
-                (params as Record<string, unknown>).body ?? {}
-              )
-            : undefined;
+        // Only send body for POST/PUT/PATCH (many servers reject DELETE with body)
+        const hasBody = method !== "GET" && method !== "DELETE";
+        const body = hasBody
+          ? JSON.stringify(
+              (params as Record<string, unknown>).body ?? {}
+            )
+          : undefined;
 
         try {
           const controller = new AbortController();

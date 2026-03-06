@@ -7,8 +7,11 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { createHmac } from "crypto";
 import { createClient } from "@/lib/supabase/server";
-import type { TestToolPayload, TestToolResult } from "@/lib/tools/types";
+import { validatePublicUrl } from "@/lib/tools/ssrf";
+import { applyAuth } from "@/lib/tools/integrations/http";
+import type { TestToolPayload, TestToolResult, HttpAuthType, HttpAuthConfig } from "@/lib/tools/types";
 
 export async function POST(
   request: NextRequest,
@@ -67,44 +70,49 @@ async function testWebhook(config: Record<string, unknown>): Promise<TestToolRes
 
   if (!url) return { success: false, message: "Webhook URL is required." };
 
-  try {
-    new URL(url);
-  } catch {
-    return { success: false, message: "URL doesn't look valid. Make sure it starts with https://." };
-  }
+  const validation = validatePublicUrl(url);
+  if (!validation.valid) return { success: false, message: validation.message! };
 
   try {
-    // Mirror the exact payload shape that real webhook execution sends
+    // Mirror the exact payload shape that real webhook execution sends (flat, not nested)
+    const payload = {
+      source: "launchpath-agent",
+      timestamp: new Date().toISOString(),
+      message: "Test ping from LaunchPath agent builder",
+    };
+    const body = JSON.stringify(payload);
+
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+
+    // Sign with HMAC if a signing secret is configured
+    const secret = config.secret as string | undefined;
+    if (secret) {
+      const sig = createHmac("sha256", secret).update(body).digest("hex");
+      headers["X-Webhook-Signature"] = `sha256=${sig}`;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15_000);
+
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        data: { message: "Test ping from LaunchPath agent builder" },
-        source: "launchpath-agent",
-        timestamp: new Date().toISOString(),
-      }),
+      headers,
+      body,
+      signal: controller.signal,
     });
+    clearTimeout(timer);
 
-    if (res.ok || res.status < 500) {
+    if (res.ok) {
       return { success: true, message: `Webhook received the test ping (HTTP ${res.status}).` };
     }
     return { success: false, message: `Webhook returned an error: HTTP ${res.status}.` };
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      return { success: false, message: "Webhook timed out after 15 seconds." };
+    }
     return { success: false, message: "Could not reach the webhook URL. Make sure it's publicly accessible." };
   }
 }
-
-// Blocked internal network patterns (SSRF prevention)
-const BLOCKED_URL_PATTERNS = [
-  /^https?:\/\/localhost/i,
-  /^https?:\/\/127\./,
-  /^https?:\/\/10\./,
-  /^https?:\/\/172\.(1[6-9]|2\d|3[01])\./,
-  /^https?:\/\/192\.168\./,
-  /^https?:\/\/0\.0\.0\.0/,
-  /^https?:\/\/\[::1\]/,
-  /^https?:\/\/169\.254\./,
-];
 
 async function testHttp(config: Record<string, unknown>): Promise<TestToolResult> {
   const url = config.url as string;
@@ -112,32 +120,38 @@ async function testHttp(config: Record<string, unknown>): Promise<TestToolResult
 
   if (!url) return { success: false, message: "URL is required." };
 
-  try {
-    new URL(url.replace(/\{[^}]+\}/g, "placeholder")); // Replace template params for validation
-  } catch {
-    return { success: false, message: "URL doesn't look valid. Make sure it starts with https://." };
-  }
-
-  if (BLOCKED_URL_PATTERNS.some((p) => p.test(url))) {
-    return { success: false, message: "Internal network addresses are not allowed." };
-  }
+  // Replace template params for validation
+  const testUrl = url.replace(/\{[^}]+\}/g, "test");
+  const validation = validatePublicUrl(testUrl);
+  if (!validation.valid) return { success: false, message: validation.message! };
 
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 10_000);
 
-    // For test, use HEAD for GET requests, or send a minimal request
-    const testMethod = method === "GET" ? "GET" : "HEAD";
-    const res = await fetch(url.replace(/\{[^}]+\}/g, "test"), {
-      method: testMethod,
+    // Use the actual configured method (not HEAD) — many APIs reject HEAD on POST endpoints
+    const needsBody = method === "POST" || method === "PUT" || method === "PATCH";
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+      ...(needsBody ? { "Content-Type": "application/json" } : {}),
+    };
+
+    // Apply auth so the test uses the same credentials as real execution
+    const authType = (config.auth_type as HttpAuthType) || "none";
+    const authConfig = config.auth_config as HttpAuthConfig | undefined;
+    const finalUrl = applyAuth(headers, testUrl, authType, authConfig);
+
+    const res = await fetch(finalUrl, {
+      method,
       signal: controller.signal,
-      headers: { Accept: "application/json" },
+      headers,
+      body: needsBody ? JSON.stringify({}) : undefined,
     });
     clearTimeout(timer);
 
     const contentType = res.headers.get("content-type") ?? "";
     let preview = "";
-    if (testMethod === "GET" && contentType.includes("json")) {
+    if (method === "GET" && contentType.includes("json")) {
       const text = await res.text();
       preview = text.slice(0, 200);
     }
@@ -162,11 +176,8 @@ async function testMCP(config: Record<string, unknown>): Promise<TestToolResult>
 
   if (!serverUrl) return { success: false, message: "MCP Server URL is required." };
 
-  try {
-    new URL(serverUrl);
-  } catch {
-    return { success: false, message: "Server URL doesn't look valid." };
-  }
+  const validation = validatePublicUrl(serverUrl);
+  if (!validation.valid) return { success: false, message: validation.message! };
 
   try {
     const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");

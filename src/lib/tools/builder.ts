@@ -54,7 +54,10 @@ export async function buildAgentTools(
       switch (agentTool.tool_type) {
         case "webhook": {
           const cfg = agentTool.config as unknown as WebhookConfig;
-          if (!cfg.url) break;
+          if (!cfg.url) {
+            failures.push({ displayName: agentTool.display_name, toolkit: "webhook", reason: "Missing webhook URL" });
+            break;
+          }
           const { toolName, toolDef } = buildWebhookTool(
             cfg,
             agentTool.display_name,
@@ -72,7 +75,10 @@ export async function buildAgentTools(
 
         case "mcp": {
           const cfg = agentTool.config as unknown as MCPConfig;
-          if (!cfg.server_url) break;
+          if (!cfg.server_url) {
+            failures.push({ displayName: agentTool.display_name, toolkit: "mcp", reason: "Missing MCP server URL" });
+            break;
+          }
           const mcpTools = await buildMCPTools(cfg);
           Object.assign(tools, mcpTools);
           break;
@@ -80,7 +86,10 @@ export async function buildAgentTools(
 
         case "http": {
           const cfg = agentTool.config as unknown as HttpToolConfig;
-          if (!cfg.url) break;
+          if (!cfg.url) {
+            failures.push({ displayName: agentTool.display_name, toolkit: "http", reason: "Missing HTTP endpoint URL" });
+            break;
+          }
           const { toolName, toolDef } = buildHttpTool(
             cfg,
             agentTool.display_name,
@@ -148,6 +157,11 @@ export async function buildAgentTools(
   }
 
   // Build all Composio tools in one batch
+  if (composioRecords.length > 0 && !userId) {
+    for (const rec of composioRecords) {
+      failures.push({ displayName: rec.display_name, toolkit: "composio", reason: "Missing user context for Composio tools" });
+    }
+  }
   if (composioRecords.length > 0 && userId) {
     try {
       const result = await buildComposioTools(userId, composioRecords);
