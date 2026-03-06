@@ -15,6 +15,8 @@ const ALLOWED_TOOL_TYPES = new Set([
   "webhook",
   "mcp",
   "composio",
+  "http",
+  "subagent",
 ]);
 
 export async function GET(
@@ -104,8 +106,36 @@ export async function POST(
     return NextResponse.json({ error: "description is required" }, { status: 400 });
   }
 
-  // Validate required config fields (skip for composio — managed by Composio SDK)
-  if (tool_type !== "composio") {
+  // Validate required config fields per tool type
+  if (tool_type === "composio") {
+    if (!config?.toolkit) {
+      return NextResponse.json(
+        { error: "toolkit is required for composio tools" },
+        { status: 400 }
+      );
+    }
+  } else if (tool_type === "subagent") {
+    if (!config?.target_agent_id) {
+      return NextResponse.json(
+        { error: "target_agent_id is required for subagent tools" },
+        { status: 400 }
+      );
+    }
+  } else if (tool_type === "http") {
+    if (!config?.url) {
+      return NextResponse.json(
+        { error: "URL is required for HTTP tools" },
+        { status: 400 }
+      );
+    }
+    if (!config?.method) {
+      return NextResponse.json(
+        { error: "HTTP method is required" },
+        { status: 400 }
+      );
+    }
+  } else {
+    // Webhook, MCP: validate via catalog setup fields
     const catalogEntry = getCatalogEntry(tool_type);
     if (catalogEntry) {
       for (const field of catalogEntry.setupFields) {
@@ -116,14 +146,6 @@ export async function POST(
           );
         }
       }
-    }
-  } else {
-    // Composio: validate toolkit is present in config
-    if (!config?.toolkit) {
-      return NextResponse.json(
-        { error: "toolkit is required for composio tools" },
-        { status: 400 }
-      );
     }
   }
 

@@ -5,6 +5,8 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import {
   Webhook,
   Plug,
+  Globe,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,16 +15,22 @@ import type { ToolNodeData } from "../canvas-types";
 const ICON_MAP: Record<string, LucideIcon> = {
   webhook: Webhook,
   mcp: Plug,
+  http: Globe,
+  subagent: Users,
 };
 
 const COLOR_MAP: Record<string, string> = {
   webhook: "text-emerald-400",
   mcp: "text-zinc-400",
+  http: "text-blue-400",
+  subagent: "text-amber-400",
 };
 
 const ACTION_LABELS: Record<string, string> = {
   webhook: "trigger: post",
   mcp: "execute: mcp",
+  http: "request: http",
+  subagent: "delegate: agent",
 };
 
 export const ToolNode = memo(function ToolNode({ data }: NodeProps) {

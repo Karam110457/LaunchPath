@@ -13,12 +13,25 @@ import { logger } from "@/lib/security/logger";
 import { buildWebhookTool } from "./integrations/webhook";
 import { buildMCPTools } from "./integrations/mcp";
 import { buildComposioTools } from "./integrations/composio";
+import { buildHttpTool } from "./integrations/http";
 import type { ToolFailure } from "./integrations/composio";
 import type {
   AgentToolRecord,
   WebhookConfig,
   MCPConfig,
+  HttpToolConfig,
 } from "./types";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+/** Context passed through the build chain for subagent depth tracking. */
+export interface ToolBuildContext {
+  /** Current depth in the subagent chain. Root = 0. */
+  depth: number;
+  /** Set of agent IDs in the current call chain, for circular reference detection. */
+  ancestorAgentIds: Set<string>;
+  /** Supabase client for loading subagent configs at runtime. */
+  supabase: SupabaseClient;
+}
 
 export interface BuildToolsResult {
   tools: Record<string, unknown>;
@@ -27,7 +40,8 @@ export interface BuildToolsResult {
 
 export async function buildAgentTools(
   agentTools: AgentToolRecord[],
-  userId?: string
+  userId?: string,
+  context?: ToolBuildContext
 ): Promise<BuildToolsResult> {
   const tools: Record<string, unknown> = {};
   const failures: ToolFailure[] = [];
@@ -61,6 +75,60 @@ export async function buildAgentTools(
           if (!cfg.server_url) break;
           const mcpTools = await buildMCPTools(cfg);
           Object.assign(tools, mcpTools);
+          break;
+        }
+
+        case "http": {
+          const cfg = agentTool.config as unknown as HttpToolConfig;
+          if (!cfg.url) break;
+          const { toolName, toolDef } = buildHttpTool(
+            cfg,
+            agentTool.display_name,
+            agentTool.description
+          );
+          let httpKey = toolName;
+          let httpI = 2;
+          while (tools[httpKey]) {
+            httpKey = `${toolName}_${httpI++}`;
+          }
+          tools[httpKey] = toolDef;
+          break;
+        }
+
+        case "subagent": {
+          // Subagent tools require a build context with supabase client
+          if (!context?.supabase) {
+            logger.warn("Subagent tool skipped — no build context provided", {
+              toolId: agentTool.id,
+            });
+            break;
+          }
+
+          // Dynamic import to avoid circular dependency at module level
+          const { buildSubagentTool } = await import("./integrations/subagent");
+          const subResult = buildSubagentTool(
+            agentTool.config as unknown as import("./types").SubagentConfig,
+            agentTool.display_name,
+            agentTool.description,
+            agentTool.agent_id,
+            context
+          );
+
+          if (subResult.skip || !subResult.toolDef) {
+            failures.push({
+              displayName: agentTool.display_name,
+              toolkit: "subagent",
+              reason: subResult.reason ?? "Unknown skip reason",
+            });
+            break;
+          }
+
+          let subKey = subResult.toolName;
+          let subI = 2;
+          while (tools[subKey]) {
+            subKey = `${subResult.toolName}_${subI++}`;
+          }
+          tools[subKey] = subResult.toolDef;
           break;
         }
 

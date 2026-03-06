@@ -10,7 +10,14 @@
  * store API keys or tokens as hardcoded parameter values.
  */
 
-const SENSITIVE_KEYS = new Set(["api_key", "access_token", "secret"]);
+const SENSITIVE_KEYS = new Set([
+  "api_key",
+  "access_token",
+  "secret",
+  "token",
+  "api_key_value",
+  "password",
+]);
 
 /** Patterns that indicate a value is likely a secret even in nested contexts. */
 const SENSITIVE_PARAM_PATTERNS = [
@@ -54,6 +61,10 @@ export function maskConfig(config: Record<string, unknown>): Record<string, unkn
     // Top-level sensitive fields (webhook api_key, MCP access_token, etc.)
     if (SENSITIVE_KEYS.has(key) && typeof value === "string" && value.length > 0) {
       masked[key] = maskValue(value);
+    }
+    // Nested HTTP auth_config — mask token, api_key_value, password
+    else if (key === "auth_config" && value && typeof value === "object") {
+      masked[key] = maskParams(value as Record<string, unknown>);
     }
     // Nested Composio action_configs — mask sensitive pinned/default params
     else if (key === "action_configs" && value && typeof value === "object") {
@@ -104,6 +115,15 @@ export function mergeConfig(
       (value.startsWith("••••") || value === "configured")
     ) {
       // Client sent back the masked value — keep stored value unchanged
+      continue;
+    }
+
+    // Deep-merge auth_config preserving masked values (HTTP tools)
+    if (key === "auth_config" && value && typeof value === "object") {
+      merged[key] = mergeParams(
+        (stored.auth_config ?? {}) as Record<string, unknown>,
+        value as Record<string, unknown>
+      );
       continue;
     }
 

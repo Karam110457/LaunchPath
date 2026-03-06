@@ -48,6 +48,9 @@ export async function POST(
     case "mcp":
       result = await testMCP(config);
       break;
+    case "http":
+      result = await testHttp(config);
+      break;
     default:
       result = { success: false, message: "Unknown tool type" };
   }
@@ -88,6 +91,69 @@ async function testWebhook(config: Record<string, unknown>): Promise<TestToolRes
     return { success: false, message: `Webhook returned an error: HTTP ${res.status}.` };
   } catch {
     return { success: false, message: "Could not reach the webhook URL. Make sure it's publicly accessible." };
+  }
+}
+
+// Blocked internal network patterns (SSRF prevention)
+const BLOCKED_URL_PATTERNS = [
+  /^https?:\/\/localhost/i,
+  /^https?:\/\/127\./,
+  /^https?:\/\/10\./,
+  /^https?:\/\/172\.(1[6-9]|2\d|3[01])\./,
+  /^https?:\/\/192\.168\./,
+  /^https?:\/\/0\.0\.0\.0/,
+  /^https?:\/\/\[::1\]/,
+  /^https?:\/\/169\.254\./,
+];
+
+async function testHttp(config: Record<string, unknown>): Promise<TestToolResult> {
+  const url = config.url as string;
+  const method = (config.method as string) || "GET";
+
+  if (!url) return { success: false, message: "URL is required." };
+
+  try {
+    new URL(url.replace(/\{[^}]+\}/g, "placeholder")); // Replace template params for validation
+  } catch {
+    return { success: false, message: "URL doesn't look valid. Make sure it starts with https://." };
+  }
+
+  if (BLOCKED_URL_PATTERNS.some((p) => p.test(url))) {
+    return { success: false, message: "Internal network addresses are not allowed." };
+  }
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10_000);
+
+    // For test, use HEAD for GET requests, or send a minimal request
+    const testMethod = method === "GET" ? "GET" : "HEAD";
+    const res = await fetch(url.replace(/\{[^}]+\}/g, "test"), {
+      method: testMethod,
+      signal: controller.signal,
+      headers: { Accept: "application/json" },
+    });
+    clearTimeout(timer);
+
+    const contentType = res.headers.get("content-type") ?? "";
+    let preview = "";
+    if (testMethod === "GET" && contentType.includes("json")) {
+      const text = await res.text();
+      preview = text.slice(0, 200);
+    }
+
+    return {
+      success: res.ok,
+      message: res.ok
+        ? `Endpoint reachable (HTTP ${res.status}).`
+        : `Endpoint returned HTTP ${res.status}: ${res.statusText}.`,
+      details: { status: res.status, contentType, preview: preview || undefined },
+    };
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      return { success: false, message: "Request timed out after 10 seconds." };
+    }
+    return { success: false, message: "Could not reach the endpoint. Make sure it's publicly accessible." };
   }
 }
 

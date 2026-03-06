@@ -1,7 +1,9 @@
 export type ToolType =
   | "webhook"
   | "mcp"
-  | "composio";
+  | "composio"
+  | "http"
+  | "subagent";
 
 // ------------------------------------------------------------------
 // DB row shape (what we read from agent_tools)
@@ -52,6 +54,59 @@ export interface ActionConfig {
   pinned_params: Record<string, unknown>;
   /** Defaults: kept in schema, injected only if AI doesn't provide a value. */
   default_params?: Record<string, unknown>;
+}
+
+// ------------------------------------------------------------------
+// HTTP REST API tool config
+// ------------------------------------------------------------------
+
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+export type HttpAuthType = "none" | "bearer" | "api_key" | "basic";
+
+export interface HttpAuthConfig {
+  /** Bearer: the token value */
+  token?: string;
+  /** API Key: header name (e.g. "X-API-Key") or query param name */
+  api_key_name?: string;
+  /** API Key: the actual key value */
+  api_key_value?: string;
+  /** API Key: placement — header (default) or query param */
+  api_key_in?: "header" | "query";
+  /** Basic: username */
+  username?: string;
+  /** Basic: password */
+  password?: string;
+}
+
+export interface HttpToolConfig {
+  url: string;
+  method: HttpMethod;
+  headers?: Record<string, string>;
+  auth_type: HttpAuthType;
+  auth_config?: HttpAuthConfig;
+  /** Optional: dot-notation to extract from response (e.g., "data.results") */
+  response_path?: string;
+  /** Optional: description of what data the AI should send in the body */
+  body_description?: string;
+  /** Timeout in milliseconds (default 10000, max 25000) */
+  timeout_ms?: number;
+}
+
+// ------------------------------------------------------------------
+// Subagent tool config
+// ------------------------------------------------------------------
+
+export interface SubagentConfig {
+  /** UUID of the target agent to invoke as a subagent */
+  target_agent_id: string;
+  /** Cached name of the target agent (for display; not authoritative) */
+  target_agent_name?: string;
+  /** Optional instructions that contextualize how the parent should use this subagent */
+  instructions?: string;
+  /** Max agentic loop iterations for the subagent (default 5) */
+  max_turns?: number;
+  /** Timeout in ms for the entire subagent run (default 25000) */
+  timeout_ms?: number;
 }
 
 // ------------------------------------------------------------------

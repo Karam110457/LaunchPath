@@ -14,6 +14,7 @@
 import { getComposioClient } from "@/lib/composio/client";
 import type { ComposioAccountItem } from "@/lib/composio/types";
 import { logger } from "@/lib/security/logger";
+import { trimToolResult } from "../result-trim";
 import type { AgentToolRecord, ComposioToolConfig, ActionConfig } from "../types";
 
 /** A toolkit that failed to load — surfaced to the agent via system prompt. */
@@ -28,21 +29,6 @@ export interface ComposioToolsResult {
   tools: Record<string, unknown>;
   failures: ToolFailure[];
 }
-
-// Fields to strip from tool results — metadata noise that wastes tokens
-const STRIP_FIELDS = new Set([
-  "response_headers",
-  "raw_response",
-  "request_id",
-  "status_code",
-  "responseHeaders",
-  "rawResponse",
-  "requestId",
-  "statusCode",
-]);
-
-/** Max chars for JSON-serialized tool result data before truncation. */
-const MAX_RESULT_CHARS = 4000;
 
 /**
  * Verifies that the user's connections for the requested toolkits are still
@@ -133,59 +119,6 @@ async function getActiveToolkits(
   }
 
   return { active, failures };
-}
-
-/**
- * Trims a tool execution result to prevent context window bloat.
- * Strips metadata fields and caps data size.
- */
-function trimToolResult(result: unknown): unknown {
-  if (!result || typeof result !== "object") return result;
-
-  const r = { ...(result as Record<string, unknown>) };
-
-  // Strip metadata noise
-  for (const field of STRIP_FIELDS) {
-    delete r[field];
-  }
-
-  // Trim nested data if present
-  if (r.data && typeof r.data === "object") {
-    const data = { ...(r.data as Record<string, unknown>) };
-    for (const field of STRIP_FIELDS) {
-      delete data[field];
-    }
-    r.data = data;
-  }
-
-  // Cap total data size
-  try {
-    const dataStr = JSON.stringify(r.data ?? r);
-    if (dataStr.length > MAX_RESULT_CHARS) {
-      // For arrays, include count; for objects, include truncated preview
-      const dataVal = r.data;
-      if (Array.isArray(dataVal)) {
-        r.data = {
-          _truncated: true,
-          _totalItems: dataVal.length,
-          _showing: "first items",
-          items: dataVal.slice(0, 5),
-          _message: `Result contained ${dataVal.length} items. Showing first 5.`,
-        };
-      } else {
-        r.data = {
-          _truncated: true,
-          _preview: dataStr.slice(0, MAX_RESULT_CHARS),
-          _message:
-            "Result was too large and has been truncated. Ask the user to be more specific if needed.",
-        };
-      }
-    }
-  } catch {
-    // JSON.stringify failed — leave as-is
-  }
-
-  return r;
 }
 
 /**

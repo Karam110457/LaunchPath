@@ -35,6 +35,28 @@ export const TOOL_CATALOG: ToolCatalogEntry[] = [
     ],
   },
 
+  {
+    type: "http",
+    name: "HTTP Request",
+    tagline: "Call any REST API — your agent sends requests and reads the response.",
+    icon: "Globe",
+    category: "automation",
+    defaultDisplayName: "API Request",
+    defaultDescription:
+      "Send HTTP requests to an external API to fetch data or trigger actions. Use this tool when you need to retrieve information or interact with a service.",
+    setupFields: [
+      {
+        key: "url",
+        label: "API URL",
+        type: "url",
+        placeholder: "https://api.example.com/v1/resource/{id}",
+        helpText:
+          "The endpoint URL. Use {param} for path parameters the AI can fill.",
+        required: true,
+      },
+    ],
+  },
+
   // ------------------------------------------------------------------
   // ADVANCED
   // ------------------------------------------------------------------

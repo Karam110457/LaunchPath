@@ -3,6 +3,8 @@
 import {
   Webhook,
   Plug,
+  Globe,
+  Users,
   Library,
   ChevronRight,
   type LucideIcon,
@@ -29,6 +31,20 @@ const CUSTOM_TOOLS: {
     tagline: "Send data to Zapier, Make, or any URL when the agent takes action.",
     Icon: Webhook,
     color: "text-emerald-400",
+  },
+  {
+    type: "http",
+    name: "HTTP Request",
+    tagline: "Call any REST API and feed the response back to the agent.",
+    Icon: Globe,
+    color: "text-blue-400",
+  },
+  {
+    type: "subagent",
+    name: "Sub-Agent",
+    tagline: "Delegate tasks to another agent — compose agents that work together.",
+    Icon: Users,
+    color: "text-amber-400",
   },
   {
     type: "mcp",

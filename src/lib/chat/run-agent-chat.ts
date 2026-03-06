@@ -17,6 +17,8 @@ import { retrieveContext } from "@/lib/knowledge/rag";
 import { buildAgentTools } from "@/lib/tools/builder";
 import { assemblePrompt } from "@/lib/agents/assemble-prompt";
 import { makeWebhookToolKey } from "@/lib/tools/integrations/webhook";
+import { makeHttpToolKey } from "@/lib/tools/integrations/http";
+import { makeSubagentToolKey } from "@/lib/tools/integrations/subagent";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AgentToolRecord } from "@/lib/tools/types";
 import type {
@@ -116,12 +118,21 @@ export async function runAgentChat(
   for (const t of agentToolRecords) {
     if (t.tool_type === "webhook") {
       toolDisplayNames[makeWebhookToolKey(t.display_name)] = t.display_name;
+    } else if (t.tool_type === "http") {
+      toolDisplayNames[makeHttpToolKey(t.display_name)] = t.display_name;
+    } else if (t.tool_type === "subagent") {
+      toolDisplayNames[makeSubagentToolKey(t.display_name)] = t.display_name;
     }
   }
 
   const { tools, failures } = await buildAgentTools(
     agentToolRecords,
-    composioUserId
+    composioUserId,
+    {
+      depth: 0,
+      ancestorAgentIds: new Set([agentId]),
+      supabase,
+    }
   );
   const hasTools = Object.keys(tools).length > 0;
 

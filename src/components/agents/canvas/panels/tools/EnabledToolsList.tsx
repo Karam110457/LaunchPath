@@ -1,24 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Trash2, Webhook, Plug, type LucideIcon } from "lucide-react";
+import { Pencil, Trash2, Webhook, Plug, Globe, Users, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AgentToolResponse } from "@/lib/tools/types";
 
 const ICON_MAP: Record<string, LucideIcon> = {
   webhook: Webhook,
   mcp: Plug,
+  http: Globe,
+  subagent: Users,
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
   webhook: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   mcp: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
   composio: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
+  http: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  subagent: "bg-amber-500/10 text-amber-400 border-amber-500/20",
 };
 
 const TYPE_LABELS: Record<string, string> = {
   webhook: "Webhook",
   mcp: "MCP",
+  http: "HTTP",
+  subagent: "Sub-Agent",
   // composio: label comes from config.toolkit_name
 };
 

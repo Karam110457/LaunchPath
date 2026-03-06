@@ -5,6 +5,8 @@ import { Plus, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ToolCatalogModal } from "./ToolCatalogModal";
 import { ToolSetupDialog } from "./ToolSetupDialog";
+import { HttpToolSetup } from "./HttpToolSetup";
+import { SubagentSetup } from "./SubagentSetup";
 import { AppLibraryModal } from "./AppLibraryModal";
 import { ComposioToolSetup } from "./ComposioToolSetup";
 import { EnabledToolsList } from "./EnabledToolsList";
@@ -78,6 +80,9 @@ export function ToolsTab({ agentId, onToolCountChange }: ToolsTabProps) {
         connectionId: cfg.connection_id ?? "",
         existing: tool,
       });
+    } else if (tool.tool_type === "http" || tool.tool_type === "subagent") {
+      // HTTP and subagent use custom setup dialogs — route via setupTool
+      setSetupTool({ toolType: tool.tool_type, existing: tool });
     } else {
       setSetupTool({ toolType: tool.tool_type, existing: tool });
     }
@@ -182,16 +187,34 @@ export function ToolsTab({ agentId, onToolCountChange }: ToolsTabProps) {
         }}
       />
 
-      {/* Setup dialog (direct tools) */}
-      {setupTool && (
-        <ToolSetupDialog
+      {/* Setup dialog — route to the right component based on tool type */}
+      {setupTool?.toolType === "http" && (
+        <HttpToolSetup
           agentId={agentId}
-          toolType={setupTool.toolType}
           existing={setupTool.existing}
           onSaved={handleToolSaved}
           onClose={() => setSetupTool(null)}
         />
       )}
+      {setupTool?.toolType === "subagent" && (
+        <SubagentSetup
+          agentId={agentId}
+          existing={setupTool.existing}
+          onSaved={handleToolSaved}
+          onClose={() => setSetupTool(null)}
+        />
+      )}
+      {setupTool &&
+        setupTool.toolType !== "http" &&
+        setupTool.toolType !== "subagent" && (
+          <ToolSetupDialog
+            agentId={agentId}
+            toolType={setupTool.toolType}
+            existing={setupTool.existing}
+            onSaved={handleToolSaved}
+            onClose={() => setSetupTool(null)}
+          />
+        )}
 
       {/* Setup dialog (Composio tools) */}
       {composioSetup && (
