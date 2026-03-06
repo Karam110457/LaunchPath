@@ -8,6 +8,7 @@ interface PreviewMessage {
 interface PreviewMessageBubbleProps {
   message: PreviewMessage;
   primaryColor: string;
+  isDark?: boolean;
 }
 
 function formatText(text: string): React.ReactNode[] {
@@ -54,6 +55,7 @@ function formatText(text: string): React.ReactNode[] {
 export function PreviewMessageBubble({
   message,
   primaryColor,
+  isDark = false,
 }: PreviewMessageBubbleProps) {
   const isUser = message.role === "user";
   const lines = message.content.split("\n");
@@ -63,7 +65,7 @@ export function PreviewMessageBubble({
       className={`max-w-[85%] px-3.5 py-2.5 text-sm leading-relaxed break-words animate-in fade-in slide-in-from-bottom-1 duration-200 ${
         isUser
           ? "self-end text-white rounded-2xl rounded-br-sm"
-          : "self-start bg-gray-100 text-gray-900 rounded-2xl rounded-bl-sm"
+          : `self-start rounded-2xl rounded-bl-sm ${isDark ? "bg-gray-800 text-gray-200" : "bg-gray-100 text-gray-900"}`
       }`}
       style={isUser ? { backgroundColor: primaryColor } : undefined}
     >

@@ -7,6 +7,10 @@ export interface WidgetConfig {
   conversationStarters?: string[];
   position?: "right" | "left";
   headerText?: string;
+  theme?: "light" | "dark";
+  borderRadius?: "rounded" | "sharp";
+  autoOpenDelay?: number;
+  showBranding?: boolean;
 }
 
 /** Shape returned by the channel CRUD API */

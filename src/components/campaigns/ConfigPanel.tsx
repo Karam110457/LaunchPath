@@ -56,6 +56,27 @@ export function ConfigPanel({
     <div className="w-[400px] shrink-0 border-r border-border overflow-y-auto p-5 space-y-5">
       <h3 className="text-sm font-semibold text-foreground">Widget Settings</h3>
 
+      {/* Theme */}
+      <div className="space-y-1.5">
+        <Label className="text-xs">Theme</Label>
+        <div className="flex gap-2">
+          {(["light", "dark"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => updateConfig("theme", t)}
+              className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium border transition-all capitalize ${
+                (config.theme || "light") === t
+                  ? "bg-primary/10 border-primary/30 text-primary"
+                  : "bg-muted/50 border-border text-muted-foreground hover:border-primary/30"
+              }`}
+            >
+              {t === "light" ? "Light" : "Dark"}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Primary Color */}
       <div className="space-y-1.5">
         <Label className="text-xs">Primary Color</Label>
@@ -66,10 +87,18 @@ export function ConfigPanel({
             className="h-8 text-sm flex-1 font-mono"
             placeholder="#6366f1"
           />
-          <div
-            className="w-8 h-8 rounded-md border border-border shrink-0"
-            style={{ backgroundColor: config.primaryColor || "#6366f1" }}
-          />
+          <label className="relative w-8 h-8 rounded-md border border-border shrink-0 cursor-pointer overflow-hidden">
+            <input
+              type="color"
+              value={config.primaryColor || "#6366f1"}
+              onChange={(e) => updateConfig("primaryColor", e.target.value)}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            />
+            <div
+              className="w-full h-full rounded-md"
+              style={{ backgroundColor: config.primaryColor || "#6366f1" }}
+            />
+          </label>
         </div>
       </div>
 
@@ -173,6 +202,50 @@ export function ConfigPanel({
         </div>
       </div>
 
+      {/* Corner Style */}
+      <div className="space-y-1.5">
+        <Label className="text-xs">Corner Style</Label>
+        <div className="flex gap-2">
+          {(["rounded", "sharp"] as const).map((style) => (
+            <button
+              key={style}
+              type="button"
+              onClick={() => updateConfig("borderRadius", style)}
+              className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium border transition-all capitalize ${
+                (config.borderRadius || "rounded") === style
+                  ? "bg-primary/10 border-primary/30 text-primary"
+                  : "bg-muted/50 border-border text-muted-foreground hover:border-primary/30"
+              }`}
+            >
+              {style}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Show Branding */}
+      <div className="flex items-center justify-between">
+        <div>
+          <Label className="text-xs">Show &ldquo;Powered by&rdquo;</Label>
+          <p className="text-[11px] text-muted-foreground">
+            Display LaunchPath branding in the widget footer.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => updateConfig("showBranding", config.showBranding === false ? true : false)}
+          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+            config.showBranding !== false ? "bg-primary" : "bg-muted"
+          }`}
+        >
+          <span
+            className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
+              config.showBranding !== false ? "translate-x-[18px]" : "translate-x-[3px]"
+            }`}
+          />
+        </button>
+      </div>
+
       <hr className="border-border" />
 
       {/* Client Website */}
@@ -189,9 +262,9 @@ export function ConfigPanel({
         </p>
       </div>
 
-      {/* Allowed Origins */}
+      {/* Allowed Websites */}
       <div className="space-y-1.5">
-        <Label className="text-xs">Allowed Origins</Label>
+        <Label className="text-xs">Allowed Websites</Label>
         <Textarea
           value={allowedOrigins}
           onChange={(e) => onAllowedOriginsChange(e.target.value)}
@@ -200,7 +273,7 @@ export function ConfigPanel({
           placeholder={"https://example.com\nhttps://staging.example.com"}
         />
         <p className="text-[11px] text-muted-foreground">
-          One origin per line. Leave empty to allow all.
+          Which websites can use this widget? One URL per line. Leave empty to allow all websites.
         </p>
       </div>
 

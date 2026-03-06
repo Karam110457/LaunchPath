@@ -44,6 +44,9 @@ export function PreviewChatPanel({
     config.welcomeMessage || "Hi! How can I help you today?";
   const starters = config.conversationStarters ?? [];
   const headerText = config.headerText || agentName;
+  const isDark = config.theme === "dark";
+  const isSharp = config.borderRadius === "sharp";
+  const showBranding = config.showBranding !== false;
 
   const avatarContent = config.agentAvatar;
   const isAvatarUrl = avatarContent?.startsWith("http");
@@ -209,13 +212,13 @@ export function PreviewChatPanel({
 
   return (
     <div
-      className={`absolute w-[380px] h-[520px] rounded-2xl bg-white shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 zoom-in-95 duration-300 ${
-        position === "right" ? "right-5" : "left-5"
-      }`}
-      style={{ bottom: "88px" }}
+      className={`absolute w-[380px] ${isSharp ? "rounded-lg" : "rounded-2xl"} shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 zoom-in-95 duration-300 ${
+        isDark ? "bg-gray-900" : "bg-white"
+      } ${position === "right" ? "right-5" : "left-5"}`}
+      style={{ bottom: "88px", maxHeight: "calc(100% - 104px)", height: "520px" }}
     >
       {/* Header */}
-      <div className="px-4 py-3.5 flex items-center gap-2.5 border-b border-gray-100 shrink-0">
+      <div className={`px-4 py-3.5 flex items-center gap-2.5 border-b shrink-0 ${isDark ? "border-gray-700" : "border-gray-100"}`}>
         <div
           className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm shrink-0 overflow-hidden"
           style={{ backgroundColor: primaryColor }}
@@ -231,7 +234,7 @@ export function PreviewChatPanel({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-gray-900 leading-tight">
+          <div className={`text-sm font-semibold leading-tight ${isDark ? "text-gray-100" : "text-gray-900"}`}>
             {headerText}
           </div>
           <div className="text-[11px] text-green-500 leading-tight">
@@ -240,7 +243,7 @@ export function PreviewChatPanel({
         </div>
         <button
           onClick={onClose}
-          className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${isDark ? "text-gray-500 hover:bg-gray-800 hover:text-gray-300" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"}`}
           aria-label="Close chat"
         >
           <svg
@@ -259,9 +262,9 @@ export function PreviewChatPanel({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2 scroll-smooth [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded">
+      <div className={`flex-1 overflow-y-auto p-4 flex flex-col gap-2 scroll-smooth [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded ${isDark ? "[&::-webkit-scrollbar-thumb]:bg-gray-600" : "[&::-webkit-scrollbar-thumb]:bg-gray-300"}`}>
         {messages.length === 0 && (
-          <div className="self-start bg-gray-100 text-gray-900 px-3.5 py-2.5 rounded-2xl rounded-bl-sm text-sm leading-relaxed">
+          <div className={`self-start px-3.5 py-2.5 rounded-2xl rounded-bl-sm text-sm leading-relaxed ${isDark ? "bg-gray-800 text-gray-200" : "bg-gray-100 text-gray-900"}`}>
             {welcomeMessage}
           </div>
         )}
@@ -271,18 +274,19 @@ export function PreviewChatPanel({
             key={msg.id}
             message={msg}
             primaryColor={primaryColor}
+            isDark={isDark}
           />
         ))}
 
         {isTyping && (
-          <div className="self-start bg-gray-100 px-4 py-2.5 rounded-2xl rounded-bl-sm flex gap-1 items-center">
-            <span className="w-[7px] h-[7px] bg-gray-400 rounded-full animate-bounce" />
+          <div className={`self-start px-4 py-2.5 rounded-2xl rounded-bl-sm flex gap-1 items-center ${isDark ? "bg-gray-800" : "bg-gray-100"}`}>
+            <span className={`w-[7px] h-[7px] rounded-full animate-bounce ${isDark ? "bg-gray-500" : "bg-gray-400"}`} />
             <span
-              className="w-[7px] h-[7px] bg-gray-400 rounded-full animate-bounce"
+              className={`w-[7px] h-[7px] rounded-full animate-bounce ${isDark ? "bg-gray-500" : "bg-gray-400"}`}
               style={{ animationDelay: "0.16s" }}
             />
             <span
-              className="w-[7px] h-[7px] bg-gray-400 rounded-full animate-bounce"
+              className={`w-[7px] h-[7px] rounded-full animate-bounce ${isDark ? "bg-gray-500" : "bg-gray-400"}`}
               style={{ animationDelay: "0.32s" }}
             />
           </div>
@@ -299,7 +303,11 @@ export function PreviewChatPanel({
               key={s}
               onClick={() => sendMessage(s)}
               disabled={isStreaming}
-              className="px-3.5 py-1.5 rounded-full border border-gray-200 bg-white text-[13px] text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors whitespace-nowrap"
+              className={`px-3.5 py-1.5 rounded-full border text-[13px] transition-colors whitespace-nowrap ${
+                isDark
+                  ? "border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700 hover:border-gray-600"
+                  : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300"
+              }`}
             >
               {s}
             </button>
@@ -309,15 +317,15 @@ export function PreviewChatPanel({
 
       {/* Deploy notice */}
       {!canChat && (
-        <div className="px-4 py-2 bg-amber-50 border-t border-amber-100 shrink-0">
-          <p className="text-[11px] text-amber-700 text-center">
+        <div className={`px-4 py-2 border-t shrink-0 ${isDark ? "bg-amber-900/30 border-amber-800/40" : "bg-amber-50 border-amber-100"}`}>
+          <p className={`text-[11px] text-center ${isDark ? "text-amber-400" : "text-amber-700"}`}>
             Click &ldquo;Save&rdquo; to enable live chat testing
           </p>
         </div>
       )}
 
       {/* Input */}
-      <div className="px-4 py-3 border-t border-gray-100 flex gap-2 items-end shrink-0">
+      <div className={`px-4 py-3 border-t flex gap-2 items-end shrink-0 ${isDark ? "border-gray-700" : "border-gray-100"}`}>
         <textarea
           ref={inputRef}
           value={inputValue}
@@ -326,7 +334,11 @@ export function PreviewChatPanel({
           placeholder={canChat ? "Type a message..." : "Save to enable chat..."}
           rows={1}
           disabled={isStreaming || !canChat}
-          className="flex-1 resize-none border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 transition-colors min-h-[38px] max-h-[100px] text-gray-900 placeholder:text-gray-400 bg-white disabled:opacity-60"
+          className={`flex-1 resize-none border rounded-xl px-3 py-2 text-sm outline-none transition-colors min-h-[38px] max-h-[100px] disabled:opacity-60 ${
+            isDark
+              ? "border-gray-700 bg-gray-800 text-gray-100 placeholder:text-gray-500 focus:border-indigo-400"
+              : "border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:border-indigo-500"
+          }`}
         />
         <button
           onClick={() => sendMessage(inputValue)}
@@ -352,16 +364,18 @@ export function PreviewChatPanel({
       </div>
 
       {/* Powered by */}
-      <div className="text-center py-1.5 text-[10px] text-gray-400 shrink-0">
-        <a
-          href="https://launchpath.io"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-gray-400 no-underline hover:text-gray-500"
-        >
-          Powered by LaunchPath
-        </a>
-      </div>
+      {showBranding && (
+        <div className={`text-center py-1.5 text-[10px] shrink-0 ${isDark ? "text-gray-600" : "text-gray-400"}`}>
+          <a
+            href="https://launchpath.io"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`no-underline ${isDark ? "text-gray-600 hover:text-gray-500" : "text-gray-400 hover:text-gray-500"}`}
+          >
+            Powered by LaunchPath
+          </a>
+        </div>
+      )}
     </div>
   );
 }
