@@ -607,6 +607,49 @@ function AgentCanvasInner({
     []
   );
 
+  const onDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  }, []);
+
+  const onDrop = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    const reactFlowBounds = document.querySelector(".react-flow")?.getBoundingClientRect();
+    if (!reactFlowBounds) return;
+
+    const dataStr = event.dataTransfer.getData("application/reactflow");
+    if (!dataStr) return;
+
+    try {
+      const data = JSON.parse(dataStr);
+      const { type, toolkit, name, icon } = data;
+
+      const targetAgentId = agent.id; // Currently drops default to main agent
+
+      if (type === "knowledge") {
+        void (async () => {
+          await fetch(`/api/agents/${targetAgentId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ knowledge_enabled: true, skip_version: true }),
+          });
+          setHasKnowledge(true);
+          setModal({ type: "knowledge" });
+        })();
+      } else if (type === "composio") {
+        // For Composio, we need a connection ID. If we don't have it, we can open the AppLibraryModal
+        // or a slimmed down connection flow. For simplicity here, we open AppLibrary to let them connect it.
+        // In a fuller implementation we'd check `isConnected(toolkit)` here directly.
+        setAppLibraryOpen(true);
+      } else {
+        setSetupTool({ toolType: type, agentId: targetAgentId });
+      }
+
+    } catch (e) {
+      console.error("Drop failed", e);
+    }
+  }, [agent.id]);
+
   const onNodeDoubleClick: NodeMouseHandler = useCallback(
     (_event, node) => {
       if (node.type === "agentNode") setModal({ type: "edit-agent" });
@@ -680,6 +723,8 @@ function AgentCanvasInner({
             onEdgesChange={onEdgesChange}
             onNodeDoubleClick={onNodeDoubleClick}
             onNodeDragStop={onNodeDragStop}
+            onDragOver={onDragOver}
+            onDrop={onDrop}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             fitView
@@ -705,7 +750,22 @@ function AgentCanvasInner({
         </div>
       )}
 
-      <BottomBar testMode={chatOpen} onToggleTest={handleToggleTest} />
+      {/* Zoom controls (moved out of removed BottomBar) */}
+      <div className="absolute bottom-6 left-6 z-30 flex items-center gap-1 bg-white/70 backdrop-blur-xl border border-white/60 shadow-sm rounded-xl p-1.5">
+        <button
+          onClick={() => {
+            const flowInstance = document.querySelector(".react-flow");
+            if (flowInstance) {
+              // Trigger a small window resize to force fitView, since we don't have direct access here cleanly without hook setup.
+              window.dispatchEvent(new Event('resize'));
+            }
+          }}
+          className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 hover:bg-black/5 transition-colors"
+          title="Zoom to Fit"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></svg>
+        </button>
+      </div>
 
       <NodeModal
         open={modal.type !== "none"}

@@ -17,8 +17,8 @@ export function DashedEdge(props: EdgeProps) {
     <BaseEdge
       path={edgePath}
       style={{
-        stroke: "rgba(255, 255, 255, 0.12)",
-        strokeWidth: 1.5,
+        stroke: "rgba(0, 0, 0, 0.15)",
+        strokeWidth: 2,
         strokeDasharray: "6 4",
         ...props.style,
       }}

@@ -17,17 +17,17 @@ export function FloatingChatWidget({
   onClose,
 }: FloatingChatWidgetProps) {
   return (
-    <div className="fixed bottom-20 right-6 z-40 w-[400px] h-[520px] flex flex-col bg-background border border-border rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-200">
+    <div className="fixed bottom-24 right-8 z-50 w-[420px] h-[580px] flex flex-col bg-white/70 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-[2rem] overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-200">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-background/90 backdrop-blur-sm flex-shrink-0">
-        <span className="text-sm font-semibold text-foreground">
-          Test {agentName}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/40 shrink-0">
+        <span className="text-sm font-bold tracking-tight text-zinc-800">
+          Chat with {agentName}
         </span>
         <button
           onClick={onClose}
-          className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          className="p-1.5 rounded-full text-zinc-400 hover:text-zinc-800 hover:bg-black/5 transition-colors"
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="w-4 h-4 text-zinc-400 font-bold" />
         </button>
       </div>
 

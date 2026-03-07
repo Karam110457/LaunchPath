@@ -109,10 +109,10 @@ export function AgentChatPanel({
 
   return (
     <div
-      className={`relative flex flex-col ${embedded ? "h-full" : "h-[calc(100vh-16rem)] min-h-[400px] border border-border rounded-xl"} overflow-hidden bg-background`}
+      className={`relative flex flex-col ${embedded ? "h-full bg-transparent" : "h-[calc(100vh-16rem)] min-h-[400px] border border-border rounded-xl bg-background"} overflow-hidden`}
     >
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur-sm flex-shrink-0">
+      <header className={`flex items-center justify-between px-4 py-3 border-b flex-shrink-0 ${embedded ? "border-white/20 bg-transparent" : "border-border bg-background/80 backdrop-blur-sm"}`}>
         {/* Left: Conversation picker */}
         <div className="relative" ref={dropdownRef}>
           <button
@@ -272,8 +272,8 @@ export function AgentChatPanel({
       </div>
 
       {/* Floating input */}
-      <div className="absolute bottom-0 left-0 right-0 px-4 pb-5 pt-3 z-10">
-        <InputBar onSend={sendMessage} disabled={isStreaming} />
+      <div className={`absolute bottom-0 left-0 right-0 px-4 pb-5 pt-3 z-10 ${embedded ? "bg-white/40 backdrop-blur-md rounded-b-[2rem]" : ""}`}>
+        <InputBar onSend={sendMessage} disabled={isStreaming} embedded={embedded} />
       </div>
     </div>
   );
@@ -306,8 +306,8 @@ function ToolActivityDisplay({ activities }: { activities: ToolActivity[] }) {
               activity.status === "running"
                 ? "bg-primary/5 border-primary/20"
                 : activity.status === "done"
-                ? "bg-emerald-500/5 border-emerald-500/20"
-                : "bg-destructive/5 border-destructive/20"
+                  ? "bg-emerald-500/5 border-emerald-500/20"
+                  : "bg-destructive/5 border-destructive/20"
             )}
           >
             {/* Header row — always visible */}
@@ -320,8 +320,8 @@ function ToolActivityDisplay({ activities }: { activities: ToolActivity[] }) {
                 activity.status === "running"
                   ? "text-primary/80"
                   : activity.status === "done"
-                  ? "text-emerald-500/80"
-                  : "text-destructive/80"
+                    ? "text-emerald-500/80"
+                    : "text-destructive/80"
               )}
             >
               {activity.status === "running" ? (
