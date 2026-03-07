@@ -29,8 +29,8 @@ export function DashedEdge(props: EdgeProps) {
   const isKnowledgeEdge = props.id.includes("knowledge");
   const showDelete = !isKnowledgeEdge && (hovered || props.selected);
 
-  // Greyish minimalistic colors
-  const strokeColor = hovered || props.selected ? "#a1a1aa" : "#e4e4e7"; // zinc-400 on hover, zinc-200 idle
+  // Greyish minimalistic but clearly visible
+  const strokeColor = hovered || props.selected ? "#52525b" : "#71717a"; // zinc-600 on hover, zinc-500 idle
 
   return (
     <>
@@ -45,13 +45,13 @@ export function DashedEdge(props: EdgeProps) {
         style={{ cursor: "pointer" }}
       />
       
-      {/* Inner solid path */}
+      {/* Visible path — thicker and darker so connections are easy to see */}
       <BaseEdge
         path={edgePath}
         style={{
           stroke: strokeColor,
-          strokeWidth: hovered || props.selected ? 2.5 : 1.5,
-          strokeDasharray: "6 6",
+          strokeWidth: hovered || props.selected ? 3 : 2,
+          strokeDasharray: "8 6",
           transition: "stroke 0.2s ease, stroke-width 0.2s ease",
         }}
         className="canvas-edge-animated"
