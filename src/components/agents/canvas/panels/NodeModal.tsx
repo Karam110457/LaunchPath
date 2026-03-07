@@ -60,11 +60,7 @@ export function NodeModal({
 
           {/* Breadcrumbs */}
           <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-400">
-            <button className="hover:text-zinc-600">Setup</button>
-            <span className="text-[12px]">›</span>
             <button className="text-zinc-900 border-b border-zinc-900 pb-0.5">Configure</button>
-            <span className="text-[12px]">›</span>
-            <button className="hover:text-zinc-600">Test</button>
           </div>
         </div>
 

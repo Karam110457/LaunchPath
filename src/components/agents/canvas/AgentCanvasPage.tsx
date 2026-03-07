@@ -798,6 +798,17 @@ function AgentCanvasInner({
         </button>
       </div>
 
+      {/* Test Chat Button */}
+      <div className="absolute top-6 right-6 z-30">
+        <button
+          onClick={handleToggleTest}
+          className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-xl hover:bg-zinc-800 transition-all font-medium text-sm border border-zinc-700/50"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          Test
+        </button>
+      </div>
+
       <NodeModal
         open={modal.type !== "none"}
         onClose={handleCloseModal}

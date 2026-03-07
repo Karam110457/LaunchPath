@@ -131,7 +131,7 @@ export function LeftCatalogPanel() {
 
                 {/* Tabs */}
                 <div className="flex items-center justify-between mt-5 border-b border-zinc-200/50">
-                    {["All", "Controls", "AI & Apps", "Custom"].map((tab) => (
+                    {["All", "AI & Apps", "Custom"].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}

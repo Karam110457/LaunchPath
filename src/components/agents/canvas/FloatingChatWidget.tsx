@@ -17,9 +17,9 @@ export function FloatingChatWidget({
   onClose,
 }: FloatingChatWidgetProps) {
   return (
-    <div className="fixed bottom-24 right-8 z-50 w-[420px] h-[580px] flex flex-col bg-white/70 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-[2rem] overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-200">
+    <div className="fixed top-[84px] right-6 bottom-6 z-50 w-[380px] flex flex-col bg-white/70 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-[2rem] overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-right-8 duration-200">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-white/40 shrink-0">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200/50 shrink-0">
         <span className="text-sm font-bold tracking-tight text-zinc-800">
           Chat with {agentName}
         </span>
