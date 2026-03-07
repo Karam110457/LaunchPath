@@ -1,14 +1,12 @@
 "use client";
 
-import { memo, useContext } from "react";
+import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { Bot, Plus } from "lucide-react";
+import { Bot } from "lucide-react";
 import type { SubagentNodeData } from "../canvas-types";
-import { CanvasActionsContext } from "../canvas-context";
 
 export const SubagentNode = memo(function SubagentNode({ data }: NodeProps) {
   const d = data as unknown as SubagentNodeData;
-  const { openCatalogForAgent } = useContext(CanvasActionsContext);
 
   return (
     <div className="group relative flex flex-col items-center">
@@ -28,18 +26,6 @@ export const SubagentNode = memo(function SubagentNode({ data }: NodeProps) {
             <Bot strokeWidth={1.5} className="w-10 h-10 text-zinc-700" />
           )}
         </div>
-
-        {/* "+" button — opens tool catalog scoped to this sub-agent */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            openCatalogForAgent(d.subagentId);
-          }}
-          className="nopan nodrag absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white border border-zinc-200 shadow-sm flex items-center justify-center hover:bg-zinc-50 hover:border-zinc-300 transition-all z-30 opacity-0 group-hover:opacity-100"
-        >
-          <Plus className="w-3.5 h-3.5 text-zinc-600" />
-        </button>
 
         {/* Bottom-left → Knowledge */}
         <Handle

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
   import {
@@ -104,7 +103,7 @@ function AgentCanvasInner({
   initialDocuments,
 }: AgentCanvasPageProps) {
   const router = useRouter();
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, getNodes } = useReactFlow();
 
   // ─── Agent form state ────────────────────────────────────────────────────
   const originalFormState = useMemo<AgentFormState>(
@@ -684,7 +683,23 @@ function AgentCanvasInner({
       const data = JSON.parse(dataStr);
       const { type, toolkit, name, icon } = data;
 
-      const targetAgentId = agent.id; // Currently drops default to main agent
+      // If drop is over a subagent node, create/enable for that subagent
+      let targetAgentId = agent.id;
+      const allNodes = getNodes();
+      const hitNode = allNodes.find((n) => {
+        const w = 200;
+        const h = 140;
+        return (
+          position.x >= n.position.x &&
+          position.x <= n.position.x + w &&
+          position.y >= n.position.y &&
+          position.y <= n.position.y + h
+        );
+      });
+      if (hitNode?.type === "subagentNode") {
+        const d = hitNode.data as unknown as SubagentNodeData;
+        targetAgentId = d.subagentId;
+      }
 
       if (type === "knowledge") {
         void (async () => {
@@ -719,20 +734,20 @@ function AgentCanvasInner({
           });
           const json = await res.json();
           if (json.tool) {
-            const nodeId = `tool-${json.tool.id}`;
+            const nodeId = targetAgentId === agent.id
+              ? `tool-${json.tool.id}`
+              : `sa-${targetAgentId}-tool-${json.tool.id}`;
             const newPos = { ...layoutState.positions, [nodeId]: position };
             const newState = { ...layoutState, positions: newPos };
             setLayoutState(newState);
             persistLayout(newState);
           }
           await fetchTools();
+          if (targetAgentId !== agent.id) await fetchSubagents();
         })();
       } else if (type === "subagent") {
-        // For subagent, we still need to open the setup to name it, but we can't save its position until it's created
-        // We'll pass the position to the setup state so it can be saved when created if we wanted,
-        // but since SubagentSetup currently doesn't accept position, we can just rely on the default layout for now,
-        // or we could add a temporary position. For now, let's just let it be.
-        setSetupTool({ toolType: type, agentId: targetAgentId });
+        // Subagent is always added to the parent agent
+        setSetupTool({ toolType: type, agentId: agent.id });
       } else {
         // Create custom tools immediately
         void (async () => {
@@ -749,20 +764,23 @@ function AgentCanvasInner({
           });
           const json = await res.json();
           if (json.tool) {
-            const nodeId = `tool-${json.tool.id}`;
+            const nodeId = targetAgentId === agent.id
+              ? `tool-${json.tool.id}`
+              : `sa-${targetAgentId}-tool-${json.tool.id}`;
             const newPos = { ...layoutState.positions, [nodeId]: position };
             const newState = { ...layoutState, positions: newPos };
             setLayoutState(newState);
             persistLayout(newState);
           }
           await fetchTools();
+          if (targetAgentId !== agent.id) await fetchSubagents();
         })();
       }
 
     } catch (e) {
       console.error("Drop failed", e);
     }
-  }, [agent.id, screenToFlowPosition, layoutState, persistLayout]);
+  }, [agent.id, getNodes, screenToFlowPosition, layoutState, persistLayout, fetchTools, fetchSubagents]);
 
   const onNodeDoubleClick: NodeMouseHandler = useCallback(
     (_event, node) => {

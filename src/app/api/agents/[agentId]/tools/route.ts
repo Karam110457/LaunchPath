@@ -134,10 +134,10 @@ export async function POST(
         { status: 400 }
       );
     }
-  } else {
-    // Webhook, MCP: validate via catalog setup fields
+  } else if (tool_type === "webhook" || tool_type === "mcp") {
+    // Allow placeholder create with empty config (e.g. from canvas drop); user configures on first edit.
     const catalogEntry = getCatalogEntry(tool_type);
-    if (catalogEntry) {
+    if (catalogEntry && config && Object.keys(config).length > 0) {
       for (const field of catalogEntry.setupFields) {
         if (field.required && !config?.[field.key]) {
           return NextResponse.json(
