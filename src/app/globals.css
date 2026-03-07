@@ -79,6 +79,23 @@
     scale: 1 1;
     }
   }
+  --animate-border-beam: border-beam calc(var(--duration)*1s) infinite linear;
+  @keyframes border-beam {
+  100% {
+    offset-distance: 100%;
+    }
+  }
+  @keyframes shine-pulse {
+  0% {
+    background-position: 0% 0%;
+    }
+  50% {
+    background-position: 100% 100%;
+    }
+  to {
+    background-position: 0% 0%;
+    }
+  }
 }
 
 :root {
