@@ -120,7 +120,7 @@ export function EnabledToolsList({
                 onClick={() => onToggle(tool.id, !tool.is_enabled)}
                 className={cn(
                   "relative w-8 h-4.5 rounded-full transition-colors",
-                  tool.is_enabled ? "bg-primary" : "bg-muted"
+                  tool.is_enabled ? "gradient-accent-bg" : "bg-muted"
                 )}
                 title={tool.is_enabled ? "Disable tool" : "Enable tool"}
               >

@@ -91,7 +91,7 @@ export function InputBar({ onSend, disabled = false, subdued = false, embedded =
           className={cn(
             "flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-200 mb-0.5",
             value.trim() && !disabled
-              ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/30"
+              ? "gradient-accent-bg text-white hover:opacity-90 shadow-sm shadow-[#FF8C00]/20"
               : "bg-muted/60 text-muted-foreground cursor-not-allowed"
           )}
           style={justSent ? { transform: "scale(1.1)", opacity: 0.6 } : undefined}

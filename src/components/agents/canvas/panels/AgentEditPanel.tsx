@@ -170,17 +170,16 @@ export function AgentEditPanel({
                     }}
                     className={cn(
                       "flex items-start gap-2 rounded-lg border px-3 py-2.5 text-left transition-all",
-                      "hover:border-primary/40 hover:bg-primary/5",
                       currentPreset === preset.value && !showCustomTone
-                        ? "border-primary bg-primary/10"
-                        : "border-border"
+                        ? "border-transparent gradient-accent-border bg-gradient-to-br from-[#FF8C00]/8 to-[#9D50BB]/8"
+                        : "border-border hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5"
                     )}
                   >
                     <span className="text-base leading-none mt-0.5">{preset.emoji}</span>
                     <div className="min-w-0">
                       <p className={cn(
                         "text-xs font-medium",
-                        currentPreset === preset.value && !showCustomTone && "text-primary"
+                        currentPreset === preset.value && !showCustomTone && "gradient-text"
                       )}>
                         {preset.label}
                       </p>
@@ -197,12 +196,13 @@ export function AgentEditPanel({
                 onClick={() => setShowCustomTone(true)}
                 className={cn(
                   "flex items-center gap-2 w-full rounded-lg border px-3 py-2 text-left transition-all",
-                  "hover:border-primary/40 hover:bg-primary/5",
-                  showCustomTone ? "border-primary bg-primary/10" : "border-border"
+                  showCustomTone
+                    ? "border-transparent gradient-accent-border bg-gradient-to-br from-[#FF8C00]/8 to-[#9D50BB]/8"
+                    : "border-border hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5"
                 )}
               >
                 <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className={cn("text-xs font-medium", showCustomTone && "text-primary")}>
+                <span className={cn("text-xs font-medium", showCustomTone && "gradient-text")}>
                   Custom tone
                 </span>
               </button>

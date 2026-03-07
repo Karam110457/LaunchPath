@@ -18,8 +18,11 @@ export function FloatingChatWidget({
 }: FloatingChatWidgetProps) {
   return (
     <div className="fixed top-[84px] right-6 bottom-6 z-50 w-[380px] flex flex-col bg-white/70 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-[2rem] overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-right-8 duration-200">
+      {/* Gradient accent line */}
+      <div className="h-[2px] gradient-accent-bg shrink-0 mx-6 mt-4 rounded-full" />
+
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200/50 shrink-0">
+      <div className="flex items-center justify-between px-6 py-3 border-b border-zinc-200/50 shrink-0">
         <span className="text-sm font-bold tracking-tight text-zinc-800">
           Chat with {agentName}
         </span>

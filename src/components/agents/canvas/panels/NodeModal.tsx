@@ -60,7 +60,7 @@ export function NodeModal({
 
           {/* Breadcrumbs */}
           <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-400">
-            <button className="text-zinc-900 border-b border-zinc-900 pb-0.5">Configure</button>
+            <button className="text-zinc-900 pb-0.5" style={{ borderBottom: "2px solid transparent", borderImage: "linear-gradient(135deg, #FF8C00, #9D50BB) 1" }}>Configure</button>
           </div>
         </div>
 

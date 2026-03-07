@@ -95,10 +95,10 @@ export function ToolCatalogModal({
               <button
                 type="button"
                 onClick={onAppLibrary}
-                className="w-full text-left rounded-xl border border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 hover:border-indigo-500/50 p-4 flex items-center gap-3.5 transition-all group"
+                className="w-full text-left rounded-xl border border-[#FF8C00]/25 bg-gradient-to-r from-[#FF8C00]/5 to-[#9D50BB]/5 hover:from-[#FF8C00]/10 hover:to-[#9D50BB]/10 hover:border-[#9D50BB]/40 p-4 flex items-center gap-3.5 transition-all group"
               >
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/15 flex items-center justify-center shrink-0">
-                  <Library className="w-5 h-5 text-indigo-400" />
+                <div className="w-10 h-10 rounded-xl gradient-accent-bg flex items-center justify-center shrink-0">
+                  <Library className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <span className="text-sm font-medium text-foreground">
@@ -109,7 +109,7 @@ export function ToolCatalogModal({
                     Connect via OAuth in seconds.
                   </p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-indigo-400 transition-colors shrink-0" />
+                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-[#9D50BB] transition-colors shrink-0" />
               </button>
             </div>
           )}

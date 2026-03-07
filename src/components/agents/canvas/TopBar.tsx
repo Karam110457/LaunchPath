@@ -100,7 +100,7 @@ export function TopBar({
           className={cn(
             "flex items-center gap-2 px-6 py-2 rounded-full text-[13px] font-medium transition-all",
             isDirty
-              ? "bg-zinc-900 text-white hover:bg-zinc-800 shadow-md"
+              ? "gradient-accent-bg text-white shadow-md hover:opacity-90"
               : "bg-white text-zinc-400 border border-zinc-200 shadow-sm cursor-not-allowed"
           )}
         >

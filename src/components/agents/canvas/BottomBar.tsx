@@ -31,7 +31,7 @@ export function BottomBar({ testMode, onToggleTest }: BottomBarProps) {
           onClick={onToggleTest}
           className={cn(
             "flex items-center justify-between px-5 py-3 bg-white/70 backdrop-blur-xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-full transition-all cursor-text hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)]",
-            testMode && "ring-2 ring-primary/20 border-primary/30"
+            testMode && "gradient-glow-ring border-transparent"
           )}
         >
           <span className="text-[13px] text-zinc-400">

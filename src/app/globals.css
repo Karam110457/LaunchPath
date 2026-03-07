@@ -522,6 +522,53 @@
   }
 }
 
+/* ── Orange–Purple accent gradient utilities ──────────────────────────────── */
+/* Matches the ShineBorder gradient on AgentNode / SubagentNode:
+   #FF8C00 (orange) → #9D50BB (purple) */
+
+:root {
+  --gradient-accent: linear-gradient(135deg, #FF8C00, #9D50BB);
+  --gradient-accent-reverse: linear-gradient(135deg, #9D50BB, #FF8C00);
+}
+
+/* Gradient text (set on the element directly) */
+.gradient-text {
+  background: var(--gradient-accent);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Gradient background fill */
+.gradient-accent-bg {
+  background: var(--gradient-accent);
+}
+
+/* Gradient border — uses a pseudo-element behind the element.
+   The element needs `position: relative` and a solid bg to mask the inner area. */
+.gradient-accent-border {
+  position: relative;
+  z-index: 0;
+}
+.gradient-accent-border::before {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  background: var(--gradient-accent);
+  z-index: -1;
+  opacity: 0.7;
+}
+
+/* Subtle gradient glow ring (used on focused inputs, active states) */
+.gradient-glow-ring {
+  box-shadow:
+    0 0 0 2px rgba(255, 140, 0, 0.15),
+    0 0 0 2px rgba(157, 80, 187, 0.15),
+    0 0 12px 2px rgba(255, 140, 0, 0.08),
+    0 0 12px 2px rgba(157, 80, 187, 0.08);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
