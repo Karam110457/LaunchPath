@@ -40,6 +40,7 @@ import { SaveDialog } from "./SaveDialog";
 import { VersionHistoryModal } from "./VersionHistoryModal";
 import { NodeHelperTip } from "./nodes/NodeHelperTip";
 import { CanvasActionsContext } from "./canvas-context";
+import { LeftCatalogPanel } from "./LeftCatalogPanel";
 import { useCanvasLayout, type SavedPositions } from "./useCanvasLayout";
 import type {
   PanelState,
@@ -423,11 +424,11 @@ function AgentCanvasInner({
             hasKnowledge: saHasKnowledge,
             knowledgeData: saHasKnowledge
               ? {
-                  agentId: cfg.target_agent_id ?? "",
-                  documentCount: kbCounts.total,
-                  readyCount: kbCounts.ready,
-                  processingCount: kbCounts.processing,
-                }
+                agentId: cfg.target_agent_id ?? "",
+                documentCount: kbCounts.total,
+                readyCount: kbCounts.ready,
+                processingCount: kbCounts.processing,
+              }
               : null,
           };
         })
@@ -645,7 +646,7 @@ function AgentCanvasInner({
   else if (modal.type === "edit-subagent") modalTitle = "Edit Sub-Agent";
 
   return (
-    <div className="relative w-full h-[calc(100vh-3.5rem)] overflow-hidden bg-[#0a0a0a]">
+    <div className="fixed inset-0 z-[100] w-full h-full overflow-hidden bg-[#ebebeb]">
       <TopBar
         agentName={formState.name}
         avatarEmoji={formState.avatarEmoji}
@@ -657,30 +658,7 @@ function AgentCanvasInner({
         versionCount={versionCount}
       />
 
-      {/* Fixed "Add Tool" button */}
-      <div className="absolute top-[60px] right-4 z-20">
-        <button
-          onClick={() =>
-            setCatalogContext({
-              agentId: agent.id,
-              hasKnowledge,
-              existingToolTypes: agentTools
-                .filter((t) => t.tool_type !== "subagent")
-                .map((t) => t.tool_type),
-            })
-          }
-          className="flex items-center gap-2 px-3 py-2 bg-card/90 backdrop-blur-sm border border-border/50 rounded-lg text-sm font-medium text-muted-foreground hover:text-amber-400 hover:border-amber-500/40 hover:bg-amber-500/5 transition-all shadow-sm"
-        >
-          <Plus className="w-4 h-4 text-amber-400" />
-          Add Tool
-        </button>
-        <NodeHelperTip
-          tipId="tools"
-          icon={<Plus className="w-3.5 h-3.5 text-amber-400" />}
-          text="Connect 900+ apps — Gmail, Slack, CRM, and more"
-          position="right-0 top-full mt-4"
-        />
-      </div>
+      <LeftCatalogPanel />
 
       {toolsReady ? (
         <CanvasActionsContext.Provider
@@ -717,7 +695,7 @@ function AgentCanvasInner({
               variant={BackgroundVariant.Dots}
               gap={24}
               size={1.2}
-              color="rgba(255, 255, 255, 0.15)"
+              color="rgba(0, 0, 0, 0.08)"
             />
           </ReactFlow>
         </CanvasActionsContext.Provider>

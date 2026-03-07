@@ -12,31 +12,21 @@ export const SubagentNode = memo(function SubagentNode({ data }: NodeProps) {
 
   return (
     <div className="group relative flex flex-col items-center">
-      <div className="relative w-[240px] bg-[#1a1a1a] border border-amber-500/30 rounded-xl shadow-xl cursor-pointer transition-all duration-200 hover:border-amber-500/50 overflow-visible z-10 flex items-center px-4 py-4">
+      <div className="relative w-[88px] h-[88px] bg-white/70 backdrop-blur-xl border border-white/60 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] cursor-pointer transition-all duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] overflow-visible z-10 flex items-center justify-center">
         {/* Target handle — receives edge from parent agent */}
         <Handle
           type="target"
           position={Position.Top}
-          className="!bg-[#111] !w-3 !h-3 !border-[1.5px] !border-amber-500/50 !rounded-[2px] !rotate-45 z-20"
+          className="!bg-zinc-200 !w-2.5 !h-2.5 !border-[1.5px] !border-white !rounded-full !top-[-5px] opacity-0 group-hover:opacity-100 transition-opacity z-20"
         />
 
         {/* Avatar */}
-        <div className="w-10 h-10 flex items-center justify-center text-zinc-100 mr-3 shrink-0">
+        <div className="flex items-center justify-center text-4xl">
           {d.avatarEmoji && d.avatarEmoji !== "🤖" ? (
-            <span className="text-2xl leading-none">{d.avatarEmoji}</span>
+            d.avatarEmoji
           ) : (
-            <Bot strokeWidth={2} className="w-8 h-8" />
+            <Bot strokeWidth={1.5} className="w-10 h-10 text-zinc-700" />
           )}
-        </div>
-
-        {/* Name + badge */}
-        <div className="min-w-0 flex-1">
-          <h3 className="text-[15px] font-semibold text-zinc-100 truncate leading-tight">
-            {d.name}
-          </h3>
-          <span className="inline-block mt-0.5 text-[9px] font-medium px-1.5 py-[1px] rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            Sub-Agent
-          </span>
         </div>
 
         {/* "+" button — opens tool catalog scoped to this sub-agent */}
@@ -46,9 +36,9 @@ export const SubagentNode = memo(function SubagentNode({ data }: NodeProps) {
             e.stopPropagation();
             openCatalogForAgent(d.subagentId);
           }}
-          className="nopan nodrag absolute -top-2 -right-2 w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center hover:bg-amber-500/25 hover:border-amber-500/60 transition-all z-30 opacity-0 group-hover:opacity-100"
+          className="nopan nodrag absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white border border-zinc-200 shadow-sm flex items-center justify-center hover:bg-zinc-50 hover:border-zinc-300 transition-all z-30 opacity-0 group-hover:opacity-100"
         >
-          <Plus className="w-3.5 h-3.5 text-amber-400" />
+          <Plus className="w-3.5 h-3.5 text-zinc-600" />
         </button>
 
         {/* Bottom-left → Knowledge */}
@@ -56,32 +46,26 @@ export const SubagentNode = memo(function SubagentNode({ data }: NodeProps) {
           type="source"
           position={Position.Bottom}
           id="bottom-left"
-          style={{ left: "25%", bottom: "-7px" }}
-          className="!bg-[#111] !w-3 !h-3 !border-[1.5px] !border-amber-500/30 !rounded-[2px] !rotate-45 z-20"
+          style={{ left: "25%", bottom: "-5px" }}
+          className="!bg-zinc-200 !w-2.5 !h-2.5 !border-[1.5px] !border-white !rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
         />
         {/* Bottom-right → Tools */}
         <Handle
           type="source"
           position={Position.Bottom}
           id="bottom-right"
-          style={{ left: "75%", bottom: "-7px" }}
-          className="!bg-[#111] !w-3 !h-3 !border-[1.5px] !border-amber-500/30 !rounded-[2px] !rotate-45 z-20"
+          style={{ left: "75%", bottom: "-5px" }}
+          className="!bg-zinc-200 !w-2.5 !h-2.5 !border-[1.5px] !border-white !rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
         />
       </div>
 
       {/* Labels below node */}
-      <div className="w-[240px] relative mt-2 pointer-events-none">
-        <span
-          className="absolute text-[11px] font-medium text-[#777]"
-          style={{ left: "25%", transform: "translateX(-50%)" }}
-        >
-          Knowledge Base
-        </span>
-        <span
-          className="absolute text-[11px] font-medium text-[#777]"
-          style={{ left: "75%", transform: "translateX(-50%)" }}
-        >
-          Tools
+      <h3 className="mt-3 text-[13px] font-medium text-zinc-800 text-center max-w-[120px] leading-tight flex-wrap">
+        {d.name}
+      </h3>
+      <div className="w-[120px] relative mt-1 flex justify-center pointer-events-none">
+        <span className="inline-block text-[9px] font-medium px-1.5 py-[1px] rounded-full bg-zinc-100 text-zinc-500 border border-zinc-200">
+          Sub-Agent
         </span>
       </div>
     </div>

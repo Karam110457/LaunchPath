@@ -11,51 +11,55 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
 
   return (
     <div className="group relative flex flex-col items-center">
-      <div className="relative w-[240px] bg-[#1a1a1a] border border-[#333] rounded-xl shadow-xl cursor-pointer transition-all duration-200 hover:border-[#555] overflow-visible z-10 flex items-center px-4 py-4">
+      <div className="relative w-[88px] h-[88px] bg-white/70 backdrop-blur-xl border border-white/60 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] cursor-pointer transition-all duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] overflow-visible z-10 flex items-center justify-center">
 
-        <div className="w-10 h-10 flex items-center justify-center text-zinc-100 mr-3">
-          <Bot strokeWidth={2} className="w-8 h-8" />
+        <div className="flex items-center justify-center text-4xl">
+          {d.avatarEmoji && d.avatarEmoji !== "🤖" ? (
+            d.avatarEmoji
+          ) : (
+            <Bot strokeWidth={1.5} className="w-10 h-10 text-zinc-700" />
+          )}
         </div>
-
-        <h3 className="text-[15px] font-semibold text-zinc-100 truncate leading-tight">
-          {d.name}
-        </h3>
 
         {/* Bottom-left → Knowledge */}
         <Handle
           type="source"
           position={Position.Bottom}
           id="bottom-left"
-          style={{ left: "25%", bottom: "-7px" }}
-          className="!bg-[#111] !w-3 !h-3 !border-[1.5px] !border-[#555] !rounded-[2px] !rotate-45 z-20"
+          style={{ left: "25%", bottom: "-5px" }}
+          className="!bg-zinc-200 !w-2.5 !h-2.5 !border-[1.5px] !border-white !rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
         />
         {/* Bottom-right → Tools */}
         <Handle
           type="source"
           position={Position.Bottom}
           id="bottom-right"
-          style={{ left: "75%", bottom: "-7px" }}
-          className="!bg-[#111] !w-3 !h-3 !border-[1.5px] !border-[#555] !rounded-[2px] !rotate-45 z-20"
+          style={{ left: "75%", bottom: "-5px" }}
+          className="!bg-zinc-200 !w-2.5 !h-2.5 !border-[1.5px] !border-white !rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
         />
 
         {/* Helper tip — anchored to the right side of the node */}
         <NodeHelperTip
           tipId="agent"
-          icon={<MousePointerClick className="w-3.5 h-3.5 text-primary" />}
+          icon={<MousePointerClick className="w-3.5 h-3.5 text-zinc-700" />}
           text="Double-click to edit personality, tone, and behavior"
           position="left-[calc(100%+28px)] top-[35%] -translate-y-1/2"
         />
       </div>
 
-      <div className="w-[240px] relative mt-2 pointer-events-none">
+      {/* Labels below node */}
+      <h3 className="mt-3 text-[13px] font-medium text-zinc-800 text-center max-w-[120px] leading-tight flex-wrap">
+        {d.name}
+      </h3>
+      <div className="w-[120px] relative mt-1 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
         <span
-          className="absolute text-[11px] font-medium text-[#777]"
+          className="absolute text-[9px] font-medium text-zinc-400"
           style={{ left: "25%", transform: "translateX(-50%)" }}
         >
-          Knowledge Base
+          Knowledge
         </span>
         <span
-          className="absolute text-[11px] font-medium text-[#777]"
+          className="absolute text-[9px] font-medium text-zinc-400"
           style={{ left: "75%", transform: "translateX(-50%)" }}
         >
           Tools

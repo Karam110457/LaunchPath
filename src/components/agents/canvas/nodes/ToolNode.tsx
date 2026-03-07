@@ -48,7 +48,7 @@ export const ToolNode = memo(function ToolNode({ data }: NodeProps) {
       {/* Square container */}
       <div
         className={cn(
-          "relative w-[84px] h-[84px] bg-[#1a1a1a] border border-[#333] rounded-[20px] flex items-center justify-center cursor-pointer shadow-xl transition-all duration-200 hover:border-[#555] z-10",
+          "relative w-[88px] h-[88px] bg-white/70 backdrop-blur-xl border border-white/60 rounded-3xl flex items-center justify-center cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] z-10",
           !d.isEnabled && "opacity-40"
         )}
       >
@@ -79,16 +79,16 @@ export const ToolNode = memo(function ToolNode({ data }: NodeProps) {
         <Handle
           type="target"
           position={Position.Top}
-          className="!bg-[#111] !w-3 !h-3 !border-[1.5px] !border-[#555] !rounded-[2px] !rotate-45 !top-[-7px] z-20"
+          className="!bg-zinc-200 !w-2.5 !h-2.5 !border-[1.5px] !border-white !rounded-full !top-[-5px] opacity-0 group-hover:opacity-100 transition-opacity z-20"
         />
       </div>
 
-      {/* Labels below */}
-      <div className="mt-2.5 flex flex-col items-center pointer-events-none text-center">
-        <h3 className="text-[14.5px] font-semibold text-[#EEEEEE] tracking-wide leading-tight">
+      {/* Labels below node */}
+      <div className="mt-3 flex flex-col items-center pointer-events-none text-center max-w-[120px]">
+        <h3 className="text-[13px] font-medium text-zinc-800 leading-tight">
           {d.displayName}
         </h3>
-        <p className="text-[12px] text-[#777] mt-1">
+        <p className="text-[10px] text-zinc-500 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           {actionLabel}
         </p>
       </div>

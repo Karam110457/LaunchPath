@@ -12,32 +12,32 @@ export const KnowledgeNode = memo(function KnowledgeNode({ data }: NodeProps) {
   return (
     <div className="group relative flex flex-col items-center">
       {/* Circle container */}
-      <div className="relative w-[96px] h-[96px] bg-[#1a1a1a] border border-[#333] rounded-full flex flex-col items-center justify-center cursor-pointer shadow-xl transition-all duration-200 hover:border-[#555] z-10">
+      <div className="relative w-[88px] h-[88px] bg-white/70 backdrop-blur-xl border border-white/60 rounded-full flex flex-col items-center justify-center cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] z-10">
 
         {/* Processing spinner inside circle */}
         {d.processingCount > 0 && (
           <div className="absolute top-1 right-1 z-10">
-            <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
+            <Loader2 className="w-4 h-4 text-amber-500 animate-spin" />
           </div>
         )}
 
-        <div className="w-12 h-12 flex items-center justify-center">
-          <Database className="w-8 h-8 text-violet-400" strokeWidth={1.5} />
+        <div className="flex items-center justify-center">
+          <Database className="w-8 h-8 text-violet-500" strokeWidth={1.5} />
         </div>
 
         <Handle
           type="target"
           position={Position.Top}
-          className="!bg-[#111] !w-3 !h-3 !border-[1.5px] !border-[#555] !rounded-[2px] !rotate-45 !top-[-7px] z-20"
+          className="!bg-zinc-200 !w-2.5 !h-2.5 !border-[1.5px] !border-white !rounded-full !top-[-5px] opacity-0 group-hover:opacity-100 transition-opacity z-20"
         />
       </div>
 
       {/* Text below */}
-      <div className="mt-2.5 flex flex-col items-center pointer-events-none text-center">
-        <h3 className="text-[14.5px] font-semibold text-[#EEEEEE] tracking-wide leading-tight">
+      <div className="mt-3 flex flex-col items-center pointer-events-none text-center max-w-[120px]">
+        <h3 className="text-[13px] font-medium text-zinc-800 leading-tight flex-wrap">
           Knowledge Base
         </h3>
-        <p className="text-[12px] text-[#777] mt-1">
+        <p className="text-[10px] text-zinc-500 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           {d.documentCount === 1 ? "1 source" : `${d.documentCount} sources`}
         </p>
       </div>

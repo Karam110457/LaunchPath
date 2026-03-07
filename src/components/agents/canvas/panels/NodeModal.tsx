@@ -33,38 +33,44 @@ export function NodeModal({
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop (invisible but captures clicks to close) */}
       <div
-        className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+        className="fixed inset-0 z-[40]"
         onClick={onClose}
       />
 
-      {/* Modal */}
-      <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
-        <div
-          ref={modalRef}
-          className={cn(
-            "pointer-events-auto bg-background border border-border rounded-2xl shadow-2xl",
-            "animate-in fade-in zoom-in-95 duration-200",
-            "flex flex-col overflow-hidden",
-            "w-full max-w-lg max-h-[80vh]",
-          )}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
-            <h2 className="text-base font-semibold text-foreground">
-              {title}
-            </h2>
+      {/* Floating Right Panel */}
+      <div className="absolute top-6 bottom-6 right-6 w-[360px] max-w-[calc(100vw-3rem)] z-50 flex flex-col bg-white/70 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] overflow-hidden animate-in slide-in-from-right-8 fade-in duration-200">
+
+        {/* Header */}
+        <div className="flex flex-col px-6 pt-6 pb-4 border-b border-zinc-200/50 flex-shrink-0 bg-transparent">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <h2 className="text-[14px] font-semibold text-zinc-900 tracking-tight">
+                {title}
+              </h2>
+            </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              className="p-1 rounded-full text-zinc-400 hover:text-zinc-800 hover:bg-black/5 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto">{children}</div>
+          {/* Breadcrumbs */}
+          <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-400">
+            <button className="hover:text-zinc-600">Setup</button>
+            <span className="text-[12px]">›</span>
+            <button className="text-zinc-900">Configure</button>
+            <span className="text-[12px]">›</span>
+            <button className="hover:text-zinc-600">Test</button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-1">
+          {children}
         </div>
       </div>
     </>
