@@ -124,7 +124,7 @@ export function Sidebar({ systems, agentCount, clientCount }: SidebarProps) {
   return (
     <aside className="fixed md:relative z-50 w-64 bg-background text-foreground hidden md:flex flex-col h-screen shrink-0 border-r border-border/40">
       {/* Brand header */}
-      <div className="h-14 flex items-center px-5 shrink-0">
+      <div className="h-14 flex items-center justify-center shrink-0">
         <Link href="/dashboard" className="flex items-center justify-center size-10 rounded-full hover:bg-muted transition-colors">
           <Logo className="text-xl" />
         </Link>
