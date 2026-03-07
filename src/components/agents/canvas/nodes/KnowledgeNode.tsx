@@ -28,7 +28,7 @@ export const KnowledgeNode = memo(function KnowledgeNode({ data }: NodeProps) {
         <Handle
           type="target"
           position={Position.Top}
-          className="!bg-zinc-200 !w-2.5 !h-2.5 !border-[1.5px] !border-white !rounded-full !top-[-5px] opacity-0 group-hover:opacity-100 transition-opacity z-20"
+          className="!bg-white !w-4 !h-4 !border-[3px] !border-[#A07CFE] !rounded-full !top-[-10px] opacity-0 group-hover:opacity-100 transition-all z-20 hover:scale-125 shadow-sm cursor-crosshair"
         />
       </div>
 
