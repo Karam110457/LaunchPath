@@ -44,6 +44,8 @@ import { NodeHelperTip } from "./nodes/NodeHelperTip";
 import { CanvasActionsContext } from "./canvas-context";
 import { LeftCatalogPanel } from "./LeftCatalogPanel";
 import { useCanvasLayout, type CanvasLayoutState } from "./useCanvasLayout";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { cn } from "@/lib/utils";
 import type {
   PanelState,
   AgentNodeData,
@@ -632,6 +634,8 @@ function AgentCanvasInner({
   } | null>(null);
   // Composio app library + tool setup state
   const [appLibraryOpen, setAppLibraryOpen] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const isDark = theme === "dark";
   const [composioSetup, setComposioSetup] = useState<{
     agentId: string;
     toolkit: string;
@@ -899,7 +903,7 @@ function AgentCanvasInner({
   else if (modal.type === "edit-subagent") modalTitle = "Edit Sub-Agent";
 
   return (
-    <div className="light fixed inset-0 z-[100] w-full h-full overflow-hidden bg-[#eef0f2] text-foreground">
+    <div className={cn(theme, "fixed inset-0 z-[100] w-full h-full overflow-hidden transition-colors duration-300", isDark ? "bg-[#0a0a0a]" : "bg-[#eef0f2]", "text-foreground")}>
       <TopBar
         agentName={formState.name}
         avatarEmoji={formState.avatarEmoji}
@@ -912,6 +916,10 @@ function AgentCanvasInner({
         saveStatus={saveStatus}
         versionCount={versionCount}
       />
+
+      <div className="absolute top-6 right-6 z-30">
+        <ThemeToggle isDark={isDark} onToggle={() => setTheme(isDark ? "light" : "dark")} />
+      </div>
 
       <LeftCatalogPanel />
 

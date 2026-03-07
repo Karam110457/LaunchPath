@@ -477,6 +477,23 @@
     transform: translateY(-2px) scale(1.02);
   }
 
+  .dark .liquid-glass-node {
+    background: linear-gradient(135deg, rgba(24, 24, 27, 0.7) 0%, rgba(24, 24, 27, 0.4) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 
+      inset 1px 2px 4px rgba(255, 255, 255, 0.05),
+      inset -1px -2px 4px rgba(0, 0, 0, 0.4),
+      0 10px 30px -4px rgba(0, 0, 0, 0.3);
+  }
+
+  .dark .liquid-glass-node:hover {
+    background: linear-gradient(135deg, rgba(39, 39, 42, 0.8) 0%, rgba(39, 39, 42, 0.5) 100%);
+    box-shadow: 
+      inset 1px 2px 4px rgba(255, 255, 255, 0.08),
+      inset -1px -2px 4px rgba(0, 0, 0, 0.5),
+      0 16px 40px -4px rgba(0, 0, 0, 0.4);
+  }
+
   .container {
     width: 100%;
     margin-left: auto;
