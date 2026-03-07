@@ -12,7 +12,7 @@ export const KnowledgeNode = memo(function KnowledgeNode({ data }: NodeProps) {
   return (
     <div className="group relative flex flex-col items-center">
       {/* Circle container */}
-      <div className="relative w-[88px] h-[88px] liquid-glass-node !rounded-full flex flex-col items-center justify-center cursor-pointer z-10">
+      <div className="relative w-[96px] h-[96px] liquid-glass-node !rounded-full flex flex-col items-center justify-center cursor-pointer z-10">
 
         {/* Processing spinner inside circle */}
         {d.processingCount > 0 && (
