@@ -905,8 +905,10 @@ function AgentCanvasInner({
         avatarEmoji={formState.avatarEmoji}
         onSave={() => setShowSaveDialog(true)}
         onVersionHistory={() => setShowVersionHistory(true)}
+        onTest={handleToggleTest}
         isSaving={isSaving}
         isDirty={isDirty}
+        isTestOpen={chatOpen}
         saveStatus={saveStatus}
         versionCount={versionCount}
       />

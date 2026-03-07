@@ -10,8 +10,10 @@ interface TopBarProps {
   avatarEmoji: string;
   onSave: () => void;
   onVersionHistory: () => void;
+  onTest?: () => void;
   isSaving: boolean;
   isDirty: boolean;
+  isTestOpen?: boolean;
   saveStatus?: "idle" | "saving" | "saved";
   versionCount?: number;
 }
@@ -21,8 +23,10 @@ export function TopBar({
   avatarEmoji,
   onSave,
   onVersionHistory,
+  onTest,
   isSaving,
   isDirty,
+  isTestOpen = false,
   saveStatus = "idle",
   versionCount,
 }: TopBarProps) {
@@ -92,6 +96,22 @@ export function TopBar({
             </span>
           )}
         </button>
+
+        {onTest && (
+          <button
+            type="button"
+            onClick={onTest}
+            className={cn(
+              "flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-medium transition-all",
+              isTestOpen
+                ? "gradient-accent-bg text-white shadow-md"
+                : "text-zinc-600 hover:text-zinc-900 hover:bg-black/5"
+            )}
+          >
+            <Play className={cn("w-3.5 h-3.5", isTestOpen && "fill-white")} />
+            Test
+          </button>
+        )}
 
         <button
           type="button"

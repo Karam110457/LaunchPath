@@ -54,7 +54,7 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
 
           <NodeHelperTip
             tipId="agent"
-            icon={<MousePointerClick className="w-3.5 h-3.5 text-zinc-700" />}
+            icon={<MousePointerClick className="w-3.5 h-3.5 text-white" />}
             text="Double-click to edit personality, tone, and behavior"
             position="left-[calc(100%+28px)] top-[50%] -translate-y-1/2"
           />
