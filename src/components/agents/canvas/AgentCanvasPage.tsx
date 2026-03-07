@@ -634,15 +634,46 @@ function AgentCanvasInner({
             body: JSON.stringify({ knowledge_enabled: true, skip_version: true }),
           });
           setHasKnowledge(true);
-          setModal({ type: "knowledge" });
+          // Don't open modal immediately on drop
         })();
       } else if (type === "composio") {
-        // For Composio, we need a connection ID. If we don't have it, we can open the AppLibraryModal
-        // or a slimmed down connection flow. For simplicity here, we open AppLibrary to let them connect it.
-        // In a fuller implementation we'd check `isConnected(toolkit)` here directly.
-        setAppLibraryOpen(true);
-      } else {
+        // Create the tool immediately on drop
+        void (async () => {
+          await fetch(`/api/agents/${targetAgentId}/tools`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              tool_type: "composio",
+              display_name: name,
+              description: `Use ${name} actions.`,
+              config: {
+                toolkit,
+                toolkit_name: name,
+                toolkit_icon: icon,
+              },
+            }),
+          });
+          await fetchTools();
+        })();
+      } else if (type === "subagent") {
+        // For subagent, we still need to open the setup to name it, or we can create a default one
         setSetupTool({ toolType: type, agentId: targetAgentId });
+      } else {
+        // Create custom tools immediately
+        void (async () => {
+          const defaultName = type === "http" ? "HTTP Request" : type === "webhook" ? "Webhook" : type === "mcp" ? "MCP Server" : "New Tool";
+          await fetch(`/api/agents/${targetAgentId}/tools`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              tool_type: type,
+              display_name: defaultName,
+              description: "",
+              config: {},
+            }),
+          });
+          await fetchTools();
+        })();
       }
 
     } catch (e) {
@@ -689,7 +720,7 @@ function AgentCanvasInner({
   else if (modal.type === "edit-subagent") modalTitle = "Edit Sub-Agent";
 
   return (
-    <div className="fixed inset-0 z-[100] w-full h-full overflow-hidden bg-[#ebebeb]">
+    <div className="light fixed inset-0 z-[100] w-full h-full overflow-hidden bg-[#ebebeb] text-foreground">
       <TopBar
         agentName={formState.name}
         avatarEmoji={formState.avatarEmoji}

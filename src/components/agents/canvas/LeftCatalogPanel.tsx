@@ -33,6 +33,9 @@ export function LeftCatalogPanel() {
     const [search, setSearch] = useState("");
     const [activeTab, setActiveTab] = useState("AI & Apps");
 
+    const [isMinimized, setIsMinimized] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
+
     useEffect(() => {
         let cancelled = false;
         async function load() {
@@ -70,8 +73,16 @@ export function LeftCatalogPanel() {
         e.dataTransfer.effectAllowed = "copy";
     };
 
+    if (isMinimized) {
+        return (
+            <div className="absolute top-6 left-6 z-20 flex items-center justify-center w-12 h-12 bg-white/70 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[1rem] cursor-pointer hover:bg-white/90 transition-all" onClick={() => setIsMinimized(false)}>
+                <Sidebar className="w-5 h-5 text-zinc-600" />
+            </div>
+        );
+    }
+
     return (
-        <div className="absolute top-6 left-6 bottom-6 w-[280px] z-20 flex flex-col bg-white/70 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] overflow-hidden">
+        <div className="absolute top-6 left-6 bottom-6 w-[280px] z-20 flex flex-col bg-white/70 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] overflow-hidden transition-all duration-300">
 
             {/* Header */}
             <div className="px-5 pt-6 pb-4">
@@ -80,11 +91,27 @@ export function LeftCatalogPanel() {
                         <LayoutGrid className="w-4 h-4 text-zinc-800" />
                         <span className="font-semibold text-zinc-900 text-sm">Tools</span>
                     </div>
-                    <div className="flex items-center gap-2 text-zinc-400">
-                        <button className="hover:text-zinc-600 transition-colors">
+                    <div className="flex items-center gap-2 text-zinc-400 relative">
+                        <button 
+                            className="hover:text-zinc-600 transition-colors"
+                            onClick={() => setShowMenu(!showMenu)}
+                        >
                             <span className="text-sm font-bold tracking-widest leading-none">...</span>
                         </button>
-                        <button className="hover:text-zinc-600 transition-colors ml-1">
+                        {showMenu && (
+                            <div className="absolute top-full right-0 mt-2 w-36 bg-white border border-zinc-200 shadow-lg rounded-xl py-1 z-50">
+                                <button className="w-full text-left px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors">
+                                    Refresh Tools
+                                </button>
+                                <button className="w-full text-left px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors">
+                                    Settings
+                                </button>
+                            </div>
+                        )}
+                        <button 
+                            className="hover:text-zinc-600 transition-colors ml-1"
+                            onClick={() => setIsMinimized(true)}
+                        >
                             <Sidebar className="w-4 h-4" />
                         </button>
                     </div>

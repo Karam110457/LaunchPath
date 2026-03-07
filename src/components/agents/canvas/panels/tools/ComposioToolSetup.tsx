@@ -23,6 +23,7 @@ import type {
   ActionConfig,
   JsonSchemaProperty,
 } from "@/lib/tools/types";
+import { useComposioConnections } from "@/hooks/useComposioConnections";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -33,7 +34,7 @@ interface ComposioToolSetupProps {
   toolkit: string;
   toolkitName: string;
   toolkitIcon: string;
-  connectionId: string;
+  connectionId?: string;
   existing?: AgentToolResponse;
   onSaved: () => void;
   onClose: () => void;
@@ -913,6 +914,8 @@ export function ComposioToolSetup({
   onSaved,
   onClose,
 }: ComposioToolSetupProps) {
+  const { connect, connecting, connectError, isConnected, getConnection } = useComposioConnections();
+
   // -- Data loading --
   const [actions, setActions] = useState<ComposioActionSchema[]>([]);
   const [actionsLoading, setActionsLoading] = useState(true);
@@ -1026,7 +1029,7 @@ export function ComposioToolSetup({
       toolkit,
       toolkit_name: toolkitName,
       toolkit_icon: toolkitIcon,
-      connection_id: connectionId,
+      connection_id: connectionId || getConnection(toolkit)?.id,
       enabled_actions: enabledArray.length > 0 ? enabledArray : undefined,
       action_configs:
         Object.keys(cleanedConfigs).length > 0 ? cleanedConfigs : undefined,
@@ -1125,210 +1128,249 @@ export function ComposioToolSetup({
           </p>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 pb-5 space-y-5">
-          {/* Agent instructions */}
-          <div>
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Agent instructions
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              className="mt-1.5 w-full px-3 py-2 bg-muted/30 border border-border/50 rounded-lg text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder:text-muted-foreground/50"
-              placeholder={`e.g. Use ${toolkitName} when the user asks to send emails or check their inbox`}
-            />
-            <p className="text-[10px] text-muted-foreground/60 mt-1">
-              Tells your agent when and how to use {toolkitName}.
-            </p>
-          </div>
-
-          {/* Action toggle list */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Actions
-              </label>
-              {!actionsLoading && (
-                <span className="text-[10px] text-muted-foreground">
-                  {enabledActions.size} of {actions.length} enabled
-                </span>
+        {(!connectionId && !isConnected(toolkit)) ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-transparent">
+            <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-border/40 flex items-center justify-center mb-5 p-2.5">
+              {toolkitIcon.startsWith("http") ? (
+                <img src={toolkitIcon} alt={toolkitName} className="w-full h-full object-contain" />
+              ) : (
+                <span className="text-3xl">{toolkitIcon}</span>
               )}
             </div>
-
-            {actionsLoading ? (
-              <div className="flex items-center gap-2 py-8 justify-center">
-                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  Loading actions...
-                </span>
-              </div>
-            ) : actions.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">
-                No actions found for this app.
-              </p>
-            ) : (
-              <div className="max-h-[300px] overflow-y-auto space-y-1 pr-1">
-                {actions.map((action) => {
-                  const enabled = enabledActions.has(action.slug);
-                  const expanded = expandedAction === action.slug;
-                  const cfg = actionConfigs[action.slug];
-                  const hardcodedCount = cfg
-                    ? Object.keys(cfg.pinned_params).length
-                    : 0;
-
-                  return (
-                    <div
-                      key={action.slug}
-                      className={cn(
-                        "rounded-lg border transition-colors",
-                        enabled
-                          ? "border-primary/20 bg-primary/[0.03]"
-                          : "border-border/30"
-                      )}
-                    >
-                      {/* Action row */}
-                      <div className="flex items-center gap-2.5 p-2.5">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleAction(action.slug)}
-                          className={cn(
-                            "w-8 h-[18px] rounded-full transition-colors relative shrink-0",
-                            enabled
-                              ? "bg-primary"
-                              : "bg-muted-foreground/20"
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-transform shadow-sm",
-                              enabled ? "left-[16px]" : "left-[2px]"
-                            )}
-                          />
-                        </button>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span
-                              className={cn(
-                                "text-xs font-medium",
-                                enabled
-                                  ? "text-foreground"
-                                  : "text-muted-foreground"
-                              )}
-                            >
-                              {action.name}
-                            </span>
-                            {action.isImportant && (
-                              <span className="text-[9px] text-primary/60 bg-primary/10 px-1 rounded">
-                                important
-                              </span>
-                            )}
-                            {hardcodedCount > 0 && (
-                              <span className="text-[9px] text-amber-400 bg-amber-500/10 px-1 rounded">
-                                {hardcodedCount} hardcoded
-                              </span>
-                            )}
-                            {action.isDeprecated && (
-                              <span className="flex items-center gap-0.5 text-[9px] text-orange-400 bg-orange-500/10 px-1 rounded">
-                                <AlertTriangle className="w-2.5 h-2.5" />
-                                deprecated
-                              </span>
-                            )}
-                          </div>
-                          {action.description && (
-                            <p
-                              className={cn(
-                                "text-[10px] mt-0.5 line-clamp-1",
-                                enabled
-                                  ? "text-muted-foreground"
-                                  : "text-muted-foreground/50"
-                              )}
-                            >
-                              {action.description}
-                            </p>
-                          )}
-                        </div>
-
-                        {enabled &&
-                          (action.inputSchema ||
-                            action.outputSchema ||
-                            action.noAuth) && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setExpandedAction(
-                                  expanded ? null : action.slug
-                                )
-                              }
-                              className="p-1 rounded hover:bg-muted/50 shrink-0"
-                            >
-                              <ChevronDown
-                                className={cn(
-                                  "w-3.5 h-3.5 text-muted-foreground transition-transform",
-                                  expanded && "rotate-180"
-                                )}
-                              />
-                            </button>
-                          )}
-                      </div>
-
-                      {/* Expanded details */}
-                      {expanded && enabled && (
-                        <>
-                          <ActionMetadata action={action} />
-                          {action.inputSchema && (
-                            <ParameterConfigPanel
-                              schema={action.inputSchema}
-                              pinnedParams={cfg?.pinned_params ?? {}}
-                              onPinnedUpdate={(pinned) =>
-                                handleUpdatePinnedParams(action.slug, pinned)
-                              }
-                            />
-                          )}
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
+            <h3 className="text-lg font-semibold text-zinc-900 mb-2">Connect to {toolkitName}</h3>
+            <p className="text-sm text-zinc-500 mb-8 max-w-[260px] leading-relaxed">
+              Authenticate with {toolkitName} to allow your agent to perform actions on your behalf.
+            </p>
+            <button
+              onClick={() => void connect(toolkit, toolkitName, toolkitIcon)}
+              disabled={connecting === toolkit}
+              className="px-6 py-2.5 bg-zinc-900 text-white font-medium rounded-xl hover:bg-zinc-800 transition-all disabled:opacity-50 flex items-center gap-2 shadow-sm"
+            >
+              {connecting === toolkit ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {connecting === toolkit ? "Connecting..." : `Connect ${toolkitName}`}
+            </button>
+            {connectError?.toolkit === toolkit && (
+              <p className="text-xs text-red-500 mt-4 max-w-sm">{connectError.message}</p>
+            )}
+            {existing && (
+              <div className="mt-8 pt-6 border-t border-border/40 w-full max-w-xs">
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="text-xs text-red-500 hover:text-red-600 transition-colors flex items-center justify-center gap-1.5 w-full"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {deleting ? "Removing..." : `Remove ${toolkitName} from agent`}
+                </button>
               </div>
             )}
           </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto px-6 pb-5 space-y-5 pt-5">
+            {/* Agent instructions */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Agent instructions
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={2}
+                className="mt-1.5 w-full px-3 py-2 bg-muted/30 border border-border/50 rounded-lg text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder:text-muted-foreground/50"
+                placeholder={`e.g. Use ${toolkitName} when the user asks to send emails or check their inbox`}
+              />
+              <p className="text-[10px] text-muted-foreground/60 mt-1">
+                Tells your agent when and how to use {toolkitName}.
+              </p>
+            </div>
 
-          {/* Delete (edit mode only) */}
-          {existing && (
-            <div className="pt-2 border-t border-border/30">
-              {confirmDelete ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-red-400">
-                    Remove this tool?
+            {/* Action toggle list */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Actions
+                </label>
+                {!actionsLoading && (
+                  <span className="text-[10px] text-muted-foreground">
+                    {enabledActions.size} of {actions.length} enabled
                   </span>
-                  <button
-                    onClick={handleDelete}
-                    disabled={deleting}
-                    className="px-2.5 py-1 text-xs font-medium text-red-400 bg-red-500/10 border border-red-500/30 rounded-md hover:bg-red-500/20"
-                  >
-                    {deleting ? "Removing..." : "Yes, remove"}
-                  </button>
-                  <button
-                    onClick={() => setConfirmDelete(false)}
-                    className="px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    Cancel
-                  </button>
+                )}
+              </div>
+
+              {actionsLoading ? (
+                <div className="flex items-center gap-2 py-8 justify-center">
+                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    Loading actions...
+                  </span>
                 </div>
+              ) : actions.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  No actions found for this app.
+                </p>
               ) : (
-                <button
-                  onClick={() => setConfirmDelete(true)}
-                  className="flex items-center gap-1.5 text-xs text-red-400/70 hover:text-red-400"
-                >
-                  <X className="w-3 h-3" />
-                  Remove {toolkitName} from agent
-                </button>
+                <div className="max-h-[300px] overflow-y-auto space-y-1 pr-1">
+                  {actions.map((action) => {
+                    const enabled = enabledActions.has(action.slug);
+                    const expanded = expandedAction === action.slug;
+                    const cfg = actionConfigs[action.slug];
+                    const hardcodedCount = cfg
+                      ? Object.keys(cfg.pinned_params).length
+                      : 0;
+
+                    return (
+                      <div
+                        key={action.slug}
+                        className={cn(
+                          "rounded-lg border transition-colors",
+                          enabled
+                            ? "border-primary/20 bg-primary/[0.03]"
+                            : "border-border/30"
+                        )}
+                      >
+                        {/* Action row */}
+                        <div className="flex items-center gap-2.5 p-2.5">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleAction(action.slug)}
+                            className={cn(
+                              "w-8 h-[18px] rounded-full transition-colors relative shrink-0",
+                              enabled
+                                ? "bg-primary"
+                                : "bg-muted-foreground/20"
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-transform shadow-sm",
+                                enabled ? "left-[16px]" : "left-[2px]"
+                              )}
+                            />
+                          </button>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className={cn(
+                                  "text-xs font-medium",
+                                  enabled
+                                    ? "text-foreground"
+                                    : "text-muted-foreground"
+                                )}
+                              >
+                                {action.name}
+                              </span>
+                              {action.isImportant && (
+                                <span className="text-[9px] text-primary/60 bg-primary/10 px-1 rounded">
+                                  important
+                                </span>
+                              )}
+                              {hardcodedCount > 0 && (
+                                <span className="text-[9px] text-amber-400 bg-amber-500/10 px-1 rounded">
+                                  {hardcodedCount} hardcoded
+                                </span>
+                              )}
+                              {action.isDeprecated && (
+                                <span className="flex items-center gap-0.5 text-[9px] text-orange-400 bg-orange-500/10 px-1 rounded">
+                                  <AlertTriangle className="w-2.5 h-2.5" />
+                                  deprecated
+                                </span>
+                              )}
+                            </div>
+                            {action.description && (
+                              <p
+                                className={cn(
+                                  "text-[10px] mt-0.5 line-clamp-1",
+                                  enabled
+                                    ? "text-muted-foreground"
+                                    : "text-muted-foreground/50"
+                                )}
+                              >
+                                {action.description}
+                              </p>
+                            )}
+                          </div>
+
+                          {enabled &&
+                            (action.inputSchema ||
+                              action.outputSchema ||
+                              action.noAuth) && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setExpandedAction(
+                                    expanded ? null : action.slug
+                                  )
+                                }
+                                className="p-1 rounded hover:bg-muted/50 shrink-0"
+                              >
+                                <ChevronDown
+                                  className={cn(
+                                    "w-3.5 h-3.5 text-muted-foreground transition-transform",
+                                    expanded && "rotate-180"
+                                  )}
+                                />
+                              </button>
+                            )}
+                        </div>
+
+                        {/* Expanded details */}
+                        {expanded && enabled && (
+                          <>
+                            <ActionMetadata action={action} />
+                            {action.inputSchema && (
+                              <ParameterConfigPanel
+                                schema={action.inputSchema}
+                                pinnedParams={cfg?.pinned_params ?? {}}
+                                onPinnedUpdate={(pinned) =>
+                                  handleUpdatePinnedParams(action.slug, pinned)
+                                }
+                              />
+                            )}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
-          )}
-        </div>
+
+            {/* Delete (edit mode only) */}
+            {existing && (
+              <div className="pt-2 border-t border-border/30">
+                {confirmDelete ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-red-400">
+                      Remove this tool?
+                    </span>
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      className="px-2.5 py-1 text-xs font-medium text-red-400 bg-red-500/10 border border-red-500/30 rounded-md hover:bg-red-500/20"
+                    >
+                      {deleting ? "Removing..." : "Yes, remove"}
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete(false)}
+                      className="px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDelete(true)}
+                    className="flex items-center gap-1.5 text-xs text-red-400/70 hover:text-red-400"
+                  >
+                    <X className="w-3 h-3" />
+                    Remove {toolkitName} from agent
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {saveError && (
           <div className="mx-5 my-2 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400 shrink-0">
@@ -1345,11 +1387,11 @@ export function ComposioToolSetup({
           </button>
           <button
             onClick={handleSave}
-            disabled={!canSave || saving}
+            disabled={(!canSave && !existing) || saving || (!connectionId && !isConnected(toolkit))}
             className={cn(
               "px-5 py-2 text-sm font-medium rounded-xl transition-all shadow-sm",
-              canSave && !saving
-                ? "bg-foreground text-background hover:bg-foreground/90 shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
+              ((canSave || existing) && !saving && (connectionId || isConnected(toolkit)))
+                ? "bg-zinc-900 text-white hover:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
                 : "bg-muted text-muted-foreground cursor-not-allowed"
             )}
           >

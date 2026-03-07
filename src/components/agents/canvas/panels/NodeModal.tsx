@@ -40,7 +40,7 @@ export function NodeModal({
       />
 
       {/* Floating Right Panel */}
-      <div className="absolute top-6 bottom-6 right-6 w-[360px] max-w-[calc(100vw-3rem)] z-50 flex flex-col bg-white/70 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] overflow-hidden animate-in slide-in-from-right-8 fade-in duration-200">
+      <div className="absolute top-6 bottom-6 right-6 w-[360px] max-w-[calc(100vw-3rem)] z-50 flex flex-col bg-white/70 text-zinc-900 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] overflow-hidden animate-in slide-in-from-right-8 fade-in duration-200">
 
         {/* Header */}
         <div className="flex flex-col px-6 pt-6 pb-4 border-b border-zinc-200/50 flex-shrink-0 bg-transparent">
@@ -62,7 +62,7 @@ export function NodeModal({
           <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-400">
             <button className="hover:text-zinc-600">Setup</button>
             <span className="text-[12px]">›</span>
-            <button className="text-zinc-900">Configure</button>
+            <button className="text-zinc-900 border-b border-zinc-900 pb-0.5">Configure</button>
             <span className="text-[12px]">›</span>
             <button className="hover:text-zinc-600">Test</button>
           </div>
