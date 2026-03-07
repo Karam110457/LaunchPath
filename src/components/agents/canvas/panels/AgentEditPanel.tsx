@@ -201,8 +201,8 @@ export function AgentEditPanel({
                     : "border-border hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5"
                 )}
               >
-                <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className={cn("text-xs font-medium", showCustomTone && "gradient-text")}>
+                <Pencil className={cn("w-3.5 h-3.5", showCustomTone ? "text-white" : "text-muted-foreground")} />
+                <span className={cn("text-xs font-medium", showCustomTone ? "text-white" : "")}>
                   Custom tone
                 </span>
               </button>
