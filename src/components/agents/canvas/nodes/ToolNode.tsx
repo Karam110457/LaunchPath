@@ -7,6 +7,7 @@ import {
   Plug,
   Globe,
   Users,
+  AlertTriangle,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -49,9 +50,15 @@ export const ToolNode = memo(function ToolNode({ data }: NodeProps) {
       <div
         className={cn(
           "relative w-[96px] h-[96px] liquid-glass-node flex items-center justify-center cursor-pointer z-10",
-          !d.isEnabled && "opacity-40"
+          !d.isEnabled && "opacity-60"
         )}
       >
+        {/* Auth warning dot for composio tools without active connection */}
+        {d.needsAuth && (
+          <div className="absolute top-1.5 right-1.5 z-10" title="Authentication required">
+            <AlertTriangle className="w-4 h-4 text-amber-500" />
+          </div>
+        )}
         <div className="w-12 h-12 flex items-center justify-center">
           {hasLogoUrl ? (
             <img
@@ -88,9 +95,13 @@ export const ToolNode = memo(function ToolNode({ data }: NodeProps) {
         <h3 className="text-[13px] font-medium text-zinc-800 leading-tight">
           {d.displayName}
         </h3>
-        <p className="text-[10px] text-zinc-500 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          {actionLabel}
-        </p>
+        {!d.isEnabled ? (
+          <p className="text-[10px] text-zinc-400 mt-0.5 font-medium">Disabled</p>
+        ) : (
+          <p className="text-[10px] text-zinc-500 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            {actionLabel}
+          </p>
+        )}
       </div>
     </div>
   );

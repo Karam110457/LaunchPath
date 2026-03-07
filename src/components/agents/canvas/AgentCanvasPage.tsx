@@ -26,7 +26,6 @@ import { ToolNode } from "./nodes/ToolNode";
 import { SubagentNode } from "./nodes/SubagentNode";
 import { DashedEdge } from "./edges/DashedEdge";
 import { TopBar } from "./TopBar";
-import { BottomBar } from "./BottomBar";
 import { NodeModal } from "./panels/NodeModal";
 import { AgentEditPanel } from "./panels/AgentEditPanel";
 import { KnowledgeDetailPanel } from "./panels/KnowledgeDetailPanel";
@@ -44,8 +43,6 @@ import { NodeHelperTip } from "./nodes/NodeHelperTip";
 import { CanvasActionsContext } from "./canvas-context";
 import { LeftCatalogPanel } from "./LeftCatalogPanel";
 import { useCanvasLayout, type CanvasLayoutState } from "./useCanvasLayout";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { cn } from "@/lib/utils";
 import type {
   PanelState,
   AgentNodeData,
@@ -57,6 +54,7 @@ import type {
   WizardConfig,
 } from "./canvas-types";
 import type { AgentToolResponse, ToolType } from "@/lib/tools/types";
+import { useComposioConnections } from "@/hooks/useComposioConnections";
 
 // Stable references for React Flow
 const nodeTypes = {
@@ -105,7 +103,8 @@ function AgentCanvasInner({
   initialDocuments,
 }: AgentCanvasPageProps) {
   const router = useRouter();
-  const { screenToFlowPosition, getNodes } = useReactFlow();
+  const { screenToFlowPosition, getNodes, zoomIn, zoomOut, fitView } = useReactFlow();
+  const { isConnected: isComposioConnected } = useComposioConnections();
 
   // ─── Agent form state ────────────────────────────────────────────────────
   const originalFormState = useMemo<AgentFormState>(
@@ -208,6 +207,12 @@ function AgentCanvasInner({
   }, [agent.id]);
 
   useEffect(() => { void refreshVersionCount(); }, [refreshVersionCount]);
+
+  // ─── Unified save notification (child component saves flash TopBar) ───
+  const notifySaved = useCallback(() => {
+    setSaveStatus("saved");
+    setTimeout(() => setSaveStatus("idle"), 2000);
+  }, []);
 
   // ─── Manual save (creates a version) ──────────────────────────────────
   const handleSave = useCallback(
@@ -386,9 +391,12 @@ function AgentCanvasInner({
             isEnabled: t.is_enabled,
             toolkitIcon: cfg?.toolkit_icon,
             toolkitSlug: cfg?.toolkit,
+            needsAuth: t.tool_type === "composio" && cfg?.toolkit
+              ? !isComposioConnected(cfg.toolkit)
+              : undefined,
           };
         }),
-    [agentTools, agent.id]
+    [agentTools, agent.id, isComposioConnected]
   );
 
   // Subagent tree nodes — join agent_tools (subagent type) with enriched subagent details
@@ -634,8 +642,6 @@ function AgentCanvasInner({
   } | null>(null);
   // Composio app library + tool setup state
   const [appLibraryOpen, setAppLibraryOpen] = useState(false);
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
-  const isDark = theme === "dark";
   const [composioSetup, setComposioSetup] = useState<{
     agentId: string;
     toolkit: string;
@@ -651,18 +657,21 @@ function AgentCanvasInner({
     setComposioSetup(null);
     setAppLibraryOpen(false);
     await Promise.all([fetchTools(), fetchSubagents()]);
-  }, [fetchTools, fetchSubagents]);
+    notifySaved();
+  }, [fetchTools, fetchSubagents, notifySaved]);
 
   const handleToolDeleted = useCallback(async () => {
     setSetupTool(null);
     setComposioSetup(null);
     await Promise.all([fetchTools(), fetchSubagents()]);
-  }, [fetchTools, fetchSubagents]);
+    notifySaved();
+  }, [fetchTools, fetchSubagents, notifySaved]);
 
   const handleSubagentDeleted = useCallback(async () => {
     setModal({ type: "none" });
     await Promise.all([fetchTools(), fetchSubagents()]);
-  }, [fetchTools, fetchSubagents]);
+    notifySaved();
+  }, [fetchTools, fetchSubagents, notifySaved]);
 
   // Helper: find a tool record by id across parent + all sub-agents
   const findToolRecord = useCallback(
@@ -903,7 +912,7 @@ function AgentCanvasInner({
   else if (modal.type === "edit-subagent") modalTitle = "Edit Sub-Agent";
 
   return (
-    <div className={cn(theme, "fixed inset-0 z-[100] w-full h-full overflow-hidden transition-colors duration-300", isDark ? "bg-[#0a0a0a]" : "bg-[#eef0f2]", "text-foreground")}>
+    <div className="light fixed inset-0 z-[100] w-full h-full overflow-hidden bg-[#eef0f2] text-foreground">
       <TopBar
         agentName={formState.name}
         avatarEmoji={formState.avatarEmoji}
@@ -916,10 +925,6 @@ function AgentCanvasInner({
         saveStatus={saveStatus}
         versionCount={versionCount}
       />
-
-      <div className="absolute top-6 right-6 z-30">
-        <ThemeToggle isDark={isDark} onToggle={() => setTheme(isDark ? "light" : "dark")} />
-      </div>
 
       <LeftCatalogPanel />
 
@@ -971,18 +976,27 @@ function AgentCanvasInner({
         </div>
       )}
 
-      {/* Zoom controls (moved out of removed BottomBar) */}
+      {/* Zoom controls */}
       <div className="absolute bottom-6 left-6 z-30 flex items-center gap-1 bg-white/70 backdrop-blur-xl border border-white/60 shadow-sm rounded-xl p-1.5">
         <button
-          onClick={() => {
-            const flowInstance = document.querySelector(".react-flow");
-            if (flowInstance) {
-              // Trigger a small window resize to force fitView, since we don't have direct access here cleanly without hook setup.
-              window.dispatchEvent(new Event('resize'));
-            }
-          }}
+          onClick={() => zoomIn({ duration: 200 })}
           className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 hover:bg-black/5 transition-colors"
-          title="Zoom to Fit"
+          title="Zoom In"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+        </button>
+        <button
+          onClick={() => zoomOut({ duration: 200 })}
+          className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 hover:bg-black/5 transition-colors"
+          title="Zoom Out"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
+        </button>
+        <div className="w-px h-4 bg-zinc-200 mx-0.5" />
+        <button
+          onClick={() => fitView({ padding: 0.3, duration: 300 })}
+          className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 hover:bg-black/5 transition-colors"
+          title="Fit View"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></svg>
         </button>
@@ -1043,6 +1057,7 @@ function AgentCanvasInner({
             parentAgentId={agent.id}
             toolRecordId={modal.toolRecordId}
             onDeleted={handleSubagentDeleted}
+            onSaved={notifySaved}
           />
         )}
       </NodeModal>

@@ -25,6 +25,7 @@ interface SubagentEditPanelProps {
   parentAgentId: string;
   toolRecordId: string;
   onDeleted: () => void;
+  onSaved?: () => void;
 }
 
 interface SubagentData {
@@ -62,6 +63,7 @@ export function SubagentEditPanel({
   parentAgentId,
   toolRecordId,
   onDeleted,
+  onSaved,
 }: SubagentEditPanelProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -168,6 +170,7 @@ export function SubagentEditPanel({
       }
 
       setDirty(false);
+      onSaved?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {

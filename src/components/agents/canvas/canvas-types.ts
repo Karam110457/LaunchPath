@@ -29,6 +29,8 @@ export interface ToolNodeData {
   toolkitIcon?: string;
   /** Toolkit slug for composio tools (used in action label) */
   toolkitSlug?: string;
+  /** Whether this composio tool needs authentication (no active connection) */
+  needsAuth?: boolean;
 }
 
 // Data payload for a subagent node on the canvas

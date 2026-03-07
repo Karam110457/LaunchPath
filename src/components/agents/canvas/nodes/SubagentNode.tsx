@@ -61,6 +61,16 @@ export const SubagentNode = memo(function SubagentNode({ data }: NodeProps) {
           />
         </div>
       </ShineBorder>
+
+      {/* Handle labels on hover */}
+      <div className="relative mt-1 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" style={{ width: NODE_W }}>
+        <span className="absolute text-[11px] font-medium text-zinc-500" style={{ left: "25%", transform: "translateX(-50%)" }}>
+          Knowledge
+        </span>
+        <span className="absolute text-[11px] font-medium text-zinc-500" style={{ left: "75%", transform: "translateX(-50%)" }}>
+          Tools
+        </span>
+      </div>
     </div>
   );
 });

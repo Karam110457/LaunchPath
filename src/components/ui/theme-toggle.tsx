@@ -6,11 +6,16 @@ import { cn } from "@/lib/utils"
 
 interface ThemeToggleProps {
   className?: string
-  isDark: boolean
-  onToggle: () => void
 }
 
-export function ThemeToggle({ className, isDark, onToggle }: ThemeToggleProps) {
+export function ThemeToggle({ className }: ThemeToggleProps) {
+  const [isDark, setIsDark] = useState(true)
+
+  // next-themes
+  // const { resolvedTheme, setTheme } = useTheme()
+  // const isDark = resolvedTheme === "dark"
+  // onClick={() => setTheme(isDark ? "light" : "dark")}
+
   return (
     <div
       className={cn(
@@ -20,7 +25,7 @@ export function ThemeToggle({ className, isDark, onToggle }: ThemeToggleProps) {
           : "bg-white border border-zinc-200",
         className
       )}
-      onClick={onToggle}
+      onClick={() => setIsDark(!isDark)}
       role="button"
       tabIndex={0}
     >
