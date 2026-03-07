@@ -2,6 +2,7 @@ import { requireAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Plus, Megaphone } from "lucide-react";
+import { AssignClientDropdown } from "@/components/clients/AssignClientDropdown";
 
 export default async function ClientsPage() {
   const user = await requireAuth();
@@ -110,7 +111,7 @@ export default async function ClientsPage() {
                 Unlinked Campaigns
               </h2>
               <p className="text-xs text-muted-foreground">
-                These campaigns aren&apos;t linked to a client yet. Create a client and link them from the campaign builder.
+                These campaigns aren&apos;t linked to a client yet. Assign them to a client to manage them.
               </p>
               <div className="rounded-lg border bg-card divide-y">
                 {unlinkedCampaigns.map((campaign) => {
@@ -121,10 +122,9 @@ export default async function ClientsPage() {
                   const emoji = (agent?.personality as Record<string, unknown>)?.avatar_emoji as string | undefined;
 
                   return (
-                    <Link
+                    <div
                       key={campaign.id}
-                      href={`/dashboard/campaigns/${campaign.id}`}
-                      className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                      className="flex items-center justify-between p-4"
                     >
                       <div className="flex items-center gap-3">
                         <Megaphone className="size-4 text-muted-foreground" />
@@ -137,18 +137,26 @@ export default async function ClientsPage() {
                           )}
                         </div>
                       </div>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                          campaign.status === "active"
-                            ? "bg-emerald-500/10 text-emerald-600"
-                            : campaign.status === "paused"
-                              ? "bg-yellow-500/10 text-yellow-600"
-                              : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {campaign.status}
-                      </span>
-                    </Link>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            campaign.status === "active"
+                              ? "bg-emerald-500/10 text-emerald-600"
+                              : campaign.status === "paused"
+                                ? "bg-yellow-500/10 text-yellow-600"
+                                : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {campaign.status}
+                        </span>
+                        {shaped.length > 0 && (
+                          <AssignClientDropdown
+                            campaignId={campaign.id}
+                            clients={shaped.map((c) => ({ id: c.id, name: c.name }))}
+                          />
+                        )}
+                      </div>
+                    </div>
                   );
                 })}
               </div>

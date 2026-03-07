@@ -3,24 +3,26 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { CampaignBuilder } from "@/components/campaigns/CampaignBuilder";
 
-interface PageProps {
-  params: Promise<{ campaignId: string }>;
-}
-
-export default async function CampaignBuilderPage({ params }: PageProps) {
-  const { campaignId } = await params;
+export default async function ClientCampaignBuilderPage({
+  params,
+}: {
+  params: Promise<{ clientId: string; campaignId: string }>;
+}) {
+  const { clientId, campaignId } = await params;
   const user = await requireAuth();
   const supabase = await createClient();
 
   const { data: campaign } = await supabase
     .from("campaigns")
-    .select("*, ai_agents(id, name, personality)")
+    .select("*, ai_agents(id, name, personality), clients(id, name, website, logo_url)")
     .eq("id", campaignId)
     .eq("user_id", user.id)
+    .eq("client_id", clientId)
     .single();
 
   if (!campaign) notFound();
 
+  // Fetch channels for this campaign
   const { data: channels } = await supabase
     .from("agent_channels")
     .select("*")
@@ -30,7 +32,8 @@ export default async function CampaignBuilderPage({ params }: PageProps) {
   return (
     <CampaignBuilder
       campaign={campaign}
-      channels={(channels ?? []) as import("@/lib/channels/types").ChannelResponse[]}
+      channels={channels ?? []}
+      backUrl={`/dashboard/clients/${clientId}/campaigns`}
     />
   );
 }

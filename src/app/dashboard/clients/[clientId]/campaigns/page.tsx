@@ -1,0 +1,80 @@
+import { requireAuth } from "@/lib/auth/guards";
+import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
+import { Plus } from "lucide-react";
+
+export default async function ClientCampaignsPage({
+  params,
+}: {
+  params: Promise<{ clientId: string }>;
+}) {
+  const { clientId } = await params;
+  const user = await requireAuth();
+  const supabase = await createClient();
+
+  const { data: campaigns } = await supabase
+    .from("campaigns")
+    .select("id, name, status, ai_agents(name, personality)")
+    .eq("client_id", clientId)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  return (
+    <div className="p-6 max-w-5xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Campaigns</h2>
+        <Link
+          href={`/dashboard/clients/${clientId}/campaigns/new`}
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="size-4" />
+          New Campaign
+        </Link>
+      </div>
+
+      {!campaigns || campaigns.length === 0 ? (
+        <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground">
+          No campaigns yet. Create one to deploy an AI agent for this client.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {campaigns.map((campaign) => {
+            const agent = campaign.ai_agents as unknown as {
+              name: string;
+              personality: Record<string, unknown> | null;
+            } | null;
+            const emoji = (agent?.personality as Record<string, unknown>)?.avatar_emoji as string | undefined;
+
+            return (
+              <Link
+                key={campaign.id}
+                href={`/dashboard/clients/${clientId}/campaigns/${campaign.id}`}
+                className="rounded-lg border bg-card p-5 hover:border-primary/30 transition-colors space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-sm truncate">{campaign.name}</h3>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      campaign.status === "active"
+                        ? "bg-emerald-500/10 text-emerald-600"
+                        : campaign.status === "paused"
+                          ? "bg-yellow-500/10 text-yellow-600"
+                          : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {campaign.status}
+                  </span>
+                </div>
+                {agent?.name && (
+                  <p className="text-xs text-muted-foreground">
+                    {emoji && `${emoji} `}{agent.name}
+                  </p>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

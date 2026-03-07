@@ -44,47 +44,59 @@ CREATE TABLE public.client_members (
 
 ALTER TABLE public.client_members ENABLE ROW LEVEL SECURITY;
 
--- Agency owner (who owns the client) can manage members
-CREATE POLICY "Agency manages client members"
-  ON public.client_members FOR ALL
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.clients c
-      WHERE c.id = client_id AND c.user_id = auth.uid()
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.clients c
-      WHERE c.id = client_id AND c.user_id = auth.uid()
-    )
-  );
-
--- Client members can see other members of their client
+-- Client members can see their own membership rows
 CREATE POLICY "Client members can view own membership"
   ON public.client_members FOR SELECT
-  USING (
-    client_id IN (
-      SELECT cm.client_id FROM public.client_members cm WHERE cm.user_id = auth.uid()
-    )
-  );
+  USING (user_id = auth.uid());
 
 CREATE INDEX idx_client_members_client_id ON public.client_members(client_id);
 CREATE INDEX idx_client_members_user_id ON public.client_members(user_id);
 
 -- ============================================================
--- Cross-referencing policies (both tables exist now)
+-- SECURITY DEFINER helpers to break mutual RLS recursion
+-- between clients ↔ client_members cross-table policies.
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION public.is_client_member(p_client_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.client_members
+    WHERE client_id = p_client_id AND user_id = auth.uid()
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_client_owner(p_client_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.clients
+    WHERE id = p_client_id AND user_id = auth.uid()
+  );
+$$;
+
+-- ============================================================
+-- Cross-referencing policies (use SECURITY DEFINER functions)
 -- ============================================================
 
 -- Client members can read their own client record
 CREATE POLICY "Client members can view their client"
   ON public.clients FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.client_members cm
-      WHERE cm.client_id = clients.id AND cm.user_id = auth.uid()
-    )
-  );
+  USING (public.is_client_member(id));
+
+-- Agency owner (who owns the client) can manage members
+CREATE POLICY "Agency manages client members"
+  ON public.client_members FOR ALL
+  USING (public.is_client_owner(client_id))
+  WITH CHECK (public.is_client_owner(client_id));
 
 -- ============================================================
 -- Link campaigns to clients
@@ -98,11 +110,7 @@ CREATE INDEX idx_campaigns_client_id ON public.campaigns(client_id);
 -- Client members can view campaigns for their client
 CREATE POLICY "Client members can view their campaigns"
   ON public.campaigns FOR SELECT
-  USING (
-    client_id IN (
-      SELECT cm.client_id FROM public.client_members cm WHERE cm.user_id = auth.uid()
-    )
-  );
+  USING (client_id IS NOT NULL AND public.is_client_member(client_id));
 
 -- ============================================================
 -- Client member access to channels + conversations
@@ -114,8 +122,7 @@ CREATE POLICY "Client members can view their channels"
   USING (
     campaign_id IN (
       SELECT c.id FROM public.campaigns c
-      JOIN public.client_members cm ON cm.client_id = c.client_id
-      WHERE cm.user_id = auth.uid()
+      WHERE c.client_id IS NOT NULL AND public.is_client_member(c.client_id)
     )
   );
 
@@ -126,7 +133,6 @@ CREATE POLICY "Client members can view their conversations"
     channel_id IN (
       SELECT ac.id FROM public.agent_channels ac
       JOIN public.campaigns camp ON camp.id = ac.campaign_id
-      JOIN public.client_members cm ON cm.client_id = camp.client_id
-      WHERE cm.user_id = auth.uid()
+      WHERE camp.client_id IS NOT NULL AND public.is_client_member(camp.client_id)
     )
   );

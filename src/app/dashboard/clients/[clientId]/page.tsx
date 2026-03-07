@@ -1,253 +1,144 @@
-"use client";
-
-import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { requireAuth } from "@/lib/auth/guards";
+import { createClient } from "@/lib/supabase/server";
+import { ConversationList } from "@/components/conversations/ConversationList";
 import Link from "next/link";
-import { ArrowLeft, Plus, Send, Trash2 } from "lucide-react";
+import { Megaphone, MessageSquare } from "lucide-react";
 
-interface Client {
-  id: string;
-  name: string;
-  email: string | null;
-  website: string | null;
-  logo_url: string | null;
-  status: string;
-  created_at: string;
-}
+export default async function ClientOverviewPage({
+  params,
+}: {
+  params: Promise<{ clientId: string }>;
+}) {
+  const { clientId } = await params;
+  const user = await requireAuth();
+  const supabase = await createClient();
 
-interface Campaign {
-  id: string;
-  name: string;
-  status: string;
-  ai_agents: { name: string; personality: Record<string, unknown> | null } | null;
-}
+  // Get campaigns for this client
+  const { data: campaigns } = await supabase
+    .from("campaigns")
+    .select("id, status")
+    .eq("client_id", clientId)
+    .eq("user_id", user.id);
 
-interface Member {
-  id: string;
-  user_id: string;
-  role: string;
-  created_at: string;
-}
+  const activeCampaigns = campaigns?.filter((c) => c.status === "active").length ?? 0;
+  const totalCampaigns = campaigns?.length ?? 0;
+  const campaignIds = campaigns?.map((c) => c.id) ?? [];
 
-export default function ClientDetailPage() {
-  const { clientId } = useParams<{ clientId: string }>();
-  const router = useRouter();
-  const [client, setClient] = useState<Client | null>(null);
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviting, setInviting] = useState(false);
-  const [inviteMsg, setInviteMsg] = useState<string | null>(null);
+  // Get channels for those campaigns
+  const { data: channels } = campaignIds.length > 0
+    ? await supabase
+        .from("agent_channels")
+        .select("id, campaign_id")
+        .in("campaign_id", campaignIds)
+    : { data: [] as { id: string; campaign_id: string | null }[] };
 
-  const load = useCallback(async () => {
-    const res = await fetch(`/api/clients/${clientId}`);
-    if (!res.ok) return;
-    const data = await res.json();
-    setClient(data.client);
-    setCampaigns(data.campaigns);
-    setMembers(data.members);
-    setLoading(false);
-  }, [clientId]);
+  const channelIds = channels?.map((ch) => ch.id) ?? [];
 
-  useEffect(() => { load(); }, [load]);
+  // Get conversation counts
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7).toISOString();
 
-  async function handleInvite(e: React.FormEvent) {
-    e.preventDefault();
-    if (!inviteEmail) return;
-    setInviting(true);
-    setInviteMsg(null);
+  let totalConversations = 0;
+  let todayConversations = 0;
+  let weekConversations = 0;
 
-    try {
-      const res = await fetch(`/api/clients/${clientId}/invite`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: inviteEmail }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setInviteMsg(data.message);
-        setInviteEmail("");
-        load(); // Refresh members
-      } else {
-        setInviteMsg(data.error ?? "Failed to invite");
-      }
-    } catch {
-      setInviteMsg("Network error");
-    } finally {
-      setInviting(false);
-    }
+  if (channelIds.length > 0) {
+    const [totalRes, todayRes, weekRes] = await Promise.all([
+      supabase
+        .from("channel_conversations")
+        .select("id", { count: "exact", head: true })
+        .in("channel_id", channelIds),
+      supabase
+        .from("channel_conversations")
+        .select("id", { count: "exact", head: true })
+        .in("channel_id", channelIds)
+        .gte("created_at", todayStart),
+      supabase
+        .from("channel_conversations")
+        .select("id", { count: "exact", head: true })
+        .in("channel_id", channelIds)
+        .gte("created_at", weekStart),
+    ]);
+    totalConversations = totalRes.count ?? 0;
+    todayConversations = todayRes.count ?? 0;
+    weekConversations = weekRes.count ?? 0;
   }
 
-  async function handleDelete() {
-    if (!confirm("Delete this client? Campaigns will be unlinked but not deleted.")) return;
-    await fetch(`/api/clients/${clientId}`, { method: "DELETE" });
-    router.push("/dashboard/clients");
+  const stats = [
+    { label: "Active Campaigns", value: activeCampaigns },
+    { label: "Conversations Today", value: todayConversations },
+    { label: "This Week", value: weekConversations },
+    { label: "Total Conversations", value: totalConversations },
+  ];
+
+  // Get recent conversations (last 5)
+  const channelCampaignMap = new Map(
+    channels?.map((ch) => [ch.id, ch.campaign_id]) ?? []
+  );
+  const campaignNameMap = new Map<string, string>();
+
+  if (campaignIds.length > 0) {
+    const { data: campaignNames } = await supabase
+      .from("campaigns")
+      .select("id, name")
+      .in("id", campaignIds);
+    campaignNames?.forEach((c) => campaignNameMap.set(c.id, c.name));
   }
 
-  if (loading) {
-    return (
-      <div className="p-6 max-w-3xl mx-auto">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-48 bg-muted rounded" />
-          <div className="h-40 bg-muted rounded-lg" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!client) {
-    return (
-      <div className="p-6 max-w-3xl mx-auto text-center text-muted-foreground">
-        Client not found
-      </div>
-    );
-  }
+  const { data: recentConversations } = channelIds.length > 0
+    ? await supabase
+        .from("channel_conversations")
+        .select("id, channel_id, session_id, messages, metadata, updated_at")
+        .in("channel_id", channelIds)
+        .order("updated_at", { ascending: false })
+        .limit(5)
+    : { data: [] };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center gap-3">
+    <div className="p-6 max-w-5xl mx-auto space-y-6">
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat) => (
+          <div
+            key={stat.label}
+            className="rounded-lg border bg-card p-5 space-y-1"
+          >
+            <p className="text-sm text-muted-foreground">{stat.label}</p>
+            <p className="text-3xl font-bold tracking-tight">{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Quick links */}
+      <div className="flex gap-3">
         <Link
-          href="/dashboard/clients"
-          className="p-1.5 rounded-md hover:bg-muted transition-colors"
+          href={`/dashboard/clients/${clientId}/campaigns`}
+          className="text-sm text-primary hover:underline"
         >
-          <ArrowLeft className="size-4" />
+          View all campaigns ({totalCampaigns})
         </Link>
-        <div className="flex-1">
-          <h1 className="text-xl font-bold tracking-tight">{client.name}</h1>
-          {client.website && (
-            <p className="text-sm text-muted-foreground">{client.website}</p>
-          )}
-        </div>
-        <span
-          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-            client.status === "active"
-              ? "bg-emerald-500/10 text-emerald-600"
-              : client.status === "paused"
-                ? "bg-yellow-500/10 text-yellow-600"
-                : "bg-muted text-muted-foreground"
-          }`}
+        <span className="text-muted-foreground">·</span>
+        <Link
+          href={`/dashboard/clients/${clientId}/conversations`}
+          className="text-sm text-primary hover:underline"
         >
-          {client.status}
-        </span>
+          View all conversations
+        </Link>
       </div>
 
-      {/* Overview */}
-      <div className="rounded-lg border bg-card p-5 space-y-3">
-        <h2 className="text-sm font-semibold">Overview</h2>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="text-muted-foreground">Email:</span>{" "}
-            {client.email ?? "-"}
-          </div>
-          <div>
-            <span className="text-muted-foreground">Created:</span>{" "}
-            {new Date(client.created_at).toLocaleDateString()}
-          </div>
-        </div>
-      </div>
-
-      {/* Campaigns */}
-      <div className="rounded-lg border bg-card p-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">
-            Campaigns ({campaigns.length})
-          </h2>
-          <Link
-            href={`/dashboard/campaigns/new?clientId=${clientId}`}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            <Plus className="size-3" />
-            New Campaign
-          </Link>
-        </div>
-        {campaigns.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No campaigns linked yet. Create one to deploy an agent for this client.
-          </p>
-        ) : (
-          <div className="divide-y">
-            {campaigns.map((c) => {
-              const emoji = (c.ai_agents?.personality as Record<string, unknown>)?.emoji as string | undefined;
-              return (
-                <Link
-                  key={c.id}
-                  href={`/dashboard/campaigns/${c.id}`}
-                  className="flex items-center justify-between py-2 hover:bg-muted/50 -mx-2 px-2 rounded transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    {emoji && <span>{emoji}</span>}
-                    <span className="text-sm font-medium">{c.name}</span>
-                    {c.ai_agents?.name && (
-                      <span className="text-xs text-muted-foreground">
-                        ({c.ai_agents.name})
-                      </span>
-                    )}
-                  </div>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${
-                      c.status === "active"
-                        ? "bg-emerald-500/10 text-emerald-600"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {c.status}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Team */}
-      <div className="rounded-lg border bg-card p-5 space-y-3">
-        <h2 className="text-sm font-semibold">
-          Team Members ({members.length})
+      {/* Recent conversations */}
+      <div className="space-y-3">
+        <h2 className="text-sm font-semibold text-muted-foreground">
+          Recent Conversations
         </h2>
-        {members.length > 0 && (
-          <div className="divide-y">
-            {members.map((m) => (
-              <div key={m.id} className="flex items-center justify-between py-2">
-                <span className="text-sm">{m.user_id.slice(0, 8)}...</span>
-                <span className="text-xs bg-muted px-2 py-0.5 rounded capitalize">
-                  {m.role}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-        <form onSubmit={handleInvite} className="flex gap-2 pt-2">
-          <input
-            type="email"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
-            placeholder="Invite by email..."
-            className="flex-1 rounded-md border bg-background px-3 py-1.5 text-sm"
-          />
-          <button
-            type="submit"
-            disabled={inviting || !inviteEmail}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
-          >
-            <Send className="size-3.5" />
-            {inviting ? "..." : "Invite"}
-          </button>
-        </form>
-        {inviteMsg && (
-          <p className="text-xs text-muted-foreground">{inviteMsg}</p>
-        )}
-      </div>
-
-      {/* Danger zone */}
-      <div className="rounded-lg border border-destructive/20 bg-card p-5">
-        <button
-          onClick={handleDelete}
-          className="inline-flex items-center gap-2 text-sm text-destructive hover:text-destructive/80 transition-colors"
-        >
-          <Trash2 className="size-4" />
-          Delete Client
-        </button>
+        <ConversationList
+          conversations={recentConversations ?? []}
+          basePath={`/dashboard/clients/${clientId}/conversations`}
+          campaignMap={campaignNameMap}
+          channelCampaignMap={channelCampaignMap}
+          emptyMessage="No conversations yet. Deploy a campaign to start receiving conversations."
+        />
       </div>
     </div>
   );

@@ -27,11 +27,13 @@ interface CampaignData {
 interface CampaignBuilderProps {
   campaign: CampaignData;
   channels: ChannelResponse[];
+  backUrl?: string;
 }
 
 export function CampaignBuilder({
   campaign,
   channels: initialChannels,
+  backUrl = "/dashboard/clients",
 }: CampaignBuilderProps) {
   const router = useRouter();
 
@@ -199,7 +201,7 @@ export function CampaignBuilder({
       <div className="flex items-center justify-between px-5 py-3 border-b border-border shrink-0">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => router.push("/dashboard/campaigns")}
+            onClick={() => router.push(backUrl)}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />

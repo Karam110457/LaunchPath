@@ -1,16 +1,22 @@
-import { requireClientAuth } from "@/lib/auth/guards";
+import { requireAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { ConversationList } from "@/components/conversations/ConversationList";
 
-export default async function PortalConversations() {
-  const { clientId } = await requireClientAuth();
+export default async function ClientConversationsPage({
+  params,
+}: {
+  params: Promise<{ clientId: string }>;
+}) {
+  const { clientId } = await params;
+  const user = await requireAuth();
   const supabase = await createClient();
 
   // Get campaigns → channels → conversations
   const { data: campaigns } = await supabase
     .from("campaigns")
     .select("id, name")
-    .eq("client_id", clientId);
+    .eq("client_id", clientId)
+    .eq("user_id", user.id);
 
   const campaignIds = campaigns?.map((c) => c.id) ?? [];
   const campaignMap = new Map(campaigns?.map((c) => [c.id, c.name]) ?? []);
@@ -38,10 +44,10 @@ export default async function PortalConversations() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Conversations</h1>
+      <h2 className="text-lg font-semibold">Conversations</h2>
       <ConversationList
         conversations={conversations ?? []}
-        basePath="/portal/conversations"
+        basePath={`/dashboard/clients/${clientId}/conversations`}
         campaignMap={campaignMap}
         channelCampaignMap={channelCampaignMap}
         emptyMessage="No conversations yet. They will appear here once visitors interact with your agents."

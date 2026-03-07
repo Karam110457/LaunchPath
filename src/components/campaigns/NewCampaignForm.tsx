@@ -21,12 +21,14 @@ interface ClientOption {
 
 interface NewCampaignFormProps {
   agents: Agent[];
+  lockedClientId?: string;
+  redirectBase?: string;
 }
 
-export function NewCampaignForm({ agents }: NewCampaignFormProps) {
+export function NewCampaignForm({ agents, lockedClientId, redirectBase }: NewCampaignFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const preselectedClientId = searchParams.get("clientId") ?? "";
+  const preselectedClientId = lockedClientId ?? searchParams.get("clientId") ?? "";
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,7 +72,7 @@ export function NewCampaignForm({ agents }: NewCampaignFormProps) {
       }
 
       const { campaign } = await res.json();
-      router.push(`/dashboard/campaigns/${campaign.id}`);
+      router.push(redirectBase ? `${redirectBase}/${campaign.id}` : `/dashboard/clients`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setSaving(false);
@@ -132,7 +134,7 @@ export function NewCampaignForm({ agents }: NewCampaignFormProps) {
             </p>
           </div>
 
-          {clients.length > 0 && (
+          {!lockedClientId && clients.length > 0 && (
             <div className="space-y-1.5">
               <Label htmlFor="client-select">Client</Label>
               <select
@@ -185,7 +187,7 @@ export function NewCampaignForm({ agents }: NewCampaignFormProps) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.push(preselectedClientId ? `/dashboard/clients/${preselectedClientId}` : "/dashboard/clients")}
+              onClick={() => router.push(redirectBase ?? (preselectedClientId ? `/dashboard/clients/${preselectedClientId}` : "/dashboard/clients"))}
             >
               Cancel
             </Button>
