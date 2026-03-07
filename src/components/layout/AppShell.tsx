@@ -1,3 +1,5 @@
+"use client";
+
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import type { SidebarSystem } from "@/lib/dashboard/sidebar-data";
