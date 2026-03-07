@@ -102,7 +102,7 @@ export async function POST(
     return NextResponse.json({ error: "display_name is required" }, { status: 400 });
   }
 
-  if (!description || typeof description !== "string") {
+  if (description == null || typeof description !== "string") {
     return NextResponse.json({ error: "description is required" }, { status: 400 });
   }
 

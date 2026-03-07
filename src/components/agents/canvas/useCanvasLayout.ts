@@ -29,10 +29,10 @@ interface LayoutInput {
 }
 
 // ─── Node dimensions (match actual rendered sizes) ───────────────────────────
-const AGENT_W = 240;
+const AGENT_W = 280;
 const KNOWLEDGE_W = 96;        // KnowledgeNode circle diameter
 const TOOL_W = 84;             // ToolNode square side
-const SUBAGENT_W = 240;        // SubagentNode width (same as AgentNode now)
+const SUBAGENT_W = 280;        // SubagentNode width (same as AgentNode now)
 
 // ─── Layout geometry ─────────────────────────────────────────────────────────
 const HANDLE_LEFT_PCT = 0.25;

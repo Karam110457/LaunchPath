@@ -579,6 +579,18 @@ function AgentCanvasInner({
     [layoutState, onEdgesChange, persistLayout, setEdges]
   );
 
+  // Persist when edges are removed via the DashedEdge delete button (direct setEdges call)
+  const prevEdgeCountRef = useRef(edges.length);
+  useEffect(() => {
+    if (!toolsReady) return;
+    if (edges.length < prevEdgeCountRef.current) {
+      const newState = { ...layoutState, edges: edges.filter(e => !e.id.includes("knowledge")) };
+      setLayoutState(newState);
+      persistLayout(newState);
+    }
+    prevEdgeCountRef.current = edges.length;
+  }, [edges.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ─── Interaction ─────────────────────────────────────────────────────────
   const [modal, setModal] = useState<PanelState>({ type: "none" });
   const [chatOpen, setChatOpen] = useState(false);
@@ -687,8 +699,8 @@ function AgentCanvasInner({
       let targetAgentId = agent.id;
       const allNodes = getNodes();
       const hitNode = allNodes.find((n) => {
-        const w = 140;
-        const h = 64;
+        const w = 280;
+        const h = 96;
         return (
           position.x >= n.position.x &&
           position.x <= n.position.x + w &&
@@ -716,7 +728,24 @@ function AgentCanvasInner({
           persistLayout(newState);
         })();
       } else if (type === "composio") {
-        // Create the tool immediately on drop
+        // Optimistic: show placeholder node instantly
+        const tempId = `temp-${Date.now()}`;
+        const tempNodeId = targetAgentId === agent.id ? `tool-${tempId}` : `sa-${targetAgentId}-tool-${tempId}`;
+        setNodes((prev) => [
+          ...prev,
+          {
+            id: tempNodeId,
+            type: "toolNode",
+            position,
+            data: {
+              toolId: tempId, agentId: targetAgentId,
+              toolType: "composio" as ToolType, displayName: name,
+              isEnabled: true, toolkitIcon: icon, toolkitSlug: toolkit,
+            } as unknown as Record<string, unknown>,
+            draggable: true,
+          },
+        ]);
+
         void (async () => {
           const res = await fetch(`/api/agents/${targetAgentId}/tools`, {
             method: "POST",
@@ -725,19 +754,20 @@ function AgentCanvasInner({
               tool_type: "composio",
               display_name: name,
               description: `Use ${name} actions.`,
-              config: {
-                toolkit,
-                toolkit_name: name,
-                toolkit_icon: icon,
-              },
+              config: { toolkit, toolkit_name: name, toolkit_icon: icon },
             }),
           });
+          if (!res.ok) {
+            setNodes((prev) => prev.filter((n) => n.id !== tempNodeId));
+            toast.error("Failed to create tool");
+            return;
+          }
           const json = await res.json();
           if (json.tool) {
-            const nodeId = targetAgentId === agent.id
+            const realNodeId = targetAgentId === agent.id
               ? `tool-${json.tool.id}`
               : `sa-${targetAgentId}-tool-${json.tool.id}`;
-            const newPos = { ...layoutState.positions, [nodeId]: position };
+            const newPos = { ...layoutState.positions, [realNodeId]: position };
             const newState = { ...layoutState, positions: newPos };
             setLayoutState(newState);
             persistLayout(newState);
@@ -748,10 +778,29 @@ function AgentCanvasInner({
       } else if (type === "subagent") {
         // Subagent is always added to the parent agent
         setSetupTool({ toolType: type, agentId: agent.id });
+      } else if (type === "http") {
+        // HTTP tools require url/method config — open setup dialog
+        setSetupTool({ toolType: "http", agentId: targetAgentId });
       } else {
-        // Create custom tools immediately
+        // Webhook / MCP — optimistic node + create with placeholder config
+        const defaultName = type === "webhook" ? "Webhook" : type === "mcp" ? "MCP Server" : "New Tool";
+        const tempId = `temp-${Date.now()}`;
+        const tempNodeId = targetAgentId === agent.id ? `tool-${tempId}` : `sa-${targetAgentId}-tool-${tempId}`;
+        setNodes((prev) => [
+          ...prev,
+          {
+            id: tempNodeId,
+            type: "toolNode",
+            position,
+            data: {
+              toolId: tempId, agentId: targetAgentId,
+              toolType: type as ToolType, displayName: defaultName, isEnabled: true,
+            } as unknown as Record<string, unknown>,
+            draggable: true,
+          },
+        ]);
+
         void (async () => {
-          const defaultName = type === "http" ? "HTTP Request" : type === "webhook" ? "Webhook" : type === "mcp" ? "MCP Server" : "New Tool";
           const res = await fetch(`/api/agents/${targetAgentId}/tools`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -762,12 +811,17 @@ function AgentCanvasInner({
               config: {},
             }),
           });
+          if (!res.ok) {
+            setNodes((prev) => prev.filter((n) => n.id !== tempNodeId));
+            toast.error("Failed to create tool");
+            return;
+          }
           const json = await res.json();
           if (json.tool) {
-            const nodeId = targetAgentId === agent.id
+            const realNodeId = targetAgentId === agent.id
               ? `tool-${json.tool.id}`
               : `sa-${targetAgentId}-tool-${json.tool.id}`;
-            const newPos = { ...layoutState.positions, [nodeId]: position };
+            const newPos = { ...layoutState.positions, [realNodeId]: position };
             const newState = { ...layoutState, positions: newPos };
             setLayoutState(newState);
             persistLayout(newState);
