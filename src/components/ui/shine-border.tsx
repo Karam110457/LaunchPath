@@ -50,6 +50,7 @@ function ShineBorder({
       <div
         style={
           {
+            "--shine-pulse-duration": `${duration}s`,
             borderRadius: `${borderRadius}px`,
             padding: `${borderWidth}px`,
             backgroundImage: `radial-gradient(transparent, transparent, ${color instanceof Array ? color.join(",") : color}, transparent, transparent)`,
@@ -63,10 +64,9 @@ function ShineBorder({
             WebkitMaskOrigin: "content-box, border-box",
             WebkitMaskClip: "content-box, border-box",
             WebkitMaskComposite: "xor",
-            animation: `shine-pulse ${duration}s infinite linear`,
           } as React.CSSProperties
         }
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 z-20 pointer-events-none motion-safe:animate-[shine-pulse_var(--shine-pulse-duration)_infinite_linear]"
       />
       <div className="relative z-10 h-full w-full">
         {children}
