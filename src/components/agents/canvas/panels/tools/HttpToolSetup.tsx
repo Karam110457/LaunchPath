@@ -11,12 +11,7 @@ import {
   Plus,
   X,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { NodeModal } from "../NodeModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -78,7 +73,7 @@ export function HttpToolSetup({
   );
   const [description, setDescription] = useState(
     existing?.description ||
-      "Send HTTP requests to an external API to fetch data or trigger actions."
+    "Send HTTP requests to an external API to fetch data or trigger actions."
   );
 
   // UI state
@@ -186,16 +181,13 @@ export function HttpToolSetup({
   };
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit" : "Add"} HTTP Request Tool</DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            Configure an API endpoint your agent can call during conversations.
-          </p>
-        </DialogHeader>
+    <NodeModal open onClose={onClose} title={isEdit ? "Edit HTTP Request Tool" : "Add HTTP Request Tool"}>
+      <div className="p-5 flex flex-col gap-4">
+        <p className="text-sm text-muted-foreground -mt-3">
+          Configure an API endpoint your agent can call during conversations.
+        </p>
 
-        <div className="space-y-4 mt-2">
+        <div className="space-y-4">
           {/* URL */}
           <div>
             <Label className="text-xs">API URL</Label>
@@ -220,11 +212,10 @@ export function HttpToolSetup({
                   key={m}
                   type="button"
                   onClick={() => setMethod(m)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                    method === m
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${method === m
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                  }`}
+                    }`}
                 >
                   {m}
                 </button>
@@ -241,11 +232,10 @@ export function HttpToolSetup({
                   key={at.value}
                   type="button"
                   onClick={() => setAuthType(at.value)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                    authType === at.value
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${authType === at.value
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                  }`}
+                    }`}
                 >
                   {at.label}
                 </button>
@@ -303,11 +293,10 @@ export function HttpToolSetup({
                           api_key_in: placement,
                         })
                       }
-                      className={`px-2.5 py-1 rounded text-xs transition-colors ${
-                        (authConfig.api_key_in ?? "header") === placement
+                      className={`px-2.5 py-1 rounded text-xs transition-colors ${(authConfig.api_key_in ?? "header") === placement
                           ? "bg-primary/20 text-primary"
                           : "bg-muted/30 text-muted-foreground"
-                      }`}
+                        }`}
                     >
                       In {placement}
                     </button>
@@ -542,7 +531,7 @@ export function HttpToolSetup({
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </NodeModal>
   );
 }

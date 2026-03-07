@@ -646,7 +646,7 @@ function AgentCanvasInner({
   else if (modal.type === "edit-subagent") modalTitle = "Edit Sub-Agent";
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-[#ebebeb] animate-in fade-in duration-500">
+    <div className="fixed inset-0 z-[100] w-full h-full overflow-hidden bg-[#ebebeb]">
       <TopBar
         agentName={formState.name}
         avatarEmoji={formState.avatarEmoji}
@@ -693,9 +693,8 @@ function AgentCanvasInner({
           >
             <Background
               variant={BackgroundVariant.Dots}
-              gap={24}
-              size={1.2}
-              color="rgba(0, 0, 0, 0.08)"
+              size={1.5}
+              color="rgba(0, 0, 0, 0.15)"
             />
           </ReactFlow>
         </CanvasActionsContext.Provider>

@@ -12,7 +12,7 @@ export const KnowledgeNode = memo(function KnowledgeNode({ data }: NodeProps) {
   return (
     <div className="group relative flex flex-col items-center">
       {/* Circle container */}
-      <div className="relative w-[88px] h-[88px] bg-white/70 backdrop-blur-xl border border-white/60 rounded-full flex flex-col items-center justify-center cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] z-10 liquid-glass">
+      <div className="relative w-[88px] h-[88px] bg-white/70 backdrop-blur-xl border border-white/60 rounded-full flex flex-col items-center justify-center cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] z-10">
 
         {/* Processing spinner inside circle */}
         {d.processingCount > 0 && (

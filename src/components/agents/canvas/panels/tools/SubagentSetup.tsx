@@ -2,12 +2,7 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { NodeModal } from "../NodeModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,17 +61,14 @@ export function SubagentSetup({
   };
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Create Sub-Agent</DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            Create a child agent that this agent can delegate tasks to.
-            You can configure its tools and behavior after creation.
-          </p>
-        </DialogHeader>
+    <NodeModal open onClose={onClose} title="Create Sub-Agent">
+      <div className="p-5 flex flex-col gap-4">
+        <p className="text-sm text-muted-foreground -mt-3">
+          Create a child agent that this agent can delegate tasks to.
+          You can configure its tools and behavior after creation.
+        </p>
 
-        <div className="space-y-4 mt-2">
+        <div className="space-y-4">
           {/* Name */}
           <div className="space-y-1.5">
             <Label className="text-xs">Name</Label>
@@ -129,7 +121,7 @@ export function SubagentSetup({
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </NodeModal>
   );
 }

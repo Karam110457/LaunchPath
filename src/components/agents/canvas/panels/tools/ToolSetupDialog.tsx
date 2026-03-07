@@ -2,12 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Eye, EyeOff, CheckCircle2, XCircle, Loader2, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { NodeModal } from "../NodeModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,8 +39,8 @@ export function ToolSetupDialog({
   const [config, setConfig] = useState<Record<string, string>>(
     existing?.config
       ? Object.fromEntries(
-          Object.entries(existing.config).map(([k, v]) => [k, String(v ?? "")])
-        )
+        Object.entries(existing.config).map(([k, v]) => [k, String(v ?? "")])
+      )
       : {}
   );
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
@@ -67,20 +62,17 @@ export function ToolSetupDialog({
 
   if (!entry) {
     return (
-      <Dialog open onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Unknown tool type</DialogTitle>
-            <p className="text-sm text-muted-foreground">
-              The tool type &quot;{toolType}&quot; is not recognised. It may have been removed.
-              You can safely delete this tool and add a replacement.
-            </p>
-          </DialogHeader>
+      <NodeModal open onClose={onClose} title="Unknown tool type">
+        <div className="p-4 space-y-4">
+          <p className="text-sm text-muted-foreground">
+            The tool type &quot;{toolType}&quot; is not recognised. It may have been removed.
+            You can safely delete this tool and add a replacement.
+          </p>
           <div className="flex justify-end pt-2">
             <Button type="button" variant="outline" onClick={onClose}>Close</Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </NodeModal>
     );
   }
 
@@ -166,16 +158,17 @@ export function ToolSetupDialog({
   });
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? `Edit ${entry.name}` : `Set up ${entry.name}`}</DialogTitle>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            {entry.tagline}
-          </p>
-        </DialogHeader>
+    <NodeModal
+      open
+      onClose={onClose}
+      title={isEdit ? `Edit ${entry.name}` : `Set up ${entry.name}`}
+    >
+      <div className="p-5 flex flex-col gap-5">
+        <p className="text-sm text-muted-foreground leading-relaxed -mt-3">
+          {entry.tagline}
+        </p>
 
-        <div className="space-y-5 mt-1">
+        <div className="space-y-5">
           {/* When to use — lead with intent, not credentials */}
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">When should your agent use this?</Label>
@@ -302,11 +295,10 @@ export function ToolSetupDialog({
 
             {testResult && (
               <div
-                className={`flex items-start gap-2 rounded-lg p-3 text-xs ${
-                  testResult.success
-                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                    : "bg-destructive/10 text-destructive border border-destructive/20"
-                }`}
+                className={`flex items-start gap-2 rounded-lg p-3 text-xs ${testResult.success
+                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                  : "bg-destructive/10 text-destructive border border-destructive/20"
+                  }`}
               >
                 {testResult.success ? (
                   <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
@@ -369,14 +361,12 @@ export function ToolSetupDialog({
               <button
                 type="button"
                 onClick={() => setIsEnabled((p) => !p)}
-                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
-                  isEnabled ? "bg-primary" : "bg-muted"
-                }`}
+                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${isEnabled ? "bg-primary" : "bg-muted"
+                  }`}
               >
                 <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform shadow-sm ${
-                    isEnabled ? "translate-x-5" : "translate-x-0"
-                  }`}
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform shadow-sm ${isEnabled ? "translate-x-5" : "translate-x-0"
+                    }`}
                 />
               </button>
             </div>
@@ -446,7 +436,7 @@ export function ToolSetupDialog({
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </NodeModal>
   );
 }

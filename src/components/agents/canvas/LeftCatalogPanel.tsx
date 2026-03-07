@@ -20,7 +20,7 @@ const MOCK_TOOLS = [
 
 export function LeftCatalogPanel() {
     return (
-        <div className="absolute top-6 left-6 bottom-6 w-[280px] z-20 flex flex-col bg-white/70 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] overflow-hidden liquid-glass">
+        <div className="absolute top-6 left-6 bottom-6 w-[280px] z-20 flex flex-col bg-white/70 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] overflow-hidden">
 
             {/* Header */}
             <div className="px-5 pt-6 pb-4">

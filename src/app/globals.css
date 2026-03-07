@@ -372,12 +372,6 @@
   animation: node-enter 0.4s ease-out;
 }
 
-@layer utilities {
-  .liquid-glass {
-    filter: url(#liquid-glass);
-  }
-}
-
 /* Hide connection handle dots on canvas nodes */
 .react-flow__handle {
   opacity: 0 !important;
