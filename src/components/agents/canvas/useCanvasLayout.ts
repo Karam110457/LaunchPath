@@ -89,13 +89,14 @@ function calcClusterWidth(sa: SubagentTreeData): number {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function useCanvasLayout({ agent, knowledge, tools, subagents, savedPositions }: LayoutInput) {
+export function useCanvasLayout({ agent, knowledge, tools, subagents, layoutState }: LayoutInput) {
   return useMemo(() => {
+    const positions = layoutState?.positions ?? {};
     const pos = (id: string, defaultPos: { x: number; y: number }) =>
-      savedPositions?.[id] ?? defaultPos;
+      positions[id] ?? defaultPos;
 
     const nodes: CanvasNode[] = [];
-    const edges: Edge[] = [...(layoutState.edges || [])];
+    const edges: Edge[] = [...(layoutState?.edges ?? [])];
 
     // ─── Agent node (row 0) ──────────────────────────────────────────────
     nodes.push({
@@ -219,5 +220,5 @@ export function useCanvasLayout({ agent, knowledge, tools, subagents, savedPosit
     }
 
     return { nodes, edges };
-  }, [agent, knowledge, tools, subagents, savedPositions]);
+  }, [agent, knowledge, tools, subagents, layoutState]);
 }
