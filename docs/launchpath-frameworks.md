@@ -6,7 +6,7 @@ The strategic thinking, mental models, and decision-making principles behind how
 
 ## The SERGE Niche Scoring Framework
 
-Most people pick a niche because it sounds interesting, or because they saw someone on YouTube succeed with it. That's backwards. A niche should be chosen based on whether the economics actually work — not whether it sounds exciting.
+Most people pick a niche because it sounds interesting, or because they saw someone on YouTube succeed with it. That's backwards. A niche should be chosen based on whether the economics actually work — not whether it sounds exciting.ddss
 
 SERGE scores every niche on four criteria. Each is worth 25 points. Total out of 100.
 

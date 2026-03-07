@@ -537,6 +537,30 @@ function AgentCanvasInner({
     [layoutState, persistLayout]
   );
 
+  // Restrict which handles can connect to which node types
+  const isValidConnection = useCallback(
+    (connection: Connection | Edge) => {
+      const sourceHandle = connection.sourceHandle;
+      const targetId = connection.target;
+      if (!targetId) return false;
+
+      const targetNode = nodes.find((n) => n.id === targetId);
+      if (!targetNode) return false;
+
+      // Knowledge handle (bottom-left) → only knowledge nodes
+      if (sourceHandle === "bottom-left") {
+        return targetNode.type === "knowledgeNode";
+      }
+      // Tools handle (bottom-right) → only tool or subagent nodes
+      if (sourceHandle === "bottom-right") {
+        return targetNode.type === "toolNode" || targetNode.type === "subagentNode";
+      }
+
+      return true;
+    },
+    [nodes]
+  );
+
   const onConnect = useCallback(
     (params: Connection) => {
       // Connect nodes visually and save
@@ -908,6 +932,7 @@ function AgentCanvasInner({
             onNodesChange={onNodesChange}
             onEdgesChange={handleEdgesChange}
             onConnect={onConnect}
+            isValidConnection={isValidConnection}
             onNodeDoubleClick={onNodeDoubleClick}
             onNodeDragStop={onNodeDragStop}
             onDragOver={onDragOver}

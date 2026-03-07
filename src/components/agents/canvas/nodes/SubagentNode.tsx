@@ -22,7 +22,9 @@ export const SubagentNode = memo(function SubagentNode({ data }: NodeProps) {
         className="relative !p-[3px] !bg-transparent cursor-pointer overflow-visible z-10"
         style={{ width: NODE_W, height: NODE_H }}
       >
-        <div className="w-full h-full liquid-glass-node flex items-center gap-3 justify-center !border-none px-4" style={{ borderRadius: 45 }}>
+        {/* Opaque backing to prevent gradient bleed through glass */}
+        <div className="absolute inset-0 bg-white rounded-[45px]" />
+        <div className="relative w-full h-full liquid-glass-node flex items-center gap-3 justify-center !border-none px-4" style={{ borderRadius: 45 }}>
           <Handle
             type="target"
             position={Position.Top}
