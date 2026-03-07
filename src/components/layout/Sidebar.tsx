@@ -77,214 +77,226 @@ export function Sidebar({ systems, user, agentCount, clientCount }: SidebarProps
   const hasSystems = systems && systems.length > 0;
 
   return (
-    <aside className="fixed md:relative z-50 w-64 border border-slate-200/60 bg-white/70 backdrop-blur-2xl rounded-[24px] text-slate-800 hidden md:flex flex-col shadow-[0_10px_40px_-10px_rgba(0,0,0,0.04)] h-[calc(100vh-2rem)] overflow-hidden shrink-0">
-      <div className="h-14 flex items-center px-6 border-b border-slate-100">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <Logo className="text-lg" />
+    <aside className="fixed md:relative z-50 w-80 bg-background text-foreground hidden md:flex h-screen shrink-0 border-r border-border/40">
+      {/* Column 1: Primary Icon Nav (w-16) */}
+      <div className="w-16 flex flex-col items-center border-r border-border/40 py-4 h-full shrink-0">
+        <Link href="/dashboard" className="mb-8 flex items-center justify-center size-10 rounded-full hover:bg-muted transition-colors">
+          <Logo className="text-xl" />
         </Link>
+
+        <nav className="flex flex-col items-center gap-4 flex-1">
+          <Link
+            href="/dashboard/agents"
+            className={cn(
+              "flex items-center justify-center size-10 rounded-full transition-all",
+              pathname.startsWith("/dashboard/agents")
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <Bot className="size-5" />
+          </Link>
+          <Link
+            href="/dashboard/clients"
+            className={cn(
+              "flex items-center justify-center size-10 rounded-full transition-all",
+              pathname.startsWith("/dashboard/clients")
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <Users className="size-5" />
+          </Link>
+        </nav>
+
+        <nav className="flex flex-col items-center gap-4">
+          <Link
+            href="/dashboard/settings"
+            className={cn(
+              "flex items-center justify-center size-10 rounded-full transition-all",
+              pathname.startsWith("/dashboard/settings")
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <Settings className="size-5" />
+          </Link>
+          <button
+            onClick={handleSignOut}
+            className="flex items-center justify-center size-10 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
+          >
+            <LogOut className="size-5" />
+          </button>
+        </nav>
       </div>
 
-      {/* Business switcher */}
-      <div className="relative px-4 pt-4" ref={switcherRef}>
-        <button
-          onClick={() => setSwitcherOpen(!switcherOpen)}
-          className="w-full flex items-center gap-3 px-3 py-3 text-sm font-semibold text-slate-900 rounded-[14px] bg-slate-50 border border-slate-200/50 hover:bg-slate-100 transition-all shadow-sm"
-        >
-          {currentBusiness ? (
-            <>
-              <span className="relative flex size-2 shrink-0">
-                {currentBusiness.status === "complete" && (
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                )}
-                <span
-                  className={cn(
-                    "relative inline-flex size-2 rounded-full",
-                    currentBusiness.status === "complete"
-                      ? "bg-emerald-500"
-                      : "bg-yellow-500"
-                  )}
-                />
-              </span>
-              <span className="truncate flex-1 text-left">
-                {currentBusiness.name}
-              </span>
-            </>
-          ) : (
-            <span className="truncate flex-1 text-left text-slate-500 font-medium">
-              Select a business
+      {/* Column 2: Contextual Drawer (w-64) */}
+      <div className="flex-1 flex flex-col h-full hidden md:flex">
+        {/* Header / Business Switcher */}
+        <div className="h-14 flex items-center px-4">
+          <button
+            onClick={() => setSwitcherOpen(!switcherOpen)}
+            className="flex items-center gap-2 px-2 py-1.5 text-sm font-medium text-foreground rounded-md hover:bg-muted transition-colors"
+          >
+            <span className="truncate max-w-[140px]">
+              {currentBusiness ? currentBusiness.name : "Select a business"}
             </span>
-          )}
-          <ChevronDown
-            className={cn(
-              "size-4 shrink-0 text-slate-400 transition-transform",
-              switcherOpen && "rotate-180"
-            )}
-          />
-        </button>
+            <ChevronDown
+              className={cn(
+                "size-4 shrink-0 text-muted-foreground transition-transform",
+                switcherOpen && "rotate-180"
+              )}
+            />
+          </button>
+        </div>
 
         {/* Dropdown */}
-        {switcherOpen && (
-          <div className="absolute left-4 right-4 top-full mt-2 rounded-[16px] border border-slate-100 bg-white shadow-[0_10px_20px_-5px_rgba(0,0,0,0.05)] z-50 py-1.5 max-h-64 overflow-y-auto">
-            {hasSystems ? (
-              systems.map((system) => {
-                const isActive = system.id === currentId;
-                const isLive = system.status === "complete";
-                return (
-                  <button
-                    key={system.id}
-                    onClick={() => handleSwitchBusiness(system.id)}
+        <div className="relative z-50 mx-4">
+          {switcherOpen && (
+            <div className="absolute left-0 top-0 mt-1 w-full rounded-lg border border-border bg-popover shadow-lg py-1 max-h-64 overflow-y-auto">
+              {hasSystems ? (
+                systems.map((system) => {
+                  const isActive = system.id === currentId;
+                  const isLive = system.status === "complete";
+                  return (
+                    <button
+                      key={system.id}
+                      onClick={() => handleSwitchBusiness(system.id)}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-3 py-2 text-sm transition-all text-left font-medium",
+                        isActive
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <span className="relative flex size-2 shrink-0">
+                        {isLive && (
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                        )}
+                        <span
+                          className={cn(
+                            "relative inline-flex size-2 rounded-full",
+                            isLive ? "bg-emerald-500" : "bg-yellow-500"
+                          )}
+                        />
+                      </span>
+                      <span className="truncate">{system.name}</span>
+                    </button>
+                  );
+                })
+              ) : (
+                <p className="px-3 py-2 text-xs text-muted-foreground font-medium">
+                  No businesses yet
+                </p>
+              )}
+              <div className="border-t border-border mt-1 pt-1">
+                <button
+                  onClick={handleNewBusiness}
+                  disabled={isCreating}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-primary hover:bg-muted transition-all text-left"
+                >
+                  <Plus className="size-4" />
+                  {isCreating ? "Creating..." : "New Business"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Contextual navigation */}
+        <div className="px-3 pt-4 space-y-6 overflow-y-auto flex-1">
+          {/* General section (if no business) or secondary info */}
+          {!currentBusiness && (
+            <div className="px-2">
+              <p className="text-sm font-medium text-muted-foreground mb-2 px-1">Overview</p>
+              <div className="space-y-1">
+                <Link
+                  href="/dashboard/agents"
+                  className={cn(
+                    "flex items-center gap-3 px-2 py-1.5 text-sm rounded-md transition-all font-medium",
+                    pathname.startsWith("/dashboard/agents")
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <Bot className="size-4" />
+                  Agents
+                  {agentCount != null && agentCount > 0 && (
+                    <span className="ml-auto text-xs bg-muted px-1.5 py-0.5 rounded-md">
+                      {agentCount}
+                    </span>
+                  )}
+                </Link>
+                <Link
+                  href="/dashboard/clients"
+                  className={cn(
+                    "flex items-center gap-3 px-2 py-1.5 text-sm rounded-md transition-all font-medium",
+                    pathname.startsWith("/dashboard/clients")
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <Users className="size-4" />
+                  Clients
+                  {clientCount != null && clientCount > 0 && (
+                    <span className="ml-auto text-xs bg-muted px-1.5 py-0.5 rounded-md">
+                      {clientCount}
+                    </span>
+                  )}
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {currentBusiness && (
+            <div className="px-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">Workspace</p>
+              <div className="space-y-1">
+                <Link
+                  href={`/dashboard/systems/${currentId}`}
+                  className={cn(
+                    "flex items-center gap-3 px-2 py-1.5 text-sm rounded-md transition-all font-medium",
+                    pathname === `/dashboard/systems/${currentId}`
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <LayoutDashboard className="size-4" />
+                  Overview
+                </Link>
+                <Link
+                  href={`/dashboard/systems/${currentId}/chat`}
+                  className={cn(
+                    "flex items-center gap-3 px-2 py-1.5 text-sm rounded-md transition-all font-medium",
+                    pathname === `/dashboard/systems/${currentId}/chat`
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <MessageSquare className="size-4" />
+                  Chat
+                </Link>
+                {currentBusiness.status === "complete" && (
+                  <Link
+                    href={`/dashboard/systems/${currentId}/builder`}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-all text-left rounded-[12px] mx-1.5 font-medium",
-                      isActive
-                        ? "bg-slate-900 text-white shadow-md"
-                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      "flex items-center gap-3 px-2 py-1.5 text-sm rounded-md transition-all font-medium",
+                      pathname === `/dashboard/systems/${currentId}/builder`
+                        ? "bg-accent text-accent-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
-                    <span className="relative flex size-2 shrink-0">
-                      {isLive && (
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                      )}
-                      <span
-                        className={cn(
-                          "relative inline-flex size-2 rounded-full",
-                          isLive ? "bg-emerald-500" : "bg-yellow-500"
-                        )}
-                      />
-                    </span>
-                    <span className="truncate">{system.name}</span>
-                  </button>
-                );
-              })
-            ) : (
-              <p className="px-4 py-3 text-xs text-slate-400 font-medium">
-                No businesses yet
-              </p>
-            )}
-            <div className="border-t border-slate-100 mt-1 pt-1 mx-1.5">
-              <button
-                onClick={handleNewBusiness}
-                disabled={isCreating}
-                className="w-full flex items-center gap-3 px-3 py-2.5 mt-0.5 text-sm font-semibold rounded-[12px] text-emerald-600 hover:bg-emerald-50 transition-all text-left mb-0.5"
-              >
-                <Plus className="size-4" />
-                {isCreating ? "Creating..." : "New Business"}
-              </button>
+                    <Paintbrush className="size-4" />
+                    Builder
+                  </Link>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Global nav — always visible */}
-      <nav className="px-4 pt-6 space-y-1">
-        <Link
-          href="/dashboard/agents"
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 text-sm rounded-[14px] transition-all font-medium",
-            pathname.startsWith("/dashboard/agents")
-              ? "bg-slate-900 text-white shadow-md shadow-slate-900/10"
-              : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-          )}
-        >
-          <Bot className="size-4" />
-          Agents
-          {agentCount != null && agentCount > 0 && (
-            <span className={cn("ml-auto text-xs font-semibold px-2 py-0.5 rounded-full",
-              pathname.startsWith("/dashboard/agents") ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
-            )}>
-              {agentCount}
-            </span>
-          )}
-        </Link>
-        <Link
-          href="/dashboard/clients"
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 text-sm rounded-[14px] transition-all font-medium",
-            pathname.startsWith("/dashboard/clients")
-              ? "bg-slate-900 text-white shadow-md shadow-slate-900/10"
-              : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-          )}
-        >
-          <Users className="size-4" />
-          Clients
-          {clientCount != null && clientCount > 0 && (
-            <span className={cn("ml-auto text-xs font-semibold px-2 py-0.5 rounded-full",
-              pathname.startsWith("/dashboard/clients") ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
-            )}>
-              {clientCount}
-            </span>
-          )}
-        </Link>
-      </nav>
 
-      {/* Business navigation — only when a business is selected */}
-      {currentBusiness && (
-        <nav className="px-4 pt-6 space-y-1">
-          <Link
-            href={`/dashboard/systems/${currentId}`}
-            className={cn(
-              "flex items-center gap-3 px-3 py-2.5 text-sm rounded-[14px] transition-all font-medium",
-              pathname === `/dashboard/systems/${currentId}`
-                ? "bg-slate-900 text-white shadow-md shadow-slate-900/10"
-                : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-            )}
-          >
-            <LayoutDashboard className="size-4" />
-            Overview
-          </Link>
-          <Link
-            href={`/dashboard/systems/${currentId}/chat`}
-            className={cn(
-              "flex items-center gap-3 px-3 py-2.5 text-sm rounded-[14px] transition-all font-medium",
-              pathname === `/dashboard/systems/${currentId}/chat`
-                ? "bg-slate-900 text-white shadow-md shadow-slate-900/10"
-                : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-            )}
-          >
-            <MessageSquare className="size-4" />
-            Chat
-          </Link>
-          {currentBusiness.status === "complete" && (
-            <Link
-              href={`/dashboard/systems/${currentId}/builder`}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 text-sm rounded-[14px] transition-all font-medium",
-                pathname === `/dashboard/systems/${currentId}/builder`
-                  ? "bg-slate-900 text-white shadow-md shadow-slate-900/10"
-                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-              )}
-            >
-              <Paintbrush className="size-4" />
-              Builder
-            </Link>
-          )}
-        </nav>
-      )}
-
-      {/* Spacer */}
-      <div className="flex-1" />
-
-      {/* Bottom nav */}
-      <nav className="px-4 space-y-1 pb-6">
-        <Link
-          href="/dashboard/settings"
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-[14px] transition-all",
-            pathname.startsWith("/dashboard/settings")
-              ? "bg-slate-900 text-white shadow-md"
-              : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-          )}
-        >
-          <Settings className="size-4" />
-          Settings
-        </Link>
-        <button
-          onClick={handleSignOut}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-[14px] text-slate-500 hover:bg-destructive/10 hover:text-destructive transition-all text-left"
-        >
-          <LogOut className="size-4" />
-          Sign out
-        </button>
-      </nav>
     </aside>
   );
 }

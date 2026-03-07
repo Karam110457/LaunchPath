@@ -54,66 +54,82 @@ export function PortalSidebar({ clientName, clientLogo }: PortalSidebarProps) {
   ];
 
   return (
-    <aside className="fixed md:relative z-50 w-64 border border-slate-200/60 bg-white/70 backdrop-blur-2xl rounded-[24px] text-slate-800 hidden md:flex flex-col shadow-[0_10px_40px_-10px_rgba(0,0,0,0.04)] h-[calc(100vh-2rem)] overflow-hidden shrink-0">
-      {/* Logo */}
-      <div className="h-14 flex items-center px-6 border-b border-slate-100">
-        <Link href="/portal" className="flex items-center gap-2">
-          <Logo className="text-lg" />
+    <aside className="fixed md:relative z-50 w-80 bg-background text-foreground hidden md:flex h-screen shrink-0 border-r border-border/40">
+      {/* Column 1: Primary Icon Nav (w-16) */}
+      <div className="w-16 flex flex-col items-center border-r border-border/40 py-4 h-full shrink-0">
+        <Link href="/portal" className="mb-8 flex items-center justify-center size-10 rounded-full hover:bg-muted transition-colors">
+          <Logo className="text-xl" />
         </Link>
+
+        <div className="flex-1" />
+
+        <nav className="flex flex-col items-center gap-4">
+          <Link
+            href="/portal/settings"
+            className={cn(
+              "flex items-center justify-center size-10 rounded-full transition-all",
+              pathname.startsWith("/portal/settings")
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <Settings className="size-5" />
+          </Link>
+          <button
+            onClick={handleSignOut}
+            className="flex items-center justify-center size-10 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
+          >
+            <LogOut className="size-5" />
+          </button>
+        </nav>
       </div>
 
-      {/* Client identity */}
-      <div className="px-4 pt-4">
-        <div className="flex items-center gap-3 px-3 py-3 text-sm font-semibold rounded-[14px] border border-slate-200/50 bg-slate-50 text-slate-900 shadow-sm">
-          {clientLogo ? (
-            <img
-              src={clientLogo}
-              alt={clientName}
-              className="size-6 rounded object-cover"
-            />
-          ) : (
-            <span className="size-6 rounded bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-              {clientName.charAt(0).toUpperCase()}
-            </span>
-          )}
-          <span className="truncate flex-1 text-left text-slate-900">{clientName}</span>
+      {/* Column 2: Contextual Drawer (w-64) */}
+      <div className="flex-1 flex flex-col h-full hidden md:flex">
+
+        {/* Client identity */}
+        <div className="px-4 py-4">
+          <div className="flex items-center gap-3 px-3 py-3 text-sm font-semibold rounded-[14px] bg-muted/50 text-foreground transition-all">
+            {clientLogo ? (
+              <img
+                src={clientLogo}
+                alt={clientName}
+                className="size-6 rounded object-cover"
+              />
+            ) : (
+              <span className="size-6 rounded bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                {clientName.charAt(0).toUpperCase()}
+              </span>
+            )}
+            <span className="truncate flex-1 text-left text-foreground">{clientName}</span>
+          </div>
         </div>
+
+        {/* Navigation */}
+        <nav className="px-4 pt-2 space-y-1 flex-1">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1 mt-2">Portal</p>
+          {navItems.map((item) => {
+            const isActive = item.exact
+              ? pathname === item.href
+              : pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 text-sm rounded-[14px] transition-all font-medium",
+                  isActive
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <item.icon className="size-4" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
-
-      {/* Navigation */}
-      <nav className="px-4 pt-6 space-y-1 flex-1">
-        {navItems.map((item) => {
-          const isActive = item.exact
-            ? pathname === item.href
-            : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 text-sm rounded-[14px] transition-all font-medium",
-                isActive
-                  ? "bg-slate-900 text-white shadow-md shadow-slate-900/10"
-                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-              )}
-            >
-              <item.icon className="size-4" />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* Bottom */}
-      <nav className="px-4 space-y-1 pb-6">
-        <button
-          onClick={handleSignOut}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-[14px] text-slate-500 hover:bg-destructive/10 hover:text-destructive transition-all text-left"
-        >
-          <LogOut className="size-4" />
-          Sign out
-        </button>
-      </nav>
     </aside>
   );
 }
