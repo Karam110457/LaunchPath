@@ -416,13 +416,20 @@
 
 /* Agent canvas: animated dashed edges */
 @keyframes dash-flow {
+  from {
+    stroke-dashoffset: 24;
+  }
   to {
-    stroke-dashoffset: -10;
+    stroke-dashoffset: 0;
   }
 }
 
 .canvas-edge-animated {
   animation: dash-flow 1s linear infinite;
+}
+
+.canvas-edge-glow {
+  filter: drop-shadow(0 0 8px rgba(157, 80, 187, 0.6));
 }
 
 /* Agent canvas: node entrance — uses separate `scale` property so it doesn't
