@@ -71,6 +71,14 @@ export function LeftCatalogPanel() {
     const onDragStart = (e: React.DragEvent, type: string, payload: any = {}) => {
         e.dataTransfer.setData("application/reactflow", JSON.stringify({ type, ...payload }));
         e.dataTransfer.effectAllowed = "copy";
+        
+        // Attempt to find the inner icon container to use as the drag image
+        // so we drag only the "node" and not the whole card
+        const target = e.currentTarget as HTMLElement;
+        const iconElement = target.querySelector('.drag-image-target');
+        if (iconElement) {
+            e.dataTransfer.setDragImage(iconElement as Element, 28, 28);
+        }
     };
 
     if (isMinimized) {
@@ -170,8 +178,8 @@ export function LeftCatalogPanel() {
                                         onDragStart={(e) => onDragStart(e, t.type)}
                                         className="group flex flex-col items-center justify-center p-3 h-[90px] bg-white/40 border border-white/50 rounded-2xl cursor-grab active:cursor-grabbing hover:bg-white/80 hover:shadow-sm transition-all"
                                     >
-                                        <div className="w-8 h-8 rounded-xl flex items-center justify-center mb-2 bg-white shadow-sm border border-zinc-100">
-                                            <t.Icon className={cn("w-4 h-4", t.color)} />
+                                        <div className="drag-image-target w-[56px] h-[56px] liquid-glass-node rounded-2xl flex items-center justify-center mb-2 bg-white/70 shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-white/60 transition-transform group-hover:scale-105">
+                                            <t.Icon className={cn("w-5 h-5", t.color)} />
                                         </div>
                                         <span className="text-[10px] font-semibold text-zinc-700 text-center tracking-tight leading-none group-hover:text-zinc-900">
                                             {t.name}
@@ -195,11 +203,11 @@ export function LeftCatalogPanel() {
                                         })}
                                         className="group flex flex-col items-center justify-center p-3 h-[90px] bg-white/40 border border-white/50 rounded-2xl cursor-grab active:cursor-grabbing hover:bg-white/80 hover:shadow-sm transition-all"
                                     >
-                                        <div className="w-8 h-8 rounded-full flex items-center justify-center mb-2 overflow-hidden bg-white shadow-sm border border-zinc-100 p-1">
+                                        <div className="drag-image-target w-[56px] h-[56px] liquid-glass-node rounded-2xl flex items-center justify-center mb-2 bg-white/70 shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-white/60 transition-transform group-hover:scale-105 overflow-hidden p-1.5">
                                             {app.logo && app.logo.startsWith("http") ? (
-                                                <img src={app.logo} alt={app.name} className="w-full h-full object-contain" />
+                                                <img src={app.logo} alt={app.name} className="w-full h-full object-contain rounded-xl" />
                                             ) : (
-                                                <span className="text-xs font-bold text-zinc-500">{app.name.charAt(0)}</span>
+                                                <span className="text-sm font-bold text-zinc-500">{app.name.charAt(0)}</span>
                                             )}
                                         </div>
                                         <span className="text-[10px] font-semibold text-zinc-700 text-center tracking-tight leading-none group-hover:text-zinc-900 line-clamp-2">

@@ -11,7 +11,7 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
 
   return (
     <div className="group relative flex flex-col items-center">
-      <div className="relative w-[88px] h-[88px] bg-white/70 backdrop-blur-xl border border-white/60 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] cursor-pointer transition-all duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] overflow-visible z-10 flex items-center justify-center">
+      <div className="relative w-[88px] h-[88px] liquid-glass-node rounded-3xl cursor-pointer overflow-visible z-10 flex items-center justify-center">
 
         <div className="flex items-center justify-center text-4xl">
           {d.avatarEmoji && d.avatarEmoji !== "🤖" ? (
