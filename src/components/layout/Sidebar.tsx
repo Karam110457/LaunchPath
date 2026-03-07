@@ -77,19 +77,18 @@ export function Sidebar({ systems, user, agentCount, clientCount }: SidebarProps
   const hasSystems = systems && systems.length > 0;
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 w-64 border-r border-sidebar-border bg-sidebar text-sidebar-foreground hidden md:flex flex-col">
-      {/* Logo */}
-      <div className="h-14 flex items-center px-6 border-b border-sidebar-border/40">
+    <aside className="fixed md:relative z-50 w-64 border border-slate-200/60 bg-white/70 backdrop-blur-2xl rounded-[24px] text-slate-800 hidden md:flex flex-col shadow-[0_10px_40px_-10px_rgba(0,0,0,0.04)] h-[calc(100vh-2rem)] overflow-hidden shrink-0">
+      <div className="h-14 flex items-center px-6 border-b border-slate-100">
         <Link href="/dashboard" className="flex items-center gap-2">
           <Logo className="text-lg" />
         </Link>
       </div>
 
       {/* Business switcher */}
-      <div className="relative px-3 pt-3" ref={switcherRef}>
+      <div className="relative px-4 pt-4" ref={switcherRef}>
         <button
           onClick={() => setSwitcherOpen(!switcherOpen)}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg border border-sidebar-border/60 hover:bg-sidebar-accent/50 transition-colors"
+          className="w-full flex items-center gap-3 px-3 py-3 text-sm font-semibold text-slate-900 rounded-[14px] bg-slate-50 border border-slate-200/50 hover:bg-slate-100 transition-all shadow-sm"
         >
           {currentBusiness ? (
             <>
@@ -111,13 +110,13 @@ export function Sidebar({ systems, user, agentCount, clientCount }: SidebarProps
               </span>
             </>
           ) : (
-            <span className="truncate flex-1 text-left text-sidebar-foreground/50">
+            <span className="truncate flex-1 text-left text-slate-500 font-medium">
               Select a business
             </span>
           )}
           <ChevronDown
             className={cn(
-              "size-4 shrink-0 text-sidebar-foreground/40 transition-transform",
+              "size-4 shrink-0 text-slate-400 transition-transform",
               switcherOpen && "rotate-180"
             )}
           />
@@ -125,7 +124,7 @@ export function Sidebar({ systems, user, agentCount, clientCount }: SidebarProps
 
         {/* Dropdown */}
         {switcherOpen && (
-          <div className="absolute left-3 right-3 top-full mt-1 rounded-lg border border-sidebar-border bg-sidebar shadow-lg z-50 py-1 max-h-64 overflow-y-auto">
+          <div className="absolute left-4 right-4 top-full mt-2 rounded-[16px] border border-slate-100 bg-white shadow-[0_10px_20px_-5px_rgba(0,0,0,0.05)] z-50 py-1.5 max-h-64 overflow-y-auto">
             {hasSystems ? (
               systems.map((system) => {
                 const isActive = system.id === currentId;
@@ -135,10 +134,10 @@ export function Sidebar({ systems, user, agentCount, clientCount }: SidebarProps
                     key={system.id}
                     onClick={() => handleSwitchBusiness(system.id)}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 text-sm transition-colors text-left",
+                      "w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-all text-left rounded-[12px] mx-1.5 font-medium",
                       isActive
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                        ? "bg-slate-900 text-white shadow-md"
+                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                     )}
                   >
                     <span className="relative flex size-2 shrink-0">
@@ -157,15 +156,15 @@ export function Sidebar({ systems, user, agentCount, clientCount }: SidebarProps
                 );
               })
             ) : (
-              <p className="px-3 py-2 text-xs text-sidebar-foreground/30">
+              <p className="px-4 py-3 text-xs text-slate-400 font-medium">
                 No businesses yet
               </p>
             )}
-            <div className="border-t border-sidebar-border/40 mt-1 pt-1">
+            <div className="border-t border-slate-100 mt-1 pt-1 mx-1.5">
               <button
                 onClick={handleNewBusiness}
                 disabled={isCreating}
-                className="w-full flex items-center gap-3 px-3 py-2 text-sm text-primary/80 hover:bg-sidebar-accent/50 hover:text-primary transition-colors text-left"
+                className="w-full flex items-center gap-3 px-3 py-2.5 mt-0.5 text-sm font-semibold rounded-[12px] text-emerald-600 hover:bg-emerald-50 transition-all text-left mb-0.5"
               >
                 <Plus className="size-4" />
                 {isCreating ? "Creating..." : "New Business"}
@@ -176,20 +175,22 @@ export function Sidebar({ systems, user, agentCount, clientCount }: SidebarProps
       </div>
 
       {/* Global nav — always visible */}
-      <nav className="px-3 pt-3 space-y-0.5">
+      <nav className="px-4 pt-6 space-y-1">
         <Link
           href="/dashboard/agents"
           className={cn(
-            "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+            "flex items-center gap-3 px-3 py-2.5 text-sm rounded-[14px] transition-all font-medium",
             pathname.startsWith("/dashboard/agents")
-              ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-              : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              ? "bg-slate-900 text-white shadow-md shadow-slate-900/10"
+              : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
           )}
         >
           <Bot className="size-4" />
           Agents
           {agentCount != null && agentCount > 0 && (
-            <span className="ml-auto text-xs text-sidebar-foreground/40">
+            <span className={cn("ml-auto text-xs font-semibold px-2 py-0.5 rounded-full",
+              pathname.startsWith("/dashboard/agents") ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+            )}>
               {agentCount}
             </span>
           )}
@@ -197,16 +198,18 @@ export function Sidebar({ systems, user, agentCount, clientCount }: SidebarProps
         <Link
           href="/dashboard/clients"
           className={cn(
-            "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+            "flex items-center gap-3 px-3 py-2.5 text-sm rounded-[14px] transition-all font-medium",
             pathname.startsWith("/dashboard/clients")
-              ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-              : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              ? "bg-slate-900 text-white shadow-md shadow-slate-900/10"
+              : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
           )}
         >
           <Users className="size-4" />
           Clients
           {clientCount != null && clientCount > 0 && (
-            <span className="ml-auto text-xs text-sidebar-foreground/40">
+            <span className={cn("ml-auto text-xs font-semibold px-2 py-0.5 rounded-full",
+              pathname.startsWith("/dashboard/clients") ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+            )}>
               {clientCount}
             </span>
           )}
@@ -215,14 +218,14 @@ export function Sidebar({ systems, user, agentCount, clientCount }: SidebarProps
 
       {/* Business navigation — only when a business is selected */}
       {currentBusiness && (
-        <nav className="px-3 pt-3 space-y-0.5">
+        <nav className="px-4 pt-6 space-y-1">
           <Link
             href={`/dashboard/systems/${currentId}`}
             className={cn(
-              "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+              "flex items-center gap-3 px-3 py-2.5 text-sm rounded-[14px] transition-all font-medium",
               pathname === `/dashboard/systems/${currentId}`
-                ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                ? "bg-slate-900 text-white shadow-md shadow-slate-900/10"
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
             )}
           >
             <LayoutDashboard className="size-4" />
@@ -231,10 +234,10 @@ export function Sidebar({ systems, user, agentCount, clientCount }: SidebarProps
           <Link
             href={`/dashboard/systems/${currentId}/chat`}
             className={cn(
-              "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+              "flex items-center gap-3 px-3 py-2.5 text-sm rounded-[14px] transition-all font-medium",
               pathname === `/dashboard/systems/${currentId}/chat`
-                ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                ? "bg-slate-900 text-white shadow-md shadow-slate-900/10"
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
             )}
           >
             <MessageSquare className="size-4" />
@@ -244,10 +247,10 @@ export function Sidebar({ systems, user, agentCount, clientCount }: SidebarProps
             <Link
               href={`/dashboard/systems/${currentId}/builder`}
               className={cn(
-                "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+                "flex items-center gap-3 px-3 py-2.5 text-sm rounded-[14px] transition-all font-medium",
                 pathname === `/dashboard/systems/${currentId}/builder`
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                  ? "bg-slate-900 text-white shadow-md shadow-slate-900/10"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
               )}
             >
               <Paintbrush className="size-4" />
@@ -261,14 +264,14 @@ export function Sidebar({ systems, user, agentCount, clientCount }: SidebarProps
       <div className="flex-1" />
 
       {/* Bottom nav */}
-      <nav className="px-3 space-y-0.5 pb-4">
+      <nav className="px-4 space-y-1 pb-6">
         <Link
           href="/dashboard/settings"
           className={cn(
-            "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+            "flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-[14px] transition-all",
             pathname.startsWith("/dashboard/settings")
-              ? "bg-sidebar-accent text-sidebar-accent-foreground"
-              : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              ? "bg-slate-900 text-white shadow-md"
+              : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
           )}
         >
           <Settings className="size-4" />
@@ -276,7 +279,7 @@ export function Sidebar({ systems, user, agentCount, clientCount }: SidebarProps
         </Link>
         <button
           onClick={handleSignOut}
-          className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors text-left"
+          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-[14px] text-slate-500 hover:bg-destructive/10 hover:text-destructive transition-all text-left"
         >
           <LogOut className="size-4" />
           Sign out

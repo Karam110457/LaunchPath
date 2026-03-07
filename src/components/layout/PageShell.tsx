@@ -8,22 +8,22 @@ interface PageShellProps {
   className?: string;
 }
 
-export function PageShell({ 
-  children, 
-  title, 
-  description, 
+export function PageShell({
+  children,
+  title,
+  description,
   action,
-  className 
+  className
 }: PageShellProps) {
   return (
     <div className={cn("container py-8 md:py-10 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500", className)}>
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-1.5">
-          <h1 className="font-serif text-3xl md:text-4xl font-light italic tracking-tight text-foreground">
+          <h1 className="font-sans text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">
             {title}
           </h1>
           {description && (
-            <p className="text-muted-foreground text-sm md:text-base max-w-2xl">
+            <p className="text-slate-500 text-sm md:text-base max-w-2xl">
               {description}
             </p>
           )}

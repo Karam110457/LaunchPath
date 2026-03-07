@@ -54,17 +54,17 @@ export function PortalSidebar({ clientName, clientLogo }: PortalSidebarProps) {
   ];
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 w-64 border-r border-sidebar-border bg-sidebar text-sidebar-foreground hidden md:flex flex-col">
+    <aside className="fixed md:relative z-50 w-64 border border-slate-200/60 bg-white/70 backdrop-blur-2xl rounded-[24px] text-slate-800 hidden md:flex flex-col shadow-[0_10px_40px_-10px_rgba(0,0,0,0.04)] h-[calc(100vh-2rem)] overflow-hidden shrink-0">
       {/* Logo */}
-      <div className="h-14 flex items-center px-6 border-b border-sidebar-border/40">
+      <div className="h-14 flex items-center px-6 border-b border-slate-100">
         <Link href="/portal" className="flex items-center gap-2">
           <Logo className="text-lg" />
         </Link>
       </div>
 
       {/* Client identity */}
-      <div className="px-3 pt-3">
-        <div className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg border border-sidebar-border/60">
+      <div className="px-4 pt-4">
+        <div className="flex items-center gap-3 px-3 py-3 text-sm font-semibold rounded-[14px] border border-slate-200/50 bg-slate-50 text-slate-900 shadow-sm">
           {clientLogo ? (
             <img
               src={clientLogo}
@@ -76,12 +76,12 @@ export function PortalSidebar({ clientName, clientLogo }: PortalSidebarProps) {
               {clientName.charAt(0).toUpperCase()}
             </span>
           )}
-          <span className="truncate flex-1 text-left">{clientName}</span>
+          <span className="truncate flex-1 text-left text-slate-900">{clientName}</span>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="px-3 pt-3 space-y-0.5 flex-1">
+      <nav className="px-4 pt-6 space-y-1 flex-1">
         {navItems.map((item) => {
           const isActive = item.exact
             ? pathname === item.href
@@ -91,10 +91,10 @@ export function PortalSidebar({ clientName, clientLogo }: PortalSidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+                "flex items-center gap-3 px-3 py-2.5 text-sm rounded-[14px] transition-all font-medium",
                 isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                  ? "bg-slate-900 text-white shadow-md shadow-slate-900/10"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
               )}
             >
               <item.icon className="size-4" />
@@ -105,10 +105,10 @@ export function PortalSidebar({ clientName, clientLogo }: PortalSidebarProps) {
       </nav>
 
       {/* Bottom */}
-      <nav className="px-3 space-y-0.5 pb-4">
+      <nav className="px-4 space-y-1 pb-6">
         <button
           onClick={handleSignOut}
-          className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors text-left"
+          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-[14px] text-slate-500 hover:bg-destructive/10 hover:text-destructive transition-all text-left"
         >
           <LogOut className="size-4" />
           Sign out
