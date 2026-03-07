@@ -14,22 +14,19 @@ import {
   MessageSquare,
   Paintbrush,
   Bot,
-  Users,
-  Megaphone,
+  Rocket,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { createSystem } from "@/app/(flows)/start/actions";
-import type { SidebarSystem, SidebarUser } from "@/lib/dashboard/sidebar-data";
+import type { SidebarSystem } from "@/lib/dashboard/sidebar-data";
 
 interface SidebarProps {
   systems?: SidebarSystem[];
-  user?: SidebarUser;
   agentCount?: number;
   clientCount?: number;
-  campaignCount?: number;
 }
 
-export function Sidebar({ systems, user, agentCount, clientCount, campaignCount }: SidebarProps) {
+export function Sidebar({ systems, agentCount, clientCount }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isCreating, startCreating] = useTransition();
@@ -96,8 +93,7 @@ export function Sidebar({ systems, user, agentCount, clientCount, campaignCount 
   // Nav items
   const manageItems = [
     { label: "Agents", href: "/dashboard/agents", icon: Bot, count: agentCount },
-    { label: "Clients", href: "/dashboard/clients", icon: Users, count: clientCount },
-    { label: "Campaigns", href: "/dashboard/campaigns", icon: Megaphone, count: campaignCount },
+    { label: "Deploy", href: "/dashboard/clients", icon: Rocket, count: clientCount },
   ];
 
   const businessItems = selectedBusinessId
@@ -128,10 +124,9 @@ export function Sidebar({ systems, user, agentCount, clientCount, campaignCount 
   return (
     <aside className="fixed md:relative z-50 w-64 bg-background text-foreground hidden md:flex flex-col h-screen shrink-0 border-r border-border/40">
       {/* Brand header */}
-      <div className="h-14 flex items-center gap-2.5 px-5 shrink-0">
-        <Link href="/dashboard" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+      <div className="h-14 flex items-center px-5 shrink-0">
+        <Link href="/dashboard" className="flex items-center justify-center size-10 rounded-full hover:bg-muted transition-colors">
           <Logo className="text-xl" />
-          <span className="font-semibold text-sm tracking-tight">LaunchPath</span>
         </Link>
       </div>
 
