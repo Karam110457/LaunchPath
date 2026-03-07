@@ -700,7 +700,7 @@ function AgentCanvasInner({
       const allNodes = getNodes();
       const hitNode = allNodes.find((n) => {
         const w = 280;
-        const h = 96;
+        const h = 128;
         return (
           position.x >= n.position.x &&
           position.x <= n.position.x + w &&

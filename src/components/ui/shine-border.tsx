@@ -1,8 +1,6 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type { ReactNode } from "react";
-import { DIcons, ValidIcon } from "dicons";
 
 type TColorProp = string | string[];
 
@@ -12,6 +10,7 @@ interface ShineBorderProps {
   duration?: number;
   color?: TColorProp;
   className?: string;
+  style?: React.CSSProperties;
   children: React.ReactNode;
 }
 
@@ -31,6 +30,7 @@ function ShineBorder({
   duration = 14,
   color = "#000000",
   className,
+  style,
   children,
 }: ShineBorderProps) {
   return (
@@ -38,6 +38,7 @@ function ShineBorder({
       style={
         {
           "--border-radius": `${borderRadius}px`,
+          ...style,
         } as React.CSSProperties
       }
       className={cn(
@@ -45,6 +46,7 @@ function ShineBorder({
         className,
       )}
     >
+      {/* Border layer: absolute so it fills the container; gradient uses var() so it applies */}
       <div
         style={
           {
@@ -55,9 +57,11 @@ function ShineBorder({
             "--background-radial-gradient": `radial-gradient(transparent,transparent, ${color instanceof Array ? color.join(",") : color},transparent,transparent)`,
           } as React.CSSProperties
         }
-        className={`before:bg-shine-size before:absolute before:inset-0 before:size-full before:rounded-[--border-radius] before:p-[--border-width] before:will-change-[background-position] before:content-[""] before:![-webkit-mask-composite:xor] before:[background-image:--background-radial-gradient] before:[background-size:300%_300%] before:![mask-composite:exclude] before:[mask:--mask-linear-gradient] motion-safe:before:animate-[shine-pulse_var(--shine-pulse-duration)_infinite_linear]`}
-      ></div>
-      {children}
+        className="absolute inset-0 pointer-events-none rounded-[var(--border-radius)] [&::before]:absolute [&::before]:inset-0 [&::before]:size-full [&::before]:rounded-[var(--border-radius)] [&::before]:p-[var(--border-width)] [&::before]:content-[''] [&::before]:will-change-[background-position] [&::before]:[-webkit-mask-composite:xor] [&::before]:[background-image:var(--background-radial-gradient)] [&::before]:[background-size:300%_300%] [&::before]:[mask-composite:exclude] [&::before]:[mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] motion-safe:[&::before]:animate-[shine-pulse_var(--shine-pulse-duration)_infinite_linear]"
+      />
+      <div className="relative z-10 h-full w-full">
+        {children}
+      </div>
     </div>
   );
 }
