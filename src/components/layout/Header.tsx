@@ -28,10 +28,10 @@ function buildBreadcrumbs(
     return crumbs;
   }
 
-  // Client pages
+  // Deploy (clients) pages
   if (pathname.startsWith("/dashboard/clients")) {
     crumbs.push({
-      label: "Clients",
+      label: "Deploy",
       href: "/dashboard/clients",
       isActive: pathname === "/dashboard/clients",
     });
@@ -49,26 +49,6 @@ function buildBreadcrumbs(
       crumbs.push({
         label: "Client",
         href: `/dashboard/clients/${clientMatch[1]}`,
-        isActive: true,
-      });
-    }
-
-    return crumbs;
-  }
-
-  // Campaign pages
-  if (pathname.startsWith("/dashboard/campaigns")) {
-    crumbs.push({
-      label: "Campaigns",
-      href: "/dashboard/campaigns",
-      isActive: pathname === "/dashboard/campaigns",
-    });
-
-    const campaignMatch = pathname.match(/^\/dashboard\/campaigns\/([^/]+)$/);
-    if (campaignMatch) {
-      crumbs.push({
-        label: "Campaign",
-        href: pathname,
         isActive: true,
       });
     }
