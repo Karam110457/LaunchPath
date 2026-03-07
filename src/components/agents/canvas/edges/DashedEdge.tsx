@@ -14,7 +14,7 @@ export function DashedEdge(props: EdgeProps) {
   const { setEdges } = useReactFlow();
   const [hovered, setHovered] = useState(false);
 
-  // We use bezier or smoothstep?
+  // We use bezier or smoothstep? The image uses a very smooth bezier or step.
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX: props.sourceX,
     sourceY: props.sourceY,
@@ -31,19 +31,23 @@ export function DashedEdge(props: EdgeProps) {
   
   // Custom orange/purple gradient ID for this edge
   const gradientId = `gradient-${props.id}`;
-  const animationDuration = "3s";
+  const animationDuration = "2s";
 
   return (
     <>
       <defs>
         <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor={isKnowledgeEdge ? "#A07CFE" : "#FF8C00"} />
-          <stop offset="100%" stopColor={isKnowledgeEdge ? "#A07CFE" : "#9D50BB"} />
+          <stop offset="0%" stopColor="#FF8C00">
+            <animate attributeName="stop-color" values="#FF8C00;#9D50BB;#FF8C00" dur={animationDuration} repeatCount="indefinite" />
+          </stop>
+          <stop offset="100%" stopColor="#9D50BB">
+            <animate attributeName="stop-color" values="#9D50BB;#FF8C00;#9D50BB" dur={animationDuration} repeatCount="indefinite" />
+          </stop>
         </linearGradient>
         
         {/* Glow filter */}
         <filter id={`glow-${props.id}`} x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="6" result="blur" />
+          <feGaussianBlur stdDeviation="4" result="blur" />
           <feComposite in="SourceGraphic" in2="blur" operator="over" />
         </filter>
       </defs>
@@ -53,11 +57,10 @@ export function DashedEdge(props: EdgeProps) {
         d={edgePath}
         fill="none"
         stroke="transparent"
-        strokeWidth={30}
+        strokeWidth={24}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{ cursor: "pointer" }}
-        className="react-flow__edge-interaction"
       />
       
       {/* Outer blurred glow path */}
@@ -65,11 +68,12 @@ export function DashedEdge(props: EdgeProps) {
         path={edgePath}
         style={{
           stroke: `url(#${gradientId})`,
-          strokeWidth: hovered || props.selected ? 10 : 8,
-          strokeOpacity: hovered || props.selected ? 0.5 : 0.25,
+          strokeWidth: hovered || props.selected ? 6 : 3,
+          strokeOpacity: 0.4,
           filter: `url(#glow-${props.id})`,
           transition: "stroke-width 0.2s, stroke-opacity 0.2s",
         }}
+        className="canvas-edge-glow"
       />
 
       {/* Inner solid path */}
@@ -77,11 +81,11 @@ export function DashedEdge(props: EdgeProps) {
         path={edgePath}
         style={{
           stroke: `url(#${gradientId})`,
-          strokeWidth: hovered || props.selected ? 4 : 3,
-          strokeDasharray: isKnowledgeEdge ? "none" : "8 6",
+          strokeWidth: hovered || props.selected ? 3 : 1.5,
+          strokeDasharray: "8 4",
           transition: "stroke-width 0.2s",
         }}
-        className={isKnowledgeEdge ? "" : "animated-connection-path"}
+        className="canvas-edge-animated"
       />
 
       <EdgeLabelRenderer>
@@ -93,17 +97,21 @@ export function DashedEdge(props: EdgeProps) {
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
         >
-          {showDelete && (
+          {showDelete ? (
             <button
-              className="flex items-center justify-center w-7 h-7 rounded-full bg-white backdrop-blur-md border-[2px] border-red-100 shadow-xl text-red-500 hover:text-white hover:bg-red-500 hover:border-red-500 transition-all z-50 scale-in-center"
+              className="flex items-center justify-center w-6 h-6 rounded-full bg-white/90 backdrop-blur-sm border border-red-200 shadow-sm text-red-500 hover:text-white hover:bg-red-500 transition-all z-50"
               title="Delete connection"
               onClick={(e) => {
                 e.stopPropagation();
                 setEdges((edges) => edges.filter((edge) => edge.id !== props.id));
               }}
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
+          ) : (
+            <div className="flex items-center justify-center px-3 py-1 rounded-full bg-white/70 backdrop-blur-md border border-white/60 shadow-[0_4px_12px_rgba(0,0,0,0.05)] text-[10px] font-semibold text-zinc-600 z-50 transition-all">
+              <span className="bg-gradient-to-r from-[#FF8C00] to-[#9D50BB] text-transparent bg-clip-text">1 item</span>
+            </div>
           )}
         </div>
       </EdgeLabelRenderer>

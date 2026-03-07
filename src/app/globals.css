@@ -417,25 +417,12 @@
 /* Agent canvas: animated dashed edges */
 @keyframes dash-flow {
   to {
-    stroke-dashoffset: -20;
+    stroke-dashoffset: -10;
   }
 }
 
 .canvas-edge-animated {
   animation: dash-flow 1s linear infinite;
-}
-
-.animated-connection-path {
-  animation: dash-flow 0.8s linear infinite;
-}
-
-@keyframes scale-in-center {
-  0% { transform: scale(0); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-.scale-in-center {
-  animation: scale-in-center 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
 /* Agent canvas: node entrance — uses separate `scale` property so it doesn't

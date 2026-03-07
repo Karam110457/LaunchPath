@@ -40,16 +40,16 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
             type="source"
             position={Position.Bottom}
             id="bottom-left"
-            style={{ left: "25%", bottom: "-10px" }}
-            className="!bg-white !w-4 !h-4 !border-[3px] !border-[#A07CFE] !rounded-full opacity-0 group-hover:opacity-100 transition-all z-20 hover:scale-125 hover:!border-[#FF8C00] shadow-sm cursor-crosshair"
+            style={{ left: "25%", bottom: "-8px" }}
+            className="!bg-zinc-200 !w-3 !h-3 !border-[2px] !border-white !rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
           />
           {/* Bottom-right → Tools */}
           <Handle
             type="source"
             position={Position.Bottom}
             id="bottom-right"
-            style={{ left: "75%", bottom: "-10px" }}
-            className="!bg-white !w-4 !h-4 !border-[3px] !border-[#FF8C00] !rounded-full opacity-0 group-hover:opacity-100 transition-all z-20 hover:scale-125 hover:!border-[#9D50BB] shadow-sm cursor-crosshair"
+            style={{ left: "75%", bottom: "-8px" }}
+            className="!bg-zinc-200 !w-3 !h-3 !border-[2px] !border-white !rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
           />
 
           <NodeHelperTip

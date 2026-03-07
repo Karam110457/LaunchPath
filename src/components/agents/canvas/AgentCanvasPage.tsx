@@ -25,7 +25,6 @@ import { KnowledgeNode } from "./nodes/KnowledgeNode";
 import { ToolNode } from "./nodes/ToolNode";
 import { SubagentNode } from "./nodes/SubagentNode";
 import { DashedEdge } from "./edges/DashedEdge";
-import { CustomConnectionLine } from "./edges/CustomConnectionLine";
 import { TopBar } from "./TopBar";
 import { BottomBar } from "./BottomBar";
 import { NodeModal } from "./panels/NodeModal";
@@ -942,7 +941,6 @@ function AgentCanvasInner({
             onDrop={onDrop}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
-            connectionLineComponent={CustomConnectionLine}
             fitView
             fitViewOptions={{ padding: 0.4 }}
             proOptions={{ hideAttribution: true }}
