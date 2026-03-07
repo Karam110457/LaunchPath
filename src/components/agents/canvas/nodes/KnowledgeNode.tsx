@@ -28,16 +28,16 @@ export const KnowledgeNode = memo(function KnowledgeNode({ data }: NodeProps) {
         <Handle
           type="target"
           position={Position.Top}
-          className="!bg-zinc-200 dark:!bg-zinc-600 !w-2.5 !h-2.5 !border-[1.5px] !border-white dark:!border-zinc-800 !rounded-full !top-[-5px] opacity-0 group-hover:opacity-100 transition-opacity z-20"
+          className="!bg-zinc-200 canvas-dark:!bg-zinc-600 !w-2.5 !h-2.5 !border-[1.5px] !border-white canvas-dark:!border-zinc-800 !rounded-full !top-[-5px] opacity-0 group-hover:opacity-100 transition-opacity z-20"
         />
       </div>
 
       {/* Text below */}
       <div className="mt-3 flex flex-col items-center pointer-events-none text-center max-w-[120px]">
-        <h3 className="text-[13px] font-medium text-zinc-800 dark:text-zinc-200 leading-tight flex-wrap">
+        <h3 className="text-[13px] font-medium text-zinc-800 canvas-dark:text-zinc-200 leading-tight flex-wrap">
           Knowledge Base
         </h3>
-        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <p className="text-[10px] text-zinc-500 canvas-dark:text-zinc-400 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           {d.documentCount === 1 ? "1 source" : `${d.documentCount} sources`}
         </p>
       </div>

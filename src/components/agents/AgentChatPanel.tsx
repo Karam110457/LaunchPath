@@ -273,7 +273,7 @@ export function AgentChatPanel({
       </div>
 
       {/* Floating input */}
-      <div className={`absolute bottom-0 left-0 right-0 px-4 pb-5 pt-3 z-10 ${embedded ? "bg-white/40 backdrop-blur-md rounded-b-[2rem]" : ""}`}>
+      <div className={cn("absolute bottom-0 left-0 right-0 px-4 pb-5 pt-3 z-10", embedded && "bg-white/40 canvas-dark:bg-zinc-900/40 backdrop-blur-md rounded-b-[2rem]")}>
         {embedded ? (
           <PlaceholdersAndVanishInput
             placeholders={[

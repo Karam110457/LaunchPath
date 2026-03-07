@@ -31,7 +31,7 @@ export function DashedEdge(props: EdgeProps) {
   const isKnowledgeEdge = props.id.includes("knowledge");
   const showDelete = !isKnowledgeEdge && (hovered || props.selected);
 
-  // Grey — adapts to theme (light: zinc-400/500, dark: zinc-600/zinc-400)
+  // Grey — adapts to theme (light: zinc-400/500, canvas-dark: zinc-600/zinc-400)
   const isDark = theme === "dark";
   const strokeColor = hovered || props.selected
     ? (isDark ? "#a1a1aa" : "#71717a")   // hover: zinc-400 dark, zinc-500 light
@@ -74,7 +74,7 @@ export function DashedEdge(props: EdgeProps) {
           onMouseLeave={() => setHovered(false)}
         >
           <button
-            className="flex items-center justify-center w-6 h-6 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm text-zinc-400 hover:text-red-500 hover:border-red-200 dark:hover:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all z-50"
+            className="flex items-center justify-center w-6 h-6 rounded-full bg-white canvas-dark:bg-zinc-800 border border-zinc-200 canvas-dark:border-zinc-700 shadow-sm text-zinc-400 hover:text-red-500 hover:border-red-200 canvas-dark:hover:border-red-800 hover:bg-red-50 canvas-dark:hover:bg-red-900/30 transition-all z-50"
             title="Delete connection"
             onClick={(e) => {
               e.stopPropagation();

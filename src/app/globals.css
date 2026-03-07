@@ -3,6 +3,7 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant canvas-dark (&:is(.canvas-dark *));
 
 @theme inline {
   --color-background: var(--background);
@@ -192,6 +193,27 @@
   --border: oklch(0.92 0 0);
   --input: oklch(0.92 0 0);
   --ring: oklch(0.20 0 0);
+}
+
+.canvas-dark {
+  --background: oklch(0.12 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.16 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.16 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.35 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.22 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.20 0 0);
+  --muted-foreground: oklch(0.65 0 0);
+  --accent: oklch(0.22 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(0.28 0 0);
+  --input: oklch(0.28 0 0);
+  --ring: oklch(0.50 0 0);
 }
 
 /*
@@ -478,7 +500,7 @@
   }
 
   /* ── Dark mode liquid glass ────────────────────────────────────────────── */
-  .dark .liquid-glass-node {
+  .canvas-dark .liquid-glass-node {
     background: linear-gradient(135deg, rgba(30, 30, 38, 0.7) 0%, rgba(30, 30, 38, 0.3) 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow:
@@ -487,7 +509,7 @@
       0 10px 30px -4px rgba(0, 0, 0, 0.3);
   }
 
-  .dark .liquid-glass-node:hover {
+  .canvas-dark .liquid-glass-node:hover {
     background: linear-gradient(135deg, rgba(38, 38, 46, 0.8) 0%, rgba(38, 38, 46, 0.4) 100%);
     box-shadow:
       inset 1px 2px 4px rgba(255, 255, 255, 0.04),

@@ -83,21 +83,21 @@ export function LeftCatalogPanel() {
 
     if (isMinimized) {
         return (
-            <div className="absolute top-6 left-6 z-20 flex items-center justify-center w-12 h-12 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-2xl border border-white/60 dark:border-zinc-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[1rem] cursor-pointer hover:bg-white/90 dark:hover:bg-zinc-800/90 transition-all" onClick={() => setIsMinimized(false)}>
-                <Sidebar className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+            <div className="absolute top-6 left-6 z-20 flex items-center justify-center w-12 h-12 bg-white/70 canvas-dark:bg-zinc-900/70 backdrop-blur-2xl border border-white/60 canvas-dark:border-zinc-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[1rem] cursor-pointer hover:bg-white/90 canvas-dark:hover:bg-zinc-800/90 transition-all" onClick={() => setIsMinimized(false)}>
+                <Sidebar className="w-5 h-5 text-zinc-600 canvas-dark:text-zinc-400" />
             </div>
         );
     }
 
     return (
-        <div className="absolute top-6 left-6 bottom-6 w-[280px] z-20 flex flex-col bg-white/70 dark:bg-zinc-900/70 backdrop-blur-2xl border border-white/60 dark:border-zinc-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] overflow-hidden transition-all duration-300">
+        <div className="absolute top-6 left-6 bottom-6 w-[280px] z-20 flex flex-col bg-white/70 canvas-dark:bg-zinc-900/70 backdrop-blur-2xl border border-white/60 canvas-dark:border-zinc-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] overflow-hidden transition-all duration-300">
 
             {/* Header */}
             <div className="px-5 pt-6 pb-4">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                        <LayoutGrid className="w-4 h-4 text-zinc-800 dark:text-zinc-200" />
-                        <span className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">Tools</span>
+                        <LayoutGrid className="w-4 h-4 text-zinc-800 canvas-dark:text-zinc-200" />
+                        <span className="font-semibold text-zinc-900 canvas-dark:text-zinc-100 text-sm">Tools</span>
                     </div>
                     <div className="flex items-center gap-2 text-zinc-400 relative">
                         <button 
@@ -107,11 +107,11 @@ export function LeftCatalogPanel() {
                             <span className="text-sm font-bold tracking-widest leading-none">...</span>
                         </button>
                         {showMenu && (
-                            <div className="absolute top-full right-0 mt-2 w-36 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-lg rounded-xl py-1 z-50">
-                                <button className="w-full text-left px-3 py-1.5 text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+                            <div className="absolute top-full right-0 mt-2 w-36 bg-white canvas-dark:bg-zinc-800 border border-zinc-200 canvas-dark:border-zinc-700 shadow-lg rounded-xl py-1 z-50">
+                                <button className="w-full text-left px-3 py-1.5 text-xs text-zinc-600 canvas-dark:text-zinc-400 hover:bg-zinc-50 canvas-dark:hover:bg-zinc-700 hover:text-zinc-900 canvas-dark:hover:text-zinc-100 transition-colors">
                                     Refresh Tools
                                 </button>
-                                <button className="w-full text-left px-3 py-1.5 text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+                                <button className="w-full text-left px-3 py-1.5 text-xs text-zinc-600 canvas-dark:text-zinc-400 hover:bg-zinc-50 canvas-dark:hover:bg-zinc-700 hover:text-zinc-900 canvas-dark:hover:text-zinc-100 transition-colors">
                                     Settings
                                 </button>
                             </div>
@@ -133,12 +133,12 @@ export function LeftCatalogPanel() {
                         placeholder="Search..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full bg-white/50 dark:bg-zinc-800/50 border border-zinc-200/60 dark:border-zinc-700/60 rounded-xl py-2 pl-9 pr-4 text-xs text-zinc-900 dark:text-zinc-100 shadow-sm shadow-black/5 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        className="w-full bg-white/50 canvas-dark:bg-zinc-800/50 border border-zinc-200/60 canvas-dark:border-zinc-700/60 rounded-xl py-2 pl-9 pr-4 text-xs text-zinc-900 canvas-dark:text-zinc-100 shadow-sm shadow-black/5 placeholder:text-zinc-400 canvas-dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                 </div>
 
                 {/* Tabs */}
-                <div className="flex items-center justify-between mt-5 border-b border-zinc-200/50 dark:border-zinc-700/50">
+                <div className="flex items-center justify-between mt-5 border-b border-zinc-200/50 canvas-dark:border-zinc-700/50">
                     {["All", "AI & Apps", "Custom"].map((tab) => (
                         <button
                             key={tab}
@@ -146,8 +146,8 @@ export function LeftCatalogPanel() {
                             className={cn(
                                 "relative pb-2 text-[10px] font-semibold transition-colors",
                                 activeTab === tab
-                                    ? "text-zinc-900 dark:text-zinc-100"
-                                    : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                                    ? "text-zinc-900 canvas-dark:text-zinc-100"
+                                    : "text-zinc-400 hover:text-zinc-600 canvas-dark:hover:text-zinc-300"
                             )}
                         >
                             {tab}
@@ -176,12 +176,12 @@ export function LeftCatalogPanel() {
                                         key={t.type}
                                         draggable
                                         onDragStart={(e) => onDragStart(e, t.type)}
-                                        className="group flex flex-col items-center justify-start pt-4 pb-2 h-[106px] bg-[#f8f9fa] dark:bg-zinc-800/50 border border-black/5 dark:border-white/5 rounded-3xl cursor-grab active:cursor-grabbing hover:bg-white dark:hover:bg-zinc-800 hover:shadow-md transition-all"
+                                        className="group flex flex-col items-center justify-start pt-4 pb-2 h-[106px] bg-[#f8f9fa] canvas-dark:bg-zinc-800/50 border border-black/5 canvas-dark:border-white/5 rounded-3xl cursor-grab active:cursor-grabbing hover:bg-white canvas-dark:hover:bg-zinc-800 hover:shadow-md transition-all"
                                     >
-                                        <div className="drag-image-target w-[52px] h-[52px] bg-white dark:bg-zinc-700 rounded-[18px] shadow-sm border border-black/5 dark:border-white/5 flex items-center justify-center mb-2.5 transition-transform group-hover:scale-105">
+                                        <div className="drag-image-target w-[52px] h-[52px] bg-white canvas-dark:bg-zinc-700 rounded-[18px] shadow-sm border border-black/5 canvas-dark:border-white/5 flex items-center justify-center mb-2.5 transition-transform group-hover:scale-105">
                                             <t.Icon className={cn("w-6 h-6", t.color)} />
                                         </div>
-                                        <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 text-center tracking-tight leading-none group-hover:text-zinc-900 dark:group-hover:text-zinc-100">
+                                        <span className="text-[11px] font-semibold text-zinc-600 canvas-dark:text-zinc-400 text-center tracking-tight leading-none group-hover:text-zinc-900 canvas-dark:group-hover:text-zinc-100">
                                             {t.name}
                                         </span>
                                     </div>
@@ -201,16 +201,16 @@ export function LeftCatalogPanel() {
                                             name: app.name,
                                             icon: app.logo ?? app.icon
                                         })}
-                                        className="group flex flex-col items-center justify-start pt-4 pb-2 h-[106px] bg-[#f8f9fa] dark:bg-zinc-800/50 border border-black/5 dark:border-white/5 rounded-3xl cursor-grab active:cursor-grabbing hover:bg-white dark:hover:bg-zinc-800 hover:shadow-md transition-all"
+                                        className="group flex flex-col items-center justify-start pt-4 pb-2 h-[106px] bg-[#f8f9fa] canvas-dark:bg-zinc-800/50 border border-black/5 canvas-dark:border-white/5 rounded-3xl cursor-grab active:cursor-grabbing hover:bg-white canvas-dark:hover:bg-zinc-800 hover:shadow-md transition-all"
                                     >
-                                        <div className="drag-image-target w-[52px] h-[52px] bg-white dark:bg-zinc-700 rounded-[18px] shadow-sm border border-black/5 dark:border-white/5 flex items-center justify-center mb-2.5 transition-transform group-hover:scale-105 overflow-hidden p-2">
+                                        <div className="drag-image-target w-[52px] h-[52px] bg-white canvas-dark:bg-zinc-700 rounded-[18px] shadow-sm border border-black/5 canvas-dark:border-white/5 flex items-center justify-center mb-2.5 transition-transform group-hover:scale-105 overflow-hidden p-2">
                                             {app.logo && app.logo.startsWith("http") ? (
                                                 <img src={app.logo} alt={app.name} className="w-full h-full object-contain" />
                                             ) : (
-                                                <span className="text-lg font-bold text-zinc-500 dark:text-zinc-400">{app.name.charAt(0)}</span>
+                                                <span className="text-lg font-bold text-zinc-500 canvas-dark:text-zinc-400">{app.name.charAt(0)}</span>
                                             )}
                                         </div>
-                                        <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 text-center tracking-tight leading-none group-hover:text-zinc-900 dark:group-hover:text-zinc-100 line-clamp-2 px-1">
+                                        <span className="text-[11px] font-semibold text-zinc-600 canvas-dark:text-zinc-400 text-center tracking-tight leading-none group-hover:text-zinc-900 canvas-dark:group-hover:text-zinc-100 line-clamp-2 px-1">
                                             {app.name}
                                         </span>
                                     </div>
