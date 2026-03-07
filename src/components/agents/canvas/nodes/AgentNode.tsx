@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { Bot, MousePointerClick } from "lucide-react";
+import { Bot, MousePointerClick, Sparkles } from "lucide-react";
 import type { AgentNodeData } from "../canvas-types";
 import { NodeHelperTip } from "./NodeHelperTip";
 
@@ -11,13 +11,22 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
 
   return (
     <div className="group relative flex flex-col items-center">
-      <div className="relative w-[96px] h-[96px] liquid-glass-node cursor-pointer overflow-visible z-10 flex items-center justify-center">
+      <div className="relative w-[112px] h-[112px] liquid-glass-node !rounded-full cursor-pointer overflow-visible z-10 flex items-center justify-center shadow-[0_0_30px_rgba(0,0,0,0.05)] ring-2 ring-white/50">
 
-        <div className="flex items-center justify-center text-4xl">
+        {/* Outer animated halo for the main AI Agent */}
+        <div className="absolute inset-[-6px] rounded-full border border-zinc-900/10 animate-[spin_10s_linear_infinite] [border-style:dashed]" />
+        
+        {/* Main AI Agent Badge */}
+        <div className="absolute -top-3 bg-zinc-900 text-white text-[9px] font-bold px-2 py-0.5 rounded-full border border-white shadow-sm z-20 flex items-center gap-1">
+          <Sparkles className="w-2.5 h-2.5" />
+          AI Agent
+        </div>
+
+        <div className="flex items-center justify-center text-5xl z-10">
           {d.avatarEmoji && d.avatarEmoji !== "🤖" ? (
             d.avatarEmoji
           ) : (
-            <Bot strokeWidth={1.5} className="w-10 h-10 text-zinc-700" />
+            <Bot strokeWidth={1.5} className="w-12 h-12 text-zinc-700" />
           )}
         </div>
 

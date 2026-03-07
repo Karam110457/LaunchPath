@@ -48,7 +48,7 @@ export const ToolNode = memo(function ToolNode({ data }: NodeProps) {
       {/* Square container */}
       <div
         className={cn(
-          "relative w-[96px] h-[96px] liquid-glass-node flex items-center justify-center cursor-pointer z-10",
+          "relative w-[96px] h-[96px] liquid-glass-node !rounded-2xl flex items-center justify-center cursor-pointer z-10",
           !d.isEnabled && "opacity-40"
         )}
       >
