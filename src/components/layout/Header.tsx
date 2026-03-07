@@ -28,6 +28,54 @@ function buildBreadcrumbs(
     return crumbs;
   }
 
+  // Client pages
+  if (pathname.startsWith("/dashboard/clients")) {
+    crumbs.push({
+      label: "Clients",
+      href: "/dashboard/clients",
+      isActive: pathname === "/dashboard/clients",
+    });
+
+    if (pathname === "/dashboard/clients/new") {
+      crumbs.push({
+        label: "New Client",
+        href: "/dashboard/clients/new",
+        isActive: true,
+      });
+    }
+
+    const clientMatch = pathname.match(/^\/dashboard\/clients\/([^/]+)/);
+    if (clientMatch && clientMatch[1] !== "new") {
+      crumbs.push({
+        label: "Client",
+        href: `/dashboard/clients/${clientMatch[1]}`,
+        isActive: true,
+      });
+    }
+
+    return crumbs;
+  }
+
+  // Campaign pages
+  if (pathname.startsWith("/dashboard/campaigns")) {
+    crumbs.push({
+      label: "Campaigns",
+      href: "/dashboard/campaigns",
+      isActive: pathname === "/dashboard/campaigns",
+    });
+
+    const campaignMatch = pathname.match(/^\/dashboard\/campaigns\/([^/]+)$/);
+    if (campaignMatch) {
+      crumbs.push({
+        label: "Campaign",
+        href: pathname,
+        isActive: true,
+      });
+    }
+
+    return crumbs;
+  }
+
   // Agent pages
   if (pathname.startsWith("/dashboard/agents")) {
     crumbs.push({

@@ -50,14 +50,18 @@ export async function getSidebarData(userId: string, email?: string) {
     name: s.name || nameMap.get(s.id) || "New Business",
   }));
 
-  // Count user's agents and clients (lightweight head-only queries)
-  const [{ count: agentCount }, { count: clientCount }] = await Promise.all([
+  // Count user's agents, clients, and campaigns (lightweight head-only queries)
+  const [{ count: agentCount }, { count: clientCount }, { count: campaignCount }] = await Promise.all([
     supabase
       .from("ai_agents")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId),
     supabase
       .from("clients")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
+    supabase
+      .from("campaigns")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId),
   ]);
@@ -72,5 +76,6 @@ export async function getSidebarData(userId: string, email?: string) {
     } satisfies SidebarUser,
     agentCount: agentCount ?? 0,
     clientCount: clientCount ?? 0,
+    campaignCount: campaignCount ?? 0,
   };
 }
