@@ -5,11 +5,11 @@
  *
  * Rotates through a shuffled list of quirky in-progress phrases. Each word
  * fades in with a short enter animation then breathes with an infinite pulse.
- * On word change, the current word fades out, the index updates, the span
- * remounts (key={index}) which resets both CSS animations cleanly.
+ * The cycling text uses a text-shimmer animation.
  */
 
 import { useState, useEffect } from "react";
+import { TextShimmer } from "@/components/ui/text-shimmer";
 
 const PHRASES = [
   "Thinking...",
@@ -75,14 +75,16 @@ export function TypingIndicator() {
       <span className="sr-only">Agent is thinking…</span>
       <span
         key={index}
-        className="text-sm font-medium text-primary/90"
+        className="text-sm font-medium text-primary/90 inline-block"
         style={
           hiding
             ? { opacity: 0, filter: "blur(3px)", transform: "scale(0.96)", transition: "opacity 200ms ease, filter 200ms ease, transform 200ms ease", animation: "none" }
             : { animation: WORD_ANIMATION }
         }
       >
-        {SHUFFLED[index]}
+        <TextShimmer duration={2}>
+          {SHUFFLED[index]}
+        </TextShimmer>
       </span>
     </div>
   );
