@@ -646,7 +646,7 @@ function AgentCanvasInner({
   else if (modal.type === "edit-subagent") modalTitle = "Edit Sub-Agent";
 
   return (
-    <div className="fixed inset-0 z-[100] w-full h-full overflow-hidden bg-[#ebebeb]">
+    <div className="relative w-full h-full overflow-hidden bg-[#ebebeb] animate-in fade-in duration-500">
       <TopBar
         agentName={formState.name}
         avatarEmoji={formState.avatarEmoji}

@@ -33,6 +33,8 @@ export function Sidebar({ systems, agentCount, clientCount }: SidebarProps) {
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const switcherRef = useRef<HTMLDivElement>(null);
 
+  const isBuilder = pathname.match(/\/dashboard\/agents\/.+/);
+
   // Derive business from URL when on a business route
   const systemMatch = pathname.match(/^\/dashboard\/systems\/([^/]+)/);
   const urlBusinessId = systemMatch?.[1] ?? null;
@@ -98,33 +100,38 @@ export function Sidebar({ systems, agentCount, clientCount }: SidebarProps) {
 
   const businessItems = selectedBusinessId
     ? [
-        {
-          label: "Overview",
-          href: `/dashboard/systems/${selectedBusinessId}`,
-          icon: LayoutDashboard,
-          exact: true,
-        },
-        {
-          label: "Chat",
-          href: `/dashboard/systems/${selectedBusinessId}/chat`,
-          icon: MessageSquare,
-        },
-        ...(selectedBusiness?.status === "complete"
-          ? [
-              {
-                label: "Builder",
-                href: `/dashboard/systems/${selectedBusinessId}/builder`,
-                icon: Paintbrush,
-              },
-            ]
-          : []),
-      ]
+      {
+        label: "Overview",
+        href: `/dashboard/systems/${selectedBusinessId}`,
+        icon: LayoutDashboard,
+        exact: true,
+      },
+      {
+        label: "Chat",
+        href: `/dashboard/systems/${selectedBusinessId}/chat`,
+        icon: MessageSquare,
+      },
+      ...(selectedBusiness?.status === "complete"
+        ? [
+          {
+            label: "Builder",
+            href: `/dashboard/systems/${selectedBusinessId}/builder`,
+            icon: Paintbrush,
+          },
+        ]
+        : []),
+    ]
     : [];
 
   return (
-    <aside className="fixed md:relative z-50 w-64 bg-background text-foreground hidden md:flex flex-col h-screen shrink-0 border-r border-border/40">
+    <aside
+      className={cn(
+        "relative z-50 bg-background text-foreground hidden md:flex flex-col h-screen shrink-0 border-r border-border/40 transition-all duration-500 ease-in-out",
+        isBuilder ? "w-0 -translate-x-full border-r-0 opacity-0 overflow-hidden" : "w-64"
+      )}
+    >
       {/* Brand header */}
-      <div className="h-14 flex items-center justify-center shrink-0">
+      <div className="h-14 flex items-center justify-center shrink-0 w-64">
         <Link href="/dashboard" className="flex items-center justify-center size-10 rounded-full hover:bg-muted transition-colors">
           <Logo className="text-xl" />
         </Link>

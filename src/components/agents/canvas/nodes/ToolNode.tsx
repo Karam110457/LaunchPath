@@ -48,7 +48,7 @@ export const ToolNode = memo(function ToolNode({ data }: NodeProps) {
       {/* Square container */}
       <div
         className={cn(
-          "relative w-[88px] h-[88px] bg-white/70 backdrop-blur-xl border border-white/60 rounded-3xl flex items-center justify-center cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] z-10",
+          "relative w-[88px] h-[88px] bg-white/70 backdrop-blur-xl border border-white/60 rounded-3xl flex items-center justify-center cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] z-10 liquid-glass",
           !d.isEnabled && "opacity-40"
         )}
       >

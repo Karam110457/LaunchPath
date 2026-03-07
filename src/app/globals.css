@@ -51,14 +51,17 @@
 :root {
   /* Default to Dark Mode values */
   --radius: 0.5rem;
-  --background: oklch(0.10 0 0); /* Darker background */
+  --background: oklch(0.10 0 0);
+  /* Darker background */
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.145 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.145 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.60 0.16 165); /* Deep Emerald/Teal Accent */
-  --primary-foreground: oklch(0.985 0 0); /* White text on green */
+  --primary: oklch(0.60 0.16 165);
+  /* Deep Emerald/Teal Accent */
+  --primary-foreground: oklch(0.985 0 0);
+  /* White text on green */
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.20 0 0);
@@ -68,7 +71,8 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(0.25 0 0);
   --input: oklch(0.25 0 0);
-  --ring: oklch(0.60 0.16 165); /* Match primary */
+  --ring: oklch(0.60 0.16 165);
+  /* Match primary */
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -124,7 +128,9 @@
  * Use slightly higher lightness so it matches sRGB appearance on Windows.
  */
 @media (color-gamut: p3) {
-  :root, .dark {
+
+  :root,
+  .dark {
     --primary: oklch(0.68 0.15 165);
     --ring: oklch(0.68 0.15 165);
   }
@@ -142,84 +148,184 @@
 
 /* Dot wave: smooth 3-dot typing indicator */
 @keyframes dot-wave {
-  0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
-  30% { transform: translateY(-5px); opacity: 1; }
+
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+
+  30% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
 }
 
 /* Cursor blink: authentic terminal-style blink (on 530ms, off 470ms) */
 @keyframes cursor-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
 }
 
 /* Shimmer sweep: left-to-right shimmer for thinking state */
 @keyframes shimmer-sweep {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(200%);
+  }
 }
 
 /* Thinking arc: slow rotating arc icon */
 @keyframes thinking-arc {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Word enter: one-shot fade-in for rotating typing indicator phrases */
 @keyframes word-enter {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 /* Word breathe: infinite gentle pulse after word-enter completes */
 @keyframes word-breathe {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* Thinking glow pulse: visible border glow while reasoning */
 @keyframes thinking-glow {
-  0%, 100% { box-shadow: 0 0 0 0 oklch(0.60 0.16 165 / 0.0); }
-  50% { box-shadow: 0 0 0 3px oklch(0.60 0.16 165 / 0.25), 0 0 20px 2px oklch(0.60 0.16 165 / 0.12); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 oklch(0.60 0.16 165 / 0.0);
+  }
+
+  50% {
+    box-shadow: 0 0 0 3px oklch(0.60 0.16 165 / 0.25), 0 0 20px 2px oklch(0.60 0.16 165 / 0.12);
+  }
 }
 
 /* Word materialise: blur-to-sharp resolve for TypingIndicator phrases */
 @keyframes word-materialise {
-  from { opacity: 0; filter: blur(4px); transform: scale(0.95) translateY(2px); }
-  to   { opacity: 1; filter: blur(0);   transform: scale(1)    translateY(0);   }
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: scale(0.95) translateY(2px);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1) translateY(0);
+  }
 }
 
 /* Score badge pulse: single pulse for #1 Recommended badge on entry */
 @keyframes badge-pulse-once {
-  0%   { transform: scale(1); }
-  35%  { transform: scale(1.08); }
-  65%  { transform: scale(0.96); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  35% {
+    transform: scale(1.08);
+  }
+
+  65% {
+    transform: scale(0.96);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* Step done bounce: icon scale pop when a progress step completes */
 @keyframes step-done-bounce {
-  0%   { transform: scale(1); }
-  40%  { transform: scale(1.25); }
-  70%  { transform: scale(0.92); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  40% {
+    transform: scale(1.25);
+  }
+
+  70% {
+    transform: scale(0.92);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* Confetti fly: particle burst for system-ready celebration */
 @keyframes confetti-fly {
-  0%   { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
-  100% { transform: translate(var(--cp-dx, 0px), var(--cp-dy, -80px)) rotate(var(--cp-rot, 180deg)) scale(0.4); opacity: 0; }
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(var(--cp-dx, 0px), var(--cp-dy, -80px)) rotate(var(--cp-rot, 180deg)) scale(0.4);
+    opacity: 0;
+  }
 }
 
 /* Ambient breathe: very slow background radial pulse for landing */
 @keyframes ambient-breathe {
-  0%, 100% { opacity: 0.4; }
-  50%       { opacity: 0.7; }
+
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
 }
 
 /* Heading word enter: for word-by-word landing reveal */
 @keyframes heading-word-enter {
-  from { opacity: 0; transform: translateY(8px); filter: blur(3px); }
-  to   { opacity: 1; transform: translateY(0);   filter: blur(0);   }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
 }
 
 /*
@@ -229,7 +335,8 @@
  * duration and removing delay makes the reveal instant or near-instant so it feels
  * intentional rather than broken.
  */
-@media (max-width: 768px), (hover: none) {
+@media (max-width: 768px),
+(hover: none) {
   [class*="animate-in"] {
     animation-duration: 0.25s !important;
     animation-delay: 0s !important;
@@ -238,8 +345,11 @@
 
 /* Agent canvas: animated dashed edges */
 @keyframes dash-flow {
-  to { stroke-dashoffset: -10; }
+  to {
+    stroke-dashoffset: -10;
+  }
 }
+
 .canvas-edge-animated {
   animation: dash-flow 1s linear infinite;
 }
@@ -247,11 +357,25 @@
 /* Agent canvas: node entrance — uses separate `scale` property so it doesn't
    override ReactFlow's inline `transform: translate()` positioning */
 @keyframes node-enter {
-  from { opacity: 0; scale: 0.92; }
-  to   { opacity: 1; scale: 1; }
+  from {
+    opacity: 0;
+    scale: 0.92;
+  }
+
+  to {
+    opacity: 1;
+    scale: 1;
+  }
 }
+
 .react-flow__node {
   animation: node-enter 0.4s ease-out;
+}
+
+@layer utilities {
+  .liquid-glass {
+    filter: url(#liquid-glass);
+  }
 }
 
 /* Hide connection handle dots on canvas nodes */
@@ -269,6 +393,7 @@
     padding-left: max(1rem, var(--safe-area-inset-left));
     padding-right: max(1rem, var(--safe-area-inset-right));
   }
+
   @media (min-width: 640px) {
     .container {
       max-width: 640px;
@@ -276,11 +401,13 @@
       padding-right: 1.5rem;
     }
   }
+
   @media (min-width: 768px) {
     .container {
       max-width: 768px;
     }
   }
+
   @media (min-width: 1024px) {
     .container {
       max-width: 1024px;
@@ -288,11 +415,13 @@
       padding-right: 2rem;
     }
   }
+
   @media (min-width: 1280px) {
     .container {
       max-width: 1280px;
     }
   }
+
   @media (min-width: 1536px) {
     .container {
       max-width: 1400px;
@@ -306,21 +435,25 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   html {
     /* Remove 300ms tap delay on iOS (with viewport max-scale, iOS already does this; this reinforces). */
     -webkit-tap-highlight-color: transparent;
   }
+
   body {
     @apply bg-background text-foreground;
     /* Smooth touch scrolling; lets browser optimize scroll without waiting for JS. */
     touch-action: manipulation;
   }
+
   /*
    * iOS / mobile: containment + content-visibility so the browser can skip painting
    * below-the-fold sections until they're near the viewport. Reduces initial paint
    * and keeps scroll responsive. contain-intrinsic-block-size avoids layout jump.
    */
   @media (max-width: 768px) {
+
     [id="problem"],
     [id="solution"],
     [id="why"],
@@ -330,8 +463,12 @@
       contain-intrinsic-block-size: 600px;
     }
   }
+
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
+
+    *,
+    *::before,
+    *::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;

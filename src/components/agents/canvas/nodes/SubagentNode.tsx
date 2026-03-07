@@ -12,7 +12,7 @@ export const SubagentNode = memo(function SubagentNode({ data }: NodeProps) {
 
   return (
     <div className="group relative flex flex-col items-center">
-      <div className="relative w-[88px] h-[88px] bg-white/70 backdrop-blur-xl border border-white/60 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] cursor-pointer transition-all duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] overflow-visible z-10 flex items-center justify-center">
+      <div className="relative w-[88px] h-[88px] bg-white/70 backdrop-blur-xl border border-white/60 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] cursor-pointer transition-all duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] overflow-visible z-10 flex items-center justify-center liquid-glass">
         {/* Target handle — receives edge from parent agent */}
         <Handle
           type="target"

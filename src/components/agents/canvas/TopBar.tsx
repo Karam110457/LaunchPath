@@ -39,7 +39,7 @@ export function TopBar({
   };
 
   return (
-    <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 flex items-center justify-between px-6 py-2.5 bg-white/70 backdrop-blur-xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-full w-[800px] max-w-[90vw]">
+    <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 flex items-center justify-between px-6 py-2.5 bg-white/70 backdrop-blur-xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-full w-[800px] max-w-[90vw] liquid-glass">
       <div className="flex items-center gap-4">
         <button
           type="button"

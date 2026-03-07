@@ -15,7 +15,7 @@ export function BottomBar({ testMode, onToggleTest }: BottomBarProps) {
   return (
     <>
       {/* Zoom controls (moved to absolute bottom left) */}
-      <div className="absolute bottom-6 left-6 z-30 flex items-center gap-1 bg-white/70 backdrop-blur-xl border border-white/60 shadow-sm rounded-xl p-1.5">
+      <div className="absolute bottom-6 left-6 z-30 flex items-center gap-1 bg-white/70 backdrop-blur-xl border border-white/60 shadow-sm rounded-xl p-1.5 liquid-glass">
         <button
           onClick={() => fitView({ padding: 0.3, duration: 300 })}
           className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 hover:bg-black/5 transition-colors"
@@ -30,7 +30,7 @@ export function BottomBar({ testMode, onToggleTest }: BottomBarProps) {
         <div
           onClick={onToggleTest}
           className={cn(
-            "flex items-center justify-between px-5 py-3 bg-white/70 backdrop-blur-xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-full transition-all cursor-text hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)]",
+            "flex items-center justify-between px-5 py-3 bg-white/70 backdrop-blur-xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-full transition-all cursor-text hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] liquid-glass",
             testMode && "ring-2 ring-primary/20 border-primary/30"
           )}
         >
