@@ -22,15 +22,16 @@ export async function PATCH(
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const body = await request.json() as { positions: Record<string, { x: number; y: number }> };
+  const body = await request.json() as any;
 
-  if (!body.positions || typeof body.positions !== "object") {
-    return NextResponse.json({ error: "positions required" }, { status: 400 });
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
+  // Update the entire canvas_layout with whatever the client sends
   const { error } = await supabase
     .from("ai_agents")
-    .update({ canvas_layout: body.positions })
+    .update({ canvas_layout: body })
     .eq("id", agentId)
     .eq("user_id", user.id);
 

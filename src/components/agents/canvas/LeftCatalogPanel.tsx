@@ -176,12 +176,12 @@ export function LeftCatalogPanel() {
                                         key={t.type}
                                         draggable
                                         onDragStart={(e) => onDragStart(e, t.type)}
-                                        className="group flex flex-col items-center justify-center p-3 h-[90px] bg-white/40 border border-white/50 rounded-2xl cursor-grab active:cursor-grabbing hover:bg-white/80 hover:shadow-sm transition-all"
+                                        className="group flex flex-col items-center justify-start pt-4 pb-2 h-[106px] bg-[#f8f9fa] border border-black/5 rounded-3xl cursor-grab active:cursor-grabbing hover:bg-white hover:shadow-md transition-all"
                                     >
-                                        <div className="drag-image-target w-[56px] h-[56px] liquid-glass-node rounded-2xl flex items-center justify-center mb-2 bg-white/70 shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-white/60 transition-transform group-hover:scale-105">
-                                            <t.Icon className={cn("w-5 h-5", t.color)} />
+                                        <div className="drag-image-target w-[52px] h-[52px] bg-white rounded-[18px] shadow-sm border border-black/5 flex items-center justify-center mb-2.5 transition-transform group-hover:scale-105">
+                                            <t.Icon className={cn("w-6 h-6", t.color)} />
                                         </div>
-                                        <span className="text-[10px] font-semibold text-zinc-700 text-center tracking-tight leading-none group-hover:text-zinc-900">
+                                        <span className="text-[11px] font-semibold text-zinc-600 text-center tracking-tight leading-none group-hover:text-zinc-900">
                                             {t.name}
                                         </span>
                                     </div>
@@ -201,16 +201,16 @@ export function LeftCatalogPanel() {
                                             name: app.name,
                                             icon: app.logo ?? app.icon
                                         })}
-                                        className="group flex flex-col items-center justify-center p-3 h-[90px] bg-white/40 border border-white/50 rounded-2xl cursor-grab active:cursor-grabbing hover:bg-white/80 hover:shadow-sm transition-all"
+                                        className="group flex flex-col items-center justify-start pt-4 pb-2 h-[106px] bg-[#f8f9fa] border border-black/5 rounded-3xl cursor-grab active:cursor-grabbing hover:bg-white hover:shadow-md transition-all"
                                     >
-                                        <div className="drag-image-target w-[56px] h-[56px] liquid-glass-node rounded-2xl flex items-center justify-center mb-2 bg-white/70 shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-white/60 transition-transform group-hover:scale-105 overflow-hidden p-1.5">
+                                        <div className="drag-image-target w-[52px] h-[52px] bg-white rounded-[18px] shadow-sm border border-black/5 flex items-center justify-center mb-2.5 transition-transform group-hover:scale-105 overflow-hidden p-2">
                                             {app.logo && app.logo.startsWith("http") ? (
-                                                <img src={app.logo} alt={app.name} className="w-full h-full object-contain rounded-xl" />
+                                                <img src={app.logo} alt={app.name} className="w-full h-full object-contain" />
                                             ) : (
-                                                <span className="text-sm font-bold text-zinc-500">{app.name.charAt(0)}</span>
+                                                <span className="text-lg font-bold text-zinc-500">{app.name.charAt(0)}</span>
                                             )}
                                         </div>
-                                        <span className="text-[10px] font-semibold text-zinc-700 text-center tracking-tight leading-none group-hover:text-zinc-900 line-clamp-2">
+                                        <span className="text-[11px] font-semibold text-zinc-600 text-center tracking-tight leading-none group-hover:text-zinc-900 line-clamp-2 px-1">
                                             {app.name}
                                         </span>
                                     </div>

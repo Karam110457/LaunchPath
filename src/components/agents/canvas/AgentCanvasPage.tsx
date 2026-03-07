@@ -4,18 +4,21 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-  ReactFlow,
-  ReactFlowProvider,
-  useNodesState,
-  useEdgesState,
-  Background,
-  BackgroundVariant,
-  type Node,
-  type Edge,
-  type NodeMouseHandler,
-  type OnNodeDrag,
-} from "@xyflow/react";
+  import {
+    ReactFlow,
+    ReactFlowProvider,
+    useNodesState,
+    useEdgesState,
+    useReactFlow,
+    Background,
+    BackgroundVariant,
+    addEdge,
+    type Connection,
+    type Node,
+    type Edge,
+    type NodeMouseHandler,
+    type OnNodeDrag,
+  } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
 import { AgentNode } from "./nodes/AgentNode";
@@ -41,7 +44,7 @@ import { VersionHistoryModal } from "./VersionHistoryModal";
 import { NodeHelperTip } from "./nodes/NodeHelperTip";
 import { CanvasActionsContext } from "./canvas-context";
 import { LeftCatalogPanel } from "./LeftCatalogPanel";
-import { useCanvasLayout, type SavedPositions } from "./useCanvasLayout";
+import { useCanvasLayout, type CanvasLayoutState } from "./useCanvasLayout";
 import type {
   PanelState,
   AgentNodeData,
@@ -75,7 +78,7 @@ export interface AgentCanvasPageProps {
     status: string;
     created_at: string;
     wizard_config?: WizardConfig | null;
-    canvas_layout?: SavedPositions | null;
+    canvas_layout?: any; // We parse this below
     knowledge_enabled?: boolean;
   };
   personality: {
@@ -101,6 +104,7 @@ function AgentCanvasInner({
   initialDocuments,
 }: AgentCanvasPageProps) {
   const router = useRouter();
+  const { screenToFlowPosition } = useReactFlow();
 
   // ─── Agent form state ────────────────────────────────────────────────────
   const originalFormState = useMemo<AgentFormState>(
@@ -437,21 +441,28 @@ function AgentCanvasInner({
   );
 
   // ─── Canvas position persistence ─────────────────────────────────────────
-  // Initialise from the server-fetched canvas_layout (persisted positions)
-  const [savedPositions, setSavedPositions] = useState<SavedPositions>(
-    (agent.canvas_layout as SavedPositions) ?? {}
-  );
+  // Parse existing data ensuring it conforms to CanvasLayoutState
+  const [layoutState, setLayoutState] = useState<CanvasLayoutState>(() => {
+    const raw = agent.canvas_layout;
+    if (!raw) return { positions: {}, edges: [] };
+    if (raw.positions) {
+      return { positions: raw.positions, edges: raw.edges || [] };
+    }
+    // Legacy support where it was just positions
+    return { positions: raw, edges: [] };
+  });
+  
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const persistPositions = useCallback(
-    (positions: SavedPositions) => {
+  const persistLayout = useCallback(
+    (newState: CanvasLayoutState) => {
       // Debounce to avoid spamming the API during rapid drags
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       saveTimerRef.current = setTimeout(() => {
         void fetch(`/api/agents/${agent.id}/canvas-layout`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ positions }),
+          body: JSON.stringify(newState),
         });
       }, 600);
     },
@@ -464,7 +475,7 @@ function AgentCanvasInner({
     knowledge: hasKnowledge ? knowledgeData : null,
     tools: toolNodeItems,
     subagents: subagentNodeItems,
-    savedPositions,
+    layoutState,
   });
 
   // Start empty — set correctly before first paint via useLayoutEffect
@@ -516,14 +527,57 @@ function AgentCanvasInner({
   // ─── Drag end: capture new position and persist ───────────────────────────
   const onNodeDragStop: OnNodeDrag = useCallback(
     (_event, _node, allNodes) => {
-      const updated: SavedPositions = { ...savedPositions };
+      const updatedPositions = { ...layoutState.positions };
       for (const n of allNodes) {
-        updated[n.id] = { x: Math.round(n.position.x), y: Math.round(n.position.y) };
+        updatedPositions[n.id] = { x: Math.round(n.position.x), y: Math.round(n.position.y) };
       }
-      setSavedPositions(updated);
-      persistPositions(updated);
+      const newState = { ...layoutState, positions: updatedPositions };
+      setLayoutState(newState);
+      persistLayout(newState);
     },
-    [savedPositions, persistPositions]
+    [layoutState, persistLayout]
+  );
+
+  const onConnect = useCallback(
+    (params: Connection) => {
+      // Connect nodes visually and save
+      const newEdge: Edge = {
+        ...params,
+        id: `e-${params.source}-${params.target}`,
+        type: "dashedEdge",
+      };
+      
+      const newEdges = addEdge(newEdge, edges);
+      setEdges(newEdges);
+      
+      // We only persist tool and subagent edges (knowledge ones are auto, but saving them is fine too)
+      const newState = { ...layoutState, edges: newEdges.filter(e => !e.id.includes("knowledge")) };
+      setLayoutState(newState);
+      persistLayout(newState);
+    },
+    [edges, layoutState, persistLayout, setEdges]
+  );
+  
+  // Wrapper for onEdgesChange to persist deletions
+  const handleEdgesChange = useCallback(
+    (changes: any) => {
+      onEdgesChange(changes);
+      
+      // If edges were deleted, we should sync to layoutState
+      const isDelete = changes.some((c: any) => c.type === 'remove');
+      if (isDelete) {
+        // We defer by 1 tick so ReactFlow updates the local `edges` state first
+        setTimeout(() => {
+          setEdges((currentEdges) => {
+            const newState = { ...layoutState, edges: currentEdges.filter(e => !e.id.includes("knowledge")) };
+            setLayoutState(newState);
+            persistLayout(newState);
+            return currentEdges;
+          });
+        }, 0);
+      }
+    },
+    [layoutState, onEdgesChange, persistLayout, setEdges]
   );
 
   // ─── Interaction ─────────────────────────────────────────────────────────
@@ -620,6 +674,12 @@ function AgentCanvasInner({
     const dataStr = event.dataTransfer.getData("application/reactflow");
     if (!dataStr) return;
 
+    // Convert mouse event to canvas coordinate
+    const position = screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY,
+    });
+
     try {
       const data = JSON.parse(dataStr);
       const { type, toolkit, name, icon } = data;
@@ -634,12 +694,16 @@ function AgentCanvasInner({
             body: JSON.stringify({ knowledge_enabled: true, skip_version: true }),
           });
           setHasKnowledge(true);
-          // Don't open modal immediately on drop
+          // Set position for knowledge node
+          const newPos = { ...layoutState.positions, "knowledge": position };
+          const newState = { ...layoutState, positions: newPos };
+          setLayoutState(newState);
+          persistLayout(newState);
         })();
       } else if (type === "composio") {
         // Create the tool immediately on drop
         void (async () => {
-          await fetch(`/api/agents/${targetAgentId}/tools`, {
+          const res = await fetch(`/api/agents/${targetAgentId}/tools`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -653,16 +717,27 @@ function AgentCanvasInner({
               },
             }),
           });
+          const json = await res.json();
+          if (json.tool) {
+            const nodeId = `tool-${json.tool.id}`;
+            const newPos = { ...layoutState.positions, [nodeId]: position };
+            const newState = { ...layoutState, positions: newPos };
+            setLayoutState(newState);
+            persistLayout(newState);
+          }
           await fetchTools();
         })();
       } else if (type === "subagent") {
-        // For subagent, we still need to open the setup to name it, or we can create a default one
+        // For subagent, we still need to open the setup to name it, but we can't save its position until it's created
+        // We'll pass the position to the setup state so it can be saved when created if we wanted,
+        // but since SubagentSetup currently doesn't accept position, we can just rely on the default layout for now,
+        // or we could add a temporary position. For now, let's just let it be.
         setSetupTool({ toolType: type, agentId: targetAgentId });
       } else {
         // Create custom tools immediately
         void (async () => {
           const defaultName = type === "http" ? "HTTP Request" : type === "webhook" ? "Webhook" : type === "mcp" ? "MCP Server" : "New Tool";
-          await fetch(`/api/agents/${targetAgentId}/tools`, {
+          const res = await fetch(`/api/agents/${targetAgentId}/tools`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -672,6 +747,14 @@ function AgentCanvasInner({
               config: {},
             }),
           });
+          const json = await res.json();
+          if (json.tool) {
+            const nodeId = `tool-${json.tool.id}`;
+            const newPos = { ...layoutState.positions, [nodeId]: position };
+            const newState = { ...layoutState, positions: newPos };
+            setLayoutState(newState);
+            persistLayout(newState);
+          }
           await fetchTools();
         })();
       }
@@ -679,7 +762,7 @@ function AgentCanvasInner({
     } catch (e) {
       console.error("Drop failed", e);
     }
-  }, [agent.id]);
+  }, [agent.id, screenToFlowPosition, layoutState, persistLayout]);
 
   const onNodeDoubleClick: NodeMouseHandler = useCallback(
     (_event, node) => {
@@ -751,7 +834,8 @@ function AgentCanvasInner({
             nodes={nodes}
             edges={edges}
             onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
+            onEdgesChange={handleEdgesChange}
+            onConnect={onConnect}
             onNodeDoubleClick={onNodeDoubleClick}
             onNodeDragStop={onNodeDragStop}
             onDragOver={onDragOver}
@@ -764,13 +848,12 @@ function AgentCanvasInner({
             minZoom={0.3}
             maxZoom={2}
             className="!bg-transparent"
-            nodesConnectable={false}
             elementsSelectable
           >
             <Background
               variant={BackgroundVariant.Dots}
               size={1.5}
-              color="rgba(0, 0, 0, 0.06)"
+              color="rgba(0, 0, 0, 0.15)"
             />
           </ReactFlow>
         </CanvasActionsContext.Provider>

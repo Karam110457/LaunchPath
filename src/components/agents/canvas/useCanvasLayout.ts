@@ -15,14 +15,17 @@ type CanvasNode = {
   draggable: boolean;
 };
 
-export type SavedPositions = Record<string, { x: number; y: number }>;
+export type CanvasLayoutState = {
+  positions: Record<string, { x: number; y: number }>;
+  edges: Edge[];
+};
 
 interface LayoutInput {
   agent: AgentNodeData;
   knowledge: KnowledgeNodeData | null;
   tools: ToolNodeData[];
   subagents: SubagentTreeData[];
-  savedPositions?: SavedPositions;
+  layoutState: CanvasLayoutState;
 }
 
 // ─── Node dimensions (match actual rendered sizes) ───────────────────────────
@@ -92,7 +95,7 @@ export function useCanvasLayout({ agent, knowledge, tools, subagents, savedPosit
       savedPositions?.[id] ?? defaultPos;
 
     const nodes: CanvasNode[] = [];
-    const edges: Edge[] = [];
+    const edges: Edge[] = [...(layoutState.edges || [])];
 
     // ─── Agent node (row 0) ──────────────────────────────────────────────
     nodes.push({
@@ -134,13 +137,7 @@ export function useCanvasLayout({ agent, knowledge, tools, subagents, savedPosit
         data: tool as unknown as Record<string, unknown>,
         draggable: true,
       });
-      edges.push({
-        id: `agent-tool-${tool.toolId}`,
-        source: "agent",
-        sourceHandle: "bottom-right",
-        target: nodeId,
-        type: "dashedEdge",
-      });
+      // Tool edges are now manual
     });
 
     // ─── Sub-agent clusters (row 1 + row 2) ──────────────────────────────
@@ -165,13 +162,7 @@ export function useCanvasLayout({ agent, knowledge, tools, subagents, savedPosit
         data: sa as unknown as Record<string, unknown>,
         draggable: true,
       });
-      edges.push({
-        id: `agent-${saId}`,
-        source: "agent",
-        sourceHandle: "bottom-right",
-        target: saId,
-        type: "dashedEdge",
-      });
+      // Subagent edges are now manual
 
       // ── Sub-agent children (row 2) ───────────────────────────────────
 
@@ -219,13 +210,7 @@ export function useCanvasLayout({ agent, knowledge, tools, subagents, savedPosit
             data: tool as unknown as Record<string, unknown>,
             draggable: true,
           });
-          edges.push({
-            id: `${saId}-tool-${tool.toolId}`,
-            source: saId,
-            sourceHandle: "bottom-right",
-            target: toolId,
-            type: "dashedEdge",
-          });
+          // Tool edges are now manual
         });
       }
 
