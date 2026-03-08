@@ -3,16 +3,16 @@
 import {
   BaseEdge,
   EdgeLabelRenderer,
-  useReactFlow,
   type EdgeProps,
   getSmoothStepPath,
 } from "@xyflow/react";
 import { X } from "lucide-react";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { useCanvasTheme } from "../canvas-theme";
+import { CanvasActionsContext } from "../canvas-context";
 
 export function DashedEdge(props: EdgeProps) {
-  const { setEdges } = useReactFlow();
+  const { onDeleteEdge } = useContext(CanvasActionsContext);
   const { theme } = useCanvasTheme();
   const [hovered, setHovered] = useState(false);
 
@@ -28,7 +28,7 @@ export function DashedEdge(props: EdgeProps) {
   });
 
   // Don't show delete on auto-generated knowledge edges
-  const isKnowledgeEdge = props.id.includes("knowledge");
+  const isKnowledgeEdge = props.id.endsWith("-knowledge");
   const showDelete = !isKnowledgeEdge && (hovered || props.selected);
 
   // Grey — adapts to theme (light: neutral-400/500, canvas-dark: neutral-600/neutral-400)
@@ -58,17 +58,20 @@ export function DashedEdge(props: EdgeProps) {
           strokeWidth: hovered || props.selected ? 2.5 : 1.75,
           strokeDasharray: "8 6",
           transition: "stroke 0.2s ease, stroke-width 0.2s ease",
+          animationDuration: hovered || props.selected ? "0.5s" : "1.5s",
         }}
         className="canvas-edge-animated"
       />
 
       <EdgeLabelRenderer>
         <div
-          className="nodrag nopan absolute pointer-events-auto transition-opacity duration-200"
+          className="nodrag nopan absolute pointer-events-auto"
           style={{
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
             opacity: showDelete ? 1 : 0,
+            scale: showDelete ? 1 : 0.8,
             pointerEvents: showDelete ? "all" : "none",
+            transition: "opacity 0.15s ease, scale 0.15s ease",
           }}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
@@ -78,7 +81,7 @@ export function DashedEdge(props: EdgeProps) {
             title="Delete connection"
             onClick={(e) => {
               e.stopPropagation();
-              setEdges((edges) => edges.filter((edge) => edge.id !== props.id));
+              onDeleteEdge(props.id);
             }}
           >
             <X className="w-3.5 h-3.5" />
