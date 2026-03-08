@@ -1109,9 +1109,6 @@ function AgentCanvasInner({
         </div>
       )}
 
-      {/* Gradient Overlay for bottom of canvas */}
-      <div className="pointer-events-none fixed bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-white via-white/80 to-transparent canvas-dark:from-[#050505] canvas-dark:via-[#050505]/80 canvas-dark:to-transparent z-[25]" />
-
       {/* Zoom controls */}
       <div className="absolute bottom-6 left-6 md:left-[320px] z-30 flex items-center gap-1 bg-white/70 canvas-dark:bg-[#1C1C1C]/70 backdrop-blur-xl border border-white/60 canvas-dark:border-[#2A2A2A]/50 shadow-sm rounded-xl p-1.5">
         <button
