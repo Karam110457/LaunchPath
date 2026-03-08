@@ -1114,6 +1114,8 @@ function AgentCanvasInner({
 
       {/* Zoom controls */}
       <div className="absolute bottom-6 left-6 md:left-[320px] z-30 flex items-center gap-1 bg-white/70 canvas-dark:bg-[#1C1C1C]/70 backdrop-blur-xl border border-white/60 canvas-dark:border-[#2A2A2A]/50 shadow-sm rounded-xl p-1.5">
+        <button
+          onClick={() => zoomIn({ duration: 200 })}
           className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-800 canvas-dark:hover:text-neutral-200 hover:bg-black/5 canvas-dark:hover:bg-white/5 transition-colors"
           title="Zoom In"
         >
