@@ -220,6 +220,8 @@ export interface UpdateToolPayload {
   description?: string;
   config?: Record<string, unknown>;
   is_enabled?: boolean;
+  /** Reassign tool to a different agent (cross-agent canvas connections) */
+  agent_id?: string;
 }
 
 export interface TestToolPayload {

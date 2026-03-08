@@ -774,19 +774,12 @@ function AgentCanvasInner({
         return false;
       }
 
-      // Tools handle (bottom-right) → own tool or subagent nodes only
+      // Tools handle (bottom-right) → tool or subagent nodes
       if (sourceHandle === "bottom-right") {
         if (targetNode.type === "toolNode") {
-          // Parent agent → parent tools only (tool-*)
-          if (sourceId === "agent") {
-            return /^tool-.+$/.test(targetId) && !targetId.startsWith("tool-temp");
-          }
-          // Subagent → its own tools only (sa-{id}-tool-*)
-          const saMatch = sourceId.match(/^subagent-(.+)$/);
-          if (saMatch) {
-            return targetId.startsWith(`sa-${saMatch[1]}-tool-`);
-          }
-          return false;
+          // Allow any agent/subagent to connect to any tool node
+          // (cross-agent connections trigger ownership reassignment in onConnect)
+          return !targetId.startsWith("tool-temp");
         }
 
         // Subagent nodes can only be connected from the parent agent
@@ -856,63 +849,154 @@ function AgentCanvasInner({
   );
 
   const onConnect = useCallback(
-    (params: Connection) => {
+    async (params: Connection) => {
       const { source, target } = params;
       if (!source || !target) return;
 
-      const newEdge: Edge = {
-        ...params,
-        id: `e-${source}-${target}`,
-        type: "dashedEdge",
-      };
+      // ── Determine source agent ID ──────────────────────────────────────
+      const sourceAgentId = source === "agent"
+        ? agent.id
+        : source.match(/^subagent-(.+)$/)?.[1] ?? agent.id;
 
-      // Add edge + persist in one updater (avoids stale closure)
-      setEdges((currentEdges) => {
-        const updated = addEdge(newEdge, currentEdges);
-        const ls = layoutStateRef.current;
-        const newState = { ...ls, edges: updated.filter(e => !e.id.endsWith("-knowledge")) };
-        setLayoutState(newState);
-        persistLayout(newState);
-        return updated;
-      });
+      // ── Determine tool's current owner + tool ID from node ID ─────────
+      const parentToolMatch = target.match(/^tool-(.+)$/);
+      const saToolMatch = target.match(/^sa-(.+)-tool-(.+)$/);
+      let toolCurrentOwnerId: string;
+      let toolId: string;
 
-      // Enable the tool in DB
-      const resolved = resolveToolFromNodeId(target);
-      if (resolved) setToolEnabled(resolved.agentId, resolved.toolId, true);
+      if (parentToolMatch) {
+        toolCurrentOwnerId = agent.id;
+        toolId = parentToolMatch[1];
+      } else if (saToolMatch) {
+        toolCurrentOwnerId = saToolMatch[1];
+        toolId = saToolMatch[2];
+      } else {
+        // Non-tool target (subagent node) — resolve + enable normally
+        const resolved = resolveToolFromNodeId(target);
+        if (resolved) setToolEnabled(resolved.agentId, resolved.toolId, true);
+        const newEdge: Edge = { ...params, id: `e-${source}-${target}`, type: "dashedEdge" };
+        setEdges((cur) => {
+          const updated = addEdge(newEdge, cur);
+          const ls = layoutStateRef.current;
+          const ns = { ...ls, edges: updated.filter(e => !e.id.endsWith("-knowledge")) };
+          setLayoutState(ns); persistLayout(ns);
+          return updated;
+        });
+        const tn = nodes.find(n => n.id === target);
+        const dn = tn ? getNodeDisplayName(tn) : target;
+        pushUndo({
+          label: `Connected ${dn}`,
+          undo: () => {
+            isUndoingRef.current = true;
+            setEdges((p) => { const f = p.filter(e => e.id !== newEdge.id); const s = { ...layoutStateRef.current, edges: f.filter(e => !e.id.endsWith("-knowledge")) }; setLayoutState(s); persistLayout(s); return f; });
+            if (resolved) setToolEnabled(resolved.agentId, resolved.toolId, false);
+            requestAnimationFrame(() => { isUndoingRef.current = false; });
+          },
+          redo: () => {
+            isUndoingRef.current = true;
+            setEdges((p) => { const r = addEdge(newEdge, p); const s = { ...layoutStateRef.current, edges: r.filter(e => !e.id.endsWith("-knowledge")) }; setLayoutState(s); persistLayout(s); return r; });
+            if (resolved) setToolEnabled(resolved.agentId, resolved.toolId, true);
+            requestAnimationFrame(() => { isUndoingRef.current = false; });
+          },
+        });
+        return;
+      }
 
-      // Undo support
+      const needsReassign = sourceAgentId !== toolCurrentOwnerId;
       const targetNode = nodes.find(n => n.id === target);
       const displayName = targetNode ? getNodeDisplayName(targetNode) : target;
 
-      pushUndo({
-        label: `Connected ${displayName}`,
-        undo: () => {
-          isUndoingRef.current = true;
-          setEdges((prev) => {
-            const filtered = prev.filter((e) => e.id !== newEdge.id);
-            const s = { ...layoutStateRef.current, edges: filtered.filter(e => !e.id.endsWith("-knowledge")) };
-            setLayoutState(s);
-            persistLayout(s);
-            return filtered;
-          });
-          if (resolved) setToolEnabled(resolved.agentId, resolved.toolId, false);
-          requestAnimationFrame(() => { isUndoingRef.current = false; });
-        },
-        redo: () => {
-          isUndoingRef.current = true;
-          setEdges((prev) => {
-            const restored = addEdge(newEdge, prev);
-            const s = { ...layoutStateRef.current, edges: restored.filter(e => !e.id.endsWith("-knowledge")) };
-            setLayoutState(s);
-            persistLayout(s);
-            return restored;
-          });
-          if (resolved) setToolEnabled(resolved.agentId, resolved.toolId, true);
-          requestAnimationFrame(() => { isUndoingRef.current = false; });
-        },
-      });
+      if (!needsReassign) {
+        // ── Same-agent connection: create edge + enable ──────────────────
+        const newEdge: Edge = { ...params, id: `e-${source}-${target}`, type: "dashedEdge" };
+        setEdges((cur) => {
+          const updated = addEdge(newEdge, cur);
+          const ls = layoutStateRef.current;
+          const ns = { ...ls, edges: updated.filter(e => !e.id.endsWith("-knowledge")) };
+          setLayoutState(ns); persistLayout(ns);
+          return updated;
+        });
+        setToolEnabled(sourceAgentId, toolId, true);
+
+        pushUndo({
+          label: `Connected ${displayName}`,
+          undo: () => {
+            isUndoingRef.current = true;
+            setEdges((p) => { const f = p.filter(e => e.id !== newEdge.id); const s = { ...layoutStateRef.current, edges: f.filter(e => !e.id.endsWith("-knowledge")) }; setLayoutState(s); persistLayout(s); return f; });
+            setToolEnabled(sourceAgentId, toolId, false);
+            requestAnimationFrame(() => { isUndoingRef.current = false; });
+          },
+          redo: () => {
+            isUndoingRef.current = true;
+            setEdges((p) => { const r = addEdge(newEdge, p); const s = { ...layoutStateRef.current, edges: r.filter(e => !e.id.endsWith("-knowledge")) }; setLayoutState(s); persistLayout(s); return r; });
+            setToolEnabled(sourceAgentId, toolId, true);
+            requestAnimationFrame(() => { isUndoingRef.current = false; });
+          },
+        });
+      } else {
+        // ── Cross-agent connection: reassign ownership + refetch ─────────
+        // Temporary edge for immediate visual feedback
+        const tempEdge: Edge = { ...params, id: `e-temp-reassign`, type: "dashedEdge" };
+        setEdges((cur) => addEdge(tempEdge, cur));
+
+        // Reassign tool to the new owner agent + enable
+        await fetch(`/api/agents/${toolCurrentOwnerId}/tools/${toolId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ agent_id: sourceAgentId, is_enabled: true }),
+        });
+
+        // Refetch — rebuilds graph with new node IDs (tool moves to new owner)
+        await Promise.all([fetchTools(), fetchSubagents()]);
+
+        // After refetch, state updates are batched. Add the correct edge.
+        // The layout rebuild useEffect will clean up the stale temp edge.
+        const newNodeId = sourceAgentId === agent.id
+          ? `tool-${toolId}`
+          : `sa-${sourceAgentId}-tool-${toolId}`;
+        const newSource = sourceAgentId === agent.id ? "agent" : `subagent-${sourceAgentId}`;
+        const correctEdgeId = `e-${newSource}-${newNodeId}`;
+
+        setEdges((cur) => {
+          // Remove temp edge, add correct edge
+          const withoutTemp = cur.filter(e => e.id !== "e-temp-reassign");
+          if (withoutTemp.some(e => e.id === correctEdgeId)) return withoutTemp;
+          const updated = addEdge(
+            { id: correctEdgeId, source: newSource, sourceHandle: "bottom-right", target: newNodeId, type: "dashedEdge" },
+            withoutTemp
+          );
+          const ls = layoutStateRef.current;
+          const ns = { ...ls, edges: updated.filter(e => !e.id.endsWith("-knowledge")) };
+          setLayoutState(ns); persistLayout(ns);
+          return updated;
+        });
+
+        pushUndo({
+          label: `Moved ${displayName} to ${sourceAgentId === agent.id ? "parent agent" : "sub-agent"}`,
+          undo: async () => {
+            isUndoingRef.current = true;
+            await fetch(`/api/agents/${sourceAgentId}/tools/${toolId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ agent_id: toolCurrentOwnerId, is_enabled: false }),
+            });
+            await Promise.all([fetchTools(), fetchSubagents()]);
+            isUndoingRef.current = false;
+          },
+          redo: async () => {
+            isUndoingRef.current = true;
+            await fetch(`/api/agents/${toolCurrentOwnerId}/tools/${toolId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ agent_id: sourceAgentId, is_enabled: true }),
+            });
+            await Promise.all([fetchTools(), fetchSubagents()]);
+            isUndoingRef.current = false;
+          },
+        });
+      }
     },
-    [nodes, persistLayout, setEdges, resolveToolFromNodeId, setToolEnabled, pushUndo]
+    [agent.id, nodes, persistLayout, setEdges, resolveToolFromNodeId, setToolEnabled, pushUndo, fetchTools, fetchSubagents]
   );
 
   // Wrapper for onEdgesChange — handles keyboard delete, persist, undo, toast

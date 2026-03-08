@@ -75,6 +75,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   if (body.display_name !== undefined) updates.display_name = body.display_name.trim();
   if (body.description !== undefined) updates.description = body.description.trim();
   if (body.is_enabled !== undefined) updates.is_enabled = body.is_enabled;
+  if (body.agent_id !== undefined) updates.agent_id = body.agent_id;
 
   if (body.config !== undefined) {
     // Merge incoming config — masked fields are preserved from stored value
