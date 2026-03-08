@@ -25,9 +25,8 @@ export default async function PortalCampaigns() {
           {campaigns.map((campaign) => {
             const agent = campaign.ai_agents as {
               name: string;
-              personality: { emoji?: string } | null;
+              personality: Record<string, unknown> | null;
             } | null;
-            const emoji = (agent?.personality as Record<string, unknown>)?.emoji as string | undefined;
 
             return (
               <Link
@@ -37,7 +36,6 @@ export default async function PortalCampaigns() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {emoji && <span className="text-lg">{emoji}</span>}
                     <h3 className="font-semibold">{campaign.name}</h3>
                   </div>
                   <span

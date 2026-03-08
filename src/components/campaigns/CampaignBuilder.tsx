@@ -191,9 +191,6 @@ export function CampaignBuilder({
   const agentData = Array.isArray(campaign.ai_agents)
     ? campaign.ai_agents[0]
     : campaign.ai_agents;
-  const agentEmoji =
-    (agentData?.personality as { avatar_emoji?: string } | null)
-      ?.avatar_emoji ?? "\u{1F916}";
 
   return (
     <div className="flex flex-col h-screen">
@@ -211,7 +208,7 @@ export function CampaignBuilder({
               {campaign.name}
             </h1>
             <p className="text-xs text-muted-foreground">
-              {agentEmoji} {agentData?.name ?? "Unknown agent"}
+              {agentData?.name ?? "Unknown agent"}
               {campaign.clients?.name
                 ? ` \u2022 ${campaign.clients.name}`
                 : campaign.client_name

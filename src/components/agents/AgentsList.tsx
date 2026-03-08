@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useMemo } from "react";
-import { Copy, Trash2, Loader2, Search } from "lucide-react";
+import { Copy, Trash2, Loader2, Search, Bot } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -127,10 +127,6 @@ export function AgentsList({ agents }: AgentsListProps) {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((agent) => {
-            const personality = agent.personality as {
-              avatar_emoji?: string;
-            } | null;
-            const emoji = personality?.avatar_emoji ?? "\u{1F916}";
             const statusInfo =
               STATUS_STYLES[agent.status] ?? STATUS_STYLES.draft;
 
@@ -143,7 +139,9 @@ export function AgentsList({ agents }: AgentsListProps) {
                 <Card className="hover:border-primary/30 hover:shadow-md transition-all h-full group relative">
                   <CardContent className="pt-6">
                     <div className="flex items-start gap-3">
-                      <span className="text-2xl">{emoji}</span>
+                      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                        <Bot className="w-5 h-5 text-muted-foreground" />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-medium truncate">{agent.name}</h3>

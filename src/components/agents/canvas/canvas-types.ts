@@ -4,7 +4,6 @@ export interface AgentNodeData {
   name: string;
   description: string | null;
   model: string;
-  avatarEmoji: string;
   tone: string | null;
   greetingMessage: string | null;
   systemPrompt: string;
@@ -40,7 +39,6 @@ export interface SubagentNodeData {
   /** The agent_tools.id linking parent → child */
   toolRecordId: string;
   name: string;
-  avatarEmoji: string;
   description: string | null;
   status: string;
 }
@@ -70,7 +68,6 @@ export interface WizardConfig {
 export interface AgentFormState {
   name: string;
   description: string;
-  avatarEmoji: string;
   tone: string;
   greetingMessage: string;
   model: string;

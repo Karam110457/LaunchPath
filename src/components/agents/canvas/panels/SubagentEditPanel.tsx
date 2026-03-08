@@ -33,7 +33,7 @@ interface SubagentData {
   description: string;
   system_prompt: string;
   model: string;
-  personality: { avatar_emoji?: string; tone?: string } | null;
+  personality: { tone?: string } | null;
 }
 
 interface ToolRecordConfig {
@@ -47,10 +47,10 @@ const MODEL_OPTIONS = [
 ];
 
 const TONE_PRESETS = [
-  { value: "friendly and approachable", label: "Friendly", emoji: "\u{1F60A}", desc: "Warm, gets to the point" },
-  { value: "professional and polished", label: "Professional", emoji: "\u{1F454}", desc: "Formal, trustworthy" },
-  { value: "patient and supportive", label: "Patient", emoji: "\u{1F917}", desc: "Thorough, never rushes" },
-  { value: "casual and conversational", label: "Casual", emoji: "\u{1F4AC}", desc: "Relaxed, like a friend" },
+  { value: "friendly and approachable", label: "Friendly", desc: "Warm, gets to the point" },
+  { value: "professional and polished", label: "Professional", desc: "Formal, trustworthy" },
+  { value: "patient and supportive", label: "Patient", desc: "Thorough, never rushes" },
+  { value: "casual and conversational", label: "Casual", desc: "Relaxed, like a friend" },
 ];
 
 function matchesPreset(tone: string): string | null {
@@ -75,7 +75,6 @@ export function SubagentEditPanel({
   const [description, setDescription] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [model, setModel] = useState("claude-sonnet-4-5-20250929");
-  const [avatarEmoji, setAvatarEmoji] = useState("🤖");
   const [tone, setTone] = useState("");
 
   // Tool record fields (instructions to parent, max turns)
@@ -103,7 +102,6 @@ export function SubagentEditPanel({
           setDescription(a.description || "");
           setSystemPrompt(a.system_prompt || "");
           setModel(a.model || "claude-sonnet-4-5-20250929");
-          setAvatarEmoji(a.personality?.avatar_emoji || "🤖");
           const t = a.personality?.tone || "";
           setTone(t);
           setShowCustomTone(!matchesPreset(t) && t.length > 0);
@@ -135,7 +133,7 @@ export function SubagentEditPanel({
           description: description.trim(),
           system_prompt: systemPrompt,
           model,
-          personality: { avatar_emoji: avatarEmoji, tone },
+          personality: { tone },
           skip_version: true,
         }),
       });
@@ -226,17 +224,6 @@ export function SubagentEditPanel({
               Identity
             </h3>
 
-            {/* Avatar emoji */}
-            <div className="space-y-1.5">
-              <Label className="text-xs">Avatar Emoji</Label>
-              <Input
-                value={avatarEmoji}
-                onChange={(e) => { setAvatarEmoji(e.target.value); markDirty(); }}
-                className="h-9 w-20 text-center text-lg"
-                maxLength={2}
-              />
-            </div>
-
             <div className="space-y-1.5">
               <Label className="text-xs">Name</Label>
               <Input
@@ -284,7 +271,6 @@ export function SubagentEditPanel({
                       : "border-border"
                   )}
                 >
-                  <span className="text-base leading-none mt-0.5">{preset.emoji}</span>
                   <div className="min-w-0">
                     <p className={cn(
                       "text-xs font-medium",

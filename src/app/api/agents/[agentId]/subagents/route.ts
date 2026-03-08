@@ -125,7 +125,7 @@ export async function POST(
       name: childName,
       description: body.description?.trim() || null,
       system_prompt: `You are a helpful sub-agent named "${childName}". Respond clearly and concisely.`,
-      personality: { avatar_emoji: "🤖" },
+      personality: {},
       model: "claude-sonnet-4-5-20250929",
       status: "draft",
     })

@@ -45,10 +45,10 @@ const MODEL_OPTIONS = [
 ];
 
 const TONE_PRESETS = [
-  { value: "friendly and approachable", label: "Friendly", emoji: "\u{1F60A}", desc: "Warm, gets to the point" },
-  { value: "professional and polished", label: "Professional", emoji: "\u{1F454}", desc: "Formal, trustworthy" },
-  { value: "patient and supportive", label: "Patient", emoji: "\u{1F917}", desc: "Thorough, never rushes" },
-  { value: "casual and conversational", label: "Casual", emoji: "\u{1F4AC}", desc: "Relaxed, like a friend" },
+  { value: "friendly and approachable", label: "Friendly", desc: "Warm, gets to the point" },
+  { value: "professional and polished", label: "Professional", desc: "Formal, trustworthy" },
+  { value: "patient and supportive", label: "Patient", desc: "Thorough, never rushes" },
+  { value: "casual and conversational", label: "Casual", desc: "Relaxed, like a friend" },
 ];
 
 function matchesPreset(tone: string): string | null {
@@ -175,7 +175,6 @@ export function AgentEditPanel({
                         : "border-border hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5"
                     )}
                   >
-                    <span className="text-base leading-none mt-0.5">{preset.emoji}</span>
                     <div className="min-w-0">
                       <p className={cn(
                         "text-xs font-medium",

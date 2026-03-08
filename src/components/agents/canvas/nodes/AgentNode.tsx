@@ -25,15 +25,16 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
       >
         <div className="w-full h-full liquid-glass-node flex items-center gap-3 justify-center !border-none px-4" style={{ borderRadius: 45 }}>
           <div className="flex items-center justify-center shrink-0 text-4xl">
-            {d.avatarEmoji && d.avatarEmoji !== "🤖" ? (
-              <span className="text-3xl">{d.avatarEmoji}</span>
-            ) : (
-              <Bot strokeWidth={1.5} className="w-9 h-9 text-neutral-700 canvas-dark:text-neutral-300" />
-            )}
+            <Bot strokeWidth={1.5} className="w-9 h-9 text-neutral-700 canvas-dark:text-neutral-300" />
           </div>
-          <h3 className="text-[14px] font-semibold text-neutral-800 canvas-dark:text-neutral-200 text-left truncate min-w-0 flex-1 leading-tight">
-            {d.name}
-          </h3>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[14px] font-semibold text-neutral-800 canvas-dark:text-neutral-200 text-left truncate leading-tight">
+              {d.name}
+            </h3>
+            <span className="inline-block text-[10px] font-medium text-neutral-500 canvas-dark:text-neutral-400 mt-0.5">
+              Agent
+            </span>
+          </div>
 
           {/* Bottom-left → Knowledge */}
           <Handle

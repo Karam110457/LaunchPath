@@ -6,6 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Bot } from "lucide-react";
 
 interface AgentDetailProps {
   agent: {
@@ -20,7 +21,6 @@ interface AgentDetailProps {
   personality: {
     tone?: string;
     greeting_message?: string;
-    avatar_emoji?: string;
   } | null;
   tools: Array<{
     tool_id: string;
@@ -36,9 +36,9 @@ export function AgentDetail({ agent, personality, tools }: AgentDetailProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <span className="text-2xl">
-              {personality?.avatar_emoji ?? "\u{1F916}"}
-            </span>
+            <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+              <Bot className="w-4 h-4 text-muted-foreground" />
+            </div>
             Personality
           </CardTitle>
           <CardDescription>How your agent communicates.</CardDescription>

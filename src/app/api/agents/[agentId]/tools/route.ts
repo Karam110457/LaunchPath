@@ -92,7 +92,7 @@ export async function POST(
   }
 
   const body = (await request.json()) as CreateToolPayload;
-  const { tool_type, display_name, description, config } = body;
+  const { tool_type, display_name, description, config, is_enabled } = body;
 
   if (!tool_type || !ALLOWED_TOOL_TYPES.has(tool_type)) {
     return NextResponse.json({ error: "Invalid tool_type" }, { status: 400 });
@@ -158,6 +158,7 @@ export async function POST(
       display_name: display_name.trim(),
       description: description.trim(),
       config: config ?? {},
+      is_enabled: is_enabled ?? true,
     })
     .select("*")
     .single();

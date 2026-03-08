@@ -43,7 +43,6 @@ export default async function ClientCampaignsPage({
               name: string;
               personality: Record<string, unknown> | null;
             } | null;
-            const emoji = (agent?.personality as Record<string, unknown>)?.avatar_emoji as string | undefined;
 
             return (
               <Link
@@ -67,7 +66,7 @@ export default async function ClientCampaignsPage({
                 </div>
                 {agent?.name && (
                   <p className="text-xs text-muted-foreground">
-                    {emoji && `${emoji} `}{agent.name}
+                    {agent.name}
                   </p>
                 )}
               </Link>

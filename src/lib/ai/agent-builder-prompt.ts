@@ -23,7 +23,6 @@ You will receive a description of what kind of agent the user wants. You must ge
 4. **personality** — An object with:
    - tone: A short phrase describing communication style (e.g. "friendly and efficient", "warm and professional")
    - greeting_message: The first message the agent sends when a conversation starts (1-2 sentences)
-   - avatar_emoji: A single emoji that represents this agent's purpose
 
 IMPORTANT RULES:
 - The system_prompt must be self-contained — it should work as standalone instructions for an AI agent without any other context.
@@ -40,7 +39,6 @@ export function buildAgentGenerationContext(input: {
     suggested_personality: {
       tone: string;
       greeting_message: string;
-      avatar_emoji: string;
     };
   } | null;
   businessContext?: {

@@ -1,13 +1,12 @@
 "use client";
 
-import { ArrowLeft, Save, Loader2, History, Check, Users, Play } from "lucide-react";
+import { ArrowLeft, Save, Loader2, History, Check, Users, Play, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 interface TopBarProps {
   agentName: string;
-  avatarEmoji: string;
   onSave: () => void;
   onVersionHistory: () => void;
   onTest?: () => void;
@@ -20,7 +19,6 @@ interface TopBarProps {
 
 export function TopBar({
   agentName,
-  avatarEmoji,
   onSave,
   onVersionHistory,
   onTest,
@@ -54,8 +52,8 @@ export function TopBar({
         </button>
 
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-white canvas-dark:bg-neutral-800 flex items-center justify-center shadow-sm text-lg shrink-0">
-            {avatarEmoji || "🤖"}
+          <div className="w-8 h-8 rounded-full bg-white canvas-dark:bg-neutral-800 flex items-center justify-center shadow-sm shrink-0">
+            <Bot className="w-4 h-4 text-neutral-600 canvas-dark:text-neutral-400" />
           </div>
           <div className="flex flex-col justify-center">
             <span className="text-[13px] font-semibold text-neutral-900 canvas-dark:text-neutral-100 leading-tight">

@@ -212,6 +212,7 @@ export interface CreateToolPayload {
   display_name: string;
   description: string;
   config: Record<string, unknown>;
+  is_enabled?: boolean;
 }
 
 export interface UpdateToolPayload {

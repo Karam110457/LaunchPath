@@ -118,16 +118,11 @@ export function NewCampaignForm({ agents, lockedClientId, redirectBase }: NewCam
               className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               required
             >
-              {agents.map((agent) => {
-                const emoji =
-                  (agent.personality as { avatar_emoji?: string } | null)
-                    ?.avatar_emoji ?? "\u{1F916}";
-                return (
+              {agents.map((agent) => (
                   <option key={agent.id} value={agent.id}>
-                    {emoji} {agent.name}
+                    {agent.name}
                   </option>
-                );
-              })}
+              ))}
             </select>
             <p className="text-[11px] text-muted-foreground">
               The AI agent that will power this campaign&apos;s chat widget.

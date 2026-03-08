@@ -113,7 +113,6 @@ function AgentCanvasInner({
   const formStateFromProps = useCallback((): AgentFormState => ({
     name: agent.name,
     description: agent.description ?? "",
-    avatarEmoji: personality?.avatar_emoji ?? "🤖",
     tone: personality?.tone ?? "",
     greetingMessage: personality?.greeting_message ?? "",
     model: agent.model,
@@ -164,7 +163,6 @@ function AgentCanvasInner({
     personality: {
       tone: formState.tone.trim() || undefined,
       greeting_message: formState.greetingMessage.trim() || undefined,
-      avatar_emoji: formState.avatarEmoji.trim() || "🤖",
     },
     model: formState.model,
     status: formState.status,
@@ -272,7 +270,6 @@ function AgentCanvasInner({
       const revertedState: AgentFormState = {
         name: revertedAgent.name,
         description: revertedAgent.description ?? "",
-        avatarEmoji: (revertedAgent.personality?.avatar_emoji as string) ?? "🤖",
         tone: (revertedAgent.personality?.tone as string) ?? "",
         greetingMessage: (revertedAgent.personality?.greeting_message as string) ?? "",
         model: revertedAgent.model,
@@ -296,7 +293,6 @@ function AgentCanvasInner({
       name: formState.name,
       description: formState.description || null,
       model: formState.model,
-      avatarEmoji: formState.avatarEmoji,
       tone: formState.tone || null,
       greetingMessage: formState.greetingMessage || null,
       systemPrompt: formState.systemPrompt,
@@ -305,7 +301,7 @@ function AgentCanvasInner({
     [
       agent.id,
       formState.name, formState.description, formState.model,
-      formState.avatarEmoji, formState.tone,
+      formState.tone,
       formState.greetingMessage, formState.systemPrompt,
     ]
   );
@@ -444,7 +440,6 @@ function AgentCanvasInner({
             parentAgentId: agent.id,
             toolRecordId: t.id,
             name: detail?.name ?? t.display_name,
-            avatarEmoji: detail?.personality?.avatar_emoji ?? "🤖",
             description: detail?.description ?? null,
             status: detail?.status ?? "draft",
             tools: saTools,
@@ -561,12 +556,13 @@ function AgentCanvasInner({
     [layoutState, persistLayout]
   );
 
-  // Restrict which handles can connect to which node types
+  // Restrict which handles can connect to which node types + ownership validation
   const isValidConnection = useCallback(
     (connection: Connection | Edge) => {
       const sourceHandle = connection.sourceHandle;
+      const sourceId = connection.source;
       const targetId = connection.target;
-      if (!targetId) return false;
+      if (!targetId || !sourceId) return false;
 
       const targetNode = nodes.find((n) => n.id === targetId);
       if (!targetNode) return false;
@@ -575,9 +571,29 @@ function AgentCanvasInner({
       if (sourceHandle === "bottom-left") {
         return targetNode.type === "knowledgeNode";
       }
+
       // Tools handle (bottom-right) → only tool or subagent nodes
       if (sourceHandle === "bottom-right") {
-        return targetNode.type === "toolNode" || targetNode.type === "subagentNode";
+        if (targetNode.type !== "toolNode" && targetNode.type !== "subagentNode") {
+          return false;
+        }
+
+        // Ownership validation: an agent can only connect to its own tools
+        if (targetNode.type === "toolNode") {
+          if (sourceId === "agent") {
+            // Parent agent → only parent tools (tool-*)
+            return targetId.startsWith("tool-");
+          } else if (sourceId.startsWith("subagent-")) {
+            // Subagent → only its own tools (sa-{subagentId}-tool-*)
+            const subagentId = sourceId.replace("subagent-", "");
+            return targetId.startsWith(`sa-${subagentId}-tool-`);
+          }
+        }
+
+        // Subagent nodes can only be connected from the parent agent
+        if (targetNode.type === "subagentNode") {
+          return sourceId === "agent";
+        }
       }
 
       return true;
@@ -778,6 +794,8 @@ function AgentCanvasInner({
                 { id: edgeId, source: sourceNode, sourceHandle: "bottom-right", target: nodeId, type: "dashedEdge" },
                 updated
               );
+              // Enable the tool now that it has an edge
+              setToolEnabled(ownerAgentId, tool.id, true);
             }
           }
 
@@ -791,7 +809,7 @@ function AgentCanvasInner({
         return currentTools;
       });
     }, 100);
-  }, [agentTools, agent.id, setupTool, composioSetup, fetchTools, fetchSubagents, notifySaved, layoutState, persistLayout, setEdges]);
+  }, [agentTools, agent.id, setupTool, composioSetup, fetchTools, fetchSubagents, notifySaved, layoutState, persistLayout, setEdges, setToolEnabled]);
 
   const handleToolDeleted = useCallback(async () => {
     setSetupTool(null);
@@ -865,20 +883,23 @@ function AgentCanvasInner({
       const data = JSON.parse(dataStr);
       const { type, toolkit, name, icon } = data;
 
-      // If drop is over a subagent node, create/enable for that subagent
+      // If drop is over a subagent node, create tool for that subagent
       let targetAgentId = agent.id;
       const allNodes = getNodes();
       const hitNode = allNodes.find((n) => {
-        const w = 280;
-        const h = 128;
+        if (n.type !== "subagentNode") return false;
+        // SubagentNode renders as a 96×96 circle with labels below (~160px total height)
+        // Use generous hit area centered on the node
+        const w = 120;
+        const h = 160;
         return (
-          position.x >= n.position.x &&
-          position.x <= n.position.x + w &&
+          position.x >= n.position.x - (w - 96) / 2 &&
+          position.x <= n.position.x + 96 + (w - 96) / 2 &&
           position.y >= n.position.y &&
           position.y <= n.position.y + h
         );
       });
-      if (hitNode?.type === "subagentNode") {
+      if (hitNode) {
         const d = hitNode.data as unknown as SubagentNodeData;
         targetAgentId = d.subagentId;
       }
@@ -911,7 +932,7 @@ function AgentCanvasInner({
             data: {
               toolId: tempId, agentId: targetAgentId,
               toolType: "composio" as ToolType, displayName: name,
-              isEnabled: true, toolkitIcon: icon, toolkitSlug: toolkit,
+              isEnabled: false, toolkitIcon: icon, toolkitSlug: toolkit,
               needsAuth,
             } as unknown as Record<string, unknown>,
             draggable: true,
@@ -927,6 +948,7 @@ function AgentCanvasInner({
               display_name: name,
               description: `Use ${name} actions.`,
               config: { toolkit, toolkit_name: name, toolkit_icon: icon },
+              is_enabled: false,
             }),
           });
           if (!res.ok) {
@@ -966,7 +988,7 @@ function AgentCanvasInner({
             position,
             data: {
               toolId: tempId, agentId: targetAgentId,
-              toolType: type as ToolType, displayName: defaultName, isEnabled: true,
+              toolType: type as ToolType, displayName: defaultName, isEnabled: false,
             } as unknown as Record<string, unknown>,
             draggable: true,
           },
@@ -981,6 +1003,7 @@ function AgentCanvasInner({
               display_name: defaultName,
               description: "",
               config: {},
+              is_enabled: false,
             }),
           });
           if (!res.ok) {
@@ -1050,7 +1073,6 @@ function AgentCanvasInner({
     <div className={`${theme === "dark" ? "canvas-dark" : "light"} fixed inset-0 z-[100] w-full h-full overflow-hidden ${theme === "dark" ? "bg-[#050505]" : "bg-[#eef0f2]"} text-foreground transition-colors duration-300`}>
       <TopBar
         agentName={formState.name}
-        avatarEmoji={formState.avatarEmoji}
         onSave={() => setShowSaveDialog(true)}
         onVersionHistory={() => setShowVersionHistory(true)}
         onTest={handleToggleTest}

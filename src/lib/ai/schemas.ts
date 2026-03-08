@@ -223,7 +223,7 @@ export type DemoResult = z.infer<typeof demoResultSchema>;
 export const agentPersonalitySchema = z.object({
   tone: z.string(),
   greeting_message: z.string(),
-  avatar_emoji: z.string(),
+  avatar_emoji: z.string().optional(),
 });
 
 export type AgentPersonality = z.infer<typeof agentPersonalitySchema>;

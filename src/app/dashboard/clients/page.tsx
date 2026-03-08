@@ -119,7 +119,6 @@ export default async function ClientsPage() {
                     name: string;
                     personality: Record<string, unknown> | null;
                   } | null;
-                  const emoji = (agent?.personality as Record<string, unknown>)?.avatar_emoji as string | undefined;
 
                   return (
                     <div
@@ -132,7 +131,7 @@ export default async function ClientsPage() {
                           <p className="text-sm font-medium">{campaign.name}</p>
                           {agent?.name && (
                             <p className="text-xs text-muted-foreground">
-                              {emoji && `${emoji} `}{agent.name}
+                              {agent.name}
                             </p>
                           )}
                         </div>

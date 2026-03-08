@@ -7,7 +7,6 @@ export interface AgentTemplate {
   suggested_personality: {
     tone: string;
     greeting_message: string;
-    avatar_emoji: string;
   };
   wizard_hints?: {
     services_placeholder?: string;
@@ -30,7 +29,6 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
       tone: "friendly and efficient",
       greeting_message:
         "Hi! I'd love to help you schedule an appointment. What service are you looking for?",
-      avatar_emoji: "\u{1F4C5}",
     },
     wizard_hints: {
       services_placeholder:
@@ -54,7 +52,6 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
       tone: "patient and helpful",
       greeting_message:
         "Hi there! I'm here to help with any questions or issues.",
-      avatar_emoji: "\u{1F6DF}",
     },
     wizard_hints: {
       business_description_placeholder:
