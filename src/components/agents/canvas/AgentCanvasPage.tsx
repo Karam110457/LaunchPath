@@ -106,7 +106,7 @@ function AgentCanvasInner({
 }: AgentCanvasPageProps) {
   const router = useRouter();
   const { screenToFlowPosition, getNodes, zoomIn, zoomOut, fitView } = useReactFlow();
-  const { isConnected: isComposioConnected } = useComposioConnections();
+  const { isConnected: isComposioConnected, refresh: refreshComposioConnections } = useComposioConnections();
 
   // ─── Agent form state ────────────────────────────────────────────────────
   // Build form state from server props
@@ -901,6 +901,7 @@ function AgentCanvasInner({
         // Optimistic: show placeholder node instantly
         const tempId = `temp-${Date.now()}`;
         const tempNodeId = targetAgentId === agent.id ? `tool-${tempId}` : `sa-${targetAgentId}-tool-${tempId}`;
+        const needsAuth = toolkit ? !isComposioConnected(toolkit) : false;
         setNodes((prev) => [
           ...prev,
           {
@@ -911,6 +912,7 @@ function AgentCanvasInner({
               toolId: tempId, agentId: targetAgentId,
               toolType: "composio" as ToolType, displayName: name,
               isEnabled: true, toolkitIcon: icon, toolkitSlug: toolkit,
+              needsAuth,
             } as unknown as Record<string, unknown>,
             draggable: true,
           },
@@ -1004,7 +1006,7 @@ function AgentCanvasInner({
     } catch (e) {
       console.error("Drop failed", e);
     }
-  }, [agent.id, getNodes, screenToFlowPosition, layoutState, persistLayout, fetchTools, fetchSubagents]);
+  }, [agent.id, getNodes, screenToFlowPosition, layoutState, persistLayout, fetchTools, fetchSubagents, isComposioConnected]);
 
   const onNodeDoubleClick: NodeMouseHandler = useCallback(
     (_event, node) => {
@@ -1301,6 +1303,7 @@ function AgentCanvasInner({
           existing={composioSetup.existing}
           onSaved={handleToolSaved}
           onClose={() => setComposioSetup(null)}
+          onAuthChanged={refreshComposioConnections}
         />
       )}
 

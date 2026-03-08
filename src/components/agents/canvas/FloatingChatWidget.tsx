@@ -23,7 +23,7 @@ export function FloatingChatWidget({
 
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-neutral-200/50 canvas-dark:border-neutral-700/50 shrink-0">
-        <span className="text-sm font-bold tracking-tight text-neutral-800 canvas-dark:text-neutral-200">
+        <span className="text-sm font-bold tracking-tight gradient-text">
           Chat with {agentName}
         </span>
         <button

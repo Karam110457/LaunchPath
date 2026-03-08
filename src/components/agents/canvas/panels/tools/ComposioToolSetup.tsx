@@ -38,6 +38,8 @@ interface ComposioToolSetupProps {
   existing?: AgentToolResponse;
   onSaved: () => void;
   onClose: () => void;
+  /** Called when the user completes authentication so the canvas can refresh its connection state */
+  onAuthChanged?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -922,8 +924,18 @@ export function ComposioToolSetup({
   existing,
   onSaved,
   onClose,
+  onAuthChanged,
 }: ComposioToolSetupProps) {
-  const { connect, connecting, connectError, isConnected, getConnection, loading: connectionsLoading } = useComposioConnections();
+  const { connect: rawConnect, connecting, connectError, isConnected, getConnection, loading: connectionsLoading } = useComposioConnections();
+
+  // Wrap connect to notify the canvas when auth completes
+  const connect = useCallback(
+    async (...args: Parameters<typeof rawConnect>) => {
+      await rawConnect(...args);
+      onAuthChanged?.();
+    },
+    [rawConnect, onAuthChanged]
+  );
 
   // -- Data loading --
   const [actions, setActions] = useState<ComposioActionSchema[]>([]);
@@ -1141,7 +1153,7 @@ export function ComposioToolSetup({
           <div className="flex-1 flex items-center justify-center">
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           </div>
-        ) : (!connectionId && !isConnected(toolkit) && !existing) ? (
+        ) : (!connectionId && !isConnected(toolkit)) ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-transparent">
             <div className="w-16 h-16 rounded-2xl bg-white canvas-dark:bg-neutral-800 shadow-sm border border-border/40 flex items-center justify-center mb-5 p-2.5">
               {toolkitIcon.startsWith("http") ? (

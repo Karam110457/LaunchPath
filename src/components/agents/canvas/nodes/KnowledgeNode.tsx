@@ -22,7 +22,7 @@ export const KnowledgeNode = memo(function KnowledgeNode({ data }: NodeProps) {
         )}
 
         <div className="flex items-center justify-center">
-          <Database className="w-8 h-8 text-violet-500" strokeWidth={1.5} />
+          <Database className="w-8 h-8 text-[#9D50BB]" strokeWidth={1.5} />
         </div>
 
         <Handle
@@ -45,7 +45,7 @@ export const KnowledgeNode = memo(function KnowledgeNode({ data }: NodeProps) {
       {/* Helper tip — anchored to the left side of the node */}
       <NodeHelperTip
         tipId="knowledge"
-        icon={<Database className="w-3.5 h-3.5 text-violet-400" />}
+        icon={<Database className="w-3.5 h-3.5 text-[#9D50BB]" />}
         text="Double-click to add documents, FAQs, and website content"
         position="right-[calc(100%+16px)] top-1/2 -translate-y-1/2"
       />
