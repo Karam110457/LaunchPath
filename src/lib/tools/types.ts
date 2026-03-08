@@ -220,7 +220,6 @@ export interface UpdateToolPayload {
   description?: string;
   config?: Record<string, unknown>;
   is_enabled?: boolean;
-  agent_id?: string;
 }
 
 export interface TestToolPayload {

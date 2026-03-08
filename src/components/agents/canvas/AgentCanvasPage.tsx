@@ -90,14 +90,6 @@ function getNodeDisplayName(node: Node): string {
   return node.id;
 }
 
-/** Pending auto-edge to be created during the next layout rebuild. */
-interface PendingAutoEdge {
-  source: string;
-  sourceHandle: string;
-  target: string;
-  enableTool?: { agentId: string; toolId: string };
-}
-
 export interface AgentCanvasPageProps {
   agent: {
     id: string;
@@ -517,9 +509,6 @@ function AgentCanvasInner({
   const layoutStateRef = useRef(layoutState);
   layoutStateRef.current = layoutState;
 
-  // Pending auto-edges queued by onConnect/handleToolSaved, processed during layout rebuild
-  const pendingAutoEdgesRef = useRef<PendingAutoEdge[]>([]);
-
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const persistLayout = useCallback(
@@ -682,49 +671,19 @@ function AgentCanvasInner({
       }, ANIMATED_EXIT_MS);
     }
 
-    // ── Edge handling: only touch edges when structurally necessary ──
+    // ── Edge cleanup: only remove stale edges pointing to deleted nodes ──
+    // Preserves edges added by onConnect without overwriting them.
     const nodeIds = layoutNodeIds;
-    const pending = pendingAutoEdgesRef.current;
-    const hasPending = pending.length > 0;
-
-    if (hasPending) {
-      // Pending auto-edges (cross-agent reassignment / handleToolSaved):
-      // rebuild edges from layout + process pending
-      let validEdges = layoutEdges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
-      pendingAutoEdgesRef.current = [];
-      for (const p of pending) {
-        if (nodeIds.has(p.target) && nodeIds.has(p.source)) {
-          const edgeId = `e-${p.source}-${p.target}`;
-          if (!validEdges.some(e => e.id === edgeId)) {
-            validEdges = addEdge(
-              { id: edgeId, source: p.source, sourceHandle: p.sourceHandle, target: p.target, type: "dashedEdge" },
-              validEdges
-            );
-          }
-          if (p.enableTool) {
-            setToolEnabled(p.enableTool.agentId, p.enableTool.toolId, true);
-          }
-        }
-      }
+    setEdges((currentEdges) => {
+      const stale = currentEdges.filter(e => !nodeIds.has(e.source) || !nodeIds.has(e.target));
+      if (stale.length === 0) return currentEdges; // No-op — keep edges as-is
+      const filtered = currentEdges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
       const ls = layoutStateRef.current;
-      const newState = { ...ls, edges: validEdges.filter(e => !e.id.endsWith("-knowledge")) };
+      const newState = { ...ls, edges: filtered.filter(e => !e.id.endsWith("-knowledge")) };
       setLayoutState(newState);
       persistLayout(newState);
-      setEdges(validEdges);
-    } else {
-      // No pending edges: only remove stale edges (pointing to deleted nodes).
-      // Preserves edges added by onConnect without overwriting them.
-      setEdges((currentEdges) => {
-        const stale = currentEdges.filter(e => !nodeIds.has(e.source) || !nodeIds.has(e.target));
-        if (stale.length === 0) return currentEdges; // No-op — keep edges as-is
-        const filtered = currentEdges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
-        const ls = layoutStateRef.current;
-        const newState = { ...ls, edges: filtered.filter(e => !e.id.endsWith("-knowledge")) };
-        setLayoutState(newState);
-        persistLayout(newState);
-        return filtered;
-      });
-    }
+      return filtered;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentTools, subagentDetails, hasKnowledge]);
 
@@ -790,7 +749,8 @@ function AgentCanvasInner({
     [layoutState, persistLayout, pushUndo, setNodes]
   );
 
-  // Restrict which handles can connect to which node types
+  // Restrict which handles can connect to which node types.
+  // Each agent can only connect to its OWN tools/knowledge — no cross-agent.
   const isValidConnection = useCallback(
     (connection: Connection | Edge) => {
       const sourceHandle = connection.sourceHandle;
@@ -804,27 +764,23 @@ function AgentCanvasInner({
       // Knowledge handle (bottom-left) → only the source agent's own knowledge node
       if (sourceHandle === "bottom-left") {
         if (targetNode.type !== "knowledgeNode") return false;
-        // Parent agent → parent knowledge only
         if (sourceId === "agent") return targetId === "knowledge";
-        // Subagent → its own knowledge node only
         const saKbMatch = sourceId.match(/^subagent-(.+)$/);
         if (saKbMatch) return targetId === `sa-${saKbMatch[1]}-knowledge`;
         return false;
       }
 
-      // Tools handle (bottom-right) → tool or subagent nodes
+      // Tools handle (bottom-right) → own tool or subagent nodes only
       if (sourceHandle === "bottom-right") {
-        if (targetNode.type !== "toolNode" && targetNode.type !== "subagentNode") {
-          return false;
-        }
-
         if (targetNode.type === "toolNode") {
-          // Parent can connect to any tool (own or cross-agent reassignment)
-          if (sourceId === "agent") return true;
-          // Subagent can only connect to parent-level tools (triggers reassignment)
-          // Block subagent-to-subagent tool transfers (sa-X-tool-Y targets)
-          if (sourceId.startsWith("subagent-")) {
+          // Parent agent → parent tools only (tool-*)
+          if (sourceId === "agent") {
             return /^tool-.+$/.test(targetId) && !targetId.startsWith("tool-temp");
+          }
+          // Subagent → its own tools only (sa-{id}-tool-*)
+          const saMatch = sourceId.match(/^subagent-(.+)$/);
+          if (saMatch) {
+            return targetId.startsWith(`sa-${saMatch[1]}-tool-`);
           }
           return false;
         }
@@ -833,6 +789,8 @@ function AgentCanvasInner({
         if (targetNode.type === "subagentNode") {
           return sourceId === "agent";
         }
+
+        return false;
       }
 
       return true;
@@ -898,92 +856,13 @@ function AgentCanvasInner({
       const { source, target } = params;
       if (!source || !target) return;
 
-      // ── Cross-agent tool reassignment detection ──────────────────────
-      const isParentSource = source === "agent";
-      const isSubagentSource = source.startsWith("subagent-");
-      const isParentTool = /^tool-.+$/.test(target) && !target.startsWith("tool-temp");
-      const saToolMatch = target.match(/^sa-(.+)-tool-(.+)$/);
-
-      const needsReassign =
-        (isSubagentSource && isParentTool) ||  // subagent → parent's tool
-        (isParentSource && !!saToolMatch);      // parent → subagent's tool
-
-      if (needsReassign) {
-        let newOwnerAgentId: string;
-        let toolId: string;
-        let currentOwnerAgentId: string;
-
-        if (isSubagentSource && isParentTool) {
-          newOwnerAgentId = source.replace("subagent-", "");
-          toolId = target.replace("tool-", "");
-          currentOwnerAgentId = agent.id;
-        } else {
-          const match = saToolMatch!;
-          newOwnerAgentId = agent.id;
-          toolId = match[2];
-          currentOwnerAgentId = match[1];
-        }
-
-        // Show optimistic edge immediately so the user gets instant feedback
-        const tempEdgeId = `e-temp-${source}-${target}`;
-        setEdges((prev) => addEdge(
-          { id: tempEdgeId, source, sourceHandle: "bottom-right", target, type: "dashedEdge" },
-          prev
-        ));
-
-        void (async () => {
-          const oldNodeId = target;
-          const newNodeId = newOwnerAgentId === agent.id
-            ? `tool-${toolId}`
-            : `sa-${newOwnerAgentId}-tool-${toolId}`;
-
-          // Transfer position from old node ID to new node ID
-          const ls = layoutStateRef.current;
-          const oldPos = ls.positions[oldNodeId];
-          if (oldPos) {
-            const newPositions = { ...ls.positions, [newNodeId]: oldPos };
-            delete newPositions[oldNodeId];
-            const posState = { ...ls, positions: newPositions };
-            setLayoutState(posState);
-            persistLayout(posState);
-          }
-
-          const res = await fetch(`/api/agents/${currentOwnerAgentId}/tools/${toolId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ agent_id: newOwnerAgentId, is_enabled: true }),
-          });
-
-          if (!res.ok) {
-            // Remove optimistic edge on failure
-            setEdges((prev) => prev.filter(e => e.id !== tempEdgeId));
-            toast.error("Failed to move tool");
-            return;
-          }
-
-          // Queue the auto-edge — layout rebuild replaces all edges (removes temp, adds real)
-          const sourceNode = newOwnerAgentId === agent.id ? "agent" : `subagent-${newOwnerAgentId}`;
-          pendingAutoEdgesRef.current.push({
-            source: sourceNode,
-            sourceHandle: "bottom-right",
-            target: newNodeId,
-          });
-
-          await Promise.all([fetchTools(), fetchSubagents()]);
-          notifySaved();
-        })();
-
-        return; // Skip normal edge creation
-      }
-
-      // ── Normal (same-agent) connection ───────────────────────────────
       const newEdge: Edge = {
         ...params,
         id: `e-${source}-${target}`,
         type: "dashedEdge",
       };
 
-      // Use functional updater to avoid stale edges closure
+      // Add edge + persist in one updater (avoids stale closure)
       setEdges((currentEdges) => {
         const updated = addEdge(newEdge, currentEdges);
         const ls = layoutStateRef.current;
@@ -993,11 +872,11 @@ function AgentCanvasInner({
         return updated;
       });
 
-      // Enable the tool in DB when edge is created
+      // Enable the tool in DB
       const resolved = resolveToolFromNodeId(target);
       if (resolved) setToolEnabled(resolved.agentId, resolved.toolId, true);
 
-      // Get display name for undo label
+      // Undo support
       const targetNode = nodes.find(n => n.id === target);
       const displayName = targetNode ? getNodeDisplayName(targetNode) : target;
 
@@ -1029,7 +908,7 @@ function AgentCanvasInner({
         },
       });
     },
-    [nodes, persistLayout, setEdges, resolveToolFromNodeId, setToolEnabled, agent.id, fetchTools, fetchSubagents, notifySaved, pushUndo]
+    [nodes, persistLayout, setEdges, resolveToolFromNodeId, setToolEnabled, pushUndo]
   );
 
   // Wrapper for onEdgesChange — handles keyboard delete, persist, undo, toast
@@ -1295,23 +1174,32 @@ function AgentCanvasInner({
         });
       }
 
-      // Queue pending auto-edges — layout rebuild effect processes them deterministically
+      // Auto-create edges for new tools and enable them
       for (const tool of newTools) {
         const nodeId = tool.tool_type === "subagent"
           ? `subagent-${(tool.config as { target_agent_id?: string }).target_agent_id}`
           : `tool-${tool.id}`;
         const sourceNode = ownerAgentId === agent.id ? "agent" : `subagent-${ownerAgentId}`;
-        pendingAutoEdgesRef.current.push({
-          source: sourceNode,
-          sourceHandle: "bottom-right",
-          target: nodeId,
-          enableTool: { agentId: ownerAgentId, toolId: tool.id },
+        const edgeId = `e-${sourceNode}-${nodeId}`;
+
+        setEdges((prev) => {
+          if (prev.some(e => e.id === edgeId)) return prev;
+          const updated = addEdge(
+            { id: edgeId, source: sourceNode, sourceHandle: "bottom-right", target: nodeId, type: "dashedEdge" },
+            prev
+          );
+          const ls = layoutStateRef.current;
+          const newState = { ...ls, edges: updated.filter(e => !e.id.endsWith("-knowledge")) };
+          setLayoutState(newState);
+          persistLayout(newState);
+          return updated;
         });
+        setToolEnabled(ownerAgentId, tool.id, true);
       }
 
       return currentTools;
     });
-  }, [agentTools, agent.id, setupTool, composioSetup, fetchTools, fetchSubagents, notifySaved, setToolEnabled, pushUndo]);
+  }, [agentTools, agent.id, setupTool, composioSetup, fetchTools, fetchSubagents, notifySaved, setToolEnabled, pushUndo, setEdges, persistLayout]);
 
   const handleToolDeleted = useCallback(async (deletedTool?: AgentToolResponse) => {
     setSetupTool(null);
