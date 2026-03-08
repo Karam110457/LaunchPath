@@ -15,7 +15,7 @@ interface ToolSetupDialogProps {
   toolType: string;
   existing?: AgentToolResponse;
   onSaved: () => void;
-  onDeleted?: () => void;
+  onDeleted?: (tool?: AgentToolResponse) => void;
   onClose: () => void;
 }
 
@@ -62,7 +62,7 @@ export function ToolSetupDialog({
 
   if (!entry) {
     return (
-      <NodeModal open onClose={onClose} title="Unknown tool type">
+      <NodeModal onClose={onClose} title="Unknown tool type">
         <div className="p-4 space-y-4">
           <p className="text-sm text-muted-foreground">
             The tool type &quot;{toolType}&quot; is not recognised. It may have been removed.
@@ -159,7 +159,6 @@ export function ToolSetupDialog({
 
   return (
     <NodeModal
-      open
       onClose={onClose}
       title={isEdit ? `Edit ${entry.name}` : `Set up ${entry.name}`}
     >
@@ -385,7 +384,7 @@ export function ToolSetupDialog({
                     onClick={async () => {
                       setDeleting(true);
                       await fetch(`/api/agents/${agentId}/tools/${existing!.id}`, { method: "DELETE" });
-                      onDeleted();
+                      onDeleted(existing);
                     }}
                   >
                     {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Confirm remove"}

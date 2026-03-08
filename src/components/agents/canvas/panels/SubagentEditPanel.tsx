@@ -265,20 +265,22 @@ export function SubagentEditPanel({
                   }}
                   className={cn(
                     "flex items-start gap-2 rounded-lg border px-3 py-2.5 text-left transition-all",
-                    "hover:border-primary/40 hover:bg-primary/5",
                     currentPreset === preset.value && !showCustomTone
-                      ? "border-primary bg-primary/10"
-                      : "border-border"
+                      ? "border-transparent gradient-accent-border bg-gradient-to-br from-[#FF8C00]/8 to-[#9D50BB]/8"
+                      : "border-border hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5"
                   )}
                 >
                   <div className="min-w-0">
                     <p className={cn(
                       "text-xs font-medium",
-                      currentPreset === preset.value && !showCustomTone && "text-primary"
+                      currentPreset === preset.value && !showCustomTone ? "text-white" : ""
                     )}>
                       {preset.label}
                     </p>
-                    <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+                    <p className={cn(
+                      "text-[11px] leading-tight mt-0.5",
+                      currentPreset === preset.value && !showCustomTone ? "text-white/80" : "text-muted-foreground"
+                    )}>
                       {preset.desc}
                     </p>
                   </div>
@@ -291,12 +293,13 @@ export function SubagentEditPanel({
               onClick={() => setShowCustomTone(true)}
               className={cn(
                 "flex items-center gap-2 w-full rounded-lg border px-3 py-2 text-left transition-all",
-                "hover:border-primary/40 hover:bg-primary/5",
-                showCustomTone ? "border-primary bg-primary/10" : "border-border"
+                showCustomTone
+                  ? "border-transparent gradient-accent-border bg-gradient-to-br from-[#FF8C00]/8 to-[#9D50BB]/8"
+                  : "border-border hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5"
               )}
             >
-              <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className={cn("text-xs font-medium", showCustomTone && "text-primary")}>
+              <Pencil className={cn("w-3.5 h-3.5", showCustomTone ? "text-white" : "text-muted-foreground")} />
+              <span className={cn("text-xs font-medium", showCustomTone ? "text-white" : "")}>
                 Custom tone
               </span>
             </button>

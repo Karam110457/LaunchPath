@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, RotateCcw, FileText, Globe, HelpCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { PANEL_SLIDE, FADE, ACCORDION } from "./animation-constants";
 
 interface KnowledgeSnapshotItem {
   id: string;
@@ -51,7 +53,6 @@ interface RevertedAgent {
 }
 
 interface VersionHistoryModalProps {
-  open: boolean;
   onClose: () => void;
   agentId: string;
   isDirty?: boolean;
@@ -65,7 +66,6 @@ const sourceIcons: Record<string, React.ReactNode> = {
 };
 
 export function VersionHistoryModal({
-  open,
   onClose,
   agentId,
   isDirty,
@@ -90,8 +90,17 @@ export function VersionHistoryModal({
   }, [agentId]);
 
   useEffect(() => {
-    if (open) fetchVersions();
-  }, [open, fetchVersions]);
+    fetchVersions();
+  }, [fetchVersions]);
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
 
   const handleRevert = async (versionId: string) => {
     setReverting(versionId);
@@ -114,13 +123,24 @@ export function VersionHistoryModal({
     }
   };
 
-  if (!open) return null;
-
   return (
     <>
-      <div className="fixed inset-0 z-[40]" onClick={onClose} />
-      
-      <div className="absolute top-6 bottom-6 right-6 w-[420px] max-w-[calc(100vw-3rem)] z-50 flex flex-col bg-white/70 canvas-dark:bg-neutral-900/70 text-neutral-900 canvas-dark:text-neutral-100 backdrop-blur-2xl border border-white/60 canvas-dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] overflow-hidden animate-in slide-in-from-right-8 fade-in duration-200">
+      <motion.div
+        className="fixed inset-0 z-[40] bg-black/5"
+        onClick={onClose}
+        initial={FADE.initial}
+        animate={FADE.animate}
+        exit={FADE.exit}
+        transition={FADE.transition}
+      />
+
+      <motion.div
+        className="absolute top-6 bottom-6 right-6 w-[420px] max-w-[calc(100vw-3rem)] z-50 flex flex-col bg-white/70 canvas-dark:bg-neutral-900/70 text-neutral-900 canvas-dark:text-neutral-100 backdrop-blur-2xl border border-white/60 canvas-dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] overflow-hidden"
+        initial={PANEL_SLIDE.initial}
+        animate={PANEL_SLIDE.animate}
+        exit={PANEL_SLIDE.exit}
+        transition={PANEL_SLIDE.transition}
+      >
         <div className="flex flex-col px-6 pt-6 pb-4 border-b border-neutral-200/50 canvas-dark:border-neutral-700/50 flex-shrink-0 bg-transparent">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-[14px] font-semibold text-neutral-900 canvas-dark:text-neutral-100 tracking-tight">Version History</h2>
@@ -262,78 +282,89 @@ export function VersionHistoryModal({
                       </AlertDialog>
                     </button>
 
-                    {/* Expanded detail */}
-                    {isExpanded && (
-                      <div className="px-4 pb-4 pt-1 space-y-4 border-t border-neutral-100 canvas-dark:border-neutral-700 bg-white/30 canvas-dark:bg-neutral-800/30">
-                        <div className="grid grid-cols-2 gap-3 mt-3">
-                          <div className="bg-neutral-50/50 canvas-dark:bg-neutral-700/30 p-2.5 rounded-xl border border-neutral-100 canvas-dark:border-neutral-700">
-                            <p className="text-[9px] uppercase tracking-wider font-semibold text-neutral-400 mb-1">
-                              Agent Name
-                            </p>
-                            <p className="text-xs text-neutral-800 canvas-dark:text-neutral-200 font-medium">{v.name}</p>
-                          </div>
-                          <div className="bg-neutral-50/50 canvas-dark:bg-neutral-700/30 p-2.5 rounded-xl border border-neutral-100 canvas-dark:border-neutral-700">
-                            <p className="text-[9px] uppercase tracking-wider font-semibold text-neutral-400 mb-1">
-                              Model
-                            </p>
-                            <p className="text-xs text-neutral-800 canvas-dark:text-neutral-200 font-medium">{v.model}</p>
-                          </div>
-                          {(v.personality as { tone?: string })?.tone && (
-                            <div className="col-span-2 bg-neutral-50/50 canvas-dark:bg-neutral-700/30 p-2.5 rounded-xl border border-neutral-100 canvas-dark:border-neutral-700">
-                              <p className="text-[9px] uppercase tracking-wider font-semibold text-neutral-400 mb-1">
-                                Tone
-                              </p>
-                              <p className="text-xs text-neutral-800 canvas-dark:text-neutral-200">
-                                {(v.personality as { tone: string }).tone}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-
-                        {knowledgeDocs.length > 0 && (
-                          <div className="bg-neutral-50/50 canvas-dark:bg-neutral-700/30 p-3 rounded-xl border border-neutral-100 canvas-dark:border-neutral-700">
-                            <p className="text-[9px] uppercase tracking-wider font-semibold text-neutral-400 mb-2">
-                              Knowledge ({knowledgeDocs.length} sources)
-                            </p>
-                            <div className="space-y-1.5">
-                              {knowledgeDocs.map((doc) => (
-                                <div
-                                  key={doc.id}
-                                  className="flex items-center gap-2 text-xs text-neutral-600 canvas-dark:text-neutral-300 bg-white canvas-dark:bg-neutral-800 p-1.5 rounded-lg border border-neutral-200/50 canvas-dark:border-neutral-600/50"
-                                >
-                                  <div className="w-5 h-5 rounded-md bg-neutral-100 canvas-dark:bg-neutral-700 flex items-center justify-center text-neutral-500 canvas-dark:text-neutral-400 shrink-0">
-                                    {sourceIcons[doc.source_type] ?? (
-                                      <FileText className="w-3 h-3" />
-                                    )}
-                                  </div>
-                                  <span className="truncate font-medium">
-                                    {doc.source_name}
-                                  </span>
+                    {/* Expanded detail with accordion animation */}
+                    <AnimatePresence initial={false}>
+                      {isExpanded && (
+                        <motion.div
+                          key="detail"
+                          initial={ACCORDION.initial}
+                          animate={ACCORDION.animate}
+                          exit={ACCORDION.exit}
+                          transition={ACCORDION.transition}
+                          className="overflow-hidden"
+                        >
+                          <div className="px-4 pb-4 pt-1 space-y-4 border-t border-neutral-100 canvas-dark:border-neutral-700 bg-white/30 canvas-dark:bg-neutral-800/30">
+                            <div className="grid grid-cols-2 gap-3 mt-3">
+                              <div className="bg-neutral-50/50 canvas-dark:bg-neutral-700/30 p-2.5 rounded-xl border border-neutral-100 canvas-dark:border-neutral-700">
+                                <p className="text-[9px] uppercase tracking-wider font-semibold text-neutral-400 mb-1">
+                                  Agent Name
+                                </p>
+                                <p className="text-xs text-neutral-800 canvas-dark:text-neutral-200 font-medium">{v.name}</p>
+                              </div>
+                              <div className="bg-neutral-50/50 canvas-dark:bg-neutral-700/30 p-2.5 rounded-xl border border-neutral-100 canvas-dark:border-neutral-700">
+                                <p className="text-[9px] uppercase tracking-wider font-semibold text-neutral-400 mb-1">
+                                  Model
+                                </p>
+                                <p className="text-xs text-neutral-800 canvas-dark:text-neutral-200 font-medium">{v.model}</p>
+                              </div>
+                              {(v.personality as { tone?: string })?.tone && (
+                                <div className="col-span-2 bg-neutral-50/50 canvas-dark:bg-neutral-700/30 p-2.5 rounded-xl border border-neutral-100 canvas-dark:border-neutral-700">
+                                  <p className="text-[9px] uppercase tracking-wider font-semibold text-neutral-400 mb-1">
+                                    Tone
+                                  </p>
+                                  <p className="text-xs text-neutral-800 canvas-dark:text-neutral-200">
+                                    {(v.personality as { tone: string }).tone}
+                                  </p>
                                 </div>
-                              ))}
+                              )}
                             </div>
-                          </div>
-                        )}
 
-                        {v.system_prompt && (
-                          <div className="bg-neutral-50/50 canvas-dark:bg-neutral-700/30 p-3 rounded-xl border border-neutral-100 canvas-dark:border-neutral-700">
-                            <p className="text-[9px] uppercase tracking-wider font-semibold text-neutral-400 mb-2">
-                              System Prompt Preview
-                            </p>
-                            <p className="text-[11px] text-neutral-600 canvas-dark:text-neutral-300 font-mono leading-relaxed line-clamp-4 bg-white canvas-dark:bg-neutral-800 p-2.5 rounded-lg border border-neutral-200/50 canvas-dark:border-neutral-600/50">
-                              {v.system_prompt}
-                            </p>
+                            {knowledgeDocs.length > 0 && (
+                              <div className="bg-neutral-50/50 canvas-dark:bg-neutral-700/30 p-3 rounded-xl border border-neutral-100 canvas-dark:border-neutral-700">
+                                <p className="text-[9px] uppercase tracking-wider font-semibold text-neutral-400 mb-2">
+                                  Knowledge ({knowledgeDocs.length} sources)
+                                </p>
+                                <div className="space-y-1.5">
+                                  {knowledgeDocs.map((doc) => (
+                                    <div
+                                      key={doc.id}
+                                      className="flex items-center gap-2 text-xs text-neutral-600 canvas-dark:text-neutral-300 bg-white canvas-dark:bg-neutral-800 p-1.5 rounded-lg border border-neutral-200/50 canvas-dark:border-neutral-600/50"
+                                    >
+                                      <div className="w-5 h-5 rounded-md bg-neutral-100 canvas-dark:bg-neutral-700 flex items-center justify-center text-neutral-500 canvas-dark:text-neutral-400 shrink-0">
+                                        {sourceIcons[doc.source_type] ?? (
+                                          <FileText className="w-3 h-3" />
+                                        )}
+                                      </div>
+                                      <span className="truncate font-medium">
+                                        {doc.source_name}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {v.system_prompt && (
+                              <div className="bg-neutral-50/50 canvas-dark:bg-neutral-700/30 p-3 rounded-xl border border-neutral-100 canvas-dark:border-neutral-700">
+                                <p className="text-[9px] uppercase tracking-wider font-semibold text-neutral-400 mb-2">
+                                  System Prompt Preview
+                                </p>
+                                <p className="text-[11px] text-neutral-600 canvas-dark:text-neutral-300 font-mono leading-relaxed line-clamp-4 bg-white canvas-dark:bg-neutral-800 p-2.5 rounded-lg border border-neutral-200/50 canvas-dark:border-neutral-600/50">
+                                  {v.system_prompt}
+                                </p>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 );
               })}
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
     </>
   );
 }

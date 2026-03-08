@@ -61,7 +61,7 @@ export function SubagentSetup({
   };
 
   return (
-    <NodeModal open onClose={onClose} title="Create Sub-Agent">
+    <NodeModal onClose={onClose} title="Create Sub-Agent">
       <div className="p-5 flex flex-col gap-4">
         <p className="text-sm text-muted-foreground -mt-3">
           Create a child agent that this agent can delegate tasks to.

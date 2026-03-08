@@ -1,7 +1,9 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { X } from "lucide-react";
 import { AgentChatPanel } from "@/components/agents/AgentChatPanel";
+import { PANEL_SLIDE } from "./animation-constants";
 
 interface FloatingChatWidgetProps {
   agentId: string;
@@ -10,6 +12,12 @@ interface FloatingChatWidgetProps {
   onClose: () => void;
 }
 
+const chatVariants = {
+  initial: { x: 24, opacity: 0, scale: 0.97 },
+  animate: { x: 0, opacity: 1, scale: 1 },
+  exit: { x: 24, opacity: 0, scale: 0.97 },
+};
+
 export function FloatingChatWidget({
   agentId,
   agentName,
@@ -17,7 +25,14 @@ export function FloatingChatWidget({
   onClose,
 }: FloatingChatWidgetProps) {
   return (
-    <div className="fixed top-[84px] right-6 bottom-6 z-50 w-[380px] flex flex-col bg-white/70 canvas-dark:bg-neutral-900/70 backdrop-blur-2xl border border-white/60 canvas-dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-[2rem] overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-right-8 duration-200">
+    <motion.div
+      className="fixed top-[84px] right-6 bottom-6 z-50 w-[380px] flex flex-col bg-white/70 canvas-dark:bg-neutral-900/70 backdrop-blur-2xl border border-white/60 canvas-dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-[2rem] overflow-hidden"
+      variants={chatVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={PANEL_SLIDE.transition}
+    >
       {/* Gradient accent line */}
       <div className="h-[2px] gradient-accent-bg shrink-0 mx-6 mt-4 rounded-full" />
 
@@ -43,6 +58,6 @@ export function FloatingChatWidget({
           embedded
         />
       </div>
-    </div>
+    </motion.div>
   );
 }

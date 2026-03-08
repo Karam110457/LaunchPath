@@ -1124,7 +1124,6 @@ export function ComposioToolSetup({
 
   return (
     <NodeModal
-      open
       onClose={onClose}
       title={existing ? "Configure Tool" : "Add Tool"}
     >

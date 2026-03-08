@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { AnimatePresence } from "framer-motion";
   import {
     ReactFlow,
     ReactFlowProvider,
@@ -37,9 +38,8 @@ import { HttpToolSetup } from "./panels/tools/HttpToolSetup";
 import { SubagentSetup } from "./panels/tools/SubagentSetup";
 import { AppLibraryModal } from "./panels/tools/AppLibraryModal";
 import { ComposioToolSetup } from "./panels/tools/ComposioToolSetup";
-import { SaveDialog } from "./SaveDialog";
-import { VersionHistoryModal } from "./VersionHistoryModal";
-import { NodeHelperTip } from "./nodes/NodeHelperTip";
+import { useUndoRedo } from "@/hooks/useUndoRedo";
+import { Undo2, Redo2 } from "lucide-react";
 import { CanvasActionsContext } from "./canvas-context";
 import { CanvasThemeProvider, useCanvasTheme } from "./canvas-theme";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -57,6 +57,17 @@ import type {
 } from "./canvas-types";
 import type { AgentToolResponse, ToolType } from "@/lib/tools/types";
 import { useComposioConnections } from "@/hooks/useComposioConnections";
+
+function buildFormChangeLabel(old: AgentFormState, next: AgentFormState): string {
+  if (old.name !== next.name) return `Changed name to "${next.name}"`;
+  if (old.tone !== next.tone) return `Changed tone`;
+  if (old.model !== next.model) return `Changed model`;
+  if (old.greetingMessage !== next.greetingMessage) return "Changed greeting message";
+  if (old.systemPrompt !== next.systemPrompt) return "Changed system prompt";
+  if (old.description !== next.description) return "Changed description";
+  if (old.status !== next.status) return `Changed status to ${next.status}`;
+  return "Changed agent settings";
+}
 
 // Stable references for React Flow
 const nodeTypes = {
@@ -131,11 +142,7 @@ function AgentCanvasInner({
   }, [formStateFromProps]);
 
   const [formState, setFormState] = useState<AgentFormState>(formStateFromProps);
-  const [isSaving, setIsSaving] = useState(false);
-  const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
-  const [versionCount, setVersionCount] = useState<number>(0);
 
   const isDirty = useMemo(() => {
     return (Object.keys(savedFormState) as (keyof AgentFormState)[]).some(
@@ -173,7 +180,7 @@ function AgentCanvasInner({
   const autosaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     // Don't autosave while the save dialog is open (manual save pending)
-    if (!isDirty || !formState.name.trim() || showSaveDialog) return;
+    if (!isDirty || !formState.name.trim()) return;
     if (autosaveRef.current) clearTimeout(autosaveRef.current);
     autosaveRef.current = setTimeout(async () => {
       setSaveStatus("saving");
@@ -200,22 +207,7 @@ function AgentCanvasInner({
       if (autosaveRef.current) clearTimeout(autosaveRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDirty, formState, showSaveDialog]);
-
-  // ─── Fetch version count ────────────────────────────────────────────────
-  const refreshVersionCount = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/agents/${agent.id}/versions`);
-      if (res.ok) {
-        const data = await res.json();
-        setVersionCount((data.versions ?? []).length);
-      }
-    } catch {
-      // non-critical
-    }
-  }, [agent.id]);
-
-  useEffect(() => { void refreshVersionCount(); }, [refreshVersionCount]);
+  }, [isDirty, formState]);
 
   // ─── Unified save notification (child component saves flash TopBar) ───
   const notifySaved = useCallback(() => {
@@ -223,68 +215,81 @@ function AgentCanvasInner({
     setTimeout(() => setSaveStatus("idle"), 2000);
   }, []);
 
-  // ─── Manual save (creates a version) ──────────────────────────────────
-  const handleSave = useCallback(
-    async (title: string, description: string) => {
-      if (!formState.name.trim()) return;
-      // Cancel any pending autosave so it doesn't race with manual save
-      if (autosaveRef.current) { clearTimeout(autosaveRef.current); autosaveRef.current = null; }
-      setIsSaving(true);
-      try {
-        const res = await fetch(`/api/agents/${agent.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...buildPayload(),
-            version_title: title || undefined,
-            version_description: description || undefined,
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "Update failed");
-        }
-        setShowSaveDialog(false);
-        toast.success(title ? `Saved: ${title}` : "Changes saved");
-        router.refresh();
-        void refreshVersionCount();
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Failed to save");
-      } finally {
-        setIsSaving(false);
-      }
-    },
-    [agent.id, formState, router, buildPayload, refreshVersionCount]
-  );
+  // ─── Back button: flush autosave then navigate ────────────────────────
+  const handleBack = useCallback(async () => {
+    if (autosaveRef.current) {
+      clearTimeout(autosaveRef.current);
+      autosaveRef.current = null;
+    }
+    if (isDirty && formState.name.trim()) {
+      setSaveStatus("saving");
+      await fetch(`/api/agents/${agent.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...buildPayload(), skip_version: true }),
+      });
+    }
+    router.push("/dashboard/agents");
+  }, [isDirty, formState, agent.id, buildPayload, router]);
 
-  const handleReverted = useCallback(
-    (revertedAgent: {
-      name: string;
-      description: string | null;
-      system_prompt: string;
-      personality: Record<string, unknown>;
-      model: string;
-      status: string;
-      wizard_config?: Record<string, unknown> | null;
-    }) => {
-      const revertedState: AgentFormState = {
-        name: revertedAgent.name,
-        description: revertedAgent.description ?? "",
-        tone: (revertedAgent.personality?.tone as string) ?? "",
-        greetingMessage: (revertedAgent.personality?.greeting_message as string) ?? "",
-        model: revertedAgent.model,
-        status: revertedAgent.status,
-        systemPrompt: revertedAgent.system_prompt,
-        wizardConfig: (revertedAgent.wizard_config as unknown as WizardConfig) ?? null,
-      };
-      // Update both form and baseline so isDirty = false immediately
-      setFormState(revertedState);
-      setSavedFormState(revertedState);
-      router.refresh();
-      void refreshVersionCount();
-    },
-    [router, refreshVersionCount]
-  );
+  // ─── Undo / Redo ──────────────────────────────────────────────────────
+  const { push: pushUndo, undo, redo, canUndo, canRedo, undoLabel, redoLabel } = useUndoRedo();
+  const isUndoingRef = useRef(false);
+  const editingToolSnapshotRef = useRef<AgentToolResponse | null>(null);
+
+  // Debounced formState undo tracking (1s debounce batches keystrokes)
+  const lastPushedFormRef = useRef<AgentFormState>(formState);
+  const formUndoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (isUndoingRef.current) return;
+    if (formUndoTimerRef.current) clearTimeout(formUndoTimerRef.current);
+    formUndoTimerRef.current = setTimeout(() => {
+      const oldSnapshot = { ...lastPushedFormRef.current };
+      const newSnapshot = { ...formState };
+      const changed = (Object.keys(oldSnapshot) as (keyof AgentFormState)[]).some((key) => {
+        if (key === "wizardConfig") return JSON.stringify(oldSnapshot.wizardConfig) !== JSON.stringify(newSnapshot.wizardConfig);
+        return oldSnapshot[key] !== newSnapshot[key];
+      });
+      if (!changed) return;
+      const label = buildFormChangeLabel(oldSnapshot, newSnapshot);
+      pushUndo({
+        label,
+        undo: () => {
+          isUndoingRef.current = true;
+          setFormState(oldSnapshot);
+          requestAnimationFrame(() => { isUndoingRef.current = false; });
+        },
+        redo: () => {
+          isUndoingRef.current = true;
+          setFormState(newSnapshot);
+          requestAnimationFrame(() => { isUndoingRef.current = false; });
+        },
+      });
+      lastPushedFormRef.current = newSnapshot;
+    }, 1000);
+    return () => { if (formUndoTimerRef.current) clearTimeout(formUndoTimerRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formState]);
+
+  // Keyboard shortcuts: Ctrl+Z / Ctrl+Shift+Z
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().includes("MAC");
+      const mod = isMac ? e.metaKey : e.ctrlKey;
+      if (!mod || e.key.toLowerCase() !== "z") return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
+      e.preventDefault();
+      if (e.shiftKey) {
+        if (canRedo) { void redo(); toast.info(`Redone: ${redoLabel}`, { duration: 2000 }); }
+      } else {
+        if (canUndo) { void undo(); toast.info(`Undone: ${undoLabel}`, { duration: 2000 }); }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [canUndo, canRedo, undo, redo, undoLabel, redoLabel]);
 
   // ─── Node data ────────────────────────────────────────────────────────────
   const agentData = useMemo<AgentNodeData>(
@@ -458,6 +463,17 @@ function AgentCanvasInner({
     [agentTools, subagentDetails, agent.id]
   );
 
+  // Canvas summary for TopBar: sub-agent count + total tool count (main + all sub-agents)
+  const canvasSummary = useMemo(
+    () => ({
+      subagentCount: subagentNodeItems.length,
+      toolCount:
+        toolNodeItems.length +
+        subagentNodeItems.reduce((sum, sa) => sum + sa.tools.length, 0),
+    }),
+    [subagentNodeItems, toolNodeItems]
+  );
+
   // ─── Canvas position persistence ─────────────────────────────────────────
   // Parse existing data ensuring it conforms to CanvasLayoutState
   const [layoutState, setLayoutState] = useState<CanvasLayoutState>(() => {
@@ -538,13 +554,30 @@ function AgentCanvasInner({
   useEffect(() => {
     if (!toolsReady) return;
     setNodes(layoutNodes);
-    setEdges(layoutEdges);
+    // Filter out stale edges referencing nodes that no longer exist
+    const nodeIds = new Set(layoutNodes.map(n => n.id));
+    const validEdges = layoutEdges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
+    setEdges(validEdges);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentTools, subagentDetails, hasKnowledge]);
 
-  // ─── Drag end: capture new position and persist ───────────────────────────
+  // ─── Drag start/stop: capture positions for undo ───────────────────────────
+  const dragStartPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
+
+  const onNodeDragStart: OnNodeDrag = useCallback(
+    (_event, _node, allNodes) => {
+      const positions: Record<string, { x: number; y: number }> = {};
+      for (const n of allNodes) {
+        positions[n.id] = { x: Math.round(n.position.x), y: Math.round(n.position.y) };
+      }
+      dragStartPositionsRef.current = positions;
+    },
+    []
+  );
+
   const onNodeDragStop: OnNodeDrag = useCallback(
     (_event, _node, allNodes) => {
+      const oldPositions = dragStartPositionsRef.current;
       const updatedPositions = { ...layoutState.positions };
       for (const n of allNodes) {
         updatedPositions[n.id] = { x: Math.round(n.position.x), y: Math.round(n.position.y) };
@@ -552,16 +585,50 @@ function AgentCanvasInner({
       const newState = { ...layoutState, positions: updatedPositions };
       setLayoutState(newState);
       persistLayout(newState);
+
+      // Check if positions actually changed
+      const moved = allNodes.some(n => {
+        const old = oldPositions[n.id];
+        return !old || Math.round(n.position.x) !== old.x || Math.round(n.position.y) !== old.y;
+      });
+
+      if (moved) {
+        const oldLayoutPositions = { ...layoutState.positions, ...oldPositions };
+        pushUndo({
+          label: "Moved nodes",
+          undo: () => {
+            const undoState = { ...layoutState, positions: oldLayoutPositions };
+            setLayoutState(undoState);
+            persistLayout(undoState);
+            setNodes((nds) =>
+              nds.map((n) => oldPositions[n.id]
+                ? { ...n, position: oldPositions[n.id] }
+                : n
+              )
+            );
+          },
+          redo: () => {
+            setLayoutState(newState);
+            persistLayout(newState);
+            setNodes((nds) =>
+              nds.map((n) => updatedPositions[n.id]
+                ? { ...n, position: updatedPositions[n.id] }
+                : n
+              )
+            );
+          },
+        });
+      }
     },
-    [layoutState, persistLayout]
+    [layoutState, persistLayout, pushUndo, setNodes]
   );
 
-  // Restrict which handles can connect to which node types + ownership validation
+  // Restrict which handles can connect to which node types
   const isValidConnection = useCallback(
     (connection: Connection | Edge) => {
       const sourceHandle = connection.sourceHandle;
-      const sourceId = connection.source;
       const targetId = connection.target;
+      const sourceId = connection.source;
       if (!targetId || !sourceId) return false;
 
       const targetNode = nodes.find((n) => n.id === targetId);
@@ -572,22 +639,15 @@ function AgentCanvasInner({
         return targetNode.type === "knowledgeNode";
       }
 
-      // Tools handle (bottom-right) → only tool or subagent nodes
+      // Tools handle (bottom-right) → tool or subagent nodes
       if (sourceHandle === "bottom-right") {
         if (targetNode.type !== "toolNode" && targetNode.type !== "subagentNode") {
           return false;
         }
 
-        // Ownership validation: an agent can only connect to its own tools
+        // Tool nodes: allow any agent → any tool (onConnect handles reassignment if cross-agent)
         if (targetNode.type === "toolNode") {
-          if (sourceId === "agent") {
-            // Parent agent → only parent tools (tool-*)
-            return targetId.startsWith("tool-");
-          } else if (sourceId.startsWith("subagent-")) {
-            // Subagent → only its own tools (sa-{subagentId}-tool-*)
-            const subagentId = sourceId.replace("subagent-", "");
-            return targetId.startsWith(`sa-${subagentId}-tool-`);
-          }
+          return true;
         }
 
         // Subagent nodes can only be connected from the parent agent
@@ -646,9 +706,100 @@ function AgentCanvasInner({
 
   const onConnect = useCallback(
     (params: Connection) => {
+      const { source, target } = params;
+      if (!source || !target) return;
+
+      // ── Cross-agent tool reassignment detection ──────────────────────
+      const isParentSource = source === "agent";
+      const isSubagentSource = source.startsWith("subagent-");
+      const isParentTool = /^tool-.+$/.test(target) && !target.startsWith("tool-temp");
+      const saToolMatch = target.match(/^sa-(.+)-tool-(.+)$/);
+
+      const needsReassign =
+        (isSubagentSource && isParentTool) ||  // subagent → parent's tool
+        (isParentSource && !!saToolMatch);      // parent → subagent's tool
+
+      if (needsReassign) {
+        let newOwnerAgentId: string;
+        let toolId: string;
+        let currentOwnerAgentId: string;
+
+        if (isSubagentSource && isParentTool) {
+          // Moving parent tool → subagent
+          newOwnerAgentId = source.replace("subagent-", "");
+          toolId = target.replace("tool-", "");
+          currentOwnerAgentId = agent.id;
+        } else {
+          // Moving subagent tool → parent
+          const match = saToolMatch!;
+          newOwnerAgentId = agent.id;
+          toolId = match[2];
+          currentOwnerAgentId = match[1];
+        }
+
+        // Node IDs will change after reassignment — don't add edge now
+        void (async () => {
+          const oldNodeId = target;
+          const newNodeId = newOwnerAgentId === agent.id
+            ? `tool-${toolId}`
+            : `sa-${newOwnerAgentId}-tool-${toolId}`;
+
+          // Transfer position from old node ID to new node ID
+          const oldPos = layoutState.positions[oldNodeId];
+          if (oldPos) {
+            const newPositions = { ...layoutState.positions, [newNodeId]: oldPos };
+            delete newPositions[oldNodeId];
+            const posState = { ...layoutState, positions: newPositions };
+            setLayoutState(posState);
+            persistLayout(posState);
+          }
+
+          // PATCH to reassign agent_id + enable
+          const res = await fetch(`/api/agents/${currentOwnerAgentId}/tools/${toolId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ agent_id: newOwnerAgentId, is_enabled: true }),
+          });
+
+          if (!res.ok) {
+            toast.error("Failed to move tool");
+            return;
+          }
+
+          // Refresh — layout rebuilds with new node IDs
+          await Promise.all([fetchTools(), fetchSubagents()]);
+
+          // Auto-create the correct edge after layout rebuilds
+          setTimeout(() => {
+            const sourceNode = newOwnerAgentId === agent.id ? "agent" : `subagent-${newOwnerAgentId}`;
+            const edgeId = `e-${sourceNode}-${newNodeId}`;
+
+            setEdges((currentEdges) => {
+              // Remove any stale edges referencing the old node ID
+              let updated = currentEdges.filter(e => e.source !== oldNodeId && e.target !== oldNodeId);
+              if (!updated.some(e => e.id === edgeId)) {
+                updated = addEdge(
+                  { id: edgeId, source: sourceNode, sourceHandle: "bottom-right", target: newNodeId, type: "dashedEdge" },
+                  updated
+                );
+              }
+              const newState = { ...layoutState, edges: updated.filter(e => !e.id.includes("knowledge")) };
+              setLayoutState(newState);
+              persistLayout(newState);
+              return updated;
+            });
+          }, 150);
+
+          notifySaved();
+        })();
+
+        return; // Skip normal edge creation
+      }
+
+      // ── Normal (same-agent) connection ───────────────────────────────
       const newEdge: Edge = {
         ...params,
-        id: `e-${params.source}-${params.target}`,
+        id: `e-${source}-${target}`,
         type: "dashedEdge",
       };
 
@@ -661,13 +812,39 @@ function AgentCanvasInner({
       persistLayout(newState);
 
       // Enable the tool in DB when edge is created
-      const target = params.target;
-      if (target) {
-        const resolved = resolveToolFromNodeId(target);
-        if (resolved) setToolEnabled(resolved.agentId, resolved.toolId, true);
-      }
+      const resolved = resolveToolFromNodeId(target);
+      if (resolved) setToolEnabled(resolved.agentId, resolved.toolId, true);
+
+      // Push undo for edge connect
+      pushUndo({
+        label: `Connected ${target.replace(/^(tool-|subagent-)/, "")}`,
+        undo: () => {
+          isUndoingRef.current = true;
+          setEdges((prev) => {
+            const filtered = prev.filter((e) => e.id !== newEdge.id);
+            const s = { ...layoutState, edges: filtered.filter(e => !e.id.includes("knowledge")) };
+            setLayoutState(s);
+            persistLayout(s);
+            return filtered;
+          });
+          if (resolved) setToolEnabled(resolved.agentId, resolved.toolId, false);
+          requestAnimationFrame(() => { isUndoingRef.current = false; });
+        },
+        redo: () => {
+          isUndoingRef.current = true;
+          setEdges((prev) => {
+            const restored = addEdge(newEdge, prev);
+            const s = { ...layoutState, edges: restored.filter(e => !e.id.includes("knowledge")) };
+            setLayoutState(s);
+            persistLayout(s);
+            return restored;
+          });
+          if (resolved) setToolEnabled(resolved.agentId, resolved.toolId, true);
+          requestAnimationFrame(() => { isUndoingRef.current = false; });
+        },
+      });
     },
-    [edges, layoutState, persistLayout, setEdges, resolveToolFromNodeId, setToolEnabled]
+    [edges, layoutState, persistLayout, setEdges, resolveToolFromNodeId, setToolEnabled, agent.id, fetchTools, fetchSubagents, notifySaved, pushUndo]
   );
 
   // Wrapper for onEdgesChange to persist deletions and disable tools
@@ -713,12 +890,14 @@ function AgentCanvasInner({
   const prevEdgesRef = useRef<Edge[]>(edges);
   useEffect(() => {
     if (!toolsReady) return;
+    if (isUndoingRef.current) { prevEdgesRef.current = edges; return; }
     const prev = prevEdgesRef.current;
     if (edges.length < prev.length) {
-      // Find which edges were removed and disable those tools
       const currentIds = new Set(edges.map((e) => e.id));
-      for (const edge of prev) {
-        if (!currentIds.has(edge.id) && edge.target) {
+      const removedEdges = prev.filter((e) => !currentIds.has(e.id));
+
+      for (const edge of removedEdges) {
+        if (edge.target) {
           const resolved = resolveToolFromNodeId(edge.target);
           if (resolved) setToolEnabled(resolved.agentId, resolved.toolId, false);
         }
@@ -727,6 +906,52 @@ function AgentCanvasInner({
       const newState = { ...layoutState, edges: edges.filter(e => !e.id.includes("knowledge")) };
       setLayoutState(newState);
       persistLayout(newState);
+
+      // Push undo for disconnected edges (skip knowledge edges)
+      const undoableRemoved = removedEdges.filter(e => !e.id.includes("knowledge"));
+      if (undoableRemoved.length > 0) {
+        pushUndo({
+          label: undoableRemoved.length === 1
+            ? `Disconnected ${undoableRemoved[0].target?.replace(/^(tool-|subagent-)/, "") ?? "node"}`
+            : `Disconnected ${undoableRemoved.length} edges`,
+          undo: () => {
+            isUndoingRef.current = true;
+            setEdges((p) => {
+              let restored = [...p];
+              for (const edge of undoableRemoved) {
+                restored = addEdge(edge, restored);
+                if (edge.target) {
+                  const r = resolveToolFromNodeId(edge.target);
+                  if (r) setToolEnabled(r.agentId, r.toolId, true);
+                }
+              }
+              const s = { ...layoutState, edges: restored.filter(e => !e.id.includes("knowledge")) };
+              setLayoutState(s);
+              persistLayout(s);
+              return restored;
+            });
+            requestAnimationFrame(() => { isUndoingRef.current = false; });
+          },
+          redo: () => {
+            isUndoingRef.current = true;
+            setEdges((p) => {
+              const removedIds = new Set(undoableRemoved.map(e => e.id));
+              const filtered = p.filter(e => !removedIds.has(e.id));
+              for (const edge of undoableRemoved) {
+                if (edge.target) {
+                  const r = resolveToolFromNodeId(edge.target);
+                  if (r) setToolEnabled(r.agentId, r.toolId, false);
+                }
+              }
+              const s = { ...layoutState, edges: filtered.filter(e => !e.id.includes("knowledge")) };
+              setLayoutState(s);
+              persistLayout(s);
+              return filtered;
+            });
+            requestAnimationFrame(() => { isUndoingRef.current = false; });
+          },
+        });
+      }
     }
     prevEdgesRef.current = edges;
   }, [edges]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -759,9 +984,10 @@ function AgentCanvasInner({
   } | null>(null);
 
   const handleToolSaved = useCallback(async () => {
-    // Remember which tool IDs existed before the save
     const prevToolIds = new Set(agentTools.map((t) => t.id));
     const ownerAgentId = setupTool?.agentId ?? composioSetup?.agentId ?? agent.id;
+    const editSnapshot = editingToolSnapshotRef.current;
+    editingToolSnapshotRef.current = null;
 
     setSetupTool(null);
     setCatalogContext(null);
@@ -770,36 +996,102 @@ function AgentCanvasInner({
     await Promise.all([fetchTools(), fetchSubagents()]);
     notifySaved();
 
-    // After tools are refreshed, auto-create edges for any NEW tools
-    // We need a small delay for the layout to rebuild with new tool nodes
+    // After tools are refreshed, auto-create edges for NEW tools + push undo
     setTimeout(() => {
       setAgentTools((currentTools) => {
         const newTools = currentTools.filter((t) => !prevToolIds.has(t.id));
+
+        // Handle tool config edit undo
+        if (editSnapshot && newTools.length === 0) {
+          const updatedTool = currentTools.find((t) => t.id === editSnapshot.id);
+          if (updatedTool) {
+            const newSnapshot = { ...updatedTool };
+            pushUndo({
+              label: `Updated ${editSnapshot.display_name}`,
+              undo: async () => {
+                await fetch(`/api/agents/${ownerAgentId}/tools/${editSnapshot.id}`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    display_name: editSnapshot.display_name,
+                    description: editSnapshot.description,
+                    config: editSnapshot.config,
+                    is_enabled: editSnapshot.is_enabled,
+                  }),
+                });
+                await Promise.all([fetchTools(), fetchSubagents()]);
+              },
+              redo: async () => {
+                await fetch(`/api/agents/${ownerAgentId}/tools/${editSnapshot.id}`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    display_name: newSnapshot.display_name,
+                    description: newSnapshot.description,
+                    config: newSnapshot.config,
+                    is_enabled: newSnapshot.is_enabled,
+                  }),
+                });
+                await Promise.all([fetchTools(), fetchSubagents()]);
+              },
+            });
+          }
+          return currentTools;
+        }
+
         if (newTools.length === 0) return currentTools;
 
+        // Push undo for each new tool
+        for (const tool of newTools) {
+          let currentToolId = tool.id;
+          pushUndo({
+            label: `Added ${tool.display_name}`,
+            undo: async () => {
+              isUndoingRef.current = true;
+              await fetch(`/api/agents/${ownerAgentId}/tools/${currentToolId}`, { method: "DELETE" });
+              await Promise.all([fetchTools(), fetchSubagents()]);
+              isUndoingRef.current = false;
+            },
+            redo: async () => {
+              isUndoingRef.current = true;
+              const res = await fetch(`/api/agents/${ownerAgentId}/tools`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  tool_type: tool.tool_type,
+                  display_name: tool.display_name,
+                  description: tool.description,
+                  config: tool.config,
+                  is_enabled: tool.is_enabled,
+                }),
+              });
+              if (res.ok) {
+                const json = await res.json();
+                if (json.tool) currentToolId = json.tool.id;
+              }
+              await Promise.all([fetchTools(), fetchSubagents()]);
+              isUndoingRef.current = false;
+            },
+          });
+        }
+
+        // Auto-create edges for new tools
         setEdges((currentEdges) => {
           let updated = [...currentEdges];
           for (const tool of newTools) {
             const nodeId = tool.tool_type === "subagent"
               ? `subagent-${(tool.config as { target_agent_id?: string }).target_agent_id}`
               : `tool-${tool.id}`;
-
-            // Determine which agent node is the source
             const sourceNode = ownerAgentId === agent.id ? "agent" : `subagent-${ownerAgentId}`;
             const edgeId = `e-${sourceNode}-${nodeId}`;
-
-            // Don't add duplicate
             if (!updated.some((e) => e.id === edgeId)) {
               updated = addEdge(
                 { id: edgeId, source: sourceNode, sourceHandle: "bottom-right", target: nodeId, type: "dashedEdge" },
                 updated
               );
-              // Enable the tool now that it has an edge
               setToolEnabled(ownerAgentId, tool.id, true);
             }
           }
-
-          // Persist
           const newState = { ...layoutState, edges: updated.filter(e => !e.id.includes("knowledge")) };
           setLayoutState(newState);
           persistLayout(newState);
@@ -809,14 +1101,50 @@ function AgentCanvasInner({
         return currentTools;
       });
     }, 100);
-  }, [agentTools, agent.id, setupTool, composioSetup, fetchTools, fetchSubagents, notifySaved, layoutState, persistLayout, setEdges, setToolEnabled]);
+  }, [agentTools, agent.id, setupTool, composioSetup, fetchTools, fetchSubagents, notifySaved, layoutState, persistLayout, setEdges, setToolEnabled, pushUndo]);
 
-  const handleToolDeleted = useCallback(async () => {
+  const handleToolDeleted = useCallback(async (deletedTool?: AgentToolResponse) => {
     setSetupTool(null);
     setComposioSetup(null);
     await Promise.all([fetchTools(), fetchSubagents()]);
     notifySaved();
-  }, [fetchTools, fetchSubagents, notifySaved]);
+
+    if (deletedTool) {
+      const ownerAgentId = deletedTool.agent_id;
+      let lastCreatedId: string | null = null;
+      pushUndo({
+        label: `Deleted ${deletedTool.display_name}`,
+        undo: async () => {
+          isUndoingRef.current = true;
+          const res = await fetch(`/api/agents/${ownerAgentId}/tools`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              tool_type: deletedTool.tool_type,
+              display_name: deletedTool.display_name,
+              description: deletedTool.description,
+              config: deletedTool.config,
+              is_enabled: deletedTool.is_enabled,
+            }),
+          });
+          if (res.ok) {
+            const json = await res.json();
+            lastCreatedId = json.tool?.id ?? null;
+          }
+          await Promise.all([fetchTools(), fetchSubagents()]);
+          isUndoingRef.current = false;
+        },
+        redo: async () => {
+          if (lastCreatedId) {
+            isUndoingRef.current = true;
+            await fetch(`/api/agents/${ownerAgentId}/tools/${lastCreatedId}`, { method: "DELETE" });
+            await Promise.all([fetchTools(), fetchSubagents()]);
+            isUndoingRef.current = false;
+          }
+        },
+      });
+    }
+  }, [fetchTools, fetchSubagents, notifySaved, pushUndo]);
 
   const handleSubagentDeleted = useCallback(async () => {
     setModal({ type: "none" });
@@ -838,6 +1166,7 @@ function AgentCanvasInner({
 
   const openToolSetup = useCallback(
     (existing: AgentToolResponse, ownerAgentId: string) => {
+      editingToolSnapshotRef.current = { ...existing };
       if (existing.tool_type === "composio") {
         const cfg = existing.config as {
           toolkit?: string;
@@ -912,11 +1241,30 @@ function AgentCanvasInner({
             body: JSON.stringify({ knowledge_enabled: true, skip_version: true }),
           });
           setHasKnowledge(true);
-          // Set position for knowledge node
           const newPos = { ...layoutState.positions, "knowledge": position };
           const newState = { ...layoutState, positions: newPos };
           setLayoutState(newState);
           persistLayout(newState);
+
+          pushUndo({
+            label: "Enabled knowledge base",
+            undo: async () => {
+              await fetch(`/api/agents/${targetAgentId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ knowledge_enabled: false, skip_version: true }),
+              });
+              setHasKnowledge(false);
+            },
+            redo: async () => {
+              await fetch(`/api/agents/${targetAgentId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ knowledge_enabled: true, skip_version: true }),
+              });
+              setHasKnowledge(true);
+            },
+          });
         })();
       } else if (type === "composio") {
         // Optimistic: show placeholder node instantly
@@ -965,6 +1313,34 @@ function AgentCanvasInner({
             const newState = { ...layoutState, positions: newPos };
             setLayoutState(newState);
             persistLayout(newState);
+
+            let currentToolId = json.tool.id as string;
+            pushUndo({
+              label: `Added ${name}`,
+              undo: async () => {
+                isUndoingRef.current = true;
+                await fetch(`/api/agents/${targetAgentId}/tools/${currentToolId}`, { method: "DELETE" });
+                await fetchTools();
+                isUndoingRef.current = false;
+              },
+              redo: async () => {
+                isUndoingRef.current = true;
+                const r = await fetch(`/api/agents/${targetAgentId}/tools`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    tool_type: "composio",
+                    display_name: name,
+                    description: `Use ${name} actions.`,
+                    config: { toolkit, toolkit_name: name, toolkit_icon: icon },
+                    is_enabled: false,
+                  }),
+                });
+                if (r.ok) { const j = await r.json(); if (j.tool) currentToolId = j.tool.id; }
+                await fetchTools();
+                isUndoingRef.current = false;
+              },
+            });
           }
           await fetchTools();
           if (targetAgentId !== agent.id) await fetchSubagents();
@@ -1020,6 +1396,35 @@ function AgentCanvasInner({
             const newState = { ...layoutState, positions: newPos };
             setLayoutState(newState);
             persistLayout(newState);
+
+            let currentToolId = json.tool.id as string;
+            const toolType = type;
+            pushUndo({
+              label: `Added ${defaultName}`,
+              undo: async () => {
+                isUndoingRef.current = true;
+                await fetch(`/api/agents/${targetAgentId}/tools/${currentToolId}`, { method: "DELETE" });
+                await fetchTools();
+                isUndoingRef.current = false;
+              },
+              redo: async () => {
+                isUndoingRef.current = true;
+                const r = await fetch(`/api/agents/${targetAgentId}/tools`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    tool_type: toolType,
+                    display_name: defaultName,
+                    description: "",
+                    config: {},
+                    is_enabled: false,
+                  }),
+                });
+                if (r.ok) { const j = await r.json(); if (j.tool) currentToolId = j.tool.id; }
+                await fetchTools();
+                isUndoingRef.current = false;
+              },
+            });
           }
           await fetchTools();
           if (targetAgentId !== agent.id) await fetchSubagents();
@@ -1029,7 +1434,7 @@ function AgentCanvasInner({
     } catch (e) {
       console.error("Drop failed", e);
     }
-  }, [agent.id, getNodes, screenToFlowPosition, layoutState, persistLayout, fetchTools, fetchSubagents, isComposioConnected]);
+  }, [agent.id, getNodes, screenToFlowPosition, layoutState, persistLayout, fetchTools, fetchSubagents, isComposioConnected, pushUndo]);
 
   const onNodeDoubleClick: NodeMouseHandler = useCallback(
     (_event, node) => {
@@ -1073,14 +1478,12 @@ function AgentCanvasInner({
     <div className={`${theme === "dark" ? "canvas-dark" : "light"} fixed inset-0 z-[100] w-full h-full overflow-hidden ${theme === "dark" ? "bg-[#050505]" : "bg-[#eef0f2]"} text-foreground transition-colors duration-300`}>
       <TopBar
         agentName={formState.name}
-        onSave={() => setShowSaveDialog(true)}
-        onVersionHistory={() => setShowVersionHistory(true)}
+        subagentCount={canvasSummary.subagentCount}
+        toolCount={canvasSummary.toolCount}
         onTest={handleToggleTest}
-        isSaving={isSaving}
-        isDirty={isDirty}
         isTestOpen={chatOpen}
         saveStatus={saveStatus}
-        versionCount={versionCount}
+        onBack={handleBack}
       />
 
       <LeftCatalogPanel />
@@ -1106,6 +1509,7 @@ function AgentCanvasInner({
             onConnect={onConnect}
             isValidConnection={isValidConnection}
             onNodeDoubleClick={onNodeDoubleClick}
+            onNodeDragStart={onNodeDragStart}
             onNodeDragStop={onNodeDragStop}
             onDragOver={onDragOver}
             onDrop={onDrop}
@@ -1133,8 +1537,25 @@ function AgentCanvasInner({
         </div>
       )}
 
-      {/* Zoom controls */}
+      {/* Undo/Redo + Zoom controls */}
       <div className="absolute bottom-6 left-6 md:left-[320px] z-30 flex items-center gap-1 bg-white/70 canvas-dark:bg-[#1C1C1C]/70 backdrop-blur-xl border border-white/60 canvas-dark:border-[#2A2A2A]/50 shadow-sm rounded-xl p-1.5">
+        <button
+          onClick={() => { if (canUndo) { void undo(); toast.info(`Undone: ${undoLabel}`, { duration: 2000 }); } }}
+          disabled={!canUndo}
+          className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-800 canvas-dark:hover:text-neutral-200 hover:bg-black/5 canvas-dark:hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          title={canUndo ? `Undo: ${undoLabel}` : "Nothing to undo"}
+        >
+          <Undo2 className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => { if (canRedo) { void redo(); toast.info(`Redone: ${redoLabel}`, { duration: 2000 }); } }}
+          disabled={!canRedo}
+          className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-800 canvas-dark:hover:text-neutral-200 hover:bg-black/5 canvas-dark:hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          title={canRedo ? `Redo: ${redoLabel}` : "Nothing to redo"}
+        >
+          <Redo2 className="w-4 h-4" />
+        </button>
+        <div className="w-px h-4 bg-neutral-200 canvas-dark:bg-[#2A2A2A] mx-0.5" />
         <button
           onClick={() => zoomIn({ duration: 200 })}
           className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-800 canvas-dark:hover:text-neutral-200 hover:bg-black/5 canvas-dark:hover:bg-white/5 transition-colors"
@@ -1165,73 +1586,80 @@ function AgentCanvasInner({
         <ThemeToggle isDark={theme === "dark"} onToggle={toggleTheme} />
       </div>
 
-      <NodeModal
-        open={modal.type !== "none"}
-        onClose={handleCloseModal}
-        title={modalTitle}
-      >
-        {modal.type === "edit-agent" && (
-          <AgentEditPanel
-            agentId={agent.id}
-            formState={formState}
-            setFormState={setFormState}
-            tools={agentTools}
-          />
+      <AnimatePresence>
+        {modal.type !== "none" && (
+          <NodeModal
+            key="node-modal"
+            onClose={handleCloseModal}
+            title={modalTitle}
+          >
+            {modal.type === "edit-agent" && (
+              <AgentEditPanel
+                agentId={agent.id}
+                formState={formState}
+                setFormState={setFormState}
+                tools={agentTools}
+              />
+            )}
+            {modal.type === "knowledge" && (
+              <KnowledgeDetailPanel
+                agentId={agent.id}
+                initialDocuments={initialDocuments}
+                onDocumentsChange={handleDocumentsChange}
+                onRemoveKnowledge={async () => {
+                  await fetch(`/api/agents/${agent.id}/knowledge?all=true`, { method: "DELETE" });
+                  await fetch(`/api/agents/${agent.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ knowledge_enabled: false, skip_version: true }),
+                  });
+                  setHasKnowledge(false);
+                  handleDocumentsChange([]);
+                  setModal({ type: "none" });
+                }}
+              />
+            )}
+            {modal.type === "subagent-knowledge" && (
+              <KnowledgeDetailPanel
+                agentId={modal.agentId}
+                initialDocuments={[]}
+                fetchOnMount
+                onRemoveKnowledge={async () => {
+                  await fetch(`/api/agents/${modal.agentId}/knowledge?all=true`, { method: "DELETE" });
+                  await fetch(`/api/agents/${modal.agentId}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ knowledge_enabled: false, skip_version: true }),
+                  });
+                  await fetchSubagents();
+                  setModal({ type: "none" });
+                }}
+              />
+            )}
+            {modal.type === "edit-subagent" && (
+              <SubagentEditPanel
+                subagentId={modal.subagentId}
+                parentAgentId={agent.id}
+                toolRecordId={modal.toolRecordId}
+                onDeleted={handleSubagentDeleted}
+                onSaved={notifySaved}
+              />
+            )}
+          </NodeModal>
         )}
-        {modal.type === "knowledge" && (
-          <KnowledgeDetailPanel
-            agentId={agent.id}
-            initialDocuments={initialDocuments}
-            onDocumentsChange={handleDocumentsChange}
-            onRemoveKnowledge={async () => {
-              await fetch(`/api/agents/${agent.id}/knowledge?all=true`, { method: "DELETE" });
-              await fetch(`/api/agents/${agent.id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ knowledge_enabled: false, skip_version: true }),
-              });
-              setHasKnowledge(false);
-              handleDocumentsChange([]);
-              setModal({ type: "none" });
-            }}
-          />
-        )}
-        {modal.type === "subagent-knowledge" && (
-          <KnowledgeDetailPanel
-            agentId={modal.agentId}
-            initialDocuments={[]}
-            fetchOnMount
-            onRemoveKnowledge={async () => {
-              await fetch(`/api/agents/${modal.agentId}/knowledge?all=true`, { method: "DELETE" });
-              await fetch(`/api/agents/${modal.agentId}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ knowledge_enabled: false, skip_version: true }),
-              });
-              await fetchSubagents();
-              setModal({ type: "none" });
-            }}
-          />
-        )}
-        {modal.type === "edit-subagent" && (
-          <SubagentEditPanel
-            subagentId={modal.subagentId}
-            parentAgentId={agent.id}
-            toolRecordId={modal.toolRecordId}
-            onDeleted={handleSubagentDeleted}
-            onSaved={notifySaved}
-          />
-        )}
-      </NodeModal>
+      </AnimatePresence>
 
-      {chatOpen && (
-        <FloatingChatWidget
-          agentId={agent.id}
-          agentName={agent.name}
-          greetingMessage={personality?.greeting_message}
-          onClose={() => setChatOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {chatOpen && (
+          <FloatingChatWidget
+            key="chat-widget"
+            agentId={agent.id}
+            agentName={agent.name}
+            greetingMessage={personality?.greeting_message}
+            onClose={() => setChatOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       <ToolCatalogModal
         open={catalogContext !== null}
@@ -1329,20 +1757,6 @@ function AgentCanvasInner({
         />
       )}
 
-      <SaveDialog
-        open={showSaveDialog}
-        onClose={() => setShowSaveDialog(false)}
-        onSave={handleSave}
-        isSaving={isSaving}
-      />
-
-      <VersionHistoryModal
-        open={showVersionHistory}
-        onClose={() => setShowVersionHistory(false)}
-        agentId={agent.id}
-        isDirty={isDirty}
-        onReverted={handleReverted}
-      />
     </div>
   );
 }

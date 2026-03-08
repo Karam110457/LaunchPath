@@ -44,10 +44,11 @@ export async function GET(
     return NextResponse.json({ conversation: data });
   }
 
-  // List summaries (no full messages)
+  // List summaries — exclude the messages column to avoid fetching
+  // potentially huge JSONB arrays. Title is set at creation time.
   const { data, error } = await supabase
     .from("agent_conversations")
-    .select("id, title, messages, created_at, updated_at")
+    .select("id, title, created_at, updated_at")
     .eq("agent_id", agentId)
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
@@ -56,26 +57,13 @@ export async function GET(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const summaries = (data ?? []).map((row) => {
-    const msgs = Array.isArray(row.messages) ? row.messages : [];
-    const firstUserMsg = msgs.find(
-      (m: Record<string, unknown>) => m.role === "user"
-    );
-    return {
-      id: row.id,
-      title:
-        row.title ??
-        (typeof firstUserMsg?.content === "string"
-          ? firstUserMsg.content.slice(0, 50)
-          : null),
-      updated_at: row.updated_at,
-      preview:
-        typeof firstUserMsg?.content === "string"
-          ? firstUserMsg.content.slice(0, 80)
-          : null,
-      message_count: msgs.length,
-    };
-  });
+  const summaries = (data ?? []).map((row) => ({
+    id: row.id,
+    title: row.title ?? "Untitled",
+    updated_at: row.updated_at,
+    preview: null,
+    message_count: 0,
+  }));
 
   return NextResponse.json({ conversations: summaries });
 }

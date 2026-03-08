@@ -21,6 +21,9 @@ function now() {
   return new Date().toISOString();
 }
 
+/** Conversations older than this are considered stale for auto-loading. */
+const STALE_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
+
 interface UseAgentChatOptions {
   agentId: string;
   greetingMessage?: string;
@@ -40,6 +43,7 @@ interface UseAgentChatReturn {
   isStreaming: boolean;
   isTyping: boolean;
   isThinking: boolean;
+  isLoadingMessages: boolean;
   thinkingText: string;
   toolActivity: ToolActivity[];
   sendMessage: (text: string) => void;
@@ -62,6 +66,7 @@ export function useAgentChat({
     AgentConversationSummary[]
   >([]);
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [activeConversationId, setActiveConversationId] = useState<
     string | null
   >(null);
@@ -93,6 +98,32 @@ export function useAgentChat({
   const historyRef = useRef<AgentConversationMessage[]>([]);
   const streamingIdRef = useRef<string | null>(null);
 
+  // AbortController for the active SSE stream
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Abort any active stream (used by switch, unmount, new conversation)
+  const abortActiveStream = useCallback(() => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    setIsStreaming(false);
+    setIsTyping(false);
+    setIsThinking(false);
+    setThinkingText("");
+    streamingIdRef.current = null;
+  }, []);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (abortRef.current) {
+        abortRef.current.abort();
+        abortRef.current = null;
+      }
+    };
+  }, []);
+
   // -------------------------------------------------------------------------
   // Fetch conversation list
   // -------------------------------------------------------------------------
@@ -113,7 +144,7 @@ export function useAgentChat({
     return [] as AgentConversationSummary[];
   }, [agentId]);
 
-  // Load conversations on mount, auto-select the most recent
+  // Load conversations on mount, auto-select the most recent IF fresh
   useEffect(() => {
     let cancelled = false;
     setIsLoadingConversations(true);
@@ -123,9 +154,14 @@ export function useAgentChat({
       setIsLoadingConversations(false);
 
       if (convos.length > 0) {
-        // Auto-load the most recent conversation
         const mostRecent = convos[0];
-        void loadConversation(mostRecent.id);
+        const age = Date.now() - new Date(mostRecent.updated_at).getTime();
+
+        if (age < STALE_THRESHOLD_MS) {
+          // Fresh conversation — auto-load it
+          void loadConversation(mostRecent.id);
+        }
+        // Stale conversation — stay on "New conversation" with greeting
       }
     });
 
@@ -142,11 +178,15 @@ export function useAgentChat({
   const loadConversation = useCallback(
     async (conversationId: string) => {
       setActiveConversationId(conversationId);
+      setIsLoadingMessages(true);
       try {
         const res = await fetch(
           `/api/agents/${agentId}/chat/conversations?id=${conversationId}`
         );
-        if (!res.ok) return;
+        if (!res.ok) {
+          setIsLoadingMessages(false);
+          return;
+        }
         const data = await res.json();
         const msgs = Array.isArray(data.conversation?.messages)
           ? data.conversation.messages
@@ -169,6 +209,8 @@ export function useAgentChat({
         );
       } catch {
         // Network error
+      } finally {
+        setIsLoadingMessages(false);
       }
     },
     [agentId]
@@ -179,9 +221,9 @@ export function useAgentChat({
   // -------------------------------------------------------------------------
 
   const startNewConversation = useCallback(() => {
+    abortActiveStream();
     setActiveConversationId(null);
     historyRef.current = [];
-    streamingIdRef.current = null;
     setMessages(
       greetingMessage
         ? [
@@ -195,11 +237,7 @@ export function useAgentChat({
           ]
         : []
     );
-    setIsStreaming(false);
-    setIsTyping(false);
-    setIsThinking(false);
-    setThinkingText("");
-  }, [greetingMessage]);
+  }, [greetingMessage, abortActiveStream]);
 
   // -------------------------------------------------------------------------
   // Switch to an existing conversation
@@ -208,14 +246,10 @@ export function useAgentChat({
   const switchConversation = useCallback(
     (conversationId: string) => {
       if (conversationId === activeConversationId) return;
-      setIsStreaming(false);
-      setIsTyping(false);
-      setIsThinking(false);
-      setThinkingText("");
-      streamingIdRef.current = null;
+      abortActiveStream();
       void loadConversation(conversationId);
     },
-    [activeConversationId, loadConversation]
+    [activeConversationId, loadConversation, abortActiveStream]
   );
 
   // -------------------------------------------------------------------------
@@ -285,8 +319,14 @@ export function useAgentChat({
       setToolActivity([]);
       streamingIdRef.current = null;
 
+      // Create an AbortController for this stream
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       void (async () => {
         let accumulatedText = "";
+        // Track tool call count so tool-result can match by index
+        let toolCallIndex = 0;
 
         try {
           const response = await fetch(`/api/agents/${agentId}/chat`, {
@@ -297,6 +337,7 @@ export function useAgentChat({
               userMessage: text,
               conversationId: activeConvIdRef.current ?? undefined,
             }),
+            signal: controller.signal,
           });
 
           if (!response.ok || !response.body) {
@@ -373,8 +414,12 @@ export function useAgentChat({
                   toolActivityRef.current = [...toolActivityRef.current, entry];
                   setToolActivity(toolActivityRef.current);
                 } else if (event.type === "tool-result") {
-                  toolActivityRef.current = toolActivityRef.current.map((t) =>
-                    t.toolName === event.toolName
+                  // Match by index (order of tool-result matches order of tool-call)
+                  // to handle duplicate tool names correctly
+                  const targetIndex = toolCallIndex;
+                  toolCallIndex++;
+                  toolActivityRef.current = toolActivityRef.current.map((t, i) =>
+                    i === targetIndex
                       ? {
                           ...t,
                           status: event.success ? ("done" as const) : ("failed" as const),
@@ -428,11 +473,13 @@ export function useAgentChat({
                   setIsStreaming(false);
                   setIsTyping(false);
                   setIsThinking(false);
+                  abortRef.current = null;
                 } else if (event.type === "error") {
                   setIsStreaming(false);
                   setIsTyping(false);
                   setIsThinking(false);
                   streamingIdRef.current = null;
+                  abortRef.current = null;
                   setMessages((prev) => [
                     ...prev,
                     {
@@ -440,6 +487,7 @@ export function useAgentChat({
                       role: "assistant",
                       content: event.message,
                       isStreaming: false,
+                      isError: true,
                       timestamp: now(),
                     },
                   ]);
@@ -476,13 +524,18 @@ export function useAgentChat({
             setIsStreaming(false);
             setIsTyping(false);
             setIsThinking(false);
+            abortRef.current = null;
           }
         } catch (err) {
+          // Ignore abort errors — those are intentional
+          if (err instanceof DOMException && err.name === "AbortError") return;
+
           console.error("Agent chat stream error:", err);
           setIsStreaming(false);
           setIsTyping(false);
           setIsThinking(false);
           streamingIdRef.current = null;
+          abortRef.current = null;
         }
       })();
     },
@@ -494,6 +547,7 @@ export function useAgentChat({
     isStreaming,
     isTyping,
     isThinking,
+    isLoadingMessages,
     thinkingText,
     toolActivity,
     sendMessage,

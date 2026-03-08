@@ -76,6 +76,22 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   if (body.description !== undefined) updates.description = body.description.trim();
   if (body.is_enabled !== undefined) updates.is_enabled = body.is_enabled;
 
+  if (body.agent_id !== undefined) {
+    // Validate target agent exists and belongs to the same user
+    const { data: targetAgent } = await supabase
+      .from("ai_agents")
+      .select("id")
+      .eq("id", body.agent_id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (!targetAgent) {
+      return NextResponse.json({ error: "Target agent not found" }, { status: 404 });
+    }
+
+    updates.agent_id = body.agent_id;
+  }
+
   if (body.config !== undefined) {
     // Merge incoming config — masked fields are preserved from stored value
     updates.config = mergeConfig(

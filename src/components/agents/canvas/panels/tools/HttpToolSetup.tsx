@@ -181,7 +181,7 @@ export function HttpToolSetup({
   };
 
   return (
-    <NodeModal open onClose={onClose} title={isEdit ? "Edit HTTP Request Tool" : "Add HTTP Request Tool"}>
+    <NodeModal onClose={onClose} title={isEdit ? "Edit HTTP Request Tool" : "Add HTTP Request Tool"}>
       <div className="p-5 flex flex-col gap-4">
         <p className="text-sm text-muted-foreground -mt-3">
           Configure an API endpoint your agent can call during conversations.

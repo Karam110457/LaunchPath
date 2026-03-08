@@ -178,11 +178,14 @@ export function AgentEditPanel({
                     <div className="min-w-0">
                       <p className={cn(
                         "text-xs font-medium",
-                        currentPreset === preset.value && !showCustomTone && "gradient-text"
+                        currentPreset === preset.value && !showCustomTone ? "text-white" : ""
                       )}>
                         {preset.label}
                       </p>
-                      <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+                      <p className={cn(
+                        "text-[11px] leading-tight mt-0.5",
+                        currentPreset === preset.value && !showCustomTone ? "text-white/80" : "text-muted-foreground"
+                      )}>
                         {preset.desc}
                       </p>
                     </div>
@@ -200,8 +203,8 @@ export function AgentEditPanel({
                     : "border-border hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5"
                 )}
               >
-                <Pencil className={cn("w-3.5 h-3.5", showCustomTone ? "text-orange-600 canvas-dark:text-orange-400" : "text-muted-foreground")} />
-                <span className={cn("text-xs font-medium", showCustomTone ? "text-orange-600 canvas-dark:text-orange-400" : "")}>
+                <Pencil className={cn("w-3.5 h-3.5", showCustomTone ? "text-white" : "text-muted-foreground")} />
+                <span className={cn("text-xs font-medium", showCustomTone ? "text-white" : "")}>
                   Custom tone
                 </span>
               </button>

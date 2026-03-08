@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
   Trash2,
@@ -67,6 +68,7 @@ export function AgentChatPanel({
     isStreaming,
     isTyping,
     isThinking,
+    isLoadingMessages,
     thinkingText,
     toolActivity,
     sendMessage,
@@ -133,57 +135,65 @@ export function AgentChatPanel({
           </button>
 
           {/* Dropdown */}
-          {showDropdown && (
-            <div className="absolute top-[calc(100%+8px)] left-0 z-20 w-72 bg-popover border border-border rounded-lg shadow-lg overflow-hidden">
-              {isLoadingConversations ? (
-                <div className="flex items-center justify-center py-6">
-                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                </div>
-              ) : conversations.length === 0 ? (
-                <div className="px-4 py-6 text-center text-xs text-muted-foreground">
-                  No past conversations
-                </div>
-              ) : (
-                <div className="max-h-[240px] overflow-y-auto">
-                  {conversations.map((conv) => (
-                    <button
-                      key={conv.id}
-                      type="button"
-                      onClick={() => {
-                        switchConversation(conv.id);
-                        setShowDropdown(false);
-                      }}
-                      className={cn(
-                        "w-full text-left px-3 py-2.5 flex items-center gap-2 hover:bg-muted/50 transition-colors group",
-                        conv.id === activeConversationId && "bg-muted/30"
-                      )}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium truncate">
-                          {conv.title || "Untitled"}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {formatRelativeTime(conv.updated_at)}
-                          {" · "}
-                          {conv.message_count} msgs
-                        </p>
-                      </div>
+          <AnimatePresence>
+            {showDropdown && (
+              <motion.div
+                key="chat-dropdown"
+                className="absolute top-[calc(100%+8px)] left-0 z-20 w-72 bg-popover border border-border rounded-lg shadow-lg overflow-hidden"
+                initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                transition={{ duration: 0.12 }}
+                style={{ transformOrigin: "top left" }}
+              >
+                {isLoadingConversations ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  </div>
+                ) : conversations.length === 0 ? (
+                  <div className="px-4 py-6 text-center text-xs text-muted-foreground">
+                    No past conversations
+                  </div>
+                ) : (
+                  <div className="max-h-[240px] overflow-y-auto">
+                    {conversations.map((conv) => (
                       <button
+                        key={conv.id}
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteConversation(conv.id);
+                        onClick={() => {
+                          switchConversation(conv.id);
+                          setShowDropdown(false);
                         }}
-                        className="shrink-0 p-1 rounded-md text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
+                        className={cn(
+                          "w-full text-left px-3 py-2.5 flex items-center gap-2 hover:bg-muted/50 transition-colors group",
+                          conv.id === activeConversationId && "bg-muted/30"
+                        )}
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">
+                            {conv.title || "Untitled"}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {formatRelativeTime(conv.updated_at)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteConversation(conv.id);
+                          }}
+                          className="shrink-0 p-1 rounded-md text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
                       </button>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Right: New chat + delete current */}
@@ -241,33 +251,47 @@ export function AgentChatPanel({
         aria-label="Test conversation"
       >
         <div className="max-w-3xl mx-auto w-full px-4 space-y-4">
-          {messages.map((msg) => (
-            <div key={msg.id}>
-              {/* Persisted tool activities shown above the assistant response */}
-              {msg.toolActivities && msg.toolActivities.length > 0 && (
-                <div className="mb-2">
-                  <ToolActivityDisplay activities={msg.toolActivities} />
-                </div>
+          {isLoadingMessages ? (
+            <MessagesSkeleton />
+          ) : (
+            <>
+              {messages.map((msg, index) => {
+                const isLast = index === messages.length - 1;
+                return (
+                  <motion.div
+                    key={msg.id}
+                    initial={isLast ? { opacity: 0, y: 12 } : false}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, ease: [0.25, 0.8, 0.25, 1] }}
+                  >
+                    {/* Persisted tool activities shown above the assistant response */}
+                    {msg.toolActivities && msg.toolActivities.length > 0 && (
+                      <div className="mb-2">
+                        <ToolActivityDisplay activities={msg.toolActivities} />
+                      </div>
+                    )}
+                    <AgentMessage message={msg} />
+                  </motion.div>
+                );
+              })}
+
+              {/* Live tool activity (while streaming) */}
+              {toolActivity.length > 0 && (
+                <ToolActivityDisplay activities={toolActivity} />
               )}
-              <AgentMessage message={msg} />
-            </div>
-          ))}
 
-          {/* Live tool activity (while streaming) */}
-          {toolActivity.length > 0 && (
-            <ToolActivityDisplay activities={toolActivity} />
+              {/* Thinking indicator */}
+              {(isThinking || thinkingText) && isStreaming && (
+                <ThinkingBubble
+                  thinkingText={thinkingText}
+                  isThinking={isThinking}
+                />
+              )}
+
+              {/* Typing indicator */}
+              {isTyping && !isThinking && toolActivity.length === 0 && <TypingIndicator />}
+            </>
           )}
-
-          {/* Thinking indicator */}
-          {(isThinking || thinkingText) && isStreaming && (
-            <ThinkingBubble
-              thinkingText={thinkingText}
-              isThinking={isThinking}
-            />
-          )}
-
-          {/* Typing indicator */}
-          {isTyping && !isThinking && toolActivity.length === 0 && <TypingIndicator />}
         </div>
       </div>
 
@@ -378,6 +402,29 @@ function ToolActivityDisplay({ activities }: { activities: ToolActivity[] }) {
   );
 }
 
+/** Loading skeleton while conversation messages are being fetched. */
+function MessagesSkeleton() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      {/* Simulated assistant message */}
+      <div className="space-y-2">
+        <div className="h-3 w-3/4 rounded bg-muted/60" />
+        <div className="h-3 w-1/2 rounded bg-muted/40" />
+      </div>
+      {/* Simulated user message */}
+      <div className="flex justify-end">
+        <div className="h-9 w-2/5 rounded-2xl bg-primary/20" />
+      </div>
+      {/* Simulated assistant message */}
+      <div className="space-y-2">
+        <div className="h-3 w-5/6 rounded bg-muted/60" />
+        <div className="h-3 w-2/3 rounded bg-muted/40" />
+        <div className="h-3 w-1/3 rounded bg-muted/30" />
+      </div>
+    </div>
+  );
+}
+
 /** Simple message bubble. */
 function AgentMessage({ message }: { message: AgentChatMessage }) {
   const timeLabel = message.timestamp
@@ -390,6 +437,19 @@ function AgentMessage({ message }: { message: AgentChatMessage }) {
         <div className="max-w-[75%] rounded-2xl rounded-tr-sm px-4 py-2.5 bg-primary text-primary-foreground text-sm">
           {message.content}
         </div>
+      </div>
+    );
+  }
+
+  // Error messages styled distinctly from normal assistant text
+  if (message.isError) {
+    return (
+      <div
+        className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 py-2.5 text-sm text-destructive"
+        title={timeLabel}
+      >
+        <XCircle className="w-4 h-4 shrink-0 mt-0.5" />
+        <span>{message.content}</span>
       </div>
     );
   }

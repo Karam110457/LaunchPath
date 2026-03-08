@@ -9,6 +9,8 @@ export interface AgentChatMessage {
   role: "user" | "assistant";
   content: string;
   isStreaming?: boolean;
+  /** Whether this message is a system error (styled differently from assistant text). */
+  isError?: boolean;
   timestamp: string;
   /** Persisted tool call activities that occurred before this assistant message. */
   toolActivities?: import("@/hooks/useAgentChat").ToolActivity[];
