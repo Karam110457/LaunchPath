@@ -22,7 +22,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
 
 const COLOR_MAP: Record<string, string> = {
   webhook: "text-emerald-400",
-  mcp: "text-zinc-400",
+  mcp: "text-neutral-400",
   http: "text-blue-400",
   subagent: "text-amber-400",
 };
@@ -86,19 +86,19 @@ export const ToolNode = memo(function ToolNode({ data }: NodeProps) {
         <Handle
           type="target"
           position={Position.Top}
-          className="!bg-zinc-200 canvas-dark:!bg-zinc-600 !w-2.5 !h-2.5 !border-[1.5px] !border-white canvas-dark:!border-zinc-800 !rounded-full !top-[-5px] opacity-0 group-hover:opacity-100 transition-opacity z-20"
+          className="!bg-neutral-200 canvas-dark:!bg-neutral-600 !w-2.5 !h-2.5 !border-[1.5px] !border-white canvas-dark:!border-neutral-800 !rounded-full !top-[-5px] opacity-0 group-hover:opacity-100 transition-opacity z-20"
         />
       </div>
 
       {/* Labels below node */}
       <div className="mt-3 flex flex-col items-center pointer-events-none text-center max-w-[120px]">
-        <h3 className="text-[13px] font-medium text-zinc-800 canvas-dark:text-zinc-200 leading-tight">
+        <h3 className="text-[13px] font-medium text-neutral-800 canvas-dark:text-neutral-200 leading-tight">
           {d.displayName}
         </h3>
         {!d.isEnabled ? (
-          <p className="text-[10px] text-zinc-400 canvas-dark:text-zinc-500 mt-0.5 font-medium">Disabled</p>
+          <p className="text-[10px] text-neutral-400 canvas-dark:text-neutral-500 mt-0.5 font-medium">Disabled</p>
         ) : (
-          <p className="text-[10px] text-zinc-500 canvas-dark:text-zinc-400 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <p className="text-[10px] text-neutral-500 canvas-dark:text-neutral-400 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
             {actionLabel}
           </p>
         )}

@@ -52,7 +52,7 @@ const CUSTOM_TOOLS: {
     name: "MCP Server",
     tagline: "Connect a Model Context Protocol server for custom tools.",
     Icon: Plug,
-    color: "text-zinc-400",
+    color: "text-neutral-400",
   },
 ];
 

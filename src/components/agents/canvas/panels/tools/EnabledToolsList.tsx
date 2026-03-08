@@ -14,7 +14,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
 
 const CATEGORY_COLORS: Record<string, string> = {
   webhook: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  mcp: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+  mcp: "bg-neutral-500/10 text-neutral-400 border-neutral-500/20",
   composio: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
   http: "bg-blue-500/10 text-blue-400 border-blue-500/20",
   subagent: "bg-amber-500/10 text-amber-400 border-amber-500/20",
@@ -126,7 +126,7 @@ export function EnabledToolsList({
               >
                 <span
                   className={cn(
-                    "absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white canvas-dark:bg-zinc-200 transition-transform shadow-sm",
+                    "absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white canvas-dark:bg-neutral-200 transition-transform shadow-sm",
                     tool.is_enabled ? "translate-x-[18px]" : "translate-x-0.5"
                   )}
                 />

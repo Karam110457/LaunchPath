@@ -102,7 +102,7 @@ export function ChannelsList({
               >
                 <span
                   className={cn(
-                    "absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white canvas-dark:bg-zinc-200 transition-transform shadow-sm",
+                    "absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white canvas-dark:bg-neutral-200 transition-transform shadow-sm",
                     channel.is_enabled
                       ? "translate-x-[18px]"
                       : "translate-x-0.5"

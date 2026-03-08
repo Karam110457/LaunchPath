@@ -365,7 +365,7 @@ export function ToolSetupDialog({
                   }`}
               >
                 <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white canvas-dark:bg-zinc-200 transition-transform shadow-sm ${isEnabled ? "translate-x-5" : "translate-x-0"
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white canvas-dark:bg-neutral-200 transition-transform shadow-sm ${isEnabled ? "translate-x-5" : "translate-x-0"
                     }`}
                 />
               </button>

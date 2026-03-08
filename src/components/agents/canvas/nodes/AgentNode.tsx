@@ -28,10 +28,10 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
             {d.avatarEmoji && d.avatarEmoji !== "🤖" ? (
               <span className="text-3xl">{d.avatarEmoji}</span>
             ) : (
-              <Bot strokeWidth={1.5} className="w-9 h-9 text-zinc-700 canvas-dark:text-zinc-300" />
+              <Bot strokeWidth={1.5} className="w-9 h-9 text-neutral-700 canvas-dark:text-neutral-300" />
             )}
           </div>
-          <h3 className="text-[14px] font-semibold text-zinc-800 canvas-dark:text-zinc-200 text-left truncate min-w-0 flex-1 leading-tight">
+          <h3 className="text-[14px] font-semibold text-neutral-800 canvas-dark:text-neutral-200 text-left truncate min-w-0 flex-1 leading-tight">
             {d.name}
           </h3>
 
@@ -41,7 +41,7 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
             position={Position.Bottom}
             id="bottom-left"
             style={{ left: "25%", bottom: "-8px" }}
-            className="!bg-zinc-200 canvas-dark:!bg-zinc-600 !w-3 !h-3 !border-[2px] !border-white canvas-dark:!border-zinc-800 !rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
+            className="!bg-neutral-200 canvas-dark:!bg-neutral-600 !w-3 !h-3 !border-[2px] !border-white canvas-dark:!border-neutral-800 !rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
           />
           {/* Bottom-right → Tools */}
           <Handle
@@ -49,7 +49,7 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
             position={Position.Bottom}
             id="bottom-right"
             style={{ left: "75%", bottom: "-8px" }}
-            className="!bg-zinc-200 canvas-dark:!bg-zinc-600 !w-3 !h-3 !border-[2px] !border-white canvas-dark:!border-zinc-800 !rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
+            className="!bg-neutral-200 canvas-dark:!bg-neutral-600 !w-3 !h-3 !border-[2px] !border-white canvas-dark:!border-neutral-800 !rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
           />
 
           <NodeHelperTip
@@ -63,10 +63,10 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
 
       {/* Handle labels on hover */}
       <div className="relative mt-1 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" style={{ width: NODE_W }}>
-        <span className="absolute text-[11px] font-medium text-zinc-500 canvas-dark:text-zinc-400" style={{ left: "25%", transform: "translateX(-50%)" }}>
+        <span className="absolute text-[11px] font-medium text-neutral-500 canvas-dark:text-neutral-400" style={{ left: "25%", transform: "translateX(-50%)" }}>
           Knowledge
         </span>
-        <span className="absolute text-[11px] font-medium text-zinc-500 canvas-dark:text-zinc-400" style={{ left: "75%", transform: "translateX(-50%)" }}>
+        <span className="absolute text-[11px] font-medium text-neutral-500 canvas-dark:text-neutral-400" style={{ left: "75%", transform: "translateX(-50%)" }}>
           Tools
         </span>
       </div>

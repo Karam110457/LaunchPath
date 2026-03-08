@@ -31,11 +31,11 @@ export function DashedEdge(props: EdgeProps) {
   const isKnowledgeEdge = props.id.includes("knowledge");
   const showDelete = !isKnowledgeEdge && (hovered || props.selected);
 
-  // Grey — adapts to theme (light: zinc-400/500, canvas-dark: zinc-600/zinc-400)
+  // Grey — adapts to theme (light: neutral-400/500, canvas-dark: neutral-600/neutral-400)
   const isDark = theme === "dark";
   const strokeColor = hovered || props.selected
-    ? (isDark ? "#a1a1aa" : "#71717a")   // hover: zinc-400 dark, zinc-500 light
-    : (isDark ? "#52525b" : "#a1a1aa");  // idle: zinc-600 dark, zinc-400 light
+    ? (isDark ? "#a1a1aa" : "#71717a")   // hover: neutral-400 dark, neutral-500 light
+    : (isDark ? "#52525b" : "#a1a1aa");  // idle: neutral-600 dark, neutral-400 light
 
   return (
     <>
@@ -74,7 +74,7 @@ export function DashedEdge(props: EdgeProps) {
           onMouseLeave={() => setHovered(false)}
         >
           <button
-            className="flex items-center justify-center w-6 h-6 rounded-full bg-white canvas-dark:bg-zinc-800 border border-zinc-200 canvas-dark:border-zinc-700 shadow-sm text-zinc-400 hover:text-red-500 hover:border-red-200 canvas-dark:hover:border-red-800 hover:bg-red-50 canvas-dark:hover:bg-red-900/30 transition-all z-50"
+            className="flex items-center justify-center w-6 h-6 rounded-full bg-white canvas-dark:bg-neutral-800 border border-neutral-200 canvas-dark:border-neutral-700 shadow-sm text-neutral-400 hover:text-red-500 hover:border-red-200 canvas-dark:hover:border-red-800 hover:bg-red-50 canvas-dark:hover:bg-red-900/30 transition-all z-50"
             title="Delete connection"
             onClick={(e) => {
               e.stopPropagation();

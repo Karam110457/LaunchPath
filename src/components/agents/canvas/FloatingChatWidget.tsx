@@ -17,20 +17,20 @@ export function FloatingChatWidget({
   onClose,
 }: FloatingChatWidgetProps) {
   return (
-    <div className="fixed top-[84px] right-6 bottom-6 z-50 w-[380px] flex flex-col bg-white/70 canvas-dark:bg-zinc-900/70 backdrop-blur-2xl border border-white/60 canvas-dark:border-zinc-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-[2rem] overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-right-8 duration-200">
+    <div className="fixed top-[84px] right-6 bottom-6 z-50 w-[380px] flex flex-col bg-white/70 canvas-dark:bg-neutral-900/70 backdrop-blur-2xl border border-white/60 canvas-dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-[2rem] overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-right-8 duration-200">
       {/* Gradient accent line */}
       <div className="h-[2px] gradient-accent-bg shrink-0 mx-6 mt-4 rounded-full" />
 
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-zinc-200/50 canvas-dark:border-zinc-700/50 shrink-0">
-        <span className="text-sm font-bold tracking-tight text-zinc-800 canvas-dark:text-zinc-200">
+      <div className="flex items-center justify-between px-6 py-3 border-b border-neutral-200/50 canvas-dark:border-neutral-700/50 shrink-0">
+        <span className="text-sm font-bold tracking-tight text-neutral-800 canvas-dark:text-neutral-200">
           Chat with {agentName}
         </span>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-full text-zinc-400 hover:text-zinc-800 canvas-dark:hover:text-zinc-200 hover:bg-black/5 canvas-dark:hover:bg-white/5 transition-colors"
+          className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-800 canvas-dark:hover:text-neutral-200 hover:bg-black/5 canvas-dark:hover:bg-white/5 transition-colors"
         >
-          <X className="w-4 h-4 text-zinc-400 font-bold" />
+          <X className="w-4 h-4 text-neutral-400 font-bold" />
         </button>
       </div>
 

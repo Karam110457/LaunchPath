@@ -927,7 +927,7 @@ function AgentCanvasInner({
   else if (modal.type === "edit-subagent") modalTitle = "Edit Sub-Agent";
 
   return (
-    <div className={`${theme === "dark" ? "canvas-dark" : "light"} fixed inset-0 z-[100] w-full h-full overflow-hidden ${theme === "dark" ? "bg-[#141416]" : "bg-[#eef0f2]"} text-foreground transition-colors duration-300`}>
+    <div className={`${theme === "dark" ? "canvas-dark" : "light"} fixed inset-0 z-[100] w-full h-full overflow-hidden ${theme === "dark" ? "bg-[#0A0A0A]" : "bg-[#eef0f2]"} text-foreground transition-colors duration-300`}>
       <TopBar
         agentName={formState.name}
         avatarEmoji={formState.avatarEmoji}
@@ -987,30 +987,30 @@ function AgentCanvasInner({
       ) : (
         // Holds space while tools are fetched — no layout jump
         <div className="w-full h-full flex items-center justify-center">
-          <div className="w-5 h-5 rounded-full border-2 border-zinc-300 canvas-dark:border-zinc-700 border-t-zinc-500 canvas-dark:border-t-zinc-400 animate-spin" />
+          <div className="w-5 h-5 rounded-full border-2 border-neutral-300 canvas-dark:border-neutral-700 border-t-neutral-500 canvas-dark:border-t-neutral-400 animate-spin" />
         </div>
       )}
 
       {/* Zoom controls */}
-      <div className="absolute bottom-6 left-6 z-30 flex items-center gap-1 bg-white/70 canvas-dark:bg-zinc-900/70 backdrop-blur-xl border border-white/60 canvas-dark:border-zinc-700/40 shadow-sm rounded-xl p-1.5">
+      <div className="absolute bottom-6 left-6 z-30 flex items-center gap-1 bg-white/70 canvas-dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 canvas-dark:border-neutral-700/40 shadow-sm rounded-xl p-1.5">
         <button
           onClick={() => zoomIn({ duration: 200 })}
-          className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 canvas-dark:hover:text-zinc-200 hover:bg-black/5 canvas-dark:hover:bg-white/5 transition-colors"
+          className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-800 canvas-dark:hover:text-neutral-200 hover:bg-black/5 canvas-dark:hover:bg-white/5 transition-colors"
           title="Zoom In"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
         </button>
         <button
           onClick={() => zoomOut({ duration: 200 })}
-          className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 canvas-dark:hover:text-zinc-200 hover:bg-black/5 canvas-dark:hover:bg-white/5 transition-colors"
+          className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-800 canvas-dark:hover:text-neutral-200 hover:bg-black/5 canvas-dark:hover:bg-white/5 transition-colors"
           title="Zoom Out"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
         </button>
-        <div className="w-px h-4 bg-zinc-200 canvas-dark:bg-zinc-700 mx-0.5" />
+        <div className="w-px h-4 bg-neutral-200 canvas-dark:bg-neutral-700 mx-0.5" />
         <button
           onClick={() => fitView({ padding: 0.3, duration: 300 })}
-          className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 canvas-dark:hover:text-zinc-200 hover:bg-black/5 canvas-dark:hover:bg-white/5 transition-colors"
+          className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-800 canvas-dark:hover:text-neutral-200 hover:bg-black/5 canvas-dark:hover:bg-white/5 transition-colors"
           title="Fit View"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></svg>

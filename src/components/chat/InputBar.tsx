@@ -58,7 +58,7 @@ export function InputBar({ onSend, disabled = false, subdued = false, embedded =
         className={cn(
           "flex items-end gap-3 rounded-2xl px-4 border transition-all duration-200 focus-within:border-primary/50 focus-within:shadow-primary/5",
           embedded
-            ? "bg-white/80 canvas-dark:bg-zinc-900/80 backdrop-blur-xl border-white/60 canvas-dark:border-zinc-700/60 shadow-[0_4px_16px_rgba(0,0,0,0.06)] py-3"
+            ? "bg-white/80 canvas-dark:bg-neutral-900/80 backdrop-blur-xl border-white/60 canvas-dark:border-neutral-700/60 shadow-[0_4px_16px_rgba(0,0,0,0.06)] py-3"
             : "bg-card/80 backdrop-blur-md py-3 border-border/60 shadow-xl shadow-black/30",
           subdued && !embedded && "py-2 border-border/30 shadow-none",
           (disabled || justSent) && "opacity-60"
@@ -80,7 +80,7 @@ export function InputBar({ onSend, disabled = false, subdued = false, embedded =
           }
           className={cn(
             "flex-1 resize-none bg-transparent text-sm outline-none min-h-[24px] max-h-[160px] py-0.5",
-            embedded ? "text-zinc-800 canvas-dark:text-zinc-200 placeholder:text-zinc-400 canvas-dark:placeholder:text-zinc-500" : "text-foreground placeholder:text-muted-foreground/60"
+            embedded ? "text-neutral-800 canvas-dark:text-neutral-200 placeholder:text-neutral-400 canvas-dark:placeholder:text-neutral-500" : "text-foreground placeholder:text-muted-foreground/60"
           )}
           style={{ lineHeight: "1.5" }}
         />
@@ -103,7 +103,7 @@ export function InputBar({ onSend, disabled = false, subdued = false, embedded =
       {/* Hint */}
       <p className={cn(
         "mt-2 text-center text-[11px]",
-        embedded ? "text-zinc-500 canvas-dark:text-zinc-400 font-medium" : "text-muted-foreground/40"
+        embedded ? "text-neutral-500 canvas-dark:text-neutral-400 font-medium" : "text-muted-foreground/40"
       )}>
         Enter to send · Shift+Enter for new line
       </p>

@@ -230,7 +230,7 @@ function ValueInput({
         >
           <span
             className={cn(
-              "absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white canvas-dark:bg-zinc-200 transition-transform shadow-sm",
+              "absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white canvas-dark:bg-neutral-200 transition-transform shadow-sm",
               isOn ? "left-[22px]" : "left-[3px]"
             )}
           />
@@ -1139,7 +1139,7 @@ export function ComposioToolSetup({
 
         {(!connectionId && !isConnected(toolkit)) ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-transparent">
-            <div className="w-16 h-16 rounded-2xl bg-white canvas-dark:bg-zinc-800 shadow-sm border border-border/40 flex items-center justify-center mb-5 p-2.5">
+            <div className="w-16 h-16 rounded-2xl bg-white canvas-dark:bg-neutral-800 shadow-sm border border-border/40 flex items-center justify-center mb-5 p-2.5">
               {toolkitIcon.startsWith("http") ? (
                 <img src={toolkitIcon} alt={toolkitName} className="w-full h-full object-contain" />
               ) : (
@@ -1153,7 +1153,7 @@ export function ComposioToolSetup({
             <button
               onClick={() => void connect(toolkit, toolkitName, toolkitIcon)}
               disabled={connecting === toolkit}
-              className="px-6 py-2.5 bg-zinc-900 canvas-dark:bg-zinc-100 text-white canvas-dark:text-zinc-900 font-medium rounded-xl hover:bg-zinc-800 canvas-dark:hover:bg-zinc-200 transition-all disabled:opacity-50 flex items-center gap-2 shadow-sm"
+              className="px-6 py-2.5 bg-neutral-900 canvas-dark:bg-neutral-100 text-white canvas-dark:text-neutral-900 font-medium rounded-xl hover:bg-neutral-800 canvas-dark:hover:bg-neutral-200 transition-all disabled:opacity-50 flex items-center gap-2 shadow-sm"
             >
               {connecting === toolkit ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               {connecting === toolkit ? "Connecting..." : `Connect ${toolkitName}`}
@@ -1251,7 +1251,7 @@ export function ComposioToolSetup({
                           >
                             <span
                               className={cn(
-                                "absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white canvas-dark:bg-zinc-200 transition-transform shadow-sm",
+                                "absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white canvas-dark:bg-neutral-200 transition-transform shadow-sm",
                                 enabled ? "left-[16px]" : "left-[2px]"
                               )}
                             />
@@ -1400,7 +1400,7 @@ export function ComposioToolSetup({
             className={cn(
               "px-5 py-2 text-sm font-medium rounded-xl transition-all shadow-sm",
               ((canSave || existing) && !saving && (connectionId || isConnected(toolkit)))
-                ? "bg-zinc-900 canvas-dark:bg-zinc-100 text-white canvas-dark:text-zinc-900 hover:bg-zinc-800 canvas-dark:hover:bg-zinc-200 shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
+                ? "bg-neutral-900 canvas-dark:bg-neutral-100 text-white canvas-dark:text-neutral-900 hover:bg-neutral-800 canvas-dark:hover:bg-neutral-200 shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
                 : "bg-muted text-muted-foreground cursor-not-allowed"
             )}
           >
