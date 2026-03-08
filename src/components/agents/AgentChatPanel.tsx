@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import { useAgentChat } from "@/hooks/useAgentChat";
 import { InputBar } from "@/components/chat/InputBar";
-import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
 import { StreamingText } from "@/components/chat/StreamingText";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { ThinkingBubble } from "@/components/chat/ThinkingBubble";
@@ -274,19 +273,7 @@ export function AgentChatPanel({
 
       {/* Floating input */}
       <div className={cn("absolute bottom-0 left-0 right-0 px-4 pb-5 pt-3 z-10", embedded && "bg-white/40 canvas-dark:bg-zinc-900/40 backdrop-blur-md rounded-b-[2rem]")}>
-        {embedded ? (
-          <PlaceholdersAndVanishInput
-            placeholders={[
-              "Type a message…",
-              "Ask anything…",
-              "Agent is thinking…",
-            ]}
-            onSubmitValue={sendMessage}
-            disabled={isStreaming}
-          />
-        ) : (
-          <InputBar onSend={sendMessage} disabled={isStreaming} embedded={embedded} />
-        )}
+        <InputBar onSend={sendMessage} disabled={isStreaming} embedded={embedded} />
       </div>
     </div>
   );
