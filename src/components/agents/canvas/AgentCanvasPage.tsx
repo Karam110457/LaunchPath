@@ -1428,6 +1428,25 @@ function AgentCanvasInner({
             setLayoutState(newState);
             persistLayout(newState);
 
+            // Sub-agent: auto-create edge from subagent to tool and enable it
+            if (targetAgentId !== agent.id) {
+              const sourceNode = `subagent-${targetAgentId}`;
+              const edgeId = `e-${sourceNode}-${realNodeId}`;
+              setEdges((prev) => {
+                if (prev.some((e) => e.id === edgeId)) return prev;
+                const updated = addEdge(
+                  { id: edgeId, source: sourceNode, sourceHandle: "bottom-right", target: realNodeId, type: "dashedEdge" },
+                  prev
+                );
+                const ls = layoutStateRef.current;
+                const newEdgeState = { ...ls, edges: updated.filter((e) => !e.id.endsWith("-knowledge")) };
+                setLayoutState(newEdgeState);
+                persistLayout(newEdgeState);
+                return updated;
+              });
+              setToolEnabled(targetAgentId, json.tool.id, true);
+            }
+
             let currentToolId = json.tool.id as string;
             pushUndo({
               label: `Added ${name}`,
@@ -1511,6 +1530,25 @@ function AgentCanvasInner({
             setLayoutState(newState);
             persistLayout(newState);
 
+            // Sub-agent: auto-create edge from subagent to tool and enable it
+            if (targetAgentId !== agent.id) {
+              const sourceNode = `subagent-${targetAgentId}`;
+              const edgeId = `e-${sourceNode}-${realNodeId}`;
+              setEdges((prev) => {
+                if (prev.some((e) => e.id === edgeId)) return prev;
+                const updated = addEdge(
+                  { id: edgeId, source: sourceNode, sourceHandle: "bottom-right", target: realNodeId, type: "dashedEdge" },
+                  prev
+                );
+                const ls = layoutStateRef.current;
+                const newEdgeState = { ...ls, edges: updated.filter((e) => !e.id.endsWith("-knowledge")) };
+                setLayoutState(newEdgeState);
+                persistLayout(newEdgeState);
+                return updated;
+              });
+              setToolEnabled(targetAgentId, json.tool.id, true);
+            }
+
             let currentToolId = json.tool.id as string;
             const toolType = type;
             pushUndo({
@@ -1548,7 +1586,7 @@ function AgentCanvasInner({
     } catch (e) {
       console.error("Drop failed", e);
     }
-  }, [agent.id, getNodes, screenToFlowPosition, layoutState, persistLayout, fetchTools, fetchSubagents, isComposioConnected, pushUndo]);
+  }, [agent.id, getNodes, screenToFlowPosition, layoutState, persistLayout, fetchTools, fetchSubagents, isComposioConnected, pushUndo, setEdges, setToolEnabled]);
 
   const onNodeDoubleClick: NodeMouseHandler = useCallback(
     (_event, node) => {
