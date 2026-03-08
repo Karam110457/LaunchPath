@@ -7,6 +7,8 @@ import { Moon, Sun, Settings, Bell, LayoutDashboard, Bot } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
 
+import { useTheme } from "next-themes";
+
 const NAV_LINKS = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Agents", href: "/dashboard/agents", icon: Bot },
@@ -14,21 +16,15 @@ const NAV_LINKS = [
 
 export function AgentsTopNav() {
     const pathname = usePathname();
-    const [isDark, setIsDark] = useState(true);
+    const { theme, setTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
 
-    // Initialize theme state based on DOM on mount
     useEffect(() => {
-        setIsDark(document.documentElement.classList.contains("dark"));
+        setMounted(true);
     }, []);
 
     const toggleTheme = () => {
-        const isNowDark = !isDark;
-        setIsDark(isNowDark);
-        if (isNowDark) {
-            document.documentElement.classList.add("dark");
-        } else {
-            document.documentElement.classList.remove("dark");
-        }
+        setTheme(theme === "dark" ? "light" : "dark");
     };
 
     return (
@@ -84,10 +80,10 @@ export function AgentsTopNav() {
                     <button
                         type="button"
                         onClick={toggleTheme}
-                        className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors ml-1"
+                        className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors ml-1 w-9 h-9 flex items-center justify-center"
                         title="Toggle theme"
                     >
-                        {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                        {mounted && (theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />)}
                     </button>
                 </div>
             </div>

@@ -102,8 +102,8 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
 
         {/* Dashboard Stats */}
         <div className="flex gap-4 md:gap-8 overflow-x-auto pb-2 -mx-6 px-6 lg:mx-0 lg:px-0 lg:pb-0 hide-scrollbar">
-          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-card border border-border/50 shadow-sm">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-white/40 dark:bg-black/40 backdrop-blur-2xl border border-white/20 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#FF8C00]/20 to-[#FF8C00]/5 flex items-center justify-center text-[#FF8C00]">
               <Bot className="w-6 h-6" />
             </div>
             <div>
@@ -111,8 +111,8 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
               <p className="text-sm font-medium text-muted-foreground mt-1">Total Agents</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-card border border-border/50 shadow-sm">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-white/40 dark:bg-black/40 backdrop-blur-2xl border border-white/20 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#9D50BB]/20 to-[#9D50BB]/5 flex items-center justify-center text-[#9D50BB]">
               <Activity className="w-6 h-6" />
             </div>
             <div>
@@ -120,8 +120,8 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
               <p className="text-sm font-medium text-muted-foreground mt-1">Active</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-card border border-border/50 shadow-sm">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-yellow-500/10 text-yellow-500">
+          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-white/40 dark:bg-black/40 backdrop-blur-2xl border border-white/20 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[#FF8C00]/10 text-[#FF8C00]">
               <FileEdit className="w-6 h-6" />
             </div>
             <div>
@@ -143,10 +143,10 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search agents..."
-              className="pl-10 h-10 rounded-full bg-card shadow-sm border-border/50 focus-visible:ring-1"
+              className="pl-10 h-10 rounded-full bg-white/40 dark:bg-black/40 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-white/20 dark:border-white/5 focus-visible:ring-[#FF8C00]/50"
             />
           </div>
-          <div className="flex bg-card p-1 rounded-full border border-border/50 shadow-sm overflow-x-auto hide-scrollbar">
+          <div className="flex bg-white/40 dark:bg-black/40 backdrop-blur-xl p-1 rounded-full border border-white/20 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-x-auto hide-scrollbar">
             {STATUS_FILTERS.map((s) => (
               <button
                 key={s}
@@ -192,25 +192,25 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
               <Card
                 key={agent.id}
                 onClick={() => router.push(`/dashboard/agents/${agent.id}`)}
-                className="group relative cursor-pointer outline-none overflow-hidden rounded-[32px] border border-border/40 bg-card/50 backdrop-blur-xl shadow-sm hover:shadow-xl hover:bg-card/80 hover:-translate-y-1 transition-all duration-300"
+                className="group relative cursor-pointer outline-none overflow-hidden rounded-[32px] border border-white/40 dark:border-white/10 bg-white/40 dark:bg-black/40 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_16px_40px_rgb(0,0,0,0.16)] hover:bg-white/60 dark:hover:bg-black/60 hover:-translate-y-1 transition-all duration-300"
               >
                 <CardContent className="p-6 h-full flex flex-col justify-between min-h-[220px]">
                   {/* Top section: Icon and Status */}
                   <div className="flex items-start justify-between mb-4">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0 border border-border/50 shadow-inner">
-                      <Bot className="w-7 h-7 text-primary" />
+                    <div className="w-14 h-14 rounded-[20px] bg-gradient-to-br from-[#FF8C00]/20 to-[#9D50BB]/10 flex items-center justify-center shrink-0 border border-white/50 dark:border-white/5 shadow-inner">
+                      <Bot className="w-7 h-7 text-[#FF8C00]" />
                     </div>
-                    <Badge variant={statusInfo.variant} className="rounded-full px-3 shadow-sm border-border/50 capitalize font-medium">
+                    <Badge variant={statusInfo.variant} className="rounded-full px-3 shadow-sm border-white/20 dark:border-white/5 capitalize font-medium bg-background/50 backdrop-blur-md">
                       {statusInfo.label}
                     </Badge>
                   </div>
 
                   {/* Middle section: Info */}
                   <div className="flex-1 min-w-0 mb-4">
-                    <h3 className="font-semibold text-xl mb-2 truncate group-hover:text-primary transition-colors">
+                    <h3 className="font-semibold text-xl mb-2 truncate group-hover:bg-[linear-gradient(135deg,#FF8C00,#9D50BB)] group-hover:bg-clip-text group-hover:text-transparent transition-all">
                       {agent.name}
                     </h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                    <p className="text-sm text-foreground/70 dark:text-muted-foreground line-clamp-2 leading-relaxed">
                       {agent.description ?? "An unconfigured AI agent resting in your digital fleet."}
                     </p>
                   </div>
@@ -227,7 +227,7 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
                         type="button"
                         onClick={(e) => handleClone(agent.id, e)}
                         disabled={loadingAction === `clone-${agent.id}`}
-                        className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-all border border-transparent hover:border-border/50 bg-background/50 shadow-sm"
+                        className="p-2 rounded-full text-foreground/70 hover:text-foreground hover:bg-white/40 dark:hover:bg-white/10 transition-all border border-transparent hover:border-white/20 bg-background/20 backdrop-blur-md shadow-sm"
                         title="Clone agent"
                       >
                         {loadingAction === `clone-${agent.id}` ? (
@@ -243,7 +243,7 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
                             type="button"
                             onClick={(e) => e.stopPropagation()}
                             disabled={loadingAction === `delete-${agent.id}`}
-                            className="p-2 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all border border-transparent hover:border-destructive/20 bg-background/50 shadow-sm"
+                            className="p-2 rounded-full text-foreground/70 hover:text-destructive hover:bg-destructive/10 transition-all border border-transparent hover:border-destructive/20 bg-background/20 backdrop-blur-md shadow-sm"
                             title="Delete agent"
                           >
                             {loadingAction === `delete-${agent.id}` ? (

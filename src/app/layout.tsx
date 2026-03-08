@@ -40,18 +40,22 @@ export const viewport = {
   viewportFit: "cover" as const,
 };
 
+import { ThemeProvider } from "@/components/ThemeProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${tiemposHeadline.variable} antialiased bg-background text-foreground`}
       >
-        {children}
-        <Toaster theme="dark" position="bottom-left" richColors closeButton />
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+          {children}
+          <Toaster theme="dark" position="bottom-left" richColors closeButton />
+        </ThemeProvider>
       </body>
     </html>
   );
