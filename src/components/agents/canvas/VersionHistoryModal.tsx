@@ -129,7 +129,7 @@ export function VersionHistoryModal({
             </button>
           </div>
           <div className="flex items-center gap-2 text-[10px] font-medium text-neutral-400">
-            <button className="gradient-text pb-0.5" style={{ borderBottom: "2px solid transparent", borderImage: "linear-gradient(135deg, #FF8C00, #9D50BB) 1" }}>History</button>
+            <button className="text-neutral-900 canvas-dark:text-neutral-100 pb-0.5" style={{ borderBottom: "2px solid transparent", borderImage: "linear-gradient(135deg, #FF8C00, #9D50BB) 1" }}>History</button>
           </div>
         </div>
 

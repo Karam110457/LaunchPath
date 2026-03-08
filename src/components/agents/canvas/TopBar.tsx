@@ -48,7 +48,7 @@ export function TopBar({
         <button
           type="button"
           onClick={handleBack}
-          className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-800 canvas-dark:hover:text-neutral-200 hover:bg-black/5 canvas-dark:hover:bg-white/5 transition-colors"
+          className="p-1.5 rounded-full text-[#FF8C00] hover:text-[#9D50BB] hover:bg-black/5 canvas-dark:hover:bg-white/5 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
@@ -88,7 +88,7 @@ export function TopBar({
           onClick={onVersionHistory}
           className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-neutral-600 canvas-dark:text-neutral-400 hover:text-neutral-900 canvas-dark:hover:text-neutral-200 transition-colors"
         >
-          <History className="w-3.5 h-3.5" />
+          <History className="w-3.5 h-3.5 text-[#9D50BB]" />
           Versions
           {typeof versionCount === "number" && versionCount > 0 && (
             <span className="ml-1 text-[10px] font-bold bg-neutral-100 canvas-dark:bg-neutral-800 text-neutral-600 canvas-dark:text-neutral-400 px-1.5 py-0.5 rounded-full">

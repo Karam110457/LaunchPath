@@ -97,7 +97,7 @@ export function LeftCatalogPanel() {
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                         <LayoutGrid className="w-4 h-4 text-[#FF8C00]" />
-                        <span className="font-semibold gradient-text text-sm">Tools</span>
+                        <span className="font-semibold text-neutral-900 canvas-dark:text-neutral-200 text-sm">Tools</span>
                     </div>
                     <div className="flex items-center gap-2 text-neutral-400 canvas-dark:text-neutral-500 relative">
                         <button 
@@ -146,7 +146,7 @@ export function LeftCatalogPanel() {
                             className={cn(
                                 "relative pb-2 text-[10px] font-semibold transition-colors",
                                 activeTab === tab
-                                    ? "gradient-text"
+                                    ? "text-neutral-900 canvas-dark:text-neutral-100"
                                     : "text-neutral-400 hover:text-neutral-600 canvas-dark:hover:text-neutral-300"
                             )}
                         >
