@@ -105,11 +105,10 @@ export function AgentsList({ agents }: AgentsListProps) {
               key={s}
               type="button"
               onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors capitalize ${
-                statusFilter === s
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors capitalize ${statusFilter === s
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}
+                }`}
             >
               {s}
             </button>
@@ -136,7 +135,7 @@ export function AgentsList({ agents }: AgentsListProps) {
                 onClick={() => router.push(`/dashboard/agents/${agent.id}`)}
                 className="cursor-pointer"
               >
-                <Card className="hover:border-primary/30 hover:shadow-md transition-all h-full group relative">
+                <Card className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[24px] hover:border-primary/30 hover:shadow-lg transition-all h-full group relative">
                   <CardContent className="pt-6">
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">

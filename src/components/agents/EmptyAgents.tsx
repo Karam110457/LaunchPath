@@ -5,7 +5,7 @@ import Link from "next/link";
 
 export function EmptyAgents() {
   return (
-    <Card className="border-dashed">
+    <Card className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border-dashed border-2 border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[24px]">
       <CardContent className="flex flex-col items-center justify-center py-16 text-center">
         <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
           <Bot className="h-6 w-6 text-primary" />

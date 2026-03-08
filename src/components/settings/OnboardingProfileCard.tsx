@@ -90,7 +90,7 @@ export function OnboardingProfileCard({ profile }: OnboardingProfileCardProps) {
 
   if (isEditing) {
     return (
-      <Card>
+      <Card className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[24px]">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -185,7 +185,7 @@ export function OnboardingProfileCard({ profile }: OnboardingProfileCardProps) {
   }
 
   return (
-    <Card>
+    <Card className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[24px]">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>

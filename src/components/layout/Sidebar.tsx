@@ -122,10 +122,10 @@ export function Sidebar({ systems, agentCount, clientCount }: SidebarProps) {
     : [];
 
   return (
-    <aside className="fixed md:relative z-50 w-64 bg-background text-foreground hidden md:flex flex-col h-screen shrink-0 border-r border-border/40">
+    <aside className="relative z-50 w-full h-full bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[24px] hidden md:flex flex-col overflow-hidden transition-all">
       {/* Brand header */}
-      <div className="h-14 flex items-center justify-center shrink-0">
-        <Link href="/dashboard" className="flex items-center justify-center size-10 rounded-full hover:bg-muted transition-colors">
+      <div className="h-16 flex items-center justify-center shrink-0">
+        <Link href="/dashboard" className="flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
           <Logo className="text-xl" />
         </Link>
       </div>
@@ -135,10 +135,10 @@ export function Sidebar({ systems, agentCount, clientCount }: SidebarProps) {
         <button
           onClick={() => setSwitcherOpen(!switcherOpen)}
           className={cn(
-            "w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
+            "w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium rounded-xl transition-colors",
             selectedBusiness
-              ? "bg-muted/50 text-foreground hover:bg-muted"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              ? "bg-black/5 dark:bg-white/5 text-foreground hover:bg-black/10 dark:hover:bg-white/10"
+              : "text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
           )}
         >
           {selectedBusiness && (
@@ -165,9 +165,8 @@ export function Sidebar({ systems, agentCount, clientCount }: SidebarProps) {
           />
         </button>
 
-        {/* Dropdown */}
         {switcherOpen && (
-          <div className="mt-1 w-full rounded-lg border border-border bg-popover shadow-lg py-1 max-h-64 overflow-y-auto">
+          <div className="mt-1 w-full rounded-lg border border-white/60 dark:border-neutral-700/40 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl shadow-lg py-1 max-h-64 overflow-y-auto">
             {hasSystems ? (
               systems.map((system) => {
                 const isActive = system.id === selectedBusinessId;
@@ -179,8 +178,8 @@ export function Sidebar({ systems, agentCount, clientCount }: SidebarProps) {
                     className={cn(
                       "w-full flex items-center gap-3 px-3 py-2 text-sm transition-all text-left font-medium",
                       isActive
-                        ? "bg-accent text-accent-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        ? "bg-black/10 dark:bg-white/10 text-foreground"
+                        : "text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
                     )}
                   >
                     <span className="relative flex size-2 shrink-0">
@@ -207,7 +206,7 @@ export function Sidebar({ systems, agentCount, clientCount }: SidebarProps) {
               <button
                 onClick={handleNewBusiness}
                 disabled={isCreating}
-                className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-primary hover:bg-muted transition-all text-left"
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-primary hover:bg-black/5 dark:hover:bg-white/5 transition-all text-left"
               >
                 <Plus className="size-4" />
                 {isCreating ? "Creating..." : "New Business"}
@@ -235,14 +234,14 @@ export function Sidebar({ systems, agentCount, clientCount }: SidebarProps) {
                   className={cn(
                     "flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-all font-medium",
                     isActive
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "bg-black/10 dark:bg-white/10 text-foreground"
+                      : "text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
                   )}
                 >
                   <Icon className="size-4" />
                   {item.label}
                   {item.count != null && item.count > 0 && (
-                    <span className="ml-auto text-xs bg-muted px-1.5 py-0.5 rounded-md tabular-nums">
+                    <span className="ml-auto text-xs bg-black/5 dark:bg-white/5 px-1.5 py-0.5 rounded-md tabular-nums">
                       {item.count}
                     </span>
                   )}
@@ -271,8 +270,8 @@ export function Sidebar({ systems, agentCount, clientCount }: SidebarProps) {
                     className={cn(
                       "flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-all font-medium",
                       isActive
-                        ? "bg-accent text-accent-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        ? "bg-black/10 dark:bg-white/10 text-foreground"
+                        : "text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
                     )}
                   >
                     <Icon className="size-4" />
@@ -292,8 +291,8 @@ export function Sidebar({ systems, agentCount, clientCount }: SidebarProps) {
           className={cn(
             "flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-all font-medium",
             pathname.startsWith("/dashboard/settings")
-              ? "bg-accent text-accent-foreground"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              ? "bg-black/10 dark:bg-white/10 text-foreground"
+              : "text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
           )}
         >
           <Settings className="size-4" />

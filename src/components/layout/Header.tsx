@@ -122,7 +122,7 @@ export function Header({ systems = [] }: HeaderProps) {
   if (breadcrumbs.length === 0) return null;
 
   return (
-    <header className="sticky top-0 z-40 h-14 bg-background/80 backdrop-blur-md border-b border-border/40 flex items-center px-6 md:px-8">
+    <header className="relative z-40 h-[52px] w-full bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-2xl flex items-center px-6 transition-all">
       <nav className="flex items-center gap-1.5 text-sm">
         {breadcrumbs.map((crumb, i) => (
           <Fragment key={crumb.href}>
@@ -130,7 +130,7 @@ export function Header({ systems = [] }: HeaderProps) {
               <ChevronRight className="size-3 text-muted-foreground/50" />
             )}
             {crumb.isActive ? (
-              <span className="font-medium text-foreground">
+              <span className="font-semibold text-foreground">
                 {crumb.label}
               </span>
             ) : (

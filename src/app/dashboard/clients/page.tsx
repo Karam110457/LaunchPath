@@ -51,7 +51,7 @@ export default async function ClientsPage() {
       </div>
 
       {shaped.length === 0 && (!unlinkedCampaigns || unlinkedCampaigns.length === 0) ? (
-        <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground">
+        <div className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[24px] p-8 text-center text-muted-foreground">
           No clients yet. Create your first client to start deploying campaigns.
         </div>
       ) : (
@@ -62,7 +62,7 @@ export default async function ClientsPage() {
                 <Link
                   key={client.id}
                   href={`/dashboard/clients/${client.id}`}
-                  className="rounded-lg border bg-card p-5 hover:border-primary/30 transition-colors space-y-3"
+                  className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[24px] p-5 hover:border-primary/30 hover:shadow-lg transition-all space-y-3"
                 >
                   <div className="flex items-center gap-3">
                     {client.logo_url ? (
@@ -85,13 +85,12 @@ export default async function ClientsPage() {
                       )}
                     </div>
                     <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        client.status === "active"
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${client.status === "active"
                           ? "bg-emerald-500/10 text-emerald-600"
                           : client.status === "paused"
                             ? "bg-yellow-500/10 text-yellow-600"
                             : "bg-muted text-muted-foreground"
-                      }`}
+                        }`}
                     >
                       {client.status}
                     </span>
@@ -113,7 +112,7 @@ export default async function ClientsPage() {
               <p className="text-xs text-muted-foreground">
                 These campaigns aren&apos;t linked to a client yet. Assign them to a client to manage them.
               </p>
-              <div className="rounded-lg border bg-card divide-y">
+              <div className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[24px] divide-y divide-border/40 overflow-hidden">
                 {unlinkedCampaigns.map((campaign) => {
                   const agent = campaign.ai_agents as unknown as {
                     name: string;
@@ -138,13 +137,12 @@ export default async function ClientsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span
-                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                            campaign.status === "active"
+                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${campaign.status === "active"
                               ? "bg-emerald-500/10 text-emerald-600"
                               : campaign.status === "paused"
                                 ? "bg-yellow-500/10 text-yellow-600"
                                 : "bg-muted text-muted-foreground"
-                          }`}
+                            }`}
                         >
                           {campaign.status}
                         </span>
