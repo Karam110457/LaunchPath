@@ -232,7 +232,7 @@ export function VersionHistoryModal({
                           <AlertDialogFooter className="mt-2">
                             <AlertDialogCancel className="rounded-xl border-zinc-200 canvas-dark:border-zinc-700 hover:bg-zinc-50 canvas-dark:hover:bg-zinc-800 hover:text-zinc-900 canvas-dark:hover:text-zinc-100">Cancel</AlertDialogCancel>
                             <AlertDialogAction
-                              className="rounded-xl bg-zinc-900 text-white hover:bg-zinc-800"
+                              className="rounded-xl bg-zinc-900 canvas-dark:bg-zinc-100 text-white canvas-dark:text-zinc-900 hover:bg-zinc-800 canvas-dark:hover:bg-zinc-200"
                               onClick={() => handleRevert(v.id)}
                             >
                               Revert

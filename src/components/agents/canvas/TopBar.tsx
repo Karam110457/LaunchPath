@@ -1,10 +1,9 @@
 "use client";
 
-import { ArrowLeft, Save, Loader2, History, Check, Users, Play, Sun, Moon } from "lucide-react";
+import { ArrowLeft, Save, Loader2, History, Check, Users, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { useCanvasTheme } from "./canvas-theme";
 
 interface TopBarProps {
   agentName: string;
@@ -32,7 +31,6 @@ export function TopBar({
   versionCount,
 }: TopBarProps) {
   const router = useRouter();
-  const { theme, toggleTheme } = useCanvasTheme();
 
   const handleBack = () => {
     if (isDirty) {
@@ -114,20 +112,6 @@ export function TopBar({
             Test
           </button>
         )}
-
-        {/* Theme toggle */}
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="p-1.5 rounded-full text-zinc-400 hover:text-zinc-800 canvas-dark:hover:text-zinc-200 hover:bg-black/5 canvas-dark:hover:bg-white/5 transition-colors"
-          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-        >
-          {theme === "dark" ? (
-            <Sun className="w-4 h-4" strokeWidth={1.5} />
-          ) : (
-            <Moon className="w-4 h-4" strokeWidth={1.5} />
-          )}
-        </button>
 
         <button
           type="button"

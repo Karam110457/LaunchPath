@@ -365,7 +365,7 @@ function ToolActivityDisplay({ activities }: { activities: ToolActivity[] }) {
                     <p className="font-semibold text-muted-foreground/70 mb-1 uppercase tracking-wider text-[9px]">
                       Request
                     </p>
-                    <pre className="bg-black/30 rounded-lg px-2.5 py-2 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[11px] text-zinc-400 max-h-[200px] overflow-y-auto">
+                    <pre className="bg-muted/50 rounded-lg px-2.5 py-2 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[11px] text-muted-foreground max-h-[200px] overflow-y-auto">
                       {JSON.stringify(activity.args, null, 2)}
                     </pre>
                   </div>
@@ -375,7 +375,7 @@ function ToolActivityDisplay({ activities }: { activities: ToolActivity[] }) {
                     <p className="font-semibold text-muted-foreground/70 mb-1 uppercase tracking-wider text-[9px]">
                       Response
                     </p>
-                    <pre className="bg-black/30 rounded-lg px-2.5 py-2 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[11px] text-zinc-400 max-h-[200px] overflow-y-auto">
+                    <pre className="bg-muted/50 rounded-lg px-2.5 py-2 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[11px] text-muted-foreground max-h-[200px] overflow-y-auto">
                       {typeof activity.result === "string"
                         ? activity.result
                         : JSON.stringify(activity.result, null, 2)}

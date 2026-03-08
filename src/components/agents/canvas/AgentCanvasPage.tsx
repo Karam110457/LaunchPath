@@ -42,6 +42,7 @@ import { VersionHistoryModal } from "./VersionHistoryModal";
 import { NodeHelperTip } from "./nodes/NodeHelperTip";
 import { CanvasActionsContext } from "./canvas-context";
 import { CanvasThemeProvider, useCanvasTheme } from "./canvas-theme";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LeftCatalogPanel } from "./LeftCatalogPanel";
 import { useCanvasLayout, type CanvasLayoutState } from "./useCanvasLayout";
 import type {
@@ -629,7 +630,7 @@ function AgentCanvasInner({
   // ─── Interaction ─────────────────────────────────────────────────────────
   const [modal, setModal] = useState<PanelState>({ type: "none" });
   const [chatOpen, setChatOpen] = useState(false);
-  const { theme } = useCanvasTheme();
+  const { theme, toggleTheme } = useCanvasTheme();
 
   // Tool dialog state — scoped to a specific agent (parent or sub-agent)
   const [catalogContext, setCatalogContext] = useState<{
@@ -1004,6 +1005,11 @@ function AgentCanvasInner({
         </button>
       </div>
 
+
+      {/* Theme toggle — top-right corner */}
+      <div className="absolute top-6 right-6 z-30">
+        <ThemeToggle isDark={theme === "dark"} onToggle={toggleTheme} />
+      </div>
 
       <NodeModal
         open={modal.type !== "none"}

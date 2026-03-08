@@ -21,7 +21,8 @@
       "Bash(node scripts/debug-composio-tools.mjs)",
       "Bash(xargs cat)",
       "Bash(ls c:/Dev/LaunchPath/src/app/api/agents/[agentId]/tools/)",
-      "Bash(xargs grep -l \"reactflow\\\\|Handle\\\\|onConnect\\\\|isValidConnection\")"
+      "Bash(xargs grep -l \"reactflow\\\\|Handle\\\\|onConnect\\\\|isValidConnection\")",
+      "WebFetch(domain:21st.dev)"
     ]
   }
 }
