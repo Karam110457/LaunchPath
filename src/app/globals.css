@@ -517,6 +517,30 @@
       0 16px 40px -4px rgba(0, 0, 0, 0.4);
   }
 
+  /* ── Canvas dark scrollbars ──────────────────────────────────────────── */
+  .canvas-dark *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .canvas-dark *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .canvas-dark *::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+  }
+  .canvas-dark *::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.22);
+  }
+  .canvas-dark *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  /* Firefox */
+  .canvas-dark * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+  }
+
   .container {
     width: 100%;
     margin-left: auto;
