@@ -514,8 +514,7 @@
   }
 
   /* ── Dark mode liquid glass ────────────────────────────────────────────── */
-  .canvas-dark .liquid-glass-node,
-  .dark .liquid-glass-node {
+  .canvas-dark .liquid-glass-node {
     background: linear-gradient(135deg, rgba(30, 30, 38, 0.7) 0%, rgba(30, 30, 38, 0.3) 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow:
@@ -524,8 +523,7 @@
       0 10px 30px -4px rgba(0, 0, 0, 0.3);
   }
 
-  .canvas-dark .liquid-glass-node:hover,
-  .dark .liquid-glass-node:hover {
+  .canvas-dark .liquid-glass-node:hover {
     background: linear-gradient(135deg, rgba(38, 38, 46, 0.8) 0%, rgba(38, 38, 46, 0.4) 100%);
     box-shadow:
       inset 1px 2px 4px rgba(255, 255, 255, 0.04),

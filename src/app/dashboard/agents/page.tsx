@@ -20,10 +20,16 @@ export default async function AgentsPage() {
   const hasAgents = agents && agents.length > 0;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col antialiased">
-      <AgentsTopNav />
-      <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8">
-        {hasAgents ? <AgentsList agents={agents} userFullName={user.user_metadata?.full_name || user.email?.split("@")[0] || "there"} /> : <EmptyAgents />}
+    <div className="min-h-screen bg-background flex flex-col antialiased relative overflow-hidden">
+      {/* Ambient glassmorphic background spheres */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#FF8C00] rounded-full mix-blend-screen filter blur-[120px] opacity-15 dark:opacity-20 animate-pulse pointer-events-none z-0" style={{ animationDuration: '8s' }} />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#9D50BB] rounded-full mix-blend-screen filter blur-[120px] opacity-15 dark:opacity-20 animate-pulse pointer-events-none z-0" style={{ animationDuration: '10s' }} />
+
+      <div className="relative z-10 flex flex-col flex-1 h-full">
+        <AgentsTopNav />
+        <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8">
+          {hasAgents ? <AgentsList agents={agents} userFullName={user.user_metadata?.full_name || user.email?.split("@")[0] || "there"} /> : <EmptyAgents />}
+        </div>
       </div>
     </div>
   );
