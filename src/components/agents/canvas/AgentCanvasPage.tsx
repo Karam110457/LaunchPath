@@ -1048,16 +1048,6 @@ function AgentCanvasInner({
 
   return (
     <div className={`${theme === "dark" ? "canvas-dark" : "light"} fixed inset-0 z-[100] w-full h-full overflow-hidden ${theme === "dark" ? "bg-[#050505]" : "bg-[#eef0f2]"} text-foreground transition-colors duration-300`}>
-      {/* Hidden SVG gradient definition — referenced by icons via stroke: url(#accent-gradient) */}
-      <svg width="0" height="0" className="absolute">
-        <defs>
-          <linearGradient id="accent-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FF8C00" />
-            <stop offset="100%" stopColor="#9D50BB" />
-          </linearGradient>
-        </defs>
-      </svg>
-
       <TopBar
         agentName={formState.name}
         avatarEmoji={formState.avatarEmoji}

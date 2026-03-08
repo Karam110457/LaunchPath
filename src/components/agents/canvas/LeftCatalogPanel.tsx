@@ -96,7 +96,7 @@ export function LeftCatalogPanel() {
             <div className="px-5 pt-6 pb-4">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                        <LayoutGrid className="w-4 h-4" style={{ stroke: 'url(#accent-gradient)' }} />
+                        <LayoutGrid className="w-4 h-4 text-neutral-600 canvas-dark:text-neutral-400" />
                         <span className="font-semibold text-neutral-900 canvas-dark:text-neutral-200 text-sm">Tools</span>
                     </div>
                     <div className="flex items-center gap-2 text-neutral-400 canvas-dark:text-neutral-500 relative">
