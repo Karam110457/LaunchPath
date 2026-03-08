@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ToolNodeData } from "../canvas-types";
-import { NODE_ENTER, NODE_DRAG } from "../animation-constants";
+import { NODE_ENTER, NODE_DRAG, NODE_EXIT } from "../animation-constants";
 
 const ICON_MAP: Record<string, LucideIcon> = {
   webhook: Webhook,
@@ -36,8 +36,9 @@ const ACTION_LABELS: Record<string, string> = {
   subagent: "delegate: agent",
 };
 
-export const ToolNode = memo(function ToolNode({ data, dragging, selected }: NodeProps) {
+export const ToolNode = memo(function ToolNode({ data, dragging }: NodeProps) {
   const d = data as unknown as ToolNodeData;
+  const isExiting = (data as Record<string, unknown>)._exiting === true;
   const Icon = ICON_MAP[d.toolType] ?? Plug;
   const iconColor = COLOR_MAP[d.toolType] ?? "text-primary";
   const hasLogoUrl = d.toolkitIcon?.startsWith("http");
@@ -50,19 +51,22 @@ export const ToolNode = memo(function ToolNode({ data, dragging, selected }: Nod
     <motion.div
       className="group relative flex flex-col items-center"
       initial={NODE_ENTER.initial}
-      animate={{
-        opacity: 1,
-        scale: dragging ? NODE_DRAG.scale : 1,
-        filter: dragging ? NODE_DRAG.filter : "drop-shadow(0 0 0 transparent)",
-      }}
+      animate={
+        isExiting
+          ? NODE_EXIT
+          : {
+              opacity: 1,
+              scale: dragging ? NODE_DRAG.scale : 1,
+              filter: dragging ? NODE_DRAG.filter : "drop-shadow(0 0 0 transparent)",
+            }
+      }
       transition={NODE_ENTER.transition}
     >
       {/* Square container */}
       <div
         className={cn(
           "relative w-[96px] h-[96px] liquid-glass-node flex items-center justify-center cursor-pointer z-10",
-          !d.isEnabled && "opacity-60",
-          selected && "ring-2 ring-primary/30 ring-offset-2 ring-offset-transparent"
+          !d.isEnabled && "opacity-60"
         )}
       >
         {/* Auth warning dot for composio tools without active connection */}

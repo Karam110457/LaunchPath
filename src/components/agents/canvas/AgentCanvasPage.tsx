@@ -18,6 +18,7 @@ import { AnimatePresence } from "framer-motion";
     type Edge,
     type NodeMouseHandler,
     type OnNodeDrag,
+    type NodeChange,
   } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -549,6 +550,49 @@ function AgentCanvasInner({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
+  // ─── Animated node removal ────────────────────────────────────────────────
+  // Must match NODE_EXIT.transition.duration (250ms) in animation-constants.ts
+  const ANIMATED_EXIT_MS = 250;
+
+  // Wrapper for onNodesChange: intercept "remove" changes, mark nodes as
+  // _exiting so they animate out, then actually remove after the animation.
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      const removeIds: string[] = [];
+      const otherChanges: NodeChange[] = [];
+
+      for (const change of changes) {
+        if (change.type === "remove") {
+          removeIds.push(change.id);
+        } else {
+          otherChanges.push(change);
+        }
+      }
+
+      // Apply non-remove changes immediately
+      if (otherChanges.length > 0) {
+        onNodesChange(otherChanges);
+      }
+
+      if (removeIds.length === 0) return;
+
+      // Mark nodes as exiting (triggers NODE_EXIT animation in the component)
+      setNodes((prev) =>
+        prev.map((n) =>
+          removeIds.includes(n.id)
+            ? { ...n, selectable: false, draggable: false, data: { ...n.data, _exiting: true } }
+            : n
+        )
+      );
+
+      // After animation completes, actually remove them
+      setTimeout(() => {
+        setNodes((prev) => prev.filter((n) => !removeIds.includes(n.id)));
+      }, ANIMATED_EXIT_MS);
+    },
+    [onNodesChange, setNodes]
+  );
+
   // When toolsReady flips true: set the correct layout synchronously before
   // the browser paints, so ReactFlow never renders with a stale/empty layout
   useLayoutEffect(() => {
@@ -582,18 +626,71 @@ function AgentCanvasInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docCounts]);
 
-  // When tools/subagents/knowledge change after initial load: rebuild layout
-  // New nodes get default positions; existing nodes keep their saved spot
+  // When tools/subagents/knowledge change after initial load: rebuild layout.
+  // IMPORTANT: merges nodes in-place (data only) to avoid full re-mount /
+  // animation replay.  New nodes are added, removed nodes animate out,
+  // edges are only replaced when structurally necessary.
   useEffect(() => {
     if (!toolsReady) return;
-    setNodes(layoutNodes);
-    // Filter out stale edges referencing nodes that no longer exist
-    const nodeIds = new Set(layoutNodes.map(n => n.id));
-    let validEdges = layoutEdges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
 
-    // Process pending auto-edges (queued by onConnect cross-agent / handleToolSaved)
+    const layoutNodeIds = new Set(layoutNodes.map((n) => n.id));
+    const layoutMap = new Map(layoutNodes.map((n) => [n.id, n]));
+    let hasRemovals = false;
+
+    // Merge nodes: update existing data in-place, add new, animate removed
+    setNodes((currentNodes) => {
+      const currentIds = new Set(currentNodes.map((n) => n.id));
+      const result: Node[] = [];
+
+      // 1. Update existing nodes (preserve position + internal state, update data)
+      for (const n of currentNodes) {
+        if ((n.data as Record<string, unknown>)._exiting) {
+          // Already exiting: keep as-is
+          result.push(n);
+          continue;
+        }
+        const layoutNode = layoutMap.get(n.id);
+        if (layoutNode) {
+          // Exists in layout: update data only
+          result.push({ ...n, data: layoutNode.data });
+        } else {
+          // Being removed: animate exit
+          hasRemovals = true;
+          result.push({
+            ...n,
+            selectable: false,
+            draggable: false,
+            data: { ...n.data, _exiting: true },
+          });
+        }
+      }
+
+      // 2. Add new nodes not in current
+      for (const ln of layoutNodes) {
+        if (!currentIds.has(ln.id)) {
+          result.push(ln);
+        }
+      }
+
+      return result;
+    });
+
+    // Clean up exiting nodes after animation completes
+    if (hasRemovals) {
+      setTimeout(() => {
+        setNodes((prev) => prev.filter((n) => !(n.data as Record<string, unknown>)._exiting));
+      }, ANIMATED_EXIT_MS);
+    }
+
+    // ── Edge handling: only touch edges when structurally necessary ──
+    const nodeIds = layoutNodeIds;
     const pending = pendingAutoEdgesRef.current;
-    if (pending.length > 0) {
+    const hasPending = pending.length > 0;
+
+    if (hasPending) {
+      // Pending auto-edges (cross-agent reassignment / handleToolSaved):
+      // rebuild edges from layout + process pending
+      let validEdges = layoutEdges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
       pendingAutoEdgesRef.current = [];
       for (const p of pending) {
         if (nodeIds.has(p.target) && nodeIds.has(p.source)) {
@@ -613,9 +710,21 @@ function AgentCanvasInner({
       const newState = { ...ls, edges: validEdges.filter(e => !e.id.endsWith("-knowledge")) };
       setLayoutState(newState);
       persistLayout(newState);
+      setEdges(validEdges);
+    } else {
+      // No pending edges: only remove stale edges (pointing to deleted nodes).
+      // Preserves edges added by onConnect without overwriting them.
+      setEdges((currentEdges) => {
+        const stale = currentEdges.filter(e => !nodeIds.has(e.source) || !nodeIds.has(e.target));
+        if (stale.length === 0) return currentEdges; // No-op — keep edges as-is
+        const filtered = currentEdges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
+        const ls = layoutStateRef.current;
+        const newState = { ...ls, edges: filtered.filter(e => !e.id.endsWith("-knowledge")) };
+        setLayoutState(newState);
+        persistLayout(newState);
+        return filtered;
+      });
     }
-
-    setEdges(validEdges);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentTools, subagentDetails, hasKnowledge]);
 
@@ -815,6 +924,13 @@ function AgentCanvasInner({
           currentOwnerAgentId = match[1];
         }
 
+        // Show optimistic edge immediately so the user gets instant feedback
+        const tempEdgeId = `e-temp-${source}-${target}`;
+        setEdges((prev) => addEdge(
+          { id: tempEdgeId, source, sourceHandle: "bottom-right", target, type: "dashedEdge" },
+          prev
+        ));
+
         void (async () => {
           const oldNodeId = target;
           const newNodeId = newOwnerAgentId === agent.id
@@ -839,11 +955,13 @@ function AgentCanvasInner({
           });
 
           if (!res.ok) {
+            // Remove optimistic edge on failure
+            setEdges((prev) => prev.filter(e => e.id !== tempEdgeId));
             toast.error("Failed to move tool");
             return;
           }
 
-          // Queue the auto-edge — layout rebuild effect processes it deterministically
+          // Queue the auto-edge — layout rebuild replaces all edges (removes temp, adds real)
           const sourceNode = newOwnerAgentId === agent.id ? "agent" : `subagent-${newOwnerAgentId}`;
           pendingAutoEdgesRef.current.push({
             source: sourceNode,
@@ -1596,7 +1714,7 @@ function AgentCanvasInner({
           <ReactFlow
             nodes={nodes}
             edges={edges}
-            onNodesChange={onNodesChange}
+            onNodesChange={handleNodesChange}
             onEdgesChange={handleEdgesChange}
             onConnect={onConnect}
             isValidConnection={isValidConnection}

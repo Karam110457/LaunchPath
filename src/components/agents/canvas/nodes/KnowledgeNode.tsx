@@ -4,30 +4,31 @@ import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { motion } from "framer-motion";
 import { Database, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import type { KnowledgeNodeData } from "../canvas-types";
 import { NodeHelperTip } from "./NodeHelperTip";
-import { NODE_ENTER, NODE_DRAG } from "../animation-constants";
+import { NODE_ENTER, NODE_DRAG, NODE_EXIT } from "../animation-constants";
 
-export const KnowledgeNode = memo(function KnowledgeNode({ data, dragging, selected }: NodeProps) {
+export const KnowledgeNode = memo(function KnowledgeNode({ data, dragging }: NodeProps) {
   const d = data as unknown as KnowledgeNodeData;
+  const isExiting = (data as Record<string, unknown>)._exiting === true;
 
   return (
     <motion.div
       className="group relative flex flex-col items-center"
       initial={NODE_ENTER.initial}
-      animate={{
-        opacity: 1,
-        scale: dragging ? NODE_DRAG.scale : 1,
-        filter: dragging ? NODE_DRAG.filter : "drop-shadow(0 0 0 transparent)",
-      }}
+      animate={
+        isExiting
+          ? NODE_EXIT
+          : {
+              opacity: 1,
+              scale: dragging ? NODE_DRAG.scale : 1,
+              filter: dragging ? NODE_DRAG.filter : "drop-shadow(0 0 0 transparent)",
+            }
+      }
       transition={NODE_ENTER.transition}
     >
       {/* Circle container */}
-      <div className={cn(
-        "relative w-[96px] h-[96px] liquid-glass-node !rounded-full flex flex-col items-center justify-center cursor-pointer z-10",
-        selected && "ring-2 ring-violet-400/30 ring-offset-2 ring-offset-transparent"
-      )}>
+      <div className="relative w-[96px] h-[96px] liquid-glass-node !rounded-full flex flex-col items-center justify-center cursor-pointer z-10">
 
         {/* Processing spinner inside circle */}
         {d.processingCount > 0 && (

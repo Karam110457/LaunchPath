@@ -4,26 +4,30 @@ import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { motion } from "framer-motion";
 import { Bot } from "lucide-react";
-import { cn } from "@/lib/utils";
 import type { SubagentNodeData } from "../canvas-types";
 import { ShineBorder } from "@/components/ui/shine-border";
-import { NODE_ENTER, NODE_DRAG } from "../animation-constants";
+import { NODE_ENTER, NODE_DRAG, NODE_EXIT } from "../animation-constants";
 
 const NODE_W = 280;
 const NODE_H = 128;
 
-export const SubagentNode = memo(function SubagentNode({ data, dragging, selected }: NodeProps) {
+export const SubagentNode = memo(function SubagentNode({ data, dragging }: NodeProps) {
   const d = data as unknown as SubagentNodeData;
+  const isExiting = (data as Record<string, unknown>)._exiting === true;
 
   return (
     <motion.div
       className="group relative flex flex-col items-center"
       initial={NODE_ENTER.initial}
-      animate={{
-        opacity: 1,
-        scale: dragging ? NODE_DRAG.scale : 1,
-        filter: dragging ? NODE_DRAG.filter : "drop-shadow(0 0 0 transparent)",
-      }}
+      animate={
+        isExiting
+          ? NODE_EXIT
+          : {
+              opacity: 1,
+              scale: dragging ? NODE_DRAG.scale : 1,
+              filter: dragging ? NODE_DRAG.filter : "drop-shadow(0 0 0 transparent)",
+            }
+      }
       transition={NODE_ENTER.transition}
     >
       <ShineBorder
@@ -31,10 +35,7 @@ export const SubagentNode = memo(function SubagentNode({ data, dragging, selecte
         borderWidth={3}
         duration={8}
         color={["#FF8C00", "#9D50BB"]}
-        className={cn(
-          "relative !p-[3px] !bg-transparent cursor-pointer overflow-visible z-10",
-          selected && "ring-2 ring-primary/30 ring-offset-2 ring-offset-transparent rounded-[48px]"
-        )}
+        className="relative !p-[3px] !bg-transparent cursor-pointer overflow-visible z-10"
         style={{ width: NODE_W, height: NODE_H }}
       >
         <div className="w-full h-full liquid-glass-node flex items-center gap-3 justify-center !border-none px-4" style={{ borderRadius: 45 }}>

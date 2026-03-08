@@ -77,6 +77,19 @@ export const NODE_DRAG = {
   filter: "drop-shadow(0 12px 24px rgba(0,0,0,0.15))",
 };
 
+/**
+ * Canvas node exit — shrink + fade + blur.
+ * Used as `animate` target when a node is marked _exiting.
+ * Transition is embedded so it overrides the element's transition prop.
+ * Duration (250ms) must match ANIMATED_EXIT_MS in AgentCanvasPage.
+ */
+export const NODE_EXIT = {
+  opacity: 0,
+  scale: 0.6,
+  filter: "blur(6px)",
+  transition: { duration: 0.25, ease: [0.4, 0, 1, 1] as const },
+};
+
 /** Helper tip slide-down entrance / slide-up exit. */
 export const HELPER_TIP = {
   initial: { opacity: 0, y: -8 },
