@@ -16,7 +16,7 @@ export function AgentsBackground() {
     }, []);
 
     return (
-        <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden bg-background">
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
             {/* Base Dot Grid */}
             <div
                 className="absolute inset-0 opacity-[0.4] dark:opacity-[0.15]"
