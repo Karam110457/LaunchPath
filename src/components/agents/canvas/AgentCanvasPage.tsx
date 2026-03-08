@@ -127,7 +127,7 @@ function AgentCanvasInner({
 }: AgentCanvasPageProps) {
   const router = useRouter();
   const { screenToFlowPosition, getNodes, zoomIn, zoomOut, fitView } = useReactFlow();
-  const { isConnected: isComposioConnected, refresh: refreshComposioConnections } = useComposioConnections();
+  const { isConnected: isComposioConnected, refresh: refreshComposioConnections, loading: composioConnectionsLoading } = useComposioConnections();
 
   // ─── Agent form state ────────────────────────────────────────────────────
   // Build form state from server props
@@ -367,18 +367,20 @@ function AgentCanvasInner({
   // Block canvas render until first tools fetch completes (prevents layout jump)
   const [toolsReady, setToolsReady] = useState(false);
 
-  const fetchTools = useCallback(async () => {
+  const fetchTools = useCallback(async (): Promise<AgentToolResponse[]> => {
     try {
       const res = await fetch(`/api/agents/${agent.id}/tools`);
       if (res.ok) {
         const data = (await res.json()) as { tools: AgentToolResponse[] };
         setAgentTools(data.tools);
+        return data.tools;
       }
     } catch {
       // non-critical
     } finally {
       setToolsReady(true);
     }
+    return [];
   }, [agent.id]);
 
   // ─── Subagent details state ─────────────────────────────────────────────
@@ -394,16 +396,18 @@ function AgentCanvasInner({
   }
   const [subagentDetails, setSubagentDetails] = useState<SubagentDetail[]>([]);
 
-  const fetchSubagents = useCallback(async () => {
+  const fetchSubagents = useCallback(async (): Promise<SubagentDetail[]> => {
     try {
       const res = await fetch(`/api/agents/${agent.id}/subagents`);
       if (res.ok) {
         const data = (await res.json()) as { subagents: SubagentDetail[] };
         setSubagentDetails(data.subagents);
+        return data.subagents;
       }
     } catch {
       // non-critical
     }
+    return [];
   }, [agent.id]);
 
   useEffect(() => { void fetchTools(); void fetchSubagents(); }, [fetchTools, fetchSubagents]);
@@ -426,11 +430,11 @@ function AgentCanvasInner({
             toolkitIcon: cfg?.toolkit_icon,
             toolkitSlug: cfg?.toolkit,
             needsAuth: t.tool_type === "composio" && cfg?.toolkit
-              ? !isComposioConnected(cfg.toolkit)
+              ? (composioConnectionsLoading ? false : !isComposioConnected(cfg.toolkit))
               : undefined,
           };
         }),
-    [agentTools, agent.id, isComposioConnected]
+    [agentTools, agent.id, isComposioConnected, composioConnectionsLoading]
   );
 
   // Subagent tree nodes — join agent_tools (subagent type) with enriched subagent details
@@ -1085,11 +1089,13 @@ function AgentCanvasInner({
 
   const handleToolSaved = useCallback(async () => {
     const ownerAgentId = setupTool?.agentId ?? composioSetup?.agentId ?? agent.id;
-    // Snapshot tool IDs for the owner agent (parent or subagent) to detect new tools after fetch
+    const isSubagentTool = ownerAgentId !== agent.id;
+
+    // Snapshot tool IDs BEFORE fetch (from closure — these are the pre-save values)
     const prevToolIds = new Set(
-      ownerAgentId === agent.id
-        ? agentTools.map((t) => t.id)
-        : (subagentDetails.find((s) => s.id === ownerAgentId)?.tools ?? []).map((t) => t.id)
+      isSubagentTool
+        ? (subagentDetails.find((s) => s.id === ownerAgentId)?.tools ?? []).map((t) => t.id)
+        : agentTools.map((t) => t.id)
     );
     const editSnapshot = editingToolSnapshotRef.current;
     editingToolSnapshotRef.current = null;
@@ -1098,30 +1104,20 @@ function AgentCanvasInner({
     setCatalogContext(null);
     setComposioSetup(null);
     setAppLibraryOpen(false);
-    await Promise.all([fetchTools(), fetchSubagents()]);
+
+    // Fetch returns FRESH data — don't rely on stale closure values
+    const [freshTools, freshSubagents] = await Promise.all([fetchTools(), fetchSubagents()]);
     notifySaved();
 
-    // Detect new tools across both parent and subagent scopes
-    const isSubagentTool = ownerAgentId !== agent.id;
-
-    // Helper: find new tools added for this owner
-    const findNewTools = (): AgentToolResponse[] => {
-      if (!isSubagentTool) {
-        // Parent tools — compare against prevToolIds snapshot
-        return agentTools.filter((t) => !prevToolIds.has(t.id));
-      }
-      // Subagent tools — compare against prev snapshot
-      const sa = subagentDetails.find((s) => s.id === ownerAgentId);
-      return (sa?.tools ?? []).filter((t) => !prevToolIds.has(t.id));
-    };
-
-    const newTools = findNewTools();
+    // Find new tools by comparing fresh data against pre-save snapshot
+    const ownerTools = isSubagentTool
+      ? (freshSubagents.find((s) => s.id === ownerAgentId)?.tools ?? [])
+      : freshTools;
+    const newTools = ownerTools.filter((t) => !prevToolIds.has(t.id));
 
     // Handle tool config edit undo (no new tools → must be an edit)
     if (editSnapshot && newTools.length === 0) {
-      const updatedTool = isSubagentTool
-        ? subagentDetails.find(s => s.id === ownerAgentId)?.tools.find(t => t.id === editSnapshot.id)
-        : agentTools.find(t => t.id === editSnapshot.id);
+      const updatedTool = ownerTools.find((t) => t.id === editSnapshot.id);
       if (updatedTool) {
         const newSnapshot = { ...updatedTool };
         pushUndo({
@@ -1384,7 +1380,7 @@ function AgentCanvasInner({
         // Optimistic: show placeholder node instantly
         const tempId = `temp-${Date.now()}`;
         const tempNodeId = targetAgentId === agent.id ? `tool-${tempId}` : `sa-${targetAgentId}-tool-${tempId}`;
-        const needsAuth = toolkit ? !isComposioConnected(toolkit) : false;
+        const needsAuth = toolkit ? (composioConnectionsLoading ? false : !isComposioConnected(toolkit)) : false;
         setNodes((prev) => [
           ...prev,
           {

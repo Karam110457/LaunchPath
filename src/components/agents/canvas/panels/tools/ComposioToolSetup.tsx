@@ -13,6 +13,7 @@ import {
   Lock,
   Plus,
   Trash2,
+  RefreshCw,
 } from "lucide-react";
 import { NodeModal } from "../NodeModal";
 import { cn } from "@/lib/utils";
@@ -926,7 +927,7 @@ export function ComposioToolSetup({
   onClose,
   onAuthChanged,
 }: ComposioToolSetupProps) {
-  const { connect: rawConnect, connecting, connectError, isConnected, getConnection, loading: connectionsLoading } = useComposioConnections();
+  const { connect: rawConnect, connecting, connectError, isConnected, getConnection, disconnect, loading: connectionsLoading } = useComposioConnections();
 
   // Wrap connect to notify the canvas when auth completes
   const connect = useCallback(
@@ -956,6 +957,18 @@ export function ComposioToolSetup({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
+
+  const handleReconnect = useCallback(async () => {
+    setReconnecting(true);
+    try {
+      const conn = getConnection(toolkit);
+      if (conn) await disconnect(conn.id);
+      await connect(toolkit, toolkitName, toolkitIcon);
+    } finally {
+      setReconnecting(false);
+    }
+  }, [toolkit, toolkitName, toolkitIcon, getConnection, disconnect, connect]);
 
   // Fetch actions on mount
   useEffect(() => {
@@ -1206,6 +1219,31 @@ export function ComposioToolSetup({
               <p className="text-[10px] text-muted-foreground/60 mt-1">
                 Tells your agent when and how to use {toolkitName}.
               </p>
+            </div>
+
+            {/* Connected account */}
+            <div className="flex items-center justify-between rounded-lg border border-border/40 bg-muted/20 px-3 py-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-5 h-5 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                </div>
+                <span className="text-xs text-muted-foreground truncate">
+                  Connected to {toolkitName}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleReconnect()}
+                disabled={reconnecting || connecting === toolkit}
+                className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 shrink-0 ml-3"
+              >
+                {reconnecting || connecting === toolkit ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-3 h-3" />
+                )}
+                {reconnecting || connecting === toolkit ? "Reconnecting..." : "Change account"}
+              </button>
             </div>
 
             {/* Action toggle list */}
