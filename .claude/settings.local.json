@@ -23,7 +23,8 @@
       "Bash(ls c:/Dev/LaunchPath/src/app/api/agents/[agentId]/tools/)",
       "Bash(xargs grep -l \"reactflow\\\\|Handle\\\\|onConnect\\\\|isValidConnection\")",
       "WebFetch(domain:21st.dev)",
-      "Bash(grep -l \"tool_guidelines\\\\|wizard_config\" /c/Dev/LaunchPath/supabase/migrations/*.sql)"
+      "Bash(grep -l \"tool_guidelines\\\\|wizard_config\" /c/Dev/LaunchPath/supabase/migrations/*.sql)",
+      "Bash(find /c/Dev/LaunchPath/src/app/api/agents/[agentId]/tools -name \"route.ts\" -type f)"
     ]
   }
 }

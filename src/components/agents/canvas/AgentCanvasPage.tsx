@@ -1084,8 +1084,13 @@ function AgentCanvasInner({
   } | null>(null);
 
   const handleToolSaved = useCallback(async () => {
-    const prevToolIds = new Set(agentTools.map((t) => t.id));
     const ownerAgentId = setupTool?.agentId ?? composioSetup?.agentId ?? agent.id;
+    // Snapshot tool IDs for the owner agent (parent or subagent) to detect new tools after fetch
+    const prevToolIds = new Set(
+      ownerAgentId === agent.id
+        ? agentTools.map((t) => t.id)
+        : (subagentDetails.find((s) => s.id === ownerAgentId)?.tools ?? []).map((t) => t.id)
+    );
     const editSnapshot = editingToolSnapshotRef.current;
     editingToolSnapshotRef.current = null;
 
@@ -1096,50 +1101,62 @@ function AgentCanvasInner({
     await Promise.all([fetchTools(), fetchSubagents()]);
     notifySaved();
 
-    // Detect new tools, push undo entries, and queue auto-edges for layout rebuild
-    setAgentTools((currentTools) => {
-      const newTools = currentTools.filter((t) => !prevToolIds.has(t.id));
+    // Detect new tools across both parent and subagent scopes
+    const isSubagentTool = ownerAgentId !== agent.id;
 
-      // Handle tool config edit undo
-      if (editSnapshot && newTools.length === 0) {
-        const updatedTool = currentTools.find((t) => t.id === editSnapshot.id);
-        if (updatedTool) {
-          const newSnapshot = { ...updatedTool };
-          pushUndo({
-            label: `Updated ${editSnapshot.display_name}`,
-            undo: async () => {
-              await fetch(`/api/agents/${ownerAgentId}/tools/${editSnapshot.id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  display_name: editSnapshot.display_name,
-                  description: editSnapshot.description,
-                  config: editSnapshot.config,
-                  is_enabled: editSnapshot.is_enabled,
-                }),
-              });
-              await Promise.all([fetchTools(), fetchSubagents()]);
-            },
-            redo: async () => {
-              await fetch(`/api/agents/${ownerAgentId}/tools/${editSnapshot.id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  display_name: newSnapshot.display_name,
-                  description: newSnapshot.description,
-                  config: newSnapshot.config,
-                  is_enabled: newSnapshot.is_enabled,
-                }),
-              });
-              await Promise.all([fetchTools(), fetchSubagents()]);
-            },
-          });
-        }
-        return currentTools;
+    // Helper: find new tools added for this owner
+    const findNewTools = (): AgentToolResponse[] => {
+      if (!isSubagentTool) {
+        // Parent tools — compare against prevToolIds snapshot
+        return agentTools.filter((t) => !prevToolIds.has(t.id));
       }
+      // Subagent tools — compare against prev snapshot
+      const sa = subagentDetails.find((s) => s.id === ownerAgentId);
+      return (sa?.tools ?? []).filter((t) => !prevToolIds.has(t.id));
+    };
 
-      if (newTools.length === 0) return currentTools;
+    const newTools = findNewTools();
 
+    // Handle tool config edit undo (no new tools → must be an edit)
+    if (editSnapshot && newTools.length === 0) {
+      const updatedTool = isSubagentTool
+        ? subagentDetails.find(s => s.id === ownerAgentId)?.tools.find(t => t.id === editSnapshot.id)
+        : agentTools.find(t => t.id === editSnapshot.id);
+      if (updatedTool) {
+        const newSnapshot = { ...updatedTool };
+        pushUndo({
+          label: `Updated ${editSnapshot.display_name}`,
+          undo: async () => {
+            await fetch(`/api/agents/${ownerAgentId}/tools/${editSnapshot.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                display_name: editSnapshot.display_name,
+                description: editSnapshot.description,
+                config: editSnapshot.config,
+                is_enabled: editSnapshot.is_enabled,
+              }),
+            });
+            await Promise.all([fetchTools(), fetchSubagents()]);
+          },
+          redo: async () => {
+            await fetch(`/api/agents/${ownerAgentId}/tools/${editSnapshot.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                display_name: newSnapshot.display_name,
+                description: newSnapshot.description,
+                config: newSnapshot.config,
+                is_enabled: newSnapshot.is_enabled,
+              }),
+            });
+            await Promise.all([fetchTools(), fetchSubagents()]);
+          },
+        });
+      }
+    }
+
+    if (newTools.length > 0) {
       // Push undo for each new tool
       for (const tool of newTools) {
         let currentToolId = tool.id;
@@ -1178,8 +1195,10 @@ function AgentCanvasInner({
       for (const tool of newTools) {
         const nodeId = tool.tool_type === "subagent"
           ? `subagent-${(tool.config as { target_agent_id?: string }).target_agent_id}`
-          : `tool-${tool.id}`;
-        const sourceNode = ownerAgentId === agent.id ? "agent" : `subagent-${ownerAgentId}`;
+          : isSubagentTool
+            ? `sa-${ownerAgentId}-tool-${tool.id}`
+            : `tool-${tool.id}`;
+        const sourceNode = isSubagentTool ? `subagent-${ownerAgentId}` : "agent";
         const edgeId = `e-${sourceNode}-${nodeId}`;
 
         setEdges((prev) => {
@@ -1196,10 +1215,8 @@ function AgentCanvasInner({
         });
         setToolEnabled(ownerAgentId, tool.id, true);
       }
-
-      return currentTools;
-    });
-  }, [agentTools, agent.id, setupTool, composioSetup, fetchTools, fetchSubagents, notifySaved, setToolEnabled, pushUndo, setEdges, persistLayout]);
+    }
+  }, [agentTools, subagentDetails, agent.id, setupTool, composioSetup, fetchTools, fetchSubagents, notifySaved, setToolEnabled, pushUndo, setEdges, persistLayout]);
 
   const handleToolDeleted = useCallback(async (deletedTool?: AgentToolResponse) => {
     setSetupTool(null);
