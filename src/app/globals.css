@@ -47,54 +47,68 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+
   @keyframes scaleToggle {
-  0% {
-    scale: 1 1;
+    0% {
+      scale: 1 1;
     }
-  50% {
-    scale: 1.1 1;
+
+    50% {
+      scale: 1.1 1;
     }
-  100% {
-    scale: 1 1;
+
+    100% {
+      scale: 1 1;
     }
   }
+
   @keyframes scaleToggle2 {
-  0% {
-    scale: 1 1;
+    0% {
+      scale: 1 1;
     }
-  50% {
-    scale: 1.2 1;
+
+    50% {
+      scale: 1.2 1;
     }
-  100% {
-    scale: 1 1;
+
+    100% {
+      scale: 1 1;
     }
   }
+
   @keyframes scaleToggle3 {
-  0% {
-    scale: 1 1;
+    0% {
+      scale: 1 1;
     }
-  50% {
-    scale: 1.1 1;
+
+    50% {
+      scale: 1.1 1;
     }
-  100% {
-    scale: 1 1;
+
+    100% {
+      scale: 1 1;
     }
   }
+
   --animate-border-beam: border-beam calc(var(--duration)*1s) infinite linear;
+
   @keyframes border-beam {
-  100% {
-    offset-distance: 100%;
+    100% {
+      offset-distance: 100%;
     }
   }
+
   @keyframes shine-pulse {
-  0% {
-    background-position: 0% 0%;
+    0% {
+      background-position: 0% 0%;
     }
-  50% {
-    background-position: 100% 100%;
+
+    50% {
+      background-position: 100% 100%;
     }
-  to {
-    background-position: 0% 0%;
+
+    to {
+      background-position: 0% 0%;
     }
   }
 }
@@ -483,7 +497,7 @@
     -webkit-backdrop-filter: blur(24px) saturate(1.2);
     border-radius: 36px;
     border: 1px solid rgba(255, 255, 255, 0.6);
-    box-shadow: 
+    box-shadow:
       inset 1px 2px 4px rgba(255, 255, 255, 0.9),
       inset -1px -2px 4px rgba(0, 0, 0, 0.02),
       0 10px 30px -4px rgba(0, 0, 0, 0.08);
@@ -500,7 +514,8 @@
   }
 
   /* ── Dark mode liquid glass ────────────────────────────────────────────── */
-  .canvas-dark .liquid-glass-node {
+  .canvas-dark .liquid-glass-node,
+  .dark .liquid-glass-node {
     background: linear-gradient(135deg, rgba(30, 30, 38, 0.7) 0%, rgba(30, 30, 38, 0.3) 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow:
@@ -509,7 +524,8 @@
       0 10px 30px -4px rgba(0, 0, 0, 0.3);
   }
 
-  .canvas-dark .liquid-glass-node:hover {
+  .canvas-dark .liquid-glass-node:hover,
+  .dark .liquid-glass-node:hover {
     background: linear-gradient(135deg, rgba(38, 38, 46, 0.8) 0%, rgba(38, 38, 46, 0.4) 100%);
     box-shadow:
       inset 1px 2px 4px rgba(255, 255, 255, 0.04),
@@ -522,19 +538,24 @@
     width: 6px;
     height: 6px;
   }
+
   .canvas-dark *::-webkit-scrollbar-track {
     background: transparent;
   }
+
   .canvas-dark *::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.12);
     border-radius: 3px;
   }
+
   .canvas-dark *::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.22);
   }
+
   .canvas-dark *::-webkit-scrollbar-corner {
     background: transparent;
   }
+
   /* Firefox */
   .canvas-dark * {
     scrollbar-width: thin;
@@ -614,6 +635,7 @@
   position: relative;
   z-index: 0;
 }
+
 .gradient-accent-border::before {
   content: "";
   position: absolute;

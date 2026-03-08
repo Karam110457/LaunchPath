@@ -102,8 +102,8 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
 
         {/* Dashboard Stats */}
         <div className="flex gap-4 md:gap-8 overflow-x-auto pb-2 -mx-6 px-6 lg:mx-0 lg:px-0 lg:pb-0 hide-scrollbar">
-          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-white/40 dark:bg-black/40 backdrop-blur-2xl border border-white/20 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#FF8C00]/20 to-[#FF8C00]/5 flex items-center justify-center text-[#FF8C00]">
+          <div className="flex items-center gap-4 shrink-0 px-4 py-3 liquid-glass-node z-10 text-foreground">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center gradient-accent-bg text-white shadow-sm">
               <Bot className="w-6 h-6" />
             </div>
             <div>
@@ -111,8 +111,8 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
               <p className="text-sm font-medium text-muted-foreground mt-1">Total Agents</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-white/40 dark:bg-black/40 backdrop-blur-2xl border border-white/20 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#9D50BB]/20 to-[#9D50BB]/5 flex items-center justify-center text-[#9D50BB]">
+          <div className="flex items-center gap-4 shrink-0 px-4 py-3 liquid-glass-node z-10 text-foreground">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-muted/50 text-foreground shadow-inner">
               <Activity className="w-6 h-6" />
             </div>
             <div>
@@ -120,8 +120,8 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
               <p className="text-sm font-medium text-muted-foreground mt-1">Active</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-white/40 dark:bg-black/40 backdrop-blur-2xl border border-white/20 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[#FF8C00]/10 text-[#FF8C00]">
+          <div className="flex items-center gap-4 shrink-0 px-4 py-3 liquid-glass-node z-10 text-foreground">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-muted/50 text-foreground shadow-inner">
               <FileEdit className="w-6 h-6" />
             </div>
             <div>
@@ -137,16 +137,16 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
       {/* Controls */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <div className="relative w-full sm:w-64 z-10">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-20" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search agents..."
-              className="pl-10 h-10 rounded-full bg-white/40 dark:bg-black/40 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-white/20 dark:border-white/5 focus-visible:ring-[#FF8C00]/50"
+              className="pl-10 h-10 liquid-glass-node !rounded-full !border-none !shadow-sm focus-visible:ring-1 focus-visible:ring-ring"
             />
           </div>
-          <div className="flex bg-white/40 dark:bg-black/40 backdrop-blur-xl p-1 rounded-full border border-white/20 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-x-auto hide-scrollbar">
+          <div className="flex liquid-glass-node !rounded-full !p-1 !border-none hide-scrollbar z-10 w-full sm:w-auto">
             {STATUS_FILTERS.map((s) => (
               <button
                 key={s}
@@ -156,7 +156,7 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
                   "px-4 py-1.5 text-sm font-medium rounded-full transition-all capitalize whitespace-nowrap",
                   statusFilter === s
                     ? "bg-foreground text-background shadow-md"
-                    : "text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
               >
                 {s}
@@ -164,7 +164,7 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
             ))}
           </div>
         </div>
-        <Button asChild className="rounded-full shadow-sm" size="lg">
+        <Button asChild className="rounded-full shadow-md gradient-accent-bg border-none text-white hover:opacity-90 transition-opacity z-10" size="lg">
           <Link href="/dashboard/agents/new">
             <Plus className="h-4 w-4 mr-2" />
             New Agent
@@ -189,28 +189,28 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
             const statusInfo = STATUS_STYLES[agent.status] ?? STATUS_STYLES.draft;
 
             return (
-              <Card
+              <div
                 key={agent.id}
                 onClick={() => router.push(`/dashboard/agents/${agent.id}`)}
-                className="group relative cursor-pointer outline-none overflow-hidden rounded-[32px] border border-white/40 dark:border-white/10 bg-white/40 dark:bg-black/40 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_16px_40px_rgb(0,0,0,0.16)] hover:bg-white/60 dark:hover:bg-black/60 hover:-translate-y-1 transition-all duration-300"
+                className="group relative cursor-pointer outline-none overflow-hidden liquid-glass-node transition-all duration-300"
               >
-                <CardContent className="p-6 h-full flex flex-col justify-between min-h-[220px]">
+                <div className="p-6 h-full flex flex-col justify-between min-h-[220px]">
                   {/* Top section: Icon and Status */}
                   <div className="flex items-start justify-between mb-4">
-                    <div className="w-14 h-14 rounded-[20px] bg-gradient-to-br from-[#FF8C00]/20 to-[#9D50BB]/10 flex items-center justify-center shrink-0 border border-white/50 dark:border-white/5 shadow-inner">
-                      <Bot className="w-7 h-7 text-[#FF8C00]" />
+                    <div className="w-14 h-14 rounded-[20px] flex items-center justify-center shrink-0 gradient-accent-bg text-white shadow-md group-hover:scale-105 transition-transform">
+                      <Bot className="w-7 h-7" />
                     </div>
-                    <Badge variant={statusInfo.variant} className="rounded-full px-3 shadow-sm border-white/20 dark:border-white/5 capitalize font-medium bg-background/50 backdrop-blur-md">
+                    <Badge variant={statusInfo.variant} className="rounded-full px-3 shadow-sm capitalize font-medium">
                       {statusInfo.label}
                     </Badge>
                   </div>
 
                   {/* Middle section: Info */}
                   <div className="flex-1 min-w-0 mb-4">
-                    <h3 className="font-semibold text-xl mb-2 truncate group-hover:bg-[linear-gradient(135deg,#FF8C00,#9D50BB)] group-hover:bg-clip-text group-hover:text-transparent transition-all">
+                    <h3 className="font-semibold text-xl mb-2 truncate text-foreground group-hover:opacity-80 transition-opacity">
                       {agent.name}
                     </h3>
-                    <p className="text-sm text-foreground/70 dark:text-muted-foreground line-clamp-2 leading-relaxed">
+                    <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
                       {agent.description ?? "An unconfigured AI agent resting in your digital fleet."}
                     </p>
                   </div>
@@ -227,7 +227,7 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
                         type="button"
                         onClick={(e) => handleClone(agent.id, e)}
                         disabled={loadingAction === `clone-${agent.id}`}
-                        className="p-2 rounded-full text-foreground/70 hover:text-foreground hover:bg-white/40 dark:hover:bg-white/10 transition-all border border-transparent hover:border-white/20 bg-background/20 backdrop-blur-md shadow-sm"
+                        className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted font-medium transition-all"
                         title="Clone agent"
                       >
                         {loadingAction === `clone-${agent.id}` ? (
@@ -243,7 +243,7 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
                             type="button"
                             onClick={(e) => e.stopPropagation()}
                             disabled={loadingAction === `delete-${agent.id}`}
-                            className="p-2 rounded-full text-foreground/70 hover:text-destructive hover:bg-destructive/10 transition-all border border-transparent hover:border-destructive/20 bg-background/20 backdrop-blur-md shadow-sm"
+                            className="p-2 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
                             title="Delete agent"
                           >
                             {loadingAction === `delete-${agent.id}` ? (
@@ -275,8 +275,8 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
                       </AlertDialog>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             );
           })}
         </div>
