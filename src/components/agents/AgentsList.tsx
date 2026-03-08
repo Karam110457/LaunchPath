@@ -89,6 +89,16 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
+      {/* SVG Definition for Orange-Purple gradient applied to Icons */}
+      <svg width="0" height="0" className="absolute">
+        <defs>
+          <linearGradient id="primary-icon-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FF8C00" />
+            <stop offset="100%" stopColor="#9D50BB" />
+          </linearGradient>
+        </defs>
+      </svg>
+
       {/* Header & Stats Row */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
         <div className="space-y-2">
@@ -102,31 +112,31 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
 
         {/* Dashboard Stats */}
         <div className="flex gap-4 md:gap-8 overflow-x-auto pb-2 -mx-6 px-6 lg:mx-0 lg:px-0 lg:pb-0 hide-scrollbar">
-          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-white/40 dark:bg-black/40 backdrop-blur-2xl border border-white/20 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#FF8C00]/20 to-[#FF8C00]/5 flex items-center justify-center text-[#FF8C00]">
-              <Bot className="w-6 h-6" />
+          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-[#2A2A2A] shadow-sm">
+            <div className="w-[52px] h-[52px] rounded-[18px] bg-[#f8f9fa] dark:bg-[#252525] border border-black/5 dark:border-[#333333] flex items-center justify-center">
+              <Bot className="w-6 h-6" style={{ stroke: "url(#primary-icon-gradient)" }} />
             </div>
             <div>
-              <p className="text-3xl font-semibold leading-none">{agents.length}</p>
-              <p className="text-sm font-medium text-muted-foreground mt-1">Total Agents</p>
+              <p className="text-3xl font-semibold leading-none text-neutral-900 dark:text-neutral-100">{agents.length}</p>
+              <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mt-1">Total Agents</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-white/40 dark:bg-black/40 backdrop-blur-2xl border border-white/20 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#9D50BB]/20 to-[#9D50BB]/5 flex items-center justify-center text-[#9D50BB]">
-              <Activity className="w-6 h-6" />
+          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-[#2A2A2A] shadow-sm">
+            <div className="w-[52px] h-[52px] rounded-[18px] bg-[#f8f9fa] dark:bg-[#252525] border border-black/5 dark:border-[#333333] flex items-center justify-center">
+              <Activity className="w-6 h-6" style={{ stroke: "url(#primary-icon-gradient)" }} />
             </div>
             <div>
-              <p className="text-3xl font-semibold leading-none">{activeCount}</p>
-              <p className="text-sm font-medium text-muted-foreground mt-1">Active</p>
+              <p className="text-3xl font-semibold leading-none text-neutral-900 dark:text-neutral-100">{activeCount}</p>
+              <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mt-1">Active</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-white/40 dark:bg-black/40 backdrop-blur-2xl border border-white/20 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[#FF8C00]/10 text-[#FF8C00]">
-              <FileEdit className="w-6 h-6" />
+          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-[#2A2A2A] shadow-sm">
+            <div className="w-[52px] h-[52px] rounded-[18px] bg-[#f8f9fa] dark:bg-[#252525] border border-black/5 dark:border-[#333333] flex items-center justify-center">
+              <FileEdit className="w-6 h-6" style={{ stroke: "url(#primary-icon-gradient)" }} />
             </div>
             <div>
-              <p className="text-3xl font-semibold leading-none">{draftCount}</p>
-              <p className="text-sm font-medium text-muted-foreground mt-1">Drafts</p>
+              <p className="text-3xl font-semibold leading-none text-neutral-900 dark:text-neutral-100">{draftCount}</p>
+              <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mt-1">Drafts</p>
             </div>
           </div>
         </div>
@@ -138,15 +148,15 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 dark:text-neutral-500" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search agents..."
-              className="pl-10 h-10 rounded-full bg-white/40 dark:bg-black/40 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-white/20 dark:border-white/5 focus-visible:ring-[#FF8C00]/50"
+              className="w-full bg-white dark:bg-[#151515] border border-neutral-200/60 dark:border-[#2A2A2A] rounded-xl h-10 pl-9 pr-4 text-sm text-neutral-900 dark:text-neutral-200 shadow-sm placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-200 dark:focus-visible:ring-[#2A2A2A]"
             />
           </div>
-          <div className="flex bg-white/40 dark:bg-black/40 backdrop-blur-xl p-1 rounded-full border border-white/20 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-x-auto hide-scrollbar">
+          <div className="flex bg-white dark:bg-[#151515] p-1 rounded-full border border-neutral-200/60 dark:border-[#2A2A2A] shadow-sm overflow-x-auto hide-scrollbar">
             {STATUS_FILTERS.map((s) => (
               <button
                 key={s}
@@ -192,25 +202,25 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
               <Card
                 key={agent.id}
                 onClick={() => router.push(`/dashboard/agents/${agent.id}`)}
-                className="group relative cursor-pointer outline-none overflow-hidden rounded-[32px] border border-white/40 dark:border-white/10 bg-white/40 dark:bg-black/40 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_16px_40px_rgb(0,0,0,0.16)] hover:bg-white/60 dark:hover:bg-black/60 hover:-translate-y-1 transition-all duration-300"
+                className="group relative cursor-pointer outline-none overflow-hidden rounded-[32px] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 border border-black/5 dark:border-[#2A2A2A] hover:bg-white dark:hover:bg-[#252525] hover:shadow-md hover:-translate-y-1 transition-all duration-300"
               >
                 <CardContent className="p-6 h-full flex flex-col justify-between min-h-[220px]">
                   {/* Top section: Icon and Status */}
                   <div className="flex items-start justify-between mb-4">
-                    <div className="w-14 h-14 rounded-[20px] bg-gradient-to-br from-[#FF8C00]/20 to-[#9D50BB]/10 flex items-center justify-center shrink-0 border border-white/50 dark:border-white/5 shadow-inner">
-                      <Bot className="w-7 h-7 text-[#FF8C00]" />
+                    <div className="w-[52px] h-[52px] rounded-[18px] bg-white dark:bg-[#252525] flex items-center justify-center shrink-0 border border-black/5 dark:border-[#333333] shadow-sm group-hover:scale-105 transition-transform">
+                      <Bot className="w-7 h-7" style={{ stroke: "url(#primary-icon-gradient)" }} />
                     </div>
-                    <Badge variant={statusInfo.variant} className="rounded-full px-3 shadow-sm border-white/20 dark:border-white/5 capitalize font-medium bg-background/50 backdrop-blur-md">
+                    <Badge variant={statusInfo.variant} className="rounded-full px-3 capitalize font-medium border-black/5 dark:border-[#333333]">
                       {statusInfo.label}
                     </Badge>
                   </div>
 
                   {/* Middle section: Info */}
-                  <div className="flex-1 min-w-0 mb-4">
-                    <h3 className="font-semibold text-xl mb-2 truncate group-hover:bg-[linear-gradient(135deg,#FF8C00,#9D50BB)] group-hover:bg-clip-text group-hover:text-transparent transition-all">
+                  <div className="flex-1 min-w-0 mb-4 px-1">
+                    <h3 className="font-semibold text-xl mb-1 truncate text-neutral-800 dark:text-neutral-200 group-hover:text-neutral-900 dark:group-hover:text-neutral-100 transition-colors">
                       {agent.name}
                     </h3>
-                    <p className="text-sm text-foreground/70 dark:text-muted-foreground line-clamp-2 leading-relaxed">
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed tracking-tight">
                       {agent.description ?? "An unconfigured AI agent resting in your digital fleet."}
                     </p>
                   </div>
@@ -227,7 +237,7 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
                         type="button"
                         onClick={(e) => handleClone(agent.id, e)}
                         disabled={loadingAction === `clone-${agent.id}`}
-                        className="p-2 rounded-full text-foreground/70 hover:text-foreground hover:bg-white/40 dark:hover:bg-white/10 transition-all border border-transparent hover:border-white/20 bg-background/20 backdrop-blur-md shadow-sm"
+                        className="p-2 rounded-full text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-black/5 dark:hover:bg-white/10 transition-all"
                         title="Clone agent"
                       >
                         {loadingAction === `clone-${agent.id}` ? (
@@ -243,7 +253,7 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
                             type="button"
                             onClick={(e) => e.stopPropagation()}
                             disabled={loadingAction === `delete-${agent.id}`}
-                            className="p-2 rounded-full text-foreground/70 hover:text-destructive hover:bg-destructive/10 transition-all border border-transparent hover:border-destructive/20 bg-background/20 backdrop-blur-md shadow-sm"
+                            className="p-2 rounded-full text-neutral-500 dark:text-neutral-400 hover:text-destructive hover:bg-destructive/10 transition-all"
                             title="Delete agent"
                           >
                             {loadingAction === `delete-${agent.id}` ? (

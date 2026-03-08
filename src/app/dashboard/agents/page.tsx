@@ -21,9 +21,8 @@ export default async function AgentsPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col antialiased relative overflow-hidden">
-      {/* Ambient glassmorphic background spheres */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#FF8C00] rounded-full mix-blend-screen filter blur-[120px] opacity-15 dark:opacity-20 animate-pulse pointer-events-none z-0" style={{ animationDuration: '8s' }} />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#9D50BB] rounded-full mix-blend-screen filter blur-[120px] opacity-15 dark:opacity-20 animate-pulse pointer-events-none z-0" style={{ animationDuration: '10s' }} />
+      {/* Minimalistic ambient background glow (dark mode only) */}
+      <div className="absolute inset-0 pointer-events-none z-0 bg-transparent dark:bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_0%,transparent_60%)]" />
 
       <div className="relative z-10 flex flex-col flex-1 h-full">
         <AgentsTopNav />
