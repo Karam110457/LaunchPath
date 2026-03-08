@@ -2,10 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useMemo } from "react";
-import { Copy, Trash2, Loader2, Search, Bot } from "lucide-react";
+import { Copy, Trash2, Loader2, Search, Bot, Plus, Activity, Pause, FileEdit } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 interface AgentListItem {
   id: string;
@@ -30,12 +33,10 @@ interface AgentListItem {
 
 interface AgentsListProps {
   agents: AgentListItem[];
+  userFullName?: string;
 }
 
-const STATUS_STYLES: Record<
-  string,
-  { label: string; variant: "default" | "secondary" | "outline" }
-> = {
+const STATUS_STYLES: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
   draft: { label: "Draft", variant: "secondary" },
   active: { label: "Active", variant: "default" },
   paused: { label: "Paused", variant: "outline" },
@@ -43,7 +44,7 @@ const STATUS_STYLES: Record<
 
 const STATUS_FILTERS = ["all", "draft", "active", "paused"] as const;
 
-export function AgentsList({ agents }: AgentsListProps) {
+export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) {
   const router = useRouter();
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -51,13 +52,15 @@ export function AgentsList({ agents }: AgentsListProps) {
 
   const filtered = useMemo(() => {
     return agents.filter((a) => {
-      const matchesSearch =
-        !search || a.name.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus =
-        statusFilter === "all" || a.status === statusFilter;
+      const matchesSearch = !search || a.name.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = statusFilter === "all" || a.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
   }, [agents, search, statusFilter]);
+
+  const activeCount = agents.filter(a => a.status === "active").length;
+  const draftCount = agents.filter(a => a.status === "draft").length;
+  const pausedCount = agents.filter(a => a.status === "paused").length;
 
   const handleDelete = async (agentId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -74,9 +77,7 @@ export function AgentsList({ agents }: AgentsListProps) {
     e.stopPropagation();
     setLoadingAction(`clone-${agentId}`);
     try {
-      const res = await fetch(`/api/agents/${agentId}/clone`, {
-        method: "POST",
-      });
+      const res = await fetch(`/api/agents/${agentId}/clone`, { method: "POST" });
       if (res.ok) {
         const data = await res.json();
         router.push(`/dashboard/agents/${data.id}`);
@@ -87,86 +88,152 @@ export function AgentsList({ agents }: AgentsListProps) {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Search + Filter */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search agents..."
-            className="pl-9 h-9 text-sm"
-          />
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header & Stats Row */}
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+        <div className="space-y-2">
+          <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">
+            Welcome in, {userFullName}
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Manage your fleet of AI agents.
+          </p>
         </div>
-        <div className="flex gap-1">
-          {STATUS_FILTERS.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors capitalize ${statusFilter === s
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
-                }`}
-            >
-              {s}
-            </button>
-          ))}
+
+        {/* Dashboard Stats */}
+        <div className="flex gap-4 md:gap-8 overflow-x-auto pb-2 -mx-6 px-6 lg:mx-0 lg:px-0 lg:pb-0 hide-scrollbar">
+          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-card border border-border/50 shadow-sm">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+              <Bot className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-3xl font-semibold leading-none">{agents.length}</p>
+              <p className="text-sm font-medium text-muted-foreground mt-1">Total Agents</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-card border border-border/50 shadow-sm">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+              <Activity className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-3xl font-semibold leading-none">{activeCount}</p>
+              <p className="text-sm font-medium text-muted-foreground mt-1">Active</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-card border border-border/50 shadow-sm">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-yellow-500/10 text-yellow-500">
+              <FileEdit className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-3xl font-semibold leading-none">{draftCount}</p>
+              <p className="text-sm font-medium text-muted-foreground mt-1">Drafts</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Agent Cards */}
+      <div className="w-full h-px bg-border/40" />
+
+      {/* Controls */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search agents..."
+              className="pl-10 h-10 rounded-full bg-card shadow-sm border-border/50 focus-visible:ring-1"
+            />
+          </div>
+          <div className="flex bg-card p-1 rounded-full border border-border/50 shadow-sm overflow-x-auto hide-scrollbar">
+            {STATUS_FILTERS.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setStatusFilter(s)}
+                className={cn(
+                  "px-4 py-1.5 text-sm font-medium rounded-full transition-all capitalize whitespace-nowrap",
+                  statusFilter === s
+                    ? "bg-foreground text-background shadow-md"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+        <Button asChild className="rounded-full shadow-sm" size="lg">
+          <Link href="/dashboard/agents/new">
+            <Plus className="h-4 w-4 mr-2" />
+            New Agent
+          </Link>
+        </Button>
+      </div>
+
+      {/* Agent Cards Dashboard Wrapper */}
       {filtered.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground text-sm">
-          {agents.length === 0
-            ? "No agents yet. Create your first agent to get started."
-            : "No agents match your search."}
+        <div className="text-center py-20 px-6 rounded-3xl border border-dashed border-border/60 bg-card/30">
+          <Bot className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+          <h3 className="text-lg font-medium">No agents found</h3>
+          <p className="text-muted-foreground text-sm mt-1 max-w-sm mx-auto">
+            {agents.length === 0
+              ? "You haven't created any agents yet. Click 'New Agent' to get started."
+              : "No agents match your current search and filter settings."}
+          </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((agent) => {
-            const statusInfo =
-              STATUS_STYLES[agent.status] ?? STATUS_STYLES.draft;
+            const statusInfo = STATUS_STYLES[agent.status] ?? STATUS_STYLES.draft;
 
             return (
-              <div
+              <Card
                 key={agent.id}
                 onClick={() => router.push(`/dashboard/agents/${agent.id}`)}
-                className="cursor-pointer"
+                className="group relative cursor-pointer outline-none overflow-hidden rounded-[32px] border border-border/40 bg-card/50 backdrop-blur-xl shadow-sm hover:shadow-xl hover:bg-card/80 hover:-translate-y-1 transition-all duration-300"
               >
-                <Card className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[24px] hover:border-primary/30 hover:shadow-lg transition-all h-full group relative">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                        <Bot className="w-5 h-5 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-medium truncate">{agent.name}</h3>
-                          <Badge variant={statusInfo.variant}>
-                            {statusInfo.label}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {agent.description ?? "No description"}
-                        </p>
-                      </div>
+                <CardContent className="p-6 h-full flex flex-col justify-between min-h-[220px]">
+                  {/* Top section: Icon and Status */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0 border border-border/50 shadow-inner">
+                      <Bot className="w-7 h-7 text-primary" />
+                    </div>
+                    <Badge variant={statusInfo.variant} className="rounded-full px-3 shadow-sm border-border/50 capitalize font-medium">
+                      {statusInfo.label}
+                    </Badge>
+                  </div>
+
+                  {/* Middle section: Info */}
+                  <div className="flex-1 min-w-0 mb-4">
+                    <h3 className="font-semibold text-xl mb-2 truncate group-hover:text-primary transition-colors">
+                      {agent.name}
+                    </h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                      {agent.description ?? "An unconfigured AI agent resting in your digital fleet."}
+                    </p>
+                  </div>
+
+                  {/* Bottom section: Footer metadata & Actions */}
+                  <div className="flex items-center justify-between pt-4 border-t border-border/40 mt-auto">
+                    <div className="text-xs text-muted-foreground font-medium">
+                      {new Date(agent.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </div>
 
-                    {/* Action buttons — visible on hover */}
-                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {/* Actions — visible on hover (or touch) */}
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         type="button"
                         onClick={(e) => handleClone(agent.id, e)}
                         disabled={loadingAction === `clone-${agent.id}`}
-                        className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+                        className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-all border border-transparent hover:border-border/50 bg-background/50 shadow-sm"
                         title="Clone agent"
                       >
                         {loadingAction === `clone-${agent.id}` ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
-                          <Copy className="w-3.5 h-3.5" />
+                          <Copy className="w-4 h-4" />
                         )}
                       </button>
 
@@ -176,43 +243,40 @@ export function AgentsList({ agents }: AgentsListProps) {
                             type="button"
                             onClick={(e) => e.stopPropagation()}
                             disabled={loadingAction === `delete-${agent.id}`}
-                            className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                            className="p-2 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all border border-transparent hover:border-destructive/20 bg-background/50 shadow-sm"
                             title="Delete agent"
                           >
                             {loadingAction === `delete-${agent.id}` ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-4 h-4" />
                             )}
                           </button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                        <AlertDialogContent onClick={(e) => e.stopPropagation()} className="rounded-[32px]">
                           <AlertDialogHeader>
-                            <AlertDialogTitle>
+                            <AlertDialogTitle className="text-xl">
                               Delete &ldquo;{agent.name}&rdquo;?
                             </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This permanently deletes the agent, all knowledge
-                              documents, and conversation history.
+                            <AlertDialogDescription className="text-base text-muted-foreground">
+                              This permanently deletes the agent, all connected knowledge tools, and conversation history. You cannot undo this action.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogFooter className="mt-6">
+                            <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
                             <AlertDialogAction
                               onClick={(e) => handleDelete(agent.id, e)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             >
-                              Delete
+                              Delete Agent
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+                  </div>
+                </CardContent>
+              </Card>
             );
           })}
         </div>

@@ -54,10 +54,10 @@ export function PortalSidebar({ clientName, clientLogo }: PortalSidebarProps) {
   ];
 
   return (
-    <aside className="relative z-50 w-full h-full bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[24px] hidden md:flex overflow-hidden transition-all">
+    <aside className="fixed md:relative z-50 w-80 bg-background text-foreground hidden md:flex h-screen shrink-0 border-r border-border/40">
       {/* Column 1: Primary Icon Nav (w-16) */}
       <div className="w-16 flex flex-col items-center border-r border-border/40 py-4 h-full shrink-0">
-        <Link href="/portal" className="mb-8 flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+        <Link href="/portal" className="mb-8 flex items-center justify-center size-10 rounded-full hover:bg-muted transition-colors">
           <Logo className="text-xl" />
         </Link>
 
@@ -69,8 +69,8 @@ export function PortalSidebar({ clientName, clientLogo }: PortalSidebarProps) {
             className={cn(
               "flex items-center justify-center size-10 rounded-full transition-all",
               pathname.startsWith("/portal/settings")
-                ? "bg-black/10 dark:bg-white/10 text-foreground"
-                : "text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
             <Settings className="size-5" />
@@ -119,8 +119,8 @@ export function PortalSidebar({ clientName, clientLogo }: PortalSidebarProps) {
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 text-sm rounded-[14px] transition-all font-medium",
                   isActive
-                    ? "bg-black/10 dark:bg-white/10 text-foreground"
-                    : "text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
                 <item.icon className="size-4" />

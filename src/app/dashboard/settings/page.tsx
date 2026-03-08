@@ -22,7 +22,7 @@ export default async function SettingsPage() {
       description="Manage your account and preferences."
     >
       <div className="grid gap-6 max-w-2xl">
-        <Card className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[24px]">
+        <Card>
           <CardHeader>
             <CardTitle>Profile</CardTitle>
             <CardDescription>Your personal information.</CardDescription>
@@ -37,7 +37,7 @@ export default async function SettingsPage() {
 
         {profile && <OnboardingProfileCard profile={profile} />}
 
-        <Card className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[24px]">
+        <Card>
           <CardHeader>
             <CardTitle>Subscription</CardTitle>
             <CardDescription>Manage your plan and billing.</CardDescription>

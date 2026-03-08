@@ -1,11 +1,8 @@
 import { requireAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
-import { PageShell } from "@/components/layout/PageShell";
 import { AgentsList } from "@/components/agents/AgentsList";
 import { EmptyAgents } from "@/components/agents/EmptyAgents";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { AgentsTopNav } from "@/components/agents/AgentsTopNav";
 
 export default async function AgentsPage() {
   const user = await requireAuth();
@@ -23,21 +20,11 @@ export default async function AgentsPage() {
   const hasAgents = agents && agents.length > 0;
 
   return (
-    <PageShell
-      title="Agents"
-      description="Create and manage AI agents for your business."
-      action={
-        hasAgents ? (
-          <Button asChild>
-            <Link href="/dashboard/agents/new">
-              <Plus className="h-4 w-4 mr-2" />
-              New Agent
-            </Link>
-          </Button>
-        ) : undefined
-      }
-    >
-      {hasAgents ? <AgentsList agents={agents} /> : <EmptyAgents />}
-    </PageShell>
+    <div className="min-h-screen bg-background flex flex-col antialiased">
+      <AgentsTopNav />
+      <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8">
+        {hasAgents ? <AgentsList agents={agents} userFullName={user.user_metadata?.full_name || user.email?.split("@")[0] || "there"} /> : <EmptyAgents />}
+      </div>
+    </div>
   );
 }

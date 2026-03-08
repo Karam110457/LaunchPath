@@ -16,33 +16,35 @@ interface AppShellProps {
 export function AppShell({ children, systems, agentCount, clientCount }: AppShellProps) {
   const pathname = usePathname();
   const isBuilder = pathname && (pathname.endsWith("/builder") || pathname.match(/\/dashboard\/agents\/[^/]+$/));
+  const isAgentsList = pathname === "/dashboard/agents";
+  const hideSidebar = isBuilder || isAgentsList;
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex font-sans overflow-hidden relative">
+    <div className="min-h-screen bg-background text-foreground flex font-sans overflow-hidden">
       <div
         className={cn(
-          "transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] h-screen shrink-0 overflow-hidden py-4 pl-4",
-          isBuilder ? "w-0 opacity-0 p-0" : "w-[280px] opacity-100"
+          "transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] h-screen shrink-0 overflow-hidden",
+          hideSidebar ? "w-0 opacity-0" : "w-64 opacity-100"
         )}
       >
-        <div className="w-full h-full">
+        <div className="w-64 h-full">
           <Sidebar systems={systems} agentCount={agentCount} clientCount={clientCount} />
         </div>
       </div>
-      <div className="flex-1 flex flex-col min-w-0 transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] relative z-10 bg-transparent">
+      <div className="flex-1 flex flex-col min-w-0 transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] relative z-10 bg-background">
         <div
           className={cn(
-            "transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] shrink-0 px-4 pt-4 md:px-8 md:pt-6 pb-2",
-            isBuilder ? "h-0 opacity-0 p-0 overflow-hidden" : "opacity-100"
+            "transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] overflow-hidden shrink-0",
+            hideSidebar ? "h-0 opacity-0" : "h-14 opacity-100"
           )}
         >
           <Header systems={systems} />
         </div>
         <main className={cn(
-          "flex-1 overflow-y-auto transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]",
-          isBuilder
-            ? "border-0 p-0 z-50 relative bg-background"
-            : "px-4 md:px-8 pb-8 relative"
+          "flex-1 overflow-y-auto bg-card border-l border-border/40 shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]",
+          hideSidebar
+            ? "rounded-tl-none border-t-0 p-0 shadow-none z-50 relative"
+            : "rounded-tl-[32px] border-t p-4 md:p-8 ml-0 md:ml-0"
         )}>
           {children}
         </main>

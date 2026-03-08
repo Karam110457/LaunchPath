@@ -51,7 +51,7 @@ export default async function ClientsPage() {
       </div>
 
       {shaped.length === 0 && (!unlinkedCampaigns || unlinkedCampaigns.length === 0) ? (
-        <div className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[24px] p-8 text-center text-muted-foreground">
+        <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground">
           No clients yet. Create your first client to start deploying campaigns.
         </div>
       ) : (
@@ -62,7 +62,7 @@ export default async function ClientsPage() {
                 <Link
                   key={client.id}
                   href={`/dashboard/clients/${client.id}`}
-                  className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[24px] p-5 hover:border-primary/30 hover:shadow-lg transition-all space-y-3"
+                  className="rounded-lg border bg-card p-5 hover:border-primary/30 transition-colors space-y-3"
                 >
                   <div className="flex items-center gap-3">
                     {client.logo_url ? (
@@ -112,7 +112,7 @@ export default async function ClientsPage() {
               <p className="text-xs text-muted-foreground">
                 These campaigns aren&apos;t linked to a client yet. Assign them to a client to manage them.
               </p>
-              <div className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[24px] divide-y divide-border/40 overflow-hidden">
+              <div className="rounded-lg border bg-card divide-y">
                 {unlinkedCampaigns.map((campaign) => {
                   const agent = campaign.ai_agents as unknown as {
                     name: string;
