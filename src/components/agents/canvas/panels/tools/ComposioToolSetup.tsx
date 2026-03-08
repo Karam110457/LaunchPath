@@ -923,7 +923,7 @@ export function ComposioToolSetup({
   onSaved,
   onClose,
 }: ComposioToolSetupProps) {
-  const { connect, connecting, connectError, isConnected, getConnection } = useComposioConnections();
+  const { connect, connecting, connectError, isConnected, getConnection, loading: connectionsLoading } = useComposioConnections();
 
   // -- Data loading --
   const [actions, setActions] = useState<ComposioActionSchema[]>([]);
@@ -1038,7 +1038,7 @@ export function ComposioToolSetup({
       toolkit,
       toolkit_name: toolkitName,
       toolkit_icon: toolkitIcon,
-      connection_id: connectionId || getConnection(toolkit)?.id,
+      connection_id: connectionId || getConnection(toolkit)?.id || (existing?.config as Record<string, unknown>)?.connection_id,
       enabled_actions: enabledArray.length > 0 ? enabledArray : undefined,
       action_configs:
         Object.keys(cleanedConfigs).length > 0 ? cleanedConfigs : undefined,
@@ -1137,7 +1137,11 @@ export function ComposioToolSetup({
           </p>
         </div>
 
-        {(!connectionId && !isConnected(toolkit)) ? (
+        {connectionsLoading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : (!connectionId && !isConnected(toolkit) && !existing) ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-transparent">
             <div className="w-16 h-16 rounded-2xl bg-white canvas-dark:bg-neutral-800 shadow-sm border border-border/40 flex items-center justify-center mb-5 p-2.5">
               {toolkitIcon.startsWith("http") ? (

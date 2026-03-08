@@ -585,35 +585,101 @@ function AgentCanvasInner({
     [nodes]
   );
 
+  // ─── Edge ↔ tool enablement sync ─────────────────────────────────────────
+  // Resolve a node ID to { agentId, toolId } for the agent_tools PATCH call.
+  // Returns null for non-tool/subagent nodes (e.g. knowledge).
+  const resolveToolFromNodeId = useCallback(
+    (nodeId: string): { agentId: string; toolId: string } | null => {
+      // Parent tool: "tool-<uuid>"
+      const toolMatch = nodeId.match(/^tool-(.+)$/);
+      if (toolMatch) return { agentId: agent.id, toolId: toolMatch[1] };
+
+      // Subagent node: "subagent-<uuid>" → find the tool record linking parent → subagent
+      const saMatch = nodeId.match(/^subagent-(.+)$/);
+      if (saMatch) {
+        const subagentId = saMatch[1];
+        const toolRecord = agentTools.find(
+          (t) => t.tool_type === "subagent" && (t.config as { target_agent_id?: string }).target_agent_id === subagentId
+        );
+        if (toolRecord) return { agentId: agent.id, toolId: toolRecord.id };
+      }
+
+      // Sub-agent's own tool: "sa-<subagentId>-tool-<toolId>"
+      const saToolMatch = nodeId.match(/^sa-(.+)-tool-(.+)$/);
+      if (saToolMatch) return { agentId: saToolMatch[1], toolId: saToolMatch[2] };
+
+      return null;
+    },
+    [agent.id, agentTools]
+  );
+
+  const setToolEnabled = useCallback(
+    (ownerAgentId: string, toolId: string, enabled: boolean) => {
+      void fetch(`/api/agents/${ownerAgentId}/tools/${toolId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_enabled: enabled }),
+      });
+      // Optimistically update local state
+      setAgentTools((prev) =>
+        prev.map((t) => (t.id === toolId ? { ...t, is_enabled: enabled } : t))
+      );
+    },
+    []
+  );
+
   const onConnect = useCallback(
     (params: Connection) => {
-      // Connect nodes visually and save
       const newEdge: Edge = {
         ...params,
         id: `e-${params.source}-${params.target}`,
         type: "dashedEdge",
       };
-      
+
       const newEdges = addEdge(newEdge, edges);
       setEdges(newEdges);
-      
-      // We only persist tool and subagent edges (knowledge ones are auto, but saving them is fine too)
+
+      // Persist edge layout
       const newState = { ...layoutState, edges: newEdges.filter(e => !e.id.includes("knowledge")) };
       setLayoutState(newState);
       persistLayout(newState);
+
+      // Enable the tool in DB when edge is created
+      const target = params.target;
+      if (target) {
+        const resolved = resolveToolFromNodeId(target);
+        if (resolved) setToolEnabled(resolved.agentId, resolved.toolId, true);
+      }
     },
-    [edges, layoutState, persistLayout, setEdges]
+    [edges, layoutState, persistLayout, setEdges, resolveToolFromNodeId, setToolEnabled]
   );
-  
-  // Wrapper for onEdgesChange to persist deletions
+
+  // Wrapper for onEdgesChange to persist deletions and disable tools
   const handleEdgesChange = useCallback(
     (changes: any) => {
+      // Capture which tool nodes are being disconnected BEFORE the state changes
+      const removedEdges: Edge[] = [];
+      if (changes.some((c: any) => c.type === "remove")) {
+        for (const change of changes) {
+          if (change.type === "remove") {
+            const found = edges.find((e: Edge) => e.id === change.id);
+            if (found) removedEdges.push(found);
+          }
+        }
+      }
+
       onEdgesChange(changes);
-      
-      // If edges were deleted, we should sync to layoutState
-      const isDelete = changes.some((c: any) => c.type === 'remove');
-      if (isDelete) {
-        // We defer by 1 tick so ReactFlow updates the local `edges` state first
+
+      // Disable tools whose edges were removed
+      for (const edge of removedEdges) {
+        if (edge.target) {
+          const resolved = resolveToolFromNodeId(edge.target);
+          if (resolved) setToolEnabled(resolved.agentId, resolved.toolId, false);
+        }
+      }
+
+      // Persist layout
+      if (removedEdges.length > 0) {
         setTimeout(() => {
           setEdges((currentEdges) => {
             const newState = { ...layoutState, edges: currentEdges.filter(e => !e.id.includes("knowledge")) };
@@ -624,20 +690,30 @@ function AgentCanvasInner({
         }, 0);
       }
     },
-    [layoutState, onEdgesChange, persistLayout, setEdges]
+    [edges, layoutState, onEdgesChange, persistLayout, setEdges, resolveToolFromNodeId, setToolEnabled]
   );
 
   // Persist when edges are removed via the DashedEdge delete button (direct setEdges call)
-  const prevEdgeCountRef = useRef(edges.length);
+  const prevEdgesRef = useRef<Edge[]>(edges);
   useEffect(() => {
     if (!toolsReady) return;
-    if (edges.length < prevEdgeCountRef.current) {
+    const prev = prevEdgesRef.current;
+    if (edges.length < prev.length) {
+      // Find which edges were removed and disable those tools
+      const currentIds = new Set(edges.map((e) => e.id));
+      for (const edge of prev) {
+        if (!currentIds.has(edge.id) && edge.target) {
+          const resolved = resolveToolFromNodeId(edge.target);
+          if (resolved) setToolEnabled(resolved.agentId, resolved.toolId, false);
+        }
+      }
+
       const newState = { ...layoutState, edges: edges.filter(e => !e.id.includes("knowledge")) };
       setLayoutState(newState);
       persistLayout(newState);
     }
-    prevEdgeCountRef.current = edges.length;
-  }, [edges.length]); // eslint-disable-line react-hooks/exhaustive-deps
+    prevEdgesRef.current = edges;
+  }, [edges]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Interaction ─────────────────────────────────────────────────────────
   const [modal, setModal] = useState<PanelState>({ type: "none" });
@@ -667,13 +743,55 @@ function AgentCanvasInner({
   } | null>(null);
 
   const handleToolSaved = useCallback(async () => {
+    // Remember which tool IDs existed before the save
+    const prevToolIds = new Set(agentTools.map((t) => t.id));
+    const ownerAgentId = setupTool?.agentId ?? composioSetup?.agentId ?? agent.id;
+
     setSetupTool(null);
     setCatalogContext(null);
     setComposioSetup(null);
     setAppLibraryOpen(false);
     await Promise.all([fetchTools(), fetchSubagents()]);
     notifySaved();
-  }, [fetchTools, fetchSubagents, notifySaved]);
+
+    // After tools are refreshed, auto-create edges for any NEW tools
+    // We need a small delay for the layout to rebuild with new tool nodes
+    setTimeout(() => {
+      setAgentTools((currentTools) => {
+        const newTools = currentTools.filter((t) => !prevToolIds.has(t.id));
+        if (newTools.length === 0) return currentTools;
+
+        setEdges((currentEdges) => {
+          let updated = [...currentEdges];
+          for (const tool of newTools) {
+            const nodeId = tool.tool_type === "subagent"
+              ? `subagent-${(tool.config as { target_agent_id?: string }).target_agent_id}`
+              : `tool-${tool.id}`;
+
+            // Determine which agent node is the source
+            const sourceNode = ownerAgentId === agent.id ? "agent" : `subagent-${ownerAgentId}`;
+            const edgeId = `e-${sourceNode}-${nodeId}`;
+
+            // Don't add duplicate
+            if (!updated.some((e) => e.id === edgeId)) {
+              updated = addEdge(
+                { id: edgeId, source: sourceNode, sourceHandle: "bottom-right", target: nodeId, type: "dashedEdge" },
+                updated
+              );
+            }
+          }
+
+          // Persist
+          const newState = { ...layoutState, edges: updated.filter(e => !e.id.includes("knowledge")) };
+          setLayoutState(newState);
+          persistLayout(newState);
+          return updated;
+        });
+
+        return currentTools;
+      });
+    }, 100);
+  }, [agentTools, agent.id, setupTool, composioSetup, fetchTools, fetchSubagents, notifySaved, layoutState, persistLayout, setEdges]);
 
   const handleToolDeleted = useCallback(async () => {
     setSetupTool(null);
@@ -927,7 +1045,7 @@ function AgentCanvasInner({
   else if (modal.type === "edit-subagent") modalTitle = "Edit Sub-Agent";
 
   return (
-    <div className={`${theme === "dark" ? "canvas-dark" : "light"} fixed inset-0 z-[100] w-full h-full overflow-hidden ${theme === "dark" ? "bg-[#0A0A0A]" : "bg-[#eef0f2]"} text-foreground transition-colors duration-300`}>
+    <div className={`${theme === "dark" ? "canvas-dark" : "light"} fixed inset-0 z-[100] w-full h-full overflow-hidden ${theme === "dark" ? "bg-[#050505]" : "bg-[#eef0f2]"} text-foreground transition-colors duration-300`}>
       <TopBar
         agentName={formState.name}
         avatarEmoji={formState.avatarEmoji}
@@ -991,10 +1109,11 @@ function AgentCanvasInner({
         </div>
       )}
 
+      {/* Gradient Overlay for bottom of canvas */}
+      <div className="pointer-events-none fixed bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-white via-white/80 to-transparent canvas-dark:from-[#050505] canvas-dark:via-[#050505]/80 canvas-dark:to-transparent z-[25]" />
+
       {/* Zoom controls */}
-      <div className="absolute bottom-6 left-6 z-30 flex items-center gap-1 bg-white/70 canvas-dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 canvas-dark:border-neutral-700/40 shadow-sm rounded-xl p-1.5">
-        <button
-          onClick={() => zoomIn({ duration: 200 })}
+      <div className="absolute bottom-6 left-6 md:left-[320px] z-30 flex items-center gap-1 bg-white/70 canvas-dark:bg-[#1C1C1C]/70 backdrop-blur-xl border border-white/60 canvas-dark:border-[#2A2A2A]/50 shadow-sm rounded-xl p-1.5">
           className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-800 canvas-dark:hover:text-neutral-200 hover:bg-black/5 canvas-dark:hover:bg-white/5 transition-colors"
           title="Zoom In"
         >
@@ -1007,7 +1126,7 @@ function AgentCanvasInner({
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
         </button>
-        <div className="w-px h-4 bg-neutral-200 canvas-dark:bg-neutral-700 mx-0.5" />
+        <div className="w-px h-4 bg-neutral-200 canvas-dark:bg-[#2A2A2A] mx-0.5" />
         <button
           onClick={() => fitView({ padding: 0.3, duration: 300 })}
           className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-800 canvas-dark:hover:text-neutral-200 hover:bg-black/5 canvas-dark:hover:bg-white/5 transition-colors"
