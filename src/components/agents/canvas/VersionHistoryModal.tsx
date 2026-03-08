@@ -155,11 +155,16 @@ export function VersionHistoryModal({
               {versions.map((v) => {
                 const isExpanded = expandedId === v.id;
                 const knowledgeDocs = v.knowledge_snapshot ?? [];
+                const isAutoSnapshot = v.change_title?.startsWith("Before revert") ?? false;
 
                 return (
                   <div
                     key={v.id}
-                    className="rounded-2xl border border-zinc-200/60 canvas-dark:border-zinc-700/60 bg-white/50 canvas-dark:bg-zinc-800/50 hover:bg-white/80 canvas-dark:hover:bg-zinc-800/80 transition-all overflow-hidden"
+                    className={`rounded-2xl border transition-all overflow-hidden ${
+                      isAutoSnapshot
+                        ? "border-dashed border-zinc-200/40 canvas-dark:border-zinc-700/40 bg-zinc-50/30 canvas-dark:bg-zinc-800/20 opacity-60 hover:opacity-100"
+                        : "border-zinc-200/60 canvas-dark:border-zinc-700/60 bg-white/50 canvas-dark:bg-zinc-800/50 hover:bg-white/80 canvas-dark:hover:bg-zinc-800/80"
+                    }`}
                   >
                     {/* Version header */}
                     <button
@@ -169,13 +174,28 @@ export function VersionHistoryModal({
                       }
                       className="w-full flex items-start gap-3 p-4 text-left"
                     >
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-100 canvas-dark:bg-zinc-700 text-xs font-semibold shrink-0 text-zinc-600 canvas-dark:text-zinc-300">
+                      <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-semibold shrink-0 ${
+                        isAutoSnapshot
+                          ? "bg-zinc-100/50 canvas-dark:bg-zinc-700/50 text-zinc-400 canvas-dark:text-zinc-500"
+                          : "bg-zinc-100 canvas-dark:bg-zinc-700 text-zinc-600 canvas-dark:text-zinc-300"
+                      }`}>
                         {v.version_number}
                       </div>
                       <div className="flex-1 min-w-0 pt-0.5">
-                        <p className="text-sm font-semibold text-zinc-900 canvas-dark:text-zinc-100 truncate">
-                          {v.change_title || `Version ${v.version_number}`}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className={`text-sm font-semibold truncate ${
+                            isAutoSnapshot
+                              ? "text-zinc-500 canvas-dark:text-zinc-400"
+                              : "text-zinc-900 canvas-dark:text-zinc-100"
+                          }`}>
+                            {v.change_title || `Version ${v.version_number}`}
+                          </p>
+                          {isAutoSnapshot && (
+                            <span className="shrink-0 text-[9px] uppercase tracking-wider font-semibold text-zinc-400 canvas-dark:text-zinc-500 bg-zinc-100/50 canvas-dark:bg-zinc-700/30 px-1.5 py-0.5 rounded-full">
+                              Auto
+                            </span>
+                          )}
+                        </div>
                         {v.change_description && (
                           <p className="text-xs text-zinc-500 canvas-dark:text-zinc-400 mt-1 line-clamp-2">
                             {v.change_description}

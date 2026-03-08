@@ -738,11 +738,20 @@ function ParameterConfigPanel({
                       label={label}
                     />
                   )}
+                  {/* Switch back to AI mode */}
+                  <button
+                    type="button"
+                    onClick={() => setAi(name)}
+                    className="flex items-center gap-1.5 mt-1.5 text-[10px] text-muted-foreground/50 hover:text-primary transition-colors"
+                  >
+                    <Bot className="w-3 h-3" />
+                    Let AI decide
+                  </button>
                 </div>
               ) : isBool ? (
                 /* Boolean AI mode: chip + toggle side by side */
                 <div className="flex items-center justify-between gap-2 px-3 py-2 bg-background border border-border/50 rounded-lg">
-                  <span className="inline-flex items-center gap-1.5 text-[10px] text-primary/70 font-medium">
+                  <span className="inline-flex items-center gap-1.5 text-[10px] text-blue-500/80 canvas-dark:text-blue-400/80 font-medium">
                     <Bot className="w-3 h-3" />
                     Determined by AI
                   </span>
@@ -759,7 +768,7 @@ function ParameterConfigPanel({
                 <div className="relative">
                   <div className="px-3 py-2 bg-background border border-border/50 rounded-lg">
                     <div className="flex items-center justify-between">
-                      <span className="inline-flex items-center gap-1.5 text-[10px] text-primary/70 font-medium">
+                      <span className="inline-flex items-center gap-1.5 text-[10px] text-blue-500/80 canvas-dark:text-blue-400/80 font-medium">
                         <Bot className="w-3 h-3" />
                         Determined by AI
                       </span>
@@ -777,7 +786,7 @@ function ParameterConfigPanel({
                 /* Array AI mode */
                 <div className="px-3 py-2 bg-background border border-border/50 rounded-lg">
                   <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-1.5 text-[10px] text-primary/70 font-medium">
+                    <span className="inline-flex items-center gap-1.5 text-[10px] text-blue-500/80 canvas-dark:text-blue-400/80 font-medium">
                       <Bot className="w-3 h-3" />
                       Determined by AI
                     </span>
@@ -813,7 +822,7 @@ function ParameterConfigPanel({
                         {`Enter ${label.toLowerCase()}`}
                       </span>
                     )}
-                    <span className="inline-flex items-center gap-1.5 text-[10px] text-primary/70 font-medium whitespace-nowrap shrink-0">
+                    <span className="inline-flex items-center gap-1.5 text-[10px] text-blue-500/80 canvas-dark:text-blue-400/80 font-medium whitespace-nowrap shrink-0">
                       <Bot className="w-3 h-3" />
                       Determined by AI
                     </span>
@@ -1261,7 +1270,7 @@ export function ComposioToolSetup({
                                 {action.name}
                               </span>
                               {action.isImportant && (
-                                <span className="text-[9px] text-primary/60 bg-primary/10 px-1 rounded">
+                                <span className="text-[9px] text-amber-500 canvas-dark:text-amber-400 bg-amber-500/10 px-1 rounded">
                                   important
                                 </span>
                               )}

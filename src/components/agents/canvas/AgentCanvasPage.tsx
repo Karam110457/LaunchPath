@@ -109,22 +109,29 @@ function AgentCanvasInner({
   const { isConnected: isComposioConnected } = useComposioConnections();
 
   // ─── Agent form state ────────────────────────────────────────────────────
-  const originalFormState = useMemo<AgentFormState>(
-    () => ({
-      name: agent.name,
-      description: agent.description ?? "",
-      avatarEmoji: personality?.avatar_emoji ?? "🤖",
-      tone: personality?.tone ?? "",
-      greetingMessage: personality?.greeting_message ?? "",
-      model: agent.model,
-      status: agent.status,
-      systemPrompt: agent.system_prompt,
-      wizardConfig: (agent.wizard_config as WizardConfig) ?? null,
-    }),
-    [agent, personality]
-  );
+  // Build form state from server props
+  const formStateFromProps = useCallback((): AgentFormState => ({
+    name: agent.name,
+    description: agent.description ?? "",
+    avatarEmoji: personality?.avatar_emoji ?? "🤖",
+    tone: personality?.tone ?? "",
+    greetingMessage: personality?.greeting_message ?? "",
+    model: agent.model,
+    status: agent.status,
+    systemPrompt: agent.system_prompt,
+    wizardConfig: (agent.wizard_config as WizardConfig) ?? null,
+  }), [agent, personality]);
 
-  const [formState, setFormState] = useState<AgentFormState>(originalFormState);
+  // savedFormState = the "baseline" for dirty tracking.
+  // Updates from: (1) server props via router.refresh, (2) autosave, (3) revert
+  const [savedFormState, setSavedFormState] = useState<AgentFormState>(formStateFromProps);
+
+  // Sync baseline when server props change (after router.refresh() propagates)
+  useEffect(() => {
+    setSavedFormState(formStateFromProps());
+  }, [formStateFromProps]);
+
+  const [formState, setFormState] = useState<AgentFormState>(formStateFromProps);
   const [isSaving, setIsSaving] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
@@ -132,15 +139,15 @@ function AgentCanvasInner({
   const [versionCount, setVersionCount] = useState<number>(0);
 
   const isDirty = useMemo(() => {
-    return (Object.keys(originalFormState) as (keyof AgentFormState)[]).some(
+    return (Object.keys(savedFormState) as (keyof AgentFormState)[]).some(
       (key) => {
         if (key === "wizardConfig") {
-          return JSON.stringify(formState.wizardConfig) !== JSON.stringify(originalFormState.wizardConfig);
+          return JSON.stringify(formState.wizardConfig) !== JSON.stringify(savedFormState.wizardConfig);
         }
-        return formState[key] !== originalFormState[key];
+        return formState[key] !== savedFormState[key];
       }
     );
-  }, [formState, originalFormState]);
+  }, [formState, savedFormState]);
 
   useEffect(() => {
     if (!isDirty) return;
@@ -179,6 +186,8 @@ function AgentCanvasInner({
           body: JSON.stringify({ ...buildPayload(), skip_version: true }),
         });
         if (res.ok) {
+          // Reset baseline so isDirty becomes false immediately
+          setSavedFormState({ ...formState });
           setSaveStatus("saved");
           router.refresh();
           setTimeout(() => setSaveStatus("idle"), 2000);
@@ -260,7 +269,7 @@ function AgentCanvasInner({
       status: string;
       wizard_config?: Record<string, unknown> | null;
     }) => {
-      setFormState(() => ({
+      const revertedState: AgentFormState = {
         name: revertedAgent.name,
         description: revertedAgent.description ?? "",
         avatarEmoji: (revertedAgent.personality?.avatar_emoji as string) ?? "🤖",
@@ -270,7 +279,10 @@ function AgentCanvasInner({
         status: revertedAgent.status,
         systemPrompt: revertedAgent.system_prompt,
         wizardConfig: (revertedAgent.wizard_config as unknown as WizardConfig) ?? null,
-      }));
+      };
+      // Update both form and baseline so isDirty = false immediately
+      setFormState(revertedState);
+      setSavedFormState(revertedState);
       router.refresh();
       void refreshVersionCount();
     },
