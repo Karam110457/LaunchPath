@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AgentsList } from "@/components/agents/AgentsList";
 import { EmptyAgents } from "@/components/agents/EmptyAgents";
 import { AgentsTopNav } from "@/components/agents/AgentsTopNav";
+import { AgentsBackground } from "@/components/agents/AgentsBackground";
 
 export default async function AgentsPage() {
   const user = await requireAuth();
@@ -21,8 +22,7 @@ export default async function AgentsPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col antialiased relative overflow-hidden">
-      {/* Minimalistic ambient background glow (dark mode only) */}
-      <div className="absolute inset-0 pointer-events-none z-0 bg-transparent dark:bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_0%,transparent_60%)]" />
+      <AgentsBackground />
 
       <div className="relative z-10 flex flex-col flex-1 h-full">
         <AgentsTopNav />

@@ -36,9 +36,13 @@ interface AgentsListProps {
   userFullName?: string;
 }
 
-const STATUS_STYLES: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
+const STATUS_STYLES: Record<string, { label: string; variant: "default" | "secondary" | "outline"; className?: string }> = {
   draft: { label: "Draft", variant: "secondary" },
-  active: { label: "Active", variant: "default" },
+  active: {
+    label: "Active",
+    variant: "outline",
+    className: "bg-white dark:bg-[#252525] border-black/5 dark:border-[#333333] text-neutral-900 dark:text-neutral-100"
+  },
   paused: { label: "Paused", variant: "outline" },
 };
 
@@ -174,7 +178,7 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
             ))}
           </div>
         </div>
-        <Button asChild className="rounded-full shadow-sm" size="lg">
+        <Button asChild className="rounded-full shadow-md gradient-accent-bg text-white hover:scale-[1.02] transition-transform border-0" size="lg">
           <Link href="/dashboard/agents/new">
             <Plus className="h-4 w-4 mr-2" />
             New Agent
@@ -210,7 +214,7 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
                     <div className="w-[52px] h-[52px] rounded-[18px] bg-white dark:bg-[#252525] flex items-center justify-center shrink-0 border border-black/5 dark:border-[#333333] shadow-sm group-hover:scale-105 transition-transform">
                       <Bot className="w-7 h-7" style={{ stroke: "url(#primary-icon-gradient)" }} />
                     </div>
-                    <Badge variant={statusInfo.variant} className="rounded-full px-3 capitalize font-medium border-black/5 dark:border-[#333333]">
+                    <Badge variant={statusInfo.variant} className={cn("rounded-full px-3 capitalize font-medium border-black/5 dark:border-[#333333]", statusInfo.className)}>
                       {statusInfo.label}
                     </Badge>
                   </div>
