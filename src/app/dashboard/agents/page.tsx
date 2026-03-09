@@ -2,8 +2,8 @@ import { requireAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { AgentsList } from "@/components/agents/AgentsList";
 import { EmptyAgents } from "@/components/agents/EmptyAgents";
-import { AgentsTopNav } from "@/components/agents/AgentsTopNav";
-import { AgentsBackground } from "@/components/agents/AgentsBackground";
+import { TopNav } from "@/components/layout/TopNav";
+import { GlobalBackground } from "@/components/layout/GlobalBackground";
 
 export default async function AgentsPage() {
   const user = await requireAuth();
@@ -22,10 +22,10 @@ export default async function AgentsPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col antialiased relative overflow-hidden">
-      <AgentsBackground />
+      <GlobalBackground />
 
       <div className="relative z-10 flex flex-col flex-1 h-full">
-        <AgentsTopNav />
+        <TopNav />
         <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8">
           {hasAgents ? <AgentsList agents={agents} userFullName={user.user_metadata?.full_name || user.email?.split("@")[0] || "there"} /> : <EmptyAgents />}
         </div>

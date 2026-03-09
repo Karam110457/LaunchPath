@@ -16,8 +16,8 @@ interface AppShellProps {
 export function AppShell({ children, systems, agentCount, clientCount }: AppShellProps) {
   const pathname = usePathname();
   const isBuilder = pathname && (pathname.endsWith("/builder") || pathname.match(/\/dashboard\/agents\/[^/]+$/));
-  const isAgentsList = pathname === "/dashboard/agents";
-  const hideSidebar = isBuilder || isAgentsList;
+  const isGlobalPage = pathname === "/dashboard/agents" || pathname === "/dashboard/clients" || pathname === "/dashboard/settings";
+  const hideSidebar = isBuilder || isGlobalPage;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex font-sans overflow-hidden">

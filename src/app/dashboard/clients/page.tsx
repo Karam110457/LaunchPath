@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Plus, Megaphone } from "lucide-react";
 import { AssignClientDropdown } from "@/components/clients/AssignClientDropdown";
+import { TopNav } from "@/components/layout/TopNav";
+import { GlobalBackground } from "@/components/layout/GlobalBackground";
 
 export default async function ClientsPage() {
   const user = await requireAuth();
@@ -38,8 +40,13 @@ export default async function ClientsPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-background flex flex-col antialiased relative overflow-hidden">
+      <GlobalBackground />
+
+      <div className="relative z-10 flex flex-col flex-1 h-full">
+        <TopNav />
+        <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 space-y-6">
+          <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
         <Link
           href="/dashboard/clients/new"
@@ -161,6 +168,8 @@ export default async function ClientsPage() {
           )}
         </>
       )}
+        </div>
+      </div>
     </div>
   );
 }

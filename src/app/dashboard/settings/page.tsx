@@ -1,10 +1,11 @@
 import { requireAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
-import { PageShell } from "@/components/layout/PageShell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OnboardingProfileCard } from "@/components/settings/OnboardingProfileCard";
+import { TopNav } from "@/components/layout/TopNav";
+import { GlobalBackground } from "@/components/layout/GlobalBackground";
 
 export default async function SettingsPage() {
   const user = await requireAuth();
@@ -17,12 +18,19 @@ export default async function SettingsPage() {
     .single();
 
   return (
-    <PageShell
-      title="Settings"
-      description="Manage your account and preferences."
-    >
-      <div className="grid gap-6 max-w-2xl">
-        <Card>
+    <div className="min-h-screen bg-background flex flex-col antialiased relative overflow-hidden">
+      <GlobalBackground />
+
+      <div className="relative z-10 flex flex-col flex-1 h-full">
+        <TopNav />
+        <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8">
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+            <p className="text-muted-foreground">Manage your account and preferences.</p>
+          </div>
+
+          <div className="grid gap-6 max-w-2xl">
+            <Card>
           <CardHeader>
             <CardTitle>Profile</CardTitle>
             <CardDescription>Your personal information.</CardDescription>
@@ -49,6 +57,8 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
       </div>
-    </PageShell>
+        </div>
+      </div>
+    </div>
   );
 }
