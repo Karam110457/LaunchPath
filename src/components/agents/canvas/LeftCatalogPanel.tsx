@@ -113,10 +113,10 @@ export function LeftCatalogPanel({ targetAgent, onToolClick, onClearTarget, pare
     return (
         <motion.div
             className={cn(
-                "absolute top-6 left-6 bottom-6 z-20 flex flex-col backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] overflow-hidden",
+                "absolute top-6 left-6 bottom-6 z-20 flex flex-col backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)]",
                 isSubagentMode
-                    ? "bg-white/80 canvas-dark:bg-[#141414]/95 relative before:absolute before:inset-0 before:z-[-1] before:p-[1.5px] before:rounded-[inherit] before:bg-gradient-to-br before:from-[#FF8C00] before:to-[#9D50BB] before:[mask-image:linear-gradient(white,white),linear-gradient(white,white)] before:[mask-clip:content-box,border-box] before:[mask-composite:exclude]"
-                    : "bg-white/70 canvas-dark:bg-[#141414]/90 border border-white/60 canvas-dark:border-[#242424]"
+                    ? "bg-white/80 canvas-dark:bg-[#141414]/95 overflow-visible"
+                    : "bg-white/70 canvas-dark:bg-[#141414]/90 border border-white/60 canvas-dark:border-[#242424] overflow-hidden"
             )}
             animate={{
                 width: isMinimized ? 48 : 280,
@@ -124,6 +124,22 @@ export function LeftCatalogPanel({ targetAgent, onToolClick, onClearTarget, pare
             }}
             transition={CATALOG_SPRING}
         >
+            {/* Gradient border ring for subagent mode */}
+            {isSubagentMode && !isMinimized && (
+                <div
+                    className="absolute inset-0 rounded-[32px] pointer-events-none z-0"
+                    style={{
+                        padding: "1.5px",
+                        background: "linear-gradient(to bottom, #FF8C00, #9D50BB)",
+                        mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+                        maskComposite: "exclude",
+                        WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+                        WebkitMaskComposite: "xor",
+                    }}
+                />
+            )}
+
+            <div className={cn("flex flex-col h-full w-full", isSubagentMode && "overflow-hidden rounded-[32px]")}>
             <AnimatePresence mode="wait">
                 {isMinimized ? (
                     <motion.div
@@ -148,14 +164,17 @@ export function LeftCatalogPanel({ targetAgent, onToolClick, onClearTarget, pare
                     >
                         {/* Subagent mode banner */}
                         {isSubagentMode && (
-                            <div className="mx-4 mt-4 mb-0 flex items-center gap-2 px-3 py-2.5 rounded-xl gradient-accent-bg shadow-md">
+                            <div
+                                className="mx-4 mt-4 mb-0 flex items-center gap-2 px-3 py-2.5 rounded-xl"
+                                style={{ background: "linear-gradient(135deg, #FF8C00, #9D50BB)" }}
+                            >
                                 <Plus className="w-3.5 h-3.5 text-white shrink-0" strokeWidth={2.5} />
                                 <span className="text-[11px] font-semibold text-white truncate flex-1">
                                     Adding to {targetAgent.name}
                                 </span>
                                 <button
                                     onClick={onClearTarget}
-                                    className="shrink-0 hover:text-white text-white/70 transition-colors"
+                                    className="shrink-0 text-white/80 hover:text-white transition-colors"
                                 >
                                     <X className="w-3.5 h-3.5" strokeWidth={2.5} />
                                 </button>
@@ -333,6 +352,7 @@ export function LeftCatalogPanel({ targetAgent, onToolClick, onClearTarget, pare
                     </motion.div>
                 )}
             </AnimatePresence>
+            </div>
         </motion.div>
     );
 }
