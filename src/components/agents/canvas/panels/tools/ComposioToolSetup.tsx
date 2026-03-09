@@ -14,6 +14,7 @@ import {
   Plus,
   Trash2,
   RefreshCw,
+  Search,
 } from "lucide-react";
 import { NodeModal } from "../NodeModal";
 import { cn } from "@/lib/utils";
@@ -958,6 +959,7 @@ export function ComposioToolSetup({
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
+  const [actionSearch, setActionSearch] = useState("");
 
   const handleReconnect = useCallback(async () => {
     setReconnecting(true);
@@ -1029,6 +1031,22 @@ export function ComposioToolSetup({
       return next;
     });
   }, []);
+
+  const handleEnableAll = useCallback(() => {
+    setEnabledActions(new Set(actions.map((a) => a.slug)));
+  }, [actions]);
+
+  const handleDisableAll = useCallback(() => {
+    setEnabledActions(new Set());
+  }, []);
+
+  const filteredActions = useMemo(() => {
+    if (!actionSearch.trim()) return actions;
+    const q = actionSearch.toLowerCase();
+    return actions.filter(
+      (a) => a.name.toLowerCase().includes(q) || a.description?.toLowerCase().includes(q)
+    );
+  }, [actions, actionSearch]);
 
   const handleUpdatePinnedParams = useCallback(
     (actionSlug: string, pinned: Record<string, unknown>) => {
@@ -1134,6 +1152,8 @@ export function ComposioToolSetup({
   }, [agentId, existing, onSaved]);
 
   const canSave = enabledActions.size > 0;
+  const allEnabled = enabledActions.size === actions.length && actions.length > 0;
+  const allDisabled = enabledActions.size === 0;
 
   return (
     <NodeModal
@@ -1252,12 +1272,64 @@ export function ComposioToolSetup({
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   Actions
                 </label>
-                {!actionsLoading && (
-                  <span className="text-[10px] text-muted-foreground">
-                    {enabledActions.size} of {actions.length} enabled
-                  </span>
+                {!actionsLoading && actions.length >= 2 && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-muted-foreground">
+                      {enabledActions.size}/{actions.length}
+                    </span>
+                    <span className="text-muted-foreground/30 text-[10px]">·</span>
+                    <button
+                      type="button"
+                      onClick={handleEnableAll}
+                      disabled={allEnabled}
+                      className={cn(
+                        "text-[10px] font-medium transition-colors",
+                        allEnabled
+                          ? "text-muted-foreground/30 cursor-not-allowed"
+                          : "text-primary hover:text-primary/80"
+                      )}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDisableAll}
+                      disabled={allDisabled}
+                      className={cn(
+                        "text-[10px] font-medium transition-colors",
+                        allDisabled
+                          ? "text-muted-foreground/30 cursor-not-allowed"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      None
+                    </button>
+                  </div>
                 )}
               </div>
+
+              {/* Search actions */}
+              {!actionsLoading && actions.length >= 5 && (
+                <div className="relative mb-2">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
+                  <input
+                    type="text"
+                    value={actionSearch}
+                    onChange={(e) => setActionSearch(e.target.value)}
+                    placeholder="Search actions..."
+                    className="w-full pl-8 pr-7 py-1.5 text-xs bg-muted/30 border border-border/40 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/40"
+                  />
+                  {actionSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setActionSearch("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              )}
 
               {actionsLoading ? (
                 <div className="flex items-center gap-2 py-8 justify-center">
@@ -1270,9 +1342,13 @@ export function ComposioToolSetup({
                 <p className="text-sm text-muted-foreground py-4 text-center">
                   No actions found for this app.
                 </p>
+              ) : filteredActions.length === 0 ? (
+                <p className="text-xs text-muted-foreground/60 py-4 text-center">
+                  No actions match &ldquo;{actionSearch}&rdquo;
+                </p>
               ) : (
                 <div className="max-h-[300px] overflow-y-auto space-y-1 pr-1">
-                  {actions.map((action) => {
+                  {filteredActions.map((action) => {
                     const enabled = enabledActions.has(action.slug);
                     const expanded = expandedAction === action.slug;
                     const cfg = actionConfigs[action.slug];
