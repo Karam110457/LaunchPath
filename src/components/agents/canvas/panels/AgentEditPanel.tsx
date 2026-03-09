@@ -10,6 +10,7 @@ import {
   X,
   Check,
   GripVertical,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -121,6 +122,17 @@ export function AgentEditPanel({
       {/* ═══════════════════════ BASICS TAB ═══════════════════════ */}
       <TabsContent value="basics">
         <div className="p-5 space-y-5">
+          {/* ── Live sync banner (wizard agents) ── */}
+          {hasWizard && (
+            <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 flex items-start gap-2">
+              <Info className="w-3.5 h-3.5 text-primary/70 mt-0.5 shrink-0" />
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Changes to tone, questions, and behavior take effect immediately
+                in conversations — no need to edit the raw system prompt.
+              </p>
+            </div>
+          )}
+
           {/* ── Identity ── */}
           <section className="space-y-3">
             <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -290,6 +302,32 @@ export function AgentEditPanel({
             />
           </section>
 
+          {/* Config Directives preview (auto-generated from Basics tab settings) */}
+          {(() => {
+            const preview = buildDirectivesPreview(formState);
+            if (!preview) return null;
+            return (
+              <>
+                <hr className="border-border" />
+                <section className="space-y-3">
+                  <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Configuration Directives
+                    <span className="ml-1.5 text-[10px] font-normal normal-case tracking-normal text-primary/70">
+                      auto-generated from Basics tab
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    These directives are built from your tone, questions, and behavior
+                    settings and appended to the system prompt at runtime.
+                  </p>
+                  <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-[11px] text-foreground/80 leading-relaxed whitespace-pre-wrap font-mono">
+                    {preview}
+                  </div>
+                </section>
+              </>
+            );
+          })()}
+
           {/* Tools Available (read-only preview — auto-generated from tool descriptions) */}
           {enabledTools.length > 0 && (
             <>
@@ -396,6 +434,67 @@ export function AgentEditPanel({
 
     </Tabs>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Config Directives Preview (mirrors assemblePrompt logic for UI display)
+// ---------------------------------------------------------------------------
+
+function buildDirectivesPreview(formState: AgentFormState): string | null {
+  const lines: string[] = [];
+
+  if (formState.tone?.trim()) {
+    lines.push(
+      `- Communication style: Maintain a ${formState.tone.trim()} tone throughout the conversation.`
+    );
+  }
+
+  const questions = formState.wizardConfig?.qualifyingQuestions?.filter(
+    (q) => q.trim()
+  );
+  if (questions?.length) {
+    const numbered = questions.map((q, i) => `  ${i + 1}. ${q}`).join("\n");
+    lines.push(`- Ask these qualifying questions during the conversation:\n${numbered}`);
+  }
+
+  const bc = formState.wizardConfig?.behaviorConfig;
+  if (bc) {
+    if (bc.lead_fields) {
+      const fields = bc.lead_fields as Record<string, boolean>;
+      const active = [
+        "name",
+        "email",
+        ...Object.entries(fields)
+          .filter(([, v]) => v)
+          .map(([k]) => k),
+      ];
+      lines.push(
+        `- Lead capture: Collect the following fields: ${active.join(", ")}.`
+      );
+    }
+
+    if (bc.booking_behavior === "book_directly") {
+      lines.push("- After qualifying, book an appointment directly on the calendar.");
+    } else if (bc.booking_behavior === "collect_and_follow_up") {
+      lines.push(
+        "- After qualifying, collect contact details for manual follow-up."
+      );
+    }
+
+    if (bc.escalation_mode === "always_available") {
+      lines.push("- Handle all issues without escalating to a human agent.");
+    } else if (bc.escalation_mode === "escalate_complex") {
+      lines.push("- Escalate complex issues to a human agent.");
+    }
+
+    if (bc.response_style === "concise") {
+      lines.push("- Response style: Concise and direct.");
+    } else if (bc.response_style === "detailed") {
+      lines.push("- Response style: Thorough, step-by-step explanations.");
+    }
+  }
+
+  return lines.length > 0 ? lines.join("\n") : null;
 }
 
 // ---------------------------------------------------------------------------

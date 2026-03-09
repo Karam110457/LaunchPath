@@ -31,6 +31,14 @@ export interface AssemblePromptInput {
   resolvedToolKeys: string[];
   /** Tool failures from buildAgentTools() */
   failures: ToolFailure[];
+  /** Structured personality settings (tone, greeting). */
+  personality?: { tone?: string; greeting_message?: string } | null;
+  /** Structured wizard config (qualifying questions, behavior). */
+  wizardConfig?: {
+    templateId?: string;
+    qualifyingQuestions?: string[];
+    behaviorConfig?: Record<string, unknown>;
+  } | null;
 }
 
 export interface AssemblePromptResult {
@@ -42,7 +50,7 @@ export interface AssemblePromptResult {
 
 export interface PromptSection {
   /** Section identifier */
-  id: "base" | "rag" | "tools" | "unavailable";
+  id: "base" | "config-directives" | "rag" | "tools" | "unavailable";
   /** Human-readable label */
   label: string;
   /** The raw text content of this section */
@@ -75,6 +83,90 @@ export function assemblePrompt(input: AssemblePromptInput): AssemblePromptResult
     source: "user",
   });
   parts.push(systemPrompt);
+
+  // ── Section 1.5: Configuration Directives (from structured settings) ──
+  const directives: string[] = [];
+
+  if (input.personality?.tone) {
+    directives.push(
+      `Communication style: Maintain a ${input.personality.tone} tone throughout the conversation.`
+    );
+  }
+
+  if (input.wizardConfig?.qualifyingQuestions?.length) {
+    const numbered = input.wizardConfig.qualifyingQuestions
+      .filter((q) => q.trim())
+      .map((q, i) => `${i + 1}. ${q}`)
+      .join("\n");
+    if (numbered) {
+      directives.push(
+        `Ask these qualifying questions during the conversation:\n${numbered}`
+      );
+    }
+  }
+
+  if (input.wizardConfig?.behaviorConfig) {
+    const bc = input.wizardConfig.behaviorConfig;
+
+    if (bc.lead_fields) {
+      const fields = bc.lead_fields as Record<string, boolean>;
+      const active = [
+        "name",
+        "email",
+        ...Object.entries(fields)
+          .filter(([, v]) => v)
+          .map(([k]) => k),
+      ];
+      directives.push(
+        `Lead capture: Collect the following fields from the visitor: ${active.join(", ")}.`
+      );
+    }
+
+    if (bc.booking_behavior === "book_directly") {
+      directives.push(
+        "After qualifying, book an appointment directly on the calendar."
+      );
+    } else if (bc.booking_behavior === "collect_and_follow_up") {
+      directives.push(
+        "After qualifying, collect the visitor's contact details so the team can follow up manually."
+      );
+    }
+
+    if (bc.escalation_mode === "always_available") {
+      directives.push(
+        "Handle all issues yourself without escalating to a human agent."
+      );
+    } else if (bc.escalation_mode === "escalate_complex") {
+      directives.push(
+        "If you cannot resolve an issue, escalate to a human agent."
+      );
+    }
+
+    if (bc.response_style === "concise") {
+      directives.push(
+        "Response style: Keep answers concise and direct. Get to the point quickly."
+      );
+    } else if (bc.response_style === "detailed") {
+      directives.push(
+        "Response style: Provide thorough, step-by-step explanations with context."
+      );
+    }
+  }
+
+  if (directives.length > 0) {
+    const directivesContent =
+      "## Configuration Directives\n" +
+      "The following directives override any conflicting instructions in the base prompt above.\n\n" +
+      directives.map((d) => `- ${d}`).join("\n");
+
+    sections.push({
+      id: "config-directives",
+      label: "Configuration Directives",
+      content: directivesContent,
+      source: "auto",
+    });
+    parts.push(directivesContent);
+  }
 
   // ── Section 2: RAG context (dynamic per-query) ─────────────────────────
   if (ragContext) {

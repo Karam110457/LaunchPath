@@ -37,6 +37,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { AgentChatMessage } from "@/lib/chat/agent-chat-types";
 import type { ToolActivity } from "@/hooks/useAgentChat";
+import { KnowledgeSourcesDisplay } from "./KnowledgeSourcesDisplay";
 
 interface AgentChatPanelProps {
   agentId: string;
@@ -71,6 +72,7 @@ export function AgentChatPanel({
     isLoadingMessages,
     thinkingText,
     toolActivity,
+    ragSources,
     sendMessage,
     conversations,
     activeConversationId,
@@ -270,6 +272,12 @@ export function AgentChatPanel({
                         <ToolActivityDisplay activities={msg.toolActivities} />
                       </div>
                     )}
+                    {/* Persisted knowledge sources shown above the assistant response */}
+                    {msg.ragSources && msg.ragSources.length > 0 && (
+                      <div className="mb-1">
+                        <KnowledgeSourcesDisplay sources={msg.ragSources} />
+                      </div>
+                    )}
                     <AgentMessage message={msg} />
                   </motion.div>
                 );
@@ -278,6 +286,11 @@ export function AgentChatPanel({
               {/* Live tool activity (while streaming) */}
               {toolActivity.length > 0 && (
                 <ToolActivityDisplay activities={toolActivity} />
+              )}
+
+              {/* Live RAG sources (while streaming) */}
+              {ragSources.length > 0 && isStreaming && (
+                <KnowledgeSourcesDisplay sources={ragSources} />
               )}
 
               {/* Thinking indicator */}

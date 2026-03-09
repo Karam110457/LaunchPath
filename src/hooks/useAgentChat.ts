@@ -11,6 +11,7 @@ import type {
   AgentConversationMessage,
   AgentConversationSummary,
   AgentServerEvent,
+  RagSource,
 } from "@/lib/chat/agent-chat-types";
 
 function generateId() {
@@ -46,6 +47,7 @@ interface UseAgentChatReturn {
   isLoadingMessages: boolean;
   thinkingText: string;
   toolActivity: ToolActivity[];
+  ragSources: RagSource[];
   sendMessage: (text: string) => void;
 
   // Multi-conversation
@@ -94,6 +96,9 @@ export function useAgentChat({
 
   const [toolActivity, setToolActivity] = useState<ToolActivity[]>([]);
   const toolActivityRef = useRef<ToolActivity[]>([]);
+
+  const [ragSources, setRagSources] = useState<RagSource[]>([]);
+  const ragSourcesRef = useRef<RagSource[]>([]);
 
   const historyRef = useRef<AgentConversationMessage[]>([]);
   const streamingIdRef = useRef<string | null>(null);
@@ -317,6 +322,8 @@ export function useAgentChat({
       setThinkingText("");
       toolActivityRef.current = [];
       setToolActivity([]);
+      ragSourcesRef.current = [];
+      setRagSources([]);
       streamingIdRef.current = null;
 
       // Create an AbortController for this stream
@@ -429,6 +436,10 @@ export function useAgentChat({
                       : t
                   );
                   setToolActivity(toolActivityRef.current);
+                } else if (event.type === "rag-context") {
+                  const ragEvent = event as Extract<AgentServerEvent, { type: "rag-context" }>;
+                  ragSourcesRef.current = ragEvent.sources;
+                  setRagSources(ragEvent.sources);
                 } else if (event.type === "thinking") {
                   setIsTyping(false);
                   setIsThinking(true);
@@ -469,6 +480,23 @@ export function useAgentChat({
                   }
                   toolActivityRef.current = [];
                   setToolActivity([]);
+
+                  // Persist RAG sources onto the assistant message
+                  const finishedRagSources = ragSourcesRef.current;
+                  if (finishedRagSources.length > 0) {
+                    setMessages((prev) => {
+                      const updated = [...prev];
+                      for (let i = updated.length - 1; i >= 0; i--) {
+                        if (updated[i].role === "assistant") {
+                          updated[i] = { ...updated[i], ragSources: [...finishedRagSources] };
+                          break;
+                        }
+                      }
+                      return updated;
+                    });
+                  }
+                  ragSourcesRef.current = [];
+                  setRagSources([]);
 
                   setIsStreaming(false);
                   setIsTyping(false);
@@ -550,6 +578,7 @@ export function useAgentChat({
     isLoadingMessages,
     thinkingText,
     toolActivity,
+    ragSources,
     sendMessage,
     conversations,
     activeConversationId,

@@ -9,7 +9,7 @@ export const PANEL_SLIDE = {
   initial: { x: 24, opacity: 0 },
   animate: { x: 0, opacity: 1 },
   exit: { x: 24, opacity: 0 },
-  transition: { type: "spring" as const, stiffness: 400, damping: 30 },
+  transition: { type: "spring" as const, stiffness: 300, damping: 28 },
 };
 
 /** Backdrops behind panels. */
@@ -31,22 +31,22 @@ export const DROPDOWN = {
 /** Parent container for staggered children (tool grids). */
 export const STAGGER_CHILDREN = {
   initial: { opacity: 0 },
-  animate: { opacity: 1, transition: { staggerChildren: 0.03 } },
-  exit: { opacity: 0, transition: { duration: 0.12 } },
+  animate: { opacity: 1, transition: { staggerChildren: 0.015 } },
+  exit: { opacity: 0, transition: { duration: 0.1 } },
 };
 
 /** Individual staggered item (tool card). */
 export const STAGGER_ITEM = {
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.15 } },
-  exit: { opacity: 0, y: 8, transition: { duration: 0.1 } },
+  initial: { opacity: 0, y: 6 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.12 } },
+  exit: { opacity: 0, y: 6, transition: { duration: 0.08 } },
 };
 
 /** Left catalog collapse / expand spring. */
 export const CATALOG_SPRING = {
   type: "spring" as const,
-  stiffness: 350,
-  damping: 28,
+  stiffness: 280,
+  damping: 26,
 };
 
 /** New chat message slide-up. */
@@ -68,7 +68,7 @@ export const ACCORDION = {
 export const NODE_ENTER = {
   initial: { opacity: 0 },
   animate: { opacity: 1 },
-  transition: { type: "spring" as const, stiffness: 350, damping: 22 },
+  transition: { type: "spring" as const, stiffness: 300, damping: 24 },
 };
 
 /** Canvas node drag lift — scale + shadow while dragging. */
@@ -78,16 +78,15 @@ export const NODE_DRAG = {
 };
 
 /**
- * Canvas node exit — shrink + fade + blur.
+ * Canvas node exit — shrink + fade (no blur — it's GPU-expensive during animation).
  * Used as `animate` target when a node is marked _exiting.
  * Transition is embedded so it overrides the element's transition prop.
  * Duration (250ms) must match ANIMATED_EXIT_MS in AgentCanvasPage.
  */
 export const NODE_EXIT = {
   opacity: 0,
-  scale: 0.6,
-  filter: "blur(6px)",
-  transition: { duration: 0.25, ease: [0.4, 0, 1, 1] as const },
+  scale: 0.85,
+  transition: { duration: 0.2, ease: [0.4, 0, 1, 1] as const },
 };
 
 /** Helper tip slide-down entrance / slide-up exit. */
@@ -95,5 +94,5 @@ export const HELPER_TIP = {
   initial: { opacity: 0, y: -8 },
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0, y: -8 },
-  transition: { duration: 0.3, ease: [0.25, 0.8, 0.25, 1] as const },
+  transition: { duration: 0.2, ease: [0.25, 0.8, 0.25, 1] as const },
 };

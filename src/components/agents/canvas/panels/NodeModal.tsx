@@ -39,7 +39,7 @@ export function NodeModal({
 
       {/* Floating Right Panel */}
       <motion.div
-        className="absolute top-6 bottom-6 right-6 w-[360px] max-w-[calc(100vw-3rem)] z-50 flex flex-col bg-white/70 canvas-dark:bg-neutral-900/70 text-neutral-900 canvas-dark:text-neutral-100 backdrop-blur-2xl border border-white/60 canvas-dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] overflow-hidden"
+        className="absolute top-6 bottom-6 right-6 w-[360px] max-w-[calc(100vw-3rem)] z-50 flex flex-col bg-white/70 canvas-dark:bg-neutral-900/70 text-neutral-900 canvas-dark:text-neutral-100 backdrop-blur-xl border border-white/60 canvas-dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] overflow-hidden"
         initial={PANEL_SLIDE.initial}
         animate={PANEL_SLIDE.animate}
         exit={PANEL_SLIDE.exit}

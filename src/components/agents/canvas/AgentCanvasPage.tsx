@@ -573,7 +573,7 @@ function AgentCanvasInner({
 
   // ─── Animated node removal ────────────────────────────────────────────────
   // Must match NODE_EXIT.transition.duration (250ms) in animation-constants.ts
-  const ANIMATED_EXIT_MS = 250;
+  const ANIMATED_EXIT_MS = 200;
 
   // Wrapper for onNodesChange: intercept "remove" changes, mark nodes as
   // _exiting so they animate out, then actually remove after the animation.

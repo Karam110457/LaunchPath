@@ -1,18 +1,30 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function GlobalBackground() {
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+    const rafRef = useRef<number>(0);
 
     useEffect(() => {
+        let lastX = 0;
+        let lastY = 0;
+
         const handleMouseMove = (e: MouseEvent) => {
-            setMousePos({ x: e.clientX, y: e.clientY });
+            lastX = e.clientX;
+            lastY = e.clientY;
+            if (rafRef.current) return; // already scheduled
+            rafRef.current = requestAnimationFrame(() => {
+                setMousePos({ x: lastX, y: lastY });
+                rafRef.current = 0;
+            });
         };
 
-        window.addEventListener("mousemove", handleMouseMove);
-        return () => window.removeEventListener("mousemove", handleMouseMove);
+        window.addEventListener("mousemove", handleMouseMove, { passive: true });
+        return () => {
+            window.removeEventListener("mousemove", handleMouseMove);
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        };
     }, []);
 
     return (
@@ -26,22 +38,20 @@ export function GlobalBackground() {
                 }}
             />
 
-            {/* Interactive Desktop Spotlight - Very subtle mouse follow glow */}
-            <motion.div
-                className="absolute inset-0 opacity-0 dark:opacity-100 hidden md:block transition-opacity duration-1000"
-                animate={{
-                    background: `radial-gradient(600px circle at ${mousePos.x}px ${mousePos.y}px, rgba(255,255,255,0.03), transparent 40%)`
+            {/* Interactive Desktop Spotlight — plain div, no Framer Motion */}
+            <div
+                className="absolute inset-0 opacity-0 dark:opacity-100 hidden md:block"
+                style={{
+                    background: `radial-gradient(600px circle at ${mousePos.x}px ${mousePos.y}px, rgba(255,255,255,0.03), transparent 40%)`,
                 }}
-                transition={{ type: "tween", ease: "linear", duration: 0.1 }}
             />
 
-            {/* Interactive Desktop Spotlight for Light Mode - Darker subtle glow */}
-            <motion.div
-                className="absolute inset-0 opacity-100 dark:opacity-0 hidden md:block transition-opacity duration-1000"
-                animate={{
-                    background: `radial-gradient(600px circle at ${mousePos.x}px ${mousePos.y}px, rgba(0,0,0,0.02), transparent 40%)`
+            {/* Interactive Desktop Spotlight for Light Mode */}
+            <div
+                className="absolute inset-0 opacity-100 dark:opacity-0 hidden md:block"
+                style={{
+                    background: `radial-gradient(600px circle at ${mousePos.x}px ${mousePos.y}px, rgba(0,0,0,0.02), transparent 40%)`,
                 }}
-                transition={{ type: "tween", ease: "linear", duration: 0.1 }}
             />
 
             {/* Ambient static sweep for mobile or fallback */}

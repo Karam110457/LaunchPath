@@ -92,7 +92,7 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-200">
       {/* SVG Definition for Orange-Purple gradient applied to Icons */}
       <svg width="0" height="0" className="absolute">
         <defs>
@@ -167,7 +167,7 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
                 type="button"
                 onClick={() => setStatusFilter(s)}
                 className={cn(
-                  "px-4 py-1.5 text-sm font-medium rounded-full transition-all capitalize whitespace-nowrap",
+                  "px-4 py-1.5 text-sm font-medium rounded-full transition-[color,background-color,box-shadow] duration-150 capitalize whitespace-nowrap",
                   statusFilter === s
                     ? "bg-foreground text-background shadow-md"
                     : "text-muted-foreground hover:text-foreground"
@@ -206,7 +206,7 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
               <Card
                 key={agent.id}
                 onClick={() => router.push(`/dashboard/agents/${agent.id}`)}
-                className="group relative cursor-pointer outline-none overflow-hidden rounded-[32px] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 border border-black/5 dark:border-[#2A2A2A] hover:bg-white dark:hover:bg-[#252525] hover:shadow-md hover:-translate-y-1 transition-all duration-300"
+                className="group relative cursor-pointer outline-none overflow-hidden rounded-[32px] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 border border-black/5 dark:border-[#2A2A2A] hover:bg-white dark:hover:bg-[#252525] hover:shadow-md hover:-translate-y-1 transition-[transform,box-shadow,background-color] duration-200"
               >
                 <CardContent className="p-6 h-full flex flex-col justify-between min-h-[220px]">
                   {/* Top section: Icon and Status */}
@@ -241,7 +241,7 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
                         type="button"
                         onClick={(e) => handleClone(agent.id, e)}
                         disabled={loadingAction === `clone-${agent.id}`}
-                        className="p-2 rounded-full text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-black/5 dark:hover:bg-white/10 transition-all"
+                        className="p-2 rounded-full text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-black/5 dark:hover:bg-white/10 transition-colors duration-150"
                         title="Clone agent"
                       >
                         {loadingAction === `clone-${agent.id}` ? (
@@ -257,7 +257,7 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
                             type="button"
                             onClick={(e) => e.stopPropagation()}
                             disabled={loadingAction === `delete-${agent.id}`}
-                            className="p-2 rounded-full text-neutral-500 dark:text-neutral-400 hover:text-destructive hover:bg-destructive/10 transition-all"
+                            className="p-2 rounded-full text-neutral-500 dark:text-neutral-400 hover:text-destructive hover:bg-destructive/10 transition-colors duration-150"
                             title="Delete agent"
                           >
                             {loadingAction === `delete-${agent.id}` ? (

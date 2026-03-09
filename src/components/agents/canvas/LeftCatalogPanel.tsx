@@ -107,13 +107,13 @@ export function LeftCatalogPanel({ targetAgent, onToolClick, onClearTarget, pare
     };
 
     const itemClass = isSubagentMode
-        ? "group flex flex-col items-center justify-start pt-4 pb-2 h-[106px] bg-[#f8f9fa] canvas-dark:bg-[#1E1E1E]/80 border border-black/5 canvas-dark:border-[#2A2A2A] rounded-3xl cursor-pointer hover:bg-white canvas-dark:hover:bg-[#252525] hover:shadow-md transition-all"
-        : "group flex flex-col items-center justify-start pt-4 pb-2 h-[106px] bg-[#f8f9fa] canvas-dark:bg-[#1E1E1E]/80 border border-black/5 canvas-dark:border-[#2A2A2A] rounded-3xl cursor-grab active:cursor-grabbing hover:bg-white canvas-dark:hover:bg-[#252525] hover:shadow-md transition-all";
+        ? "group flex flex-col items-center justify-start pt-4 pb-2 h-[106px] bg-[#f8f9fa] canvas-dark:bg-[#1E1E1E]/80 border border-black/5 canvas-dark:border-[#2A2A2A] rounded-3xl cursor-pointer hover:bg-white canvas-dark:hover:bg-[#252525] hover:shadow-md transition-[background-color,box-shadow] duration-150"
+        : "group flex flex-col items-center justify-start pt-4 pb-2 h-[106px] bg-[#f8f9fa] canvas-dark:bg-[#1E1E1E]/80 border border-black/5 canvas-dark:border-[#2A2A2A] rounded-3xl cursor-grab active:cursor-grabbing hover:bg-white canvas-dark:hover:bg-[#252525] hover:shadow-md transition-[background-color,box-shadow] duration-150";
 
     return (
         <motion.div
             className={cn(
-                "absolute top-6 left-6 bottom-6 z-20 flex flex-col backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)]",
+                "absolute top-6 left-6 bottom-6 z-20 flex flex-col backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.2)]",
                 isSubagentMode
                     ? "bg-white/80 canvas-dark:bg-[#141414]/95 overflow-visible"
                     : "bg-white/70 canvas-dark:bg-[#141414]/90 border border-white/60 canvas-dark:border-[#242424] overflow-hidden"
@@ -257,7 +257,7 @@ export function LeftCatalogPanel({ targetAgent, onToolClick, onClearTarget, pare
                                             <motion.div
                                                 layoutId="catalog-tab-indicator"
                                                 className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full gradient-accent-bg"
-                                                transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
                                             />
                                         )}
                                     </button>
@@ -373,7 +373,7 @@ export function LeftCatalogPanel({ targetAgent, onToolClick, onClearTarget, pare
                             <div className="shrink-0 px-4 pb-5 pt-2">
                                 <button
                                     onClick={onClearTarget}
-                                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-xs font-semibold shadow-sm hover:shadow-md hover:brightness-110 transition-all"
+                                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-xs font-semibold shadow-sm hover:shadow-md hover:brightness-110 transition-[box-shadow,filter] duration-150"
                                     style={{ background: "linear-gradient(135deg, #FF8C00, #9D50BB)" }}
                                 >
                                     <Check className="w-3.5 h-3.5" strokeWidth={2.5} />

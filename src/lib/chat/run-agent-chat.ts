@@ -13,7 +13,8 @@
 import { streamText, stepCountIs } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { logger } from "@/lib/security/logger";
-import { retrieveContext } from "@/lib/knowledge/rag";
+import { retrieveContextWithMetadata } from "@/lib/knowledge/rag";
+import type { RagChunk } from "@/lib/knowledge/rag";
 import { buildAgentTools } from "@/lib/tools/builder";
 import { assemblePrompt } from "@/lib/agents/assemble-prompt";
 import { makeWebhookToolKey } from "@/lib/tools/integrations/webhook";
@@ -162,6 +163,7 @@ export async function runAgentChat(
   // -------------------------------------------------------------------------
 
   let ragContext = "";
+  let ragChunks: RagChunk[] = [];
 
   const { count: docCount } = await supabase
     .from("agent_knowledge_documents")
@@ -177,8 +179,13 @@ export async function runAgentChat(
     recentUserMsgs.push(userMessage);
     const retrievalQuery = recentUserMsgs.join("\n");
 
-    ragContext =
-      (await retrieveContext(agentId, retrievalQuery, supabase)) ?? "";
+    const ragResult = await retrieveContextWithMetadata(
+      agentId,
+      retrievalQuery,
+      supabase
+    );
+    ragContext = ragResult.contextString;
+    ragChunks = ragResult.chunks;
   }
 
   // -------------------------------------------------------------------------
@@ -191,6 +198,16 @@ export async function runAgentChat(
     toolRecords: agentToolRecords,
     resolvedToolKeys: Object.keys(tools),
     failures,
+    personality: agent.personality as
+      | { tone?: string; greeting_message?: string }
+      | null,
+    wizardConfig: agent.wizard_config as
+      | {
+          templateId?: string;
+          qualifyingQuestions?: string[];
+          behaviorConfig?: Record<string, unknown>;
+        }
+      | null,
   });
 
   // -------------------------------------------------------------------------
@@ -243,6 +260,29 @@ export async function runAgentChat(
 
   void (async () => {
     const toolEvents: AgentConversationMessage[] = [];
+
+    // Emit RAG sources before LLM stream starts (so UI shows them early)
+    if (ragChunks.length > 0) {
+      const seen = new Set<string>();
+      const uniqueSources: Array<{
+        name: string;
+        type: string;
+        similarity: number;
+        documentId: string;
+      }> = [];
+      for (const chunk of ragChunks) {
+        if (!seen.has(chunk.documentId)) {
+          seen.add(chunk.documentId);
+          uniqueSources.push({
+            name: chunk.sourceName,
+            type: chunk.sourceType,
+            similarity: Math.round(chunk.similarity * 100) / 100,
+            documentId: chunk.documentId,
+          });
+        }
+      }
+      emit({ type: "rag-context", sources: uniqueSources });
+    }
 
     try {
       const streamOptions: Parameters<typeof streamText>[0] = {

@@ -14,6 +14,8 @@ export interface AgentChatMessage {
   timestamp: string;
   /** Persisted tool call activities that occurred before this assistant message. */
   toolActivities?: import("@/hooks/useAgentChat").ToolActivity[];
+  /** Knowledge sources used for this response (RAG transparency). */
+  ragSources?: RagSource[];
 }
 
 /**
@@ -42,6 +44,14 @@ export interface AgentConversationSummary {
   message_count: number;
 }
 
+/** A knowledge source retrieved via RAG. */
+export interface RagSource {
+  name: string;
+  type: string;
+  similarity: number;
+  documentId: string;
+}
+
 /** SSE events for agent chat. */
 export type AgentServerEvent =
   | { type: "text-delta"; delta: string }
@@ -50,5 +60,6 @@ export type AgentServerEvent =
   | { type: "thinking-done" }
   | { type: "tool-call"; toolName: string; displayName: string; args?: Record<string, unknown> }
   | { type: "tool-result"; toolName: string; success: boolean; message?: string; result?: unknown }
+  | { type: "rag-context"; sources: RagSource[] }
   | { type: "done"; assistantContent?: string; conversationId?: string }
   | { type: "error"; message: string };
