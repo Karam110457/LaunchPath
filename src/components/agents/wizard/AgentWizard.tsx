@@ -159,6 +159,9 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
       case "conversation-flow":
         return null;
 
+      case "integrations":
+        return null;
+
       case "agent-identity": {
         const missing: string[] = [];
         if (!state.agentName.trim()) missing.push("name");
