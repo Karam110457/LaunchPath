@@ -20,6 +20,10 @@ import { assemblePrompt } from "@/lib/agents/assemble-prompt";
 import { makeWebhookToolKey } from "@/lib/tools/integrations/webhook";
 import { makeHttpToolKey } from "@/lib/tools/integrations/http";
 import { makeSubagentToolKey } from "@/lib/tools/integrations/subagent";
+import {
+  buildKnowledgeTool,
+  KNOWLEDGE_TOOL_DISPLAY_NAME,
+} from "@/lib/tools/integrations/knowledge";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AgentToolRecord } from "@/lib/tools/types";
 import type {
@@ -135,7 +139,6 @@ export async function runAgentChat(
       supabase,
     }
   );
-  const hasTools = Object.keys(tools).length > 0;
 
   // Map Composio tool keys to friendly display names.
   for (const t of agentToolRecords) {
@@ -171,7 +174,10 @@ export async function runAgentChat(
     .eq("agent_id", agentId)
     .eq("status", "ready");
 
-  if (docCount && docCount > 0) {
+  const hasKnowledgeBase = (docCount ?? 0) > 0;
+
+  if (hasKnowledgeBase) {
+    // Automatic RAG retrieval (backward compat — pre-loads context)
     const recentUserMsgs = conversationHistory
       .filter((m) => m.role === "user")
       .slice(-2)
@@ -186,7 +192,15 @@ export async function runAgentChat(
     );
     ragContext = ragResult.contextString;
     ragChunks = ragResult.chunks;
+
+    // Auto-inject knowledge search tool (agent can call explicitly)
+    const { toolName, toolDef } = buildKnowledgeTool(agentId, supabase);
+    tools[toolName] = toolDef;
+    toolDisplayNames[toolName] = KNOWLEDGE_TOOL_DISPLAY_NAME;
   }
+
+  // hasTools must be computed AFTER knowledge tool injection
+  const hasTools = Object.keys(tools).length > 0;
 
   // -------------------------------------------------------------------------
   // Assemble final system prompt
@@ -198,6 +212,7 @@ export async function runAgentChat(
     toolRecords: agentToolRecords,
     resolvedToolKeys: Object.keys(tools),
     failures,
+    hasKnowledgeBase,
     personality: agent.personality as
       | { tone?: string; greeting_message?: string }
       | null,

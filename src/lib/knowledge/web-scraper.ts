@@ -7,6 +7,8 @@ import * as cheerio from "cheerio";
 
 const MAX_CONTENT_LENGTH = 100 * 1024; // 100KB text limit
 const FETCH_TIMEOUT_MS = 10_000;
+const SPARSE_CONTENT_THRESHOLD = 200; // chars — below this, cheerio likely failed on a JS-heavy site
+const JINA_TIMEOUT_MS = 15_000; // Jina renders JS so it's slower
 
 /** Browser-like headers to avoid 403 blocks from sites that reject bots. */
 export const BROWSER_HEADERS: Record<string, string> = {
@@ -49,12 +51,8 @@ function validateUrl(url: string): boolean {
   }
 }
 
-/** Scrape a URL and extract its main text content. */
-export async function scrapeWebsite(url: string): Promise<ScrapedContent> {
-  if (!validateUrl(url)) {
-    throw new Error("Invalid or blocked URL");
-  }
-
+/** Primary scraper: fetch + cheerio static HTML parsing. */
+async function scrapeWithCheerio(url: string): Promise<ScrapedContent> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
@@ -78,6 +76,87 @@ export async function scrapeWebsite(url: string): Promise<ScrapedContent> {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+/**
+ * Fallback scraper using Jina AI Reader.
+ * Jina renders JavaScript, extracts main content, and returns markdown.
+ * Free tier, no API key required.
+ */
+async function scrapeWithJina(url: string): Promise<ScrapedContent> {
+  const jinaUrl = `https://r.jina.ai/${url}`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), JINA_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(jinaUrl, {
+      signal: controller.signal,
+      headers: { Accept: "text/plain" },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Jina Reader failed: ${response.status} ${response.statusText}`);
+    }
+
+    const text = await response.text();
+
+    // Jina format: first line is often "Title: <title>" or "# <title>"
+    const lines = text.split("\n");
+    let title = "Untitled";
+    let contentStart = 0;
+
+    if (lines[0]?.startsWith("Title:")) {
+      title = lines[0].slice(6).trim();
+      contentStart = 1;
+    } else if (lines[0]?.startsWith("# ")) {
+      title = lines[0].slice(2).trim();
+      contentStart = 1;
+    }
+
+    const content = lines
+      .slice(contentStart)
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
+      .slice(0, MAX_CONTENT_LENGTH);
+
+    return { title, content };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/** Scrape a URL and extract its main text content. */
+export async function scrapeWebsite(url: string): Promise<ScrapedContent> {
+  if (!validateUrl(url)) {
+    throw new Error("Invalid or blocked URL");
+  }
+
+  // Primary: cheerio (fast, no external dependency)
+  const cheerioResult = await scrapeWithCheerio(url);
+
+  // Check if cheerio extracted enough content
+  const cleanedLength = cheerioResult.content.replace(/\s+/g, " ").trim().length;
+
+  if (cleanedLength >= SPARSE_CONTENT_THRESHOLD) {
+    return cheerioResult;
+  }
+
+  // Fallback: Jina AI Reader (handles JS-rendered sites)
+  try {
+    const jinaResult = await scrapeWithJina(url);
+    const jinaCleanedLength = jinaResult.content.replace(/\s+/g, " ").trim().length;
+
+    if (jinaCleanedLength > cleanedLength) {
+      return jinaResult;
+    }
+  } catch {
+    // Jina failed — fall through to cheerio result
+  }
+
+  // Return cheerio result even if sparse (better than nothing)
+  return cheerioResult;
 }
 
 /** Extract main text content from HTML. */

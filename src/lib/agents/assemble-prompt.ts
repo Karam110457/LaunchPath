@@ -39,6 +39,8 @@ export interface AssemblePromptInput {
     qualifyingQuestions?: string[];
     behaviorConfig?: Record<string, unknown>;
   } | null;
+  /** Whether this agent has ready knowledge documents (enables knowledge awareness). */
+  hasKnowledgeBase?: boolean;
 }
 
 export interface AssemblePromptResult {
@@ -50,7 +52,7 @@ export interface AssemblePromptResult {
 
 export interface PromptSection {
   /** Section identifier */
-  id: "base" | "config-directives" | "rag" | "tools" | "unavailable";
+  id: "base" | "config-directives" | "rag" | "knowledge" | "tools" | "unavailable";
   /** Human-readable label */
   label: string;
   /** The raw text content of this section */
@@ -177,6 +179,38 @@ export function assemblePrompt(input: AssemblePromptInput): AssemblePromptResult
       source: "auto",
     });
     parts.push(ragContext);
+  }
+
+  // ── Section 2.5: Knowledge Awareness ──────────────────────────────────
+  if (input.hasKnowledgeBase) {
+    if (ragContext) {
+      // Auto-retrieval found hits — agent already has context, just note the tool
+      const knowledgeNote =
+        "You also have a `search_knowledge_base` tool for deeper or follow-up searches " +
+        "across your knowledge base. Use it when the pre-loaded context above doesn't " +
+        "fully answer the user's question, or when the user asks about a different topic.";
+      sections.push({
+        id: "knowledge",
+        label: "Knowledge Tool Note",
+        content: knowledgeNote,
+        source: "auto",
+      });
+      parts.push(knowledgeNote);
+    } else {
+      // No auto-retrieved context — tell the agent it has knowledge and should search
+      const knowledgeAwareness =
+        "## Knowledge Base\n" +
+        "You have access to a knowledge base containing uploaded documents and website content. " +
+        "Use the `search_knowledge_base` tool to find relevant information when users ask questions. " +
+        "Always search your knowledge base before saying you don't have information on a topic.";
+      sections.push({
+        id: "knowledge",
+        label: "Knowledge Base",
+        content: knowledgeAwareness,
+        source: "auto",
+      });
+      parts.push(knowledgeAwareness);
+    }
   }
 
   // ── Section 3: Tools Available ─────────────────────────────────────────

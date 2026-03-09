@@ -17,7 +17,8 @@ import { z } from "zod";
 import { logger } from "@/lib/security/logger";
 import { buildAgentTools } from "../builder";
 import { assemblePrompt } from "@/lib/agents/assemble-prompt";
-import { retrieveContext } from "@/lib/knowledge/rag";
+import { retrieveContextWithMetadata } from "@/lib/knowledge/rag";
+import { buildKnowledgeTool } from "./knowledge";
 import type { SubagentConfig, AgentToolRecord } from "../types";
 import type { ToolBuildContext } from "../builder";
 
@@ -158,13 +159,22 @@ export function buildSubagentTool(
             .eq("agent_id", config.target_agent_id)
             .eq("status", "ready");
 
-          if (docCount && docCount > 0) {
-            ragContext =
-              (await retrieveContext(
-                config.target_agent_id,
-                params.message,
-                context.supabase
-              )) ?? "";
+          const hasKnowledgeBase = (docCount ?? 0) > 0;
+
+          if (hasKnowledgeBase) {
+            const ragResult = await retrieveContextWithMetadata(
+              config.target_agent_id,
+              params.message,
+              context.supabase
+            );
+            ragContext = ragResult.contextString;
+
+            // Auto-inject knowledge search tool for subagent
+            const { toolName, toolDef } = buildKnowledgeTool(
+              config.target_agent_id,
+              context.supabase
+            );
+            tools[toolName] = toolDef;
           }
 
           // Assemble prompt
@@ -174,6 +184,7 @@ export function buildSubagentTool(
             toolRecords: subagentTools,
             resolvedToolKeys: Object.keys(tools),
             failures,
+            hasKnowledgeBase,
           });
 
           // Build messages — include optional context
