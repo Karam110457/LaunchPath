@@ -10,6 +10,7 @@ import { AnimatePresence } from "framer-motion";
     useNodesState,
     useEdgesState,
     useReactFlow,
+    useUpdateNodeInternals,
     Background,
     BackgroundVariant,
     addEdge,
@@ -720,6 +721,24 @@ function AgentCanvasInner({
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentTools, subagentDetails, hasKnowledge, layoutNodes]);
+
+  // ─── Recalculate handle positions after node changes ───────────────────────
+  // ReactFlow caches handle positions on mount; if CSS or framer-motion animations
+  // were still in progress, positions can be stale. Force a re-read after paint.
+  const updateNodeInternals = useUpdateNodeInternals();
+  const prevNodeCountRef = useRef(0);
+  useEffect(() => {
+    if (nodes.length === 0) return;
+    // Only recalculate when node count actually changes (add/remove)
+    if (nodes.length === prevNodeCountRef.current) return;
+    prevNodeCountRef.current = nodes.length;
+    const raf = requestAnimationFrame(() => {
+      for (const n of nodes) {
+        updateNodeInternals(n.id);
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [nodes, updateNodeInternals]);
 
   // ─── Drag start/stop: capture positions for undo ───────────────────────────
   const dragStartPositionsRef = useRef<Record<string, { x: number; y: number }>>({});

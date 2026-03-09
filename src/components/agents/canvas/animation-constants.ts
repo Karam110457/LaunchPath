@@ -64,10 +64,10 @@ export const ACCORDION = {
   transition: { duration: 0.2, ease: [0.25, 0.8, 0.25, 1] as const },
 };
 
-/** Canvas node entrance — scale + fade spring. */
+/** Canvas node entrance — fade spring (no scale to avoid stale ReactFlow handle positions). */
 export const NODE_ENTER = {
-  initial: { opacity: 0, scale: 0.85 },
-  animate: { opacity: 1, scale: 1 },
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
   transition: { type: "spring" as const, stiffness: 350, damping: 22 },
 };
 

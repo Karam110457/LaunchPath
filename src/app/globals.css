@@ -461,17 +461,15 @@
   animation: dash-flow 1s linear infinite;
 }
 
-/* Agent canvas: node entrance — uses separate `scale` property so it doesn't
-   override ReactFlow's inline `transform: translate()` positioning */
+/* Agent canvas: node entrance — opacity only (no scale to avoid stale
+   ReactFlow handle position calculations) */
 @keyframes node-enter {
   from {
     opacity: 0;
-    scale: 0.92;
   }
 
   to {
     opacity: 1;
-    scale: 1;
   }
 }
 
