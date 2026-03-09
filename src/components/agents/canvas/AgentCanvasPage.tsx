@@ -723,8 +723,8 @@ function AgentCanvasInner({
   }, [agentTools, subagentDetails, hasKnowledge, layoutNodes]);
 
   // ─── Recalculate handle positions after node changes ───────────────────────
-  // ReactFlow caches handle positions on mount; if CSS or framer-motion animations
-  // were still in progress, positions can be stale. Force a re-read after paint.
+  // ReactFlow caches handle positions on mount. New nodes need time for their
+  // Handle components to register before we can re-read positions.
   const updateNodeInternals = useUpdateNodeInternals();
   const prevNodeCountRef = useRef(0);
   useEffect(() => {
@@ -732,12 +732,13 @@ function AgentCanvasInner({
     // Only recalculate when node count actually changes (add/remove)
     if (nodes.length === prevNodeCountRef.current) return;
     prevNodeCountRef.current = nodes.length;
-    const raf = requestAnimationFrame(() => {
+    // Delay to let ReactFlow finish internal handle registration for new nodes
+    const timer = setTimeout(() => {
       for (const n of nodes) {
         updateNodeInternals(n.id);
       }
-    });
-    return () => cancelAnimationFrame(raf);
+    }, 150);
+    return () => clearTimeout(timer);
   }, [nodes, updateNodeInternals]);
 
   // ─── Drag start/stop: capture positions for undo ───────────────────────────
