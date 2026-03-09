@@ -765,13 +765,11 @@ function AgentCanvasInner({
       const targetNode = nodes.find((n) => n.id === targetId);
       if (!targetNode) return false;
 
-      // Knowledge handle (bottom-left) → only the source agent's own knowledge node
+      // Knowledge handle (bottom-left) → only parent agent can manually draw
+      // Subagent knowledge edges are auto-generated in useCanvasLayout
       if (sourceHandle === "bottom-left") {
         if (targetNode.type !== "knowledgeNode") return false;
-        if (sourceId === "agent") return targetId === "knowledge";
-        const saKbMatch = sourceId.match(/^subagent-(.+)$/);
-        if (saKbMatch) return targetId === `sa-${saKbMatch[1]}-knowledge`;
-        return false;
+        return sourceId === "agent" && targetId === "knowledge";
       }
 
       // Tools handle (bottom-right) → tool or subagent nodes
@@ -1064,6 +1062,10 @@ function AgentCanvasInner({
     hasKnowledge: boolean;
     existingToolTypes: string[];
   } | null>(null);
+  // Subagent left-panel mode: when set, LeftCatalogPanel shows click-to-add UI
+  const [catalogTargetAgent, setCatalogTargetAgent] = useState<{ id: string; name: string } | null>(null);
+  // Preserve agentId across modal transitions (catalog → app library → composio setup)
+  const pendingComposioAgentRef = useRef<string | null>(null);
   const [setupTool, setSetupTool] = useState<{
     toolType: string;
     agentId: string;
@@ -1316,25 +1318,9 @@ function AgentCanvasInner({
       const data = JSON.parse(dataStr);
       const { type, toolkit, name, icon } = data;
 
-      // If drop is over a subagent node, create tool for that subagent
-      let targetAgentId = agent.id;
-      const allNodes = getNodes();
-      const hitNode = allNodes.find((n) => {
-        if (n.type !== "subagentNode") return false;
-        // SubagentNode is a 280×128 pill shape — match actual rendered dimensions
-        const w = 280;
-        const h = 128;
-        return (
-          position.x >= n.position.x &&
-          position.x <= n.position.x + w &&
-          position.y >= n.position.y &&
-          position.y <= n.position.y + h
-        );
-      });
-      if (hitNode) {
-        const d = hitNode.data as unknown as SubagentNodeData;
-        targetAgentId = d.subagentId;
-      }
+      // Tools dropped on canvas always belong to the parent agent.
+      // Subagent tools are added via the "+" button on SubagentNode.
+      const targetAgentId = agent.id;
 
       if (type === "knowledge") {
         void (async () => {
@@ -1627,18 +1613,43 @@ function AgentCanvasInner({
         onBack={handleBack}
       />
 
-      <LeftCatalogPanel />
+      <LeftCatalogPanel
+        targetAgent={catalogTargetAgent}
+        onClearTarget={() => setCatalogTargetAgent(null)}
+        onToolClick={(type, _payload) => {
+          const tgt = catalogTargetAgent;
+          if (!tgt) return;
+
+          if (type === "knowledge") {
+            void (async () => {
+              await fetch(`/api/agents/${tgt.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ knowledge_enabled: true, skip_version: true }),
+              });
+              await fetchSubagents();
+              setCatalogTargetAgent(null);
+              setModal({ type: "subagent-knowledge", agentId: tgt.id });
+            })();
+          } else if (type === "composio") {
+            // Preserve agentId for the composio flow (catalog → app library → setup)
+            pendingComposioAgentRef.current = tgt.id;
+            setCatalogTargetAgent(null);
+            setAppLibraryOpen(true);
+          } else {
+            // webhook, http, mcp → open setup dialog for the subagent
+            setCatalogTargetAgent(null);
+            setSetupTool({ toolType: type, agentId: tgt.id });
+          }
+        }}
+      />
 
       {toolsReady ? (
         <CanvasActionsContext.Provider
           value={{
             openCatalogForAgent: (saId: string) => {
               const sa = subagentNodeItems.find((s) => s.subagentId === saId);
-              setCatalogContext({
-                agentId: saId,
-                hasKnowledge: sa?.hasKnowledge ?? false,
-                existingToolTypes: (sa?.tools ?? []).map((t) => t.toolType),
-              });
+              setCatalogTargetAgent({ id: saId, name: sa?.name ?? "Sub-Agent" });
             },
             onDeleteEdge,
           }}
@@ -1845,6 +1856,8 @@ function AgentCanvasInner({
         existingTypes={(catalogContext?.existingToolTypes ?? []) as ToolType[]}
         hasKnowledge={catalogContext?.hasKnowledge}
         onAppLibrary={() => {
+          // Preserve agentId for the composio flow before clearing catalog
+          pendingComposioAgentRef.current = catalogContext?.agentId ?? agent.id;
           setCatalogContext(null);
           setAppLibraryOpen(true);
         }}
@@ -1852,11 +1865,11 @@ function AgentCanvasInner({
 
       <AppLibraryModal
         open={appLibraryOpen}
-        onClose={() => setAppLibraryOpen(false)}
+        onClose={() => { setAppLibraryOpen(false); pendingComposioAgentRef.current = null; }}
         onSelectApp={(app, connection) => {
           setAppLibraryOpen(false);
           setComposioSetup({
-            agentId: catalogContext?.agentId ?? agent.id,
+            agentId: pendingComposioAgentRef.current ?? agent.id,
             toolkit: app.toolkit,
             toolkitName: app.name,
             toolkitIcon: app.icon,

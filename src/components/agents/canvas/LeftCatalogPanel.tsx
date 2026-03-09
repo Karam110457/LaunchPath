@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, LayoutGrid, Sidebar, Loader2, Webhook, Globe, Users, Plug, Database, type LucideIcon } from "lucide-react";
+import { Search, LayoutGrid, Sidebar, Loader2, Webhook, Globe, Users, Plug, Database, X, Plus, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CATALOG_SPRING, DROPDOWN, STAGGER_CHILDREN, STAGGER_ITEM } from "./animation-constants";
 
@@ -28,7 +28,13 @@ const CUSTOM_TOOLS: {
         { type: "mcp", name: "MCP Server", Icon: Plug, color: "text-neutral-600" },
     ];
 
-export function LeftCatalogPanel() {
+interface LeftCatalogPanelProps {
+    targetAgent?: { id: string; name: string } | null;
+    onToolClick?: (type: string, payload?: Record<string, unknown>) => void;
+    onClearTarget?: () => void;
+}
+
+export function LeftCatalogPanel({ targetAgent, onToolClick, onClearTarget }: LeftCatalogPanelProps) {
     const [apps, setApps] = useState<ComposioApp[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
@@ -36,6 +42,13 @@ export function LeftCatalogPanel() {
 
     const [isMinimized, setIsMinimized] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
+
+    const isSubagentMode = !!targetAgent;
+
+    // Auto-expand when entering subagent mode
+    useEffect(() => {
+        if (targetAgent) setIsMinimized(false);
+    }, [targetAgent]);
 
     useEffect(() => {
         let cancelled = false;
@@ -63,13 +76,17 @@ export function LeftCatalogPanel() {
     }, [apps, search]);
 
     const filteredCustom = useMemo(() => {
-        if (!search.trim()) return CUSTOM_TOOLS;
+        const base = isSubagentMode
+            ? CUSTOM_TOOLS.filter(t => t.type !== "subagent") // No sub-sub-agents
+            : CUSTOM_TOOLS;
+        if (!search.trim()) return base;
         const q = search.toLowerCase().trim();
-        return CUSTOM_TOOLS.filter(t => t.name.toLowerCase().includes(q));
-    }, [search]);
+        return base.filter(t => t.name.toLowerCase().includes(q));
+    }, [search, isSubagentMode]);
 
-    // Handle Drag Start
+    // Handle Drag Start (only in normal mode)
     const onDragStart = (e: React.DragEvent, type: string, payload: Record<string, unknown> = {}) => {
+        if (isSubagentMode) { e.preventDefault(); return; }
         e.dataTransfer.setData("application/reactflow", JSON.stringify({ type, ...payload }));
         e.dataTransfer.effectAllowed = "copy";
 
@@ -80,9 +97,18 @@ export function LeftCatalogPanel() {
         }
     };
 
+    const itemClass = isSubagentMode
+        ? "group flex flex-col items-center justify-start pt-4 pb-2 h-[106px] bg-amber-50/50 canvas-dark:bg-amber-950/20 border border-amber-200/30 canvas-dark:border-amber-800/30 rounded-3xl cursor-pointer hover:bg-amber-50 canvas-dark:hover:bg-amber-950/40 hover:shadow-md hover:border-amber-300/50 canvas-dark:hover:border-amber-700/50 transition-all"
+        : "group flex flex-col items-center justify-start pt-4 pb-2 h-[106px] bg-[#f8f9fa] canvas-dark:bg-[#1E1E1E]/80 border border-black/5 canvas-dark:border-[#2A2A2A] rounded-3xl cursor-grab active:cursor-grabbing hover:bg-white canvas-dark:hover:bg-[#252525] hover:shadow-md transition-all";
+
     return (
         <motion.div
-            className="absolute top-6 left-6 bottom-6 z-20 flex flex-col bg-white/70 canvas-dark:bg-[#141414]/90 backdrop-blur-2xl border border-white/60 canvas-dark:border-[#242424] shadow-[0_8px_32px_rgba(0,0,0,0.2)] overflow-hidden"
+            className={cn(
+                "absolute top-6 left-6 bottom-6 z-20 flex flex-col backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] overflow-hidden",
+                isSubagentMode
+                    ? "bg-white/80 canvas-dark:bg-[#141414]/95 border border-amber-300/40 canvas-dark:border-amber-800/40"
+                    : "bg-white/70 canvas-dark:bg-[#141414]/90 border border-white/60 canvas-dark:border-[#242424]"
+            )}
             animate={{
                 width: isMinimized ? 48 : 280,
                 borderRadius: isMinimized ? 16 : 32,
@@ -111,6 +137,22 @@ export function LeftCatalogPanel() {
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.15 }}
                     >
+                        {/* Subagent mode banner */}
+                        {isSubagentMode && (
+                            <div className="mx-4 mt-4 mb-0 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                                <Plus className="w-3.5 h-3.5 text-amber-500 shrink-0" strokeWidth={2.5} />
+                                <span className="text-[11px] font-semibold text-amber-600 canvas-dark:text-amber-400 truncate flex-1">
+                                    Adding to {targetAgent.name}
+                                </span>
+                                <button
+                                    onClick={onClearTarget}
+                                    className="shrink-0 hover:text-amber-700 canvas-dark:hover:text-amber-300 text-amber-500/70 transition-colors"
+                                >
+                                    <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+                                </button>
+                            </div>
+                        )}
+
                         {/* Header */}
                         <div className="px-5 pt-6 pb-4">
                             <div className="flex items-center justify-between mb-4">
@@ -119,34 +161,38 @@ export function LeftCatalogPanel() {
                                     <span className="font-semibold text-neutral-900 canvas-dark:text-neutral-200 text-sm">Tools</span>
                                 </div>
                                 <div className="flex items-center gap-2 text-neutral-400 canvas-dark:text-neutral-500 relative">
-                                    <button
-                                        className="hover:text-neutral-600 canvas-dark:hover:text-neutral-300 transition-colors"
-                                        onClick={() => setShowMenu(!showMenu)}
-                                    >
-                                        <span className="text-sm font-bold tracking-widest leading-none">...</span>
-                                    </button>
-                                    <AnimatePresence>
-                                        {showMenu && (
-                                            <motion.div
-                                                className="absolute top-full right-0 mt-2 w-36 bg-white canvas-dark:bg-[#1A1A1A] border border-neutral-200 canvas-dark:border-[#2A2A2A] shadow-lg rounded-xl py-1 z-50"
-                                                initial={DROPDOWN.initial}
-                                                animate={DROPDOWN.animate}
-                                                exit={DROPDOWN.exit}
-                                                transition={DROPDOWN.transition}
-                                                style={{ transformOrigin: "top right" }}
+                                    {!isSubagentMode && (
+                                        <>
+                                            <button
+                                                className="hover:text-neutral-600 canvas-dark:hover:text-neutral-300 transition-colors"
+                                                onClick={() => setShowMenu(!showMenu)}
                                             >
-                                                <button className="w-full text-left px-3 py-1.5 text-xs text-neutral-600 canvas-dark:text-neutral-400 hover:bg-neutral-50 canvas-dark:hover:bg-[#2A2A2A] hover:text-neutral-900 canvas-dark:hover:text-neutral-200 transition-colors">
-                                                    Refresh Tools
-                                                </button>
-                                                <button className="w-full text-left px-3 py-1.5 text-xs text-neutral-600 canvas-dark:text-neutral-400 hover:bg-neutral-50 canvas-dark:hover:bg-[#2A2A2A] hover:text-neutral-900 canvas-dark:hover:text-neutral-200 transition-colors">
-                                                    Settings
-                                                </button>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
+                                                <span className="text-sm font-bold tracking-widest leading-none">...</span>
+                                            </button>
+                                            <AnimatePresence>
+                                                {showMenu && (
+                                                    <motion.div
+                                                        className="absolute top-full right-0 mt-2 w-36 bg-white canvas-dark:bg-[#1A1A1A] border border-neutral-200 canvas-dark:border-[#2A2A2A] shadow-lg rounded-xl py-1 z-50"
+                                                        initial={DROPDOWN.initial}
+                                                        animate={DROPDOWN.animate}
+                                                        exit={DROPDOWN.exit}
+                                                        transition={DROPDOWN.transition}
+                                                        style={{ transformOrigin: "top right" }}
+                                                    >
+                                                        <button className="w-full text-left px-3 py-1.5 text-xs text-neutral-600 canvas-dark:text-neutral-400 hover:bg-neutral-50 canvas-dark:hover:bg-[#2A2A2A] hover:text-neutral-900 canvas-dark:hover:text-neutral-200 transition-colors">
+                                                            Refresh Tools
+                                                        </button>
+                                                        <button className="w-full text-left px-3 py-1.5 text-xs text-neutral-600 canvas-dark:text-neutral-400 hover:bg-neutral-50 canvas-dark:hover:bg-[#2A2A2A] hover:text-neutral-900 canvas-dark:hover:text-neutral-200 transition-colors">
+                                                            Settings
+                                                        </button>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </>
+                                    )}
                                     <button
                                         className="hover:text-neutral-600 canvas-dark:hover:text-neutral-300 transition-colors ml-1"
-                                        onClick={() => setIsMinimized(true)}
+                                        onClick={() => { setIsMinimized(true); if (isSubagentMode) onClearTarget?.(); }}
                                     >
                                         <Sidebar className="w-4 h-4" />
                                     </button>
@@ -200,7 +246,7 @@ export function LeftCatalogPanel() {
                             ) : (
                                 <AnimatePresence mode="wait">
                                     <motion.div
-                                        key={activeTab}
+                                        key={`${activeTab}-${isSubagentMode ? "sa" : "normal"}`}
                                         className="grid grid-cols-2 gap-3 pb-8"
                                         variants={STAGGER_CHILDREN}
                                         initial="initial"
@@ -213,9 +259,10 @@ export function LeftCatalogPanel() {
                                                 {filteredCustom.map((t) => (
                                                     <motion.div key={t.type} variants={STAGGER_ITEM}>
                                                         <div
-                                                            draggable
+                                                            draggable={!isSubagentMode}
                                                             onDragStart={(e) => onDragStart(e, t.type)}
-                                                            className="group flex flex-col items-center justify-start pt-4 pb-2 h-[106px] bg-[#f8f9fa] canvas-dark:bg-[#1E1E1E]/80 border border-black/5 canvas-dark:border-[#2A2A2A] rounded-3xl cursor-grab active:cursor-grabbing hover:bg-white canvas-dark:hover:bg-[#252525] hover:shadow-md transition-all"
+                                                            onClick={isSubagentMode ? () => onToolClick?.(t.type) : undefined}
+                                                            className={itemClass}
                                                         >
                                                             <div className="drag-image-target w-[52px] h-[52px] bg-white canvas-dark:bg-[#252525] rounded-[18px] shadow-sm border border-black/5 canvas-dark:border-[#333333] flex items-center justify-center mb-2.5 transition-transform group-hover:scale-105">
                                                                 <t.Icon className={cn("w-6 h-6", t.color)} />
@@ -235,13 +282,18 @@ export function LeftCatalogPanel() {
                                                 {filteredApps.map((app) => (
                                                     <motion.div key={app.toolkit} variants={STAGGER_ITEM}>
                                                         <div
-                                                            draggable
+                                                            draggable={!isSubagentMode}
                                                             onDragStart={(e) => onDragStart(e, "composio", {
                                                                 toolkit: app.toolkit,
                                                                 name: app.name,
                                                                 icon: app.logo ?? app.icon
                                                             })}
-                                                            className="group flex flex-col items-center justify-start pt-4 pb-2 h-[106px] bg-[#f8f9fa] canvas-dark:bg-[#1E1E1E]/80 border border-black/5 canvas-dark:border-[#2A2A2A] rounded-3xl cursor-grab active:cursor-grabbing hover:bg-white canvas-dark:hover:bg-[#252525] hover:shadow-md transition-all"
+                                                            onClick={isSubagentMode ? () => onToolClick?.("composio", {
+                                                                toolkit: app.toolkit,
+                                                                name: app.name,
+                                                                icon: app.logo ?? app.icon
+                                                            }) : undefined}
+                                                            className={itemClass}
                                                         >
                                                             <div className="drag-image-target w-[52px] h-[52px] bg-white canvas-dark:bg-[#252525] rounded-[18px] shadow-sm border border-black/5 canvas-dark:border-[#333333] flex items-center justify-center mb-2.5 transition-transform group-hover:scale-105 overflow-hidden p-2">
                                                                 {app.logo && app.logo.startsWith("http") ? (

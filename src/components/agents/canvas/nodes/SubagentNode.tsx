@@ -68,32 +68,25 @@ export const SubagentNode = memo(function SubagentNode({ data, dragging }: NodeP
             <Plus className="w-4 h-4 text-amber-500" strokeWidth={2} />
           </button>
 
+          {/* Hidden handles — kept for auto-generated edge endpoints, not user-interactive */}
           <Handle
             type="source"
             position={Position.Bottom}
             id="bottom-left"
+            isConnectableStart={false}
             style={{ left: "25%", bottom: "-8px" }}
-            className="!bg-neutral-200 canvas-dark:!bg-neutral-600 !w-3 !h-3 !border-[2px] !border-white canvas-dark:!border-neutral-800 !rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
+            className="!bg-transparent !w-0 !h-0 !border-0 !min-w-0 !min-h-0"
           />
           <Handle
             type="source"
             position={Position.Bottom}
             id="bottom-right"
+            isConnectableStart={false}
             style={{ left: "75%", bottom: "-8px" }}
-            className="!bg-neutral-200 canvas-dark:!bg-neutral-600 !w-3 !h-3 !border-[2px] !border-white canvas-dark:!border-neutral-800 !rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
+            className="!bg-transparent !w-0 !h-0 !border-0 !min-w-0 !min-h-0"
           />
         </div>
       </ShineBorder>
-
-      {/* Handle labels on hover */}
-      <div className="relative mt-1 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" style={{ width: NODE_W }}>
-        <span className="absolute text-[11px] font-medium text-neutral-500 canvas-dark:text-neutral-400" style={{ left: "25%", transform: "translateX(-50%)" }}>
-          Knowledge
-        </span>
-        <span className="absolute text-[11px] font-medium text-neutral-500 canvas-dark:text-neutral-400" style={{ left: "75%", transform: "translateX(-50%)" }}>
-          Tools
-        </span>
-      </div>
     </motion.div>
   );
 });
