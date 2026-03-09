@@ -55,8 +55,9 @@ export function ReviewStep({
   );
   const questions = state.qualifyingQuestions.filter((q) => q.trim());
   const template = state.templateId ? getTemplateById(state.templateId) : null;
+  const toolkits = state.selectedToolkits ?? [];
   const selectedTools = (template?.suggestedTools ?? []).filter((t) =>
-    state.selectedToolkits.includes(t.toolkit),
+    toolkits.includes(t.toolkit),
   );
   const meta = state.templateId ? TEMPLATE_META[state.templateId] : null;
 

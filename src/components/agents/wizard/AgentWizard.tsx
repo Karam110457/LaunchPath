@@ -35,7 +35,13 @@ function loadDraft(): { stepIndex: number; state: AgentWizardState } | null {
     if (!raw) return null;
     const draft = JSON.parse(raw);
     // Restore files as empty (File objects can't be serialized)
-    if (draft.state) draft.state.files = [];
+    if (draft.state) {
+      draft.state.files = [];
+      // Backfill fields added after draft was saved
+      if (!Array.isArray(draft.state.selectedToolkits)) {
+        draft.state.selectedToolkits = [];
+      }
+    }
     return draft;
   } catch {
     return null;
