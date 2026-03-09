@@ -42,13 +42,23 @@ export interface CustomerSupportConfig {
   response_style: "concise" | "detailed";
 }
 
+export interface LeadQualificationConfig {
+  lead_fields: {
+    phone: boolean;
+    company: boolean;
+    budget: boolean;
+    timeline: boolean;
+  };
+  notification_behavior: "email_team" | "sheet_only";
+}
+
 // ---------------------------------------------------------------------------
 // Wizard state (accumulated across all 6 steps)
 // ---------------------------------------------------------------------------
 
 export interface AgentWizardState {
   // Step 1: Agent Type
-  templateId: "appointment-booker" | "customer-support" | null;
+  templateId: "appointment-booker" | "customer-support" | "lead-qualification" | null;
 
   // Step 2: Your Business
   businessContextMode: "link_system" | "describe" | null;
@@ -65,6 +75,7 @@ export interface AgentWizardState {
   qualifyingQuestions: string[];
   appointmentBookerConfig: AppointmentBookerConfig;
   customerSupportConfig: CustomerSupportConfig;
+  leadQualificationConfig: LeadQualificationConfig;
 
   // Step 5: Agent Identity
   agentName: string;
@@ -120,6 +131,10 @@ export function createInitialWizardState(): AgentWizardState {
       escalation_mode: "escalate_complex",
       response_style: "detailed",
     },
+    leadQualificationConfig: {
+      lead_fields: { phone: true, company: true, budget: false, timeline: false },
+      notification_behavior: "email_team",
+    },
     agentName: "",
     agentDescription: "",
     tone: "",
@@ -137,7 +152,7 @@ export interface WizardGenerationPayload {
   businessDescription?: string;
   agentName: string;
   agentDescription: string;
-  behaviorConfig: AppointmentBookerConfig | CustomerSupportConfig;
+  behaviorConfig: AppointmentBookerConfig | CustomerSupportConfig | LeadQualificationConfig;
   personality: {
     tone: string;
     greeting_message: string;

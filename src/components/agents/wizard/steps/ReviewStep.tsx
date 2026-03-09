@@ -139,6 +139,8 @@ export function ReviewStep({
             )}
             {isAppointment ? (
               <AppointmentReview config={state.appointmentBookerConfig} />
+            ) : state.templateId === "lead-qualification" ? (
+              <LeadQualReview config={state.leadQualificationConfig} />
             ) : (
               <SupportReview config={state.customerSupportConfig} />
             )}
@@ -253,6 +255,49 @@ function AppointmentReview({
           {config.booking_behavior === "book_directly"
             ? "Book directly on calendar"
             : "Collect info for manual follow-up"}
+        </p>
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Lead Qualification Review
+// ---------------------------------------------------------------------------
+
+function LeadQualReview({
+  config,
+}: {
+  config: AgentWizardState["leadQualificationConfig"];
+}) {
+  const fields = ["Name", "Email"];
+  if (config.lead_fields.phone) fields.push("Phone");
+  if (config.lead_fields.company) fields.push("Company");
+  if (config.lead_fields.budget) fields.push("Budget");
+  if (config.lead_fields.timeline) fields.push("Timeline");
+
+  return (
+    <>
+      <div>
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Lead Fields
+        </span>
+        <div className="flex flex-wrap gap-1.5 mt-1">
+          {fields.map((f) => (
+            <Badge key={f} variant="secondary" className="text-xs">
+              {f}
+            </Badge>
+          ))}
+        </div>
+      </div>
+      <div>
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Notification
+        </span>
+        <p className="text-muted-foreground mt-0.5">
+          {config.notification_behavior === "email_team"
+            ? "Email team with lead summary"
+            : "Save to spreadsheet only"}
         </p>
       </div>
     </>

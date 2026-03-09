@@ -156,6 +156,7 @@ export async function POST(request: NextRequest) {
             template_id: templateId ?? null,
             model: "claude-sonnet-4-5-20250929",
             status: "draft",
+            tool_guidelines: template?.toolWorkflow ?? null,
             wizard_config: wizardConfig
               ? {
                   templateId: wizardConfig.templateId,
@@ -202,6 +203,37 @@ export async function POST(request: NextRequest) {
                 wizardConfig,
                 enqueue,
               );
+            }
+          }
+
+          // Auto-add suggested Composio tools from template
+          if (template?.suggestedTools?.length) {
+            try {
+              for (const tool of template.suggestedTools) {
+                await supabase.from("agent_tools").insert({
+                  agent_id: newAgent.id,
+                  user_id: user.id,
+                  tool_type: "composio",
+                  display_name: tool.displayName,
+                  description: tool.description,
+                  config: {
+                    toolkit: tool.toolkit,
+                    toolkit_name: tool.toolkitName,
+                    enabled_actions: tool.actions,
+                  },
+                  is_enabled: true,
+                });
+              }
+              logger.info("Auto-added template tools", {
+                agentId: newAgent.id,
+                toolCount: template.suggestedTools.length,
+              });
+            } catch (toolErr) {
+              // Tool auto-config failed — agent still exists, user can add manually
+              logger.warn("Failed to auto-add template tools", {
+                agentId: newAgent.id,
+                error: toolErr instanceof Error ? toolErr.message : String(toolErr),
+              });
             }
           }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { AGENT_TEMPLATES } from "@/lib/agents/templates";
-import { Calendar, LifeBuoy, Sparkles } from "lucide-react";
+import { Calendar, LifeBuoy, Target, Sparkles } from "lucide-react";
 
 const ICON_MAP: Record<
   string,
@@ -9,11 +9,12 @@ const ICON_MAP: Record<
 > = {
   Calendar,
   LifeBuoy,
+  Target,
 };
 
 interface ChooseTypeStepProps {
   templateId: string | null;
-  onSelect: (id: "appointment-booker" | "customer-support") => void;
+  onSelect: (id: "appointment-booker" | "customer-support" | "lead-qualification") => void;
 }
 
 export function ChooseTypeStep({ templateId, onSelect }: ChooseTypeStepProps) {
@@ -40,7 +41,7 @@ export function ChooseTypeStep({ templateId, onSelect }: ChooseTypeStepProps) {
               type="button"
               onClick={() =>
                 onSelect(
-                  template.id as "appointment-booker" | "customer-support",
+                  template.id as "appointment-booker" | "customer-support" | "lead-qualification",
                 )
               }
               className={`

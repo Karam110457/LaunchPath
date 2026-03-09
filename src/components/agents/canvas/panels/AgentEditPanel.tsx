@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { AgentToolResponse } from "@/lib/tools/types";
 import type { AgentFormState, WizardConfig } from "../canvas-types";
+import { AGENT_TEMPLATES, getTemplateById } from "@/lib/agents/templates";
 
 interface AgentEditPanelProps {
   agentId: string;
@@ -112,6 +113,54 @@ export function AgentEditPanel({
     [setFormState]
   );
 
+  const handleGoalChange = useCallback(
+    (newTemplateId: string) => {
+      if (!formState.wizardConfig) return;
+      if (formState.wizardConfig.templateId === newTemplateId) return;
+
+      const template = getTemplateById(newTemplateId);
+      if (!template) return;
+
+      // Build default behaviorConfig for the new template
+      let behaviorConfig: Record<string, unknown> = {};
+      if (newTemplateId === "appointment-booker") {
+        behaviorConfig = {
+          lead_fields: { phone: true, company: false, custom_fields: [] },
+          booking_behavior: "collect_and_follow_up",
+        };
+      } else if (newTemplateId === "customer-support") {
+        behaviorConfig = {
+          escalation_mode: "escalate_complex",
+          response_style: "detailed",
+        };
+      } else if (newTemplateId === "lead-qualification") {
+        behaviorConfig = {
+          lead_fields: { phone: true, company: true, budget: false, timeline: false },
+          notification_behavior: "email_team",
+        };
+      }
+
+      setFormState((prev) => ({
+        ...prev,
+        wizardConfig: {
+          ...prev.wizardConfig!,
+          templateId: newTemplateId as WizardConfig["templateId"],
+          behaviorConfig,
+        },
+      }));
+
+      // Update tool_guidelines in DB (separate from form auto-save)
+      fetch(`/api/agents/${agentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tool_guidelines: template.toolWorkflow }),
+      }).catch(() => {
+        // Non-critical — tool_guidelines will be stale until next save
+      });
+    },
+    [formState.wizardConfig, setFormState, agentId],
+  );
+
   const handleDelete = async () => {
     setDeleting(true);
     try {
@@ -152,6 +201,30 @@ export function AgentEditPanel({
                 in conversations — no need to edit the raw system prompt.
               </p>
             </div>
+          )}
+
+          {/* ── Conversation Goal (wizard agents only) ── */}
+          {hasWizard && (
+            <>
+              <section className="space-y-3">
+                <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Conversation Goal
+                </h3>
+                <div className="space-y-2">
+                  {AGENT_TEMPLATES.map((tmpl) => (
+                    <OptionCard
+                      key={tmpl.id}
+                      value={tmpl.id}
+                      label={tmpl.name}
+                      description={tmpl.description}
+                      selected={formState.wizardConfig!.templateId === tmpl.id}
+                      onSelect={() => handleGoalChange(tmpl.id)}
+                    />
+                  ))}
+                </div>
+              </section>
+              <hr className="border-border" />
+            </>
           )}
 
           {/* ── Identity ── */}
@@ -292,8 +365,8 @@ export function AgentEditPanel({
             </>
           )}
 
-          {/* ── Qualifying Questions (appointment-booker only) ── */}
-          {hasWizard && formState.wizardConfig!.templateId === "appointment-booker" && (
+          {/* ── Qualifying Questions (appointment-booker and lead-qualification) ── */}
+          {hasWizard && (formState.wizardConfig!.templateId === "appointment-booker" || formState.wizardConfig!.templateId === "lead-qualification") && (
             <>
               <hr className="border-border" />
               <QuestionsSection
@@ -528,6 +601,12 @@ function buildDirectivesPreview(formState: AgentFormState): string | null {
     } else if (bc.response_style === "detailed") {
       lines.push("- Response style: Thorough, step-by-step explanations.");
     }
+
+    if (bc.notification_behavior === "email_team") {
+      lines.push("- Notification: Email team with qualified lead summary.");
+    } else if (bc.notification_behavior === "sheet_only") {
+      lines.push("- Notification: Save leads to spreadsheet only.");
+    }
   }
 
   return lines.length > 0 ? lines.join("\n") : null;
@@ -629,6 +708,125 @@ function BehaviorSection({
                   behaviorConfig: {
                     ...prev.behaviorConfig,
                     booking_behavior: "collect_and_follow_up",
+                  },
+                }))
+              }
+            />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Lead qualification
+  if (wizardConfig.templateId === "lead-qualification") {
+    const leadFields = (bc.lead_fields ?? {}) as {
+      phone?: boolean;
+      company?: boolean;
+      budget?: boolean;
+      timeline?: boolean;
+    };
+    const notificationBehavior =
+      (bc.notification_behavior as string) ?? "email_team";
+
+    return (
+      <section className="space-y-4">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Behavior
+        </h3>
+
+        <div className="space-y-2">
+          <Label className="text-xs">Lead capture fields</Label>
+          <p className="text-[11px] text-muted-foreground">
+            Name and email are always captured. Toggle additional fields.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <FieldToggle label="Name" enabled disabled />
+            <FieldToggle label="Email" enabled disabled />
+            <FieldToggle
+              label="Phone"
+              enabled={!!leadFields.phone}
+              onToggle={() =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  behaviorConfig: {
+                    ...prev.behaviorConfig,
+                    lead_fields: { ...leadFields, phone: !leadFields.phone },
+                  },
+                }))
+              }
+            />
+            <FieldToggle
+              label="Company"
+              enabled={!!leadFields.company}
+              onToggle={() =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  behaviorConfig: {
+                    ...prev.behaviorConfig,
+                    lead_fields: { ...leadFields, company: !leadFields.company },
+                  },
+                }))
+              }
+            />
+            <FieldToggle
+              label="Budget"
+              enabled={!!leadFields.budget}
+              onToggle={() =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  behaviorConfig: {
+                    ...prev.behaviorConfig,
+                    lead_fields: { ...leadFields, budget: !leadFields.budget },
+                  },
+                }))
+              }
+            />
+            <FieldToggle
+              label="Timeline"
+              enabled={!!leadFields.timeline}
+              onToggle={() =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  behaviorConfig: {
+                    ...prev.behaviorConfig,
+                    lead_fields: { ...leadFields, timeline: !leadFields.timeline },
+                  },
+                }))
+              }
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs">When a lead is qualified</Label>
+          <div className="space-y-2">
+            <OptionCard
+              value="email_team"
+              label="Email team with lead summary"
+              description="Sends an internal notification with the lead details to your team"
+              selected={notificationBehavior === "email_team"}
+              onSelect={() =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  behaviorConfig: {
+                    ...prev.behaviorConfig,
+                    notification_behavior: "email_team",
+                  },
+                }))
+              }
+            />
+            <OptionCard
+              value="sheet_only"
+              label="Save to spreadsheet only"
+              description="Leads are saved to Google Sheets without email notifications"
+              selected={notificationBehavior === "sheet_only"}
+              onSelect={() =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  behaviorConfig: {
+                    ...prev.behaviorConfig,
+                    notification_behavior: "sheet_only",
                   },
                 }))
               }

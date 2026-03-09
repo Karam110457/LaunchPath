@@ -41,6 +41,8 @@ export interface AssemblePromptInput {
   } | null;
   /** Whether this agent has ready knowledge documents (enables knowledge awareness). */
   hasKnowledgeBase?: boolean;
+  /** Tool workflow instructions from template (stored in ai_agents.tool_guidelines). */
+  toolGuidelines?: string;
 }
 
 export interface AssemblePromptResult {
@@ -52,7 +54,7 @@ export interface AssemblePromptResult {
 
 export interface PromptSection {
   /** Section identifier */
-  id: "base" | "config-directives" | "rag" | "knowledge" | "tools" | "unavailable";
+  id: "base" | "config-directives" | "rag" | "knowledge" | "tool-guidelines" | "tools" | "unavailable";
   /** Human-readable label */
   label: string;
   /** The raw text content of this section */
@@ -166,6 +168,16 @@ export function assemblePrompt(input: AssemblePromptInput): AssemblePromptResult
         "Response style: Provide thorough, step-by-step explanations with context."
       );
     }
+
+    if (bc.notification_behavior === "email_team") {
+      directives.push(
+        "When a lead is qualified, send an internal notification email to the team with the lead summary. Never email the lead directly."
+      );
+    } else if (bc.notification_behavior === "sheet_only") {
+      directives.push(
+        "Save qualified leads to the spreadsheet only. Do not send email notifications."
+      );
+    }
   }
 
   if (directives.length > 0) {
@@ -224,6 +236,17 @@ export function assemblePrompt(input: AssemblePromptInput): AssemblePromptResult
       });
       parts.push(knowledgeAwareness);
     }
+  }
+
+  // ── Section 2.7: Tool Guidelines (from template) ─────────────────────────
+  if (input.toolGuidelines?.trim()) {
+    sections.push({
+      id: "tool-guidelines",
+      label: "Tool Guidelines",
+      content: input.toolGuidelines,
+      source: "auto",
+    });
+    parts.push(input.toolGuidelines);
   }
 
   // ── Section 3: Tools Available ─────────────────────────────────────────

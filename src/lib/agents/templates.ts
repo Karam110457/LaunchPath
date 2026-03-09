@@ -1,3 +1,24 @@
+// ---------------------------------------------------------------------------
+// Suggested Composio tool spec (auto-added to agent on creation)
+// ---------------------------------------------------------------------------
+
+export interface SuggestedTool {
+  /** Composio toolkit ID: "googlecalendar", "gmail", "googlesheets" */
+  toolkit: string;
+  /** Display name: "Google Calendar" */
+  toolkitName: string;
+  /** Tool display name shown on canvas */
+  displayName: string;
+  /** AI-facing description of what the tool does */
+  description: string;
+  /** Specific Composio actions to enable */
+  actions: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Agent template definition
+// ---------------------------------------------------------------------------
+
 export interface AgentTemplate {
   id: string;
   name: string;
@@ -8,6 +29,10 @@ export interface AgentTemplate {
     tone: string;
     greeting_message: string;
   };
+  /** Static tool workflow instructions — stored in ai_agents.tool_guidelines */
+  toolWorkflow: string;
+  /** Composio tools to auto-add when creating from this template */
+  suggestedTools: SuggestedTool[];
   wizard_hints?: {
     services_placeholder?: string;
     qualifying_questions_examples?: string[];
@@ -15,6 +40,10 @@ export interface AgentTemplate {
     support_topics_examples?: string[];
   };
 }
+
+// ---------------------------------------------------------------------------
+// Template definitions
+// ---------------------------------------------------------------------------
 
 export const AGENT_TEMPLATES: AgentTemplate[] = [
   {
@@ -30,6 +59,41 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
       greeting_message:
         "Hi! I'd love to help you schedule an appointment. What service are you looking for?",
     },
+    toolWorkflow: `## Tool Workflow — Appointment Booking
+
+When booking an appointment, follow this exact sequence:
+1. Use \`GOOGLECALENDAR_GET_CURRENT_DATE_TIME\` to get the current date and time
+2. Use \`GOOGLECALENDAR_FIND_FREE_SLOTS\` to find available time slots
+3. Present the available slots to the customer and let them choose
+4. Use \`GOOGLECALENDAR_CREATE_EVENT\` to create the calendar event with all collected details
+5. Use \`GMAIL_SEND_EMAIL\` to send a confirmation email to the customer with date, time, and appointment details
+
+CRITICAL RULES:
+- NEVER fabricate or guess availability — always check the calendar first
+- NEVER book without confirming all details with the customer
+- Collect name, email, and phone BEFORE attempting to book
+- If no suitable times are available, offer to check alternative dates
+- Include all relevant details in the calendar event description`,
+    suggestedTools: [
+      {
+        toolkit: "googlecalendar",
+        toolkitName: "Google Calendar",
+        displayName: "Google Calendar",
+        description: "Check availability and book appointments on the calendar",
+        actions: [
+          "GOOGLECALENDAR_GET_CURRENT_DATE_TIME",
+          "GOOGLECALENDAR_FIND_FREE_SLOTS",
+          "GOOGLECALENDAR_CREATE_EVENT",
+        ],
+      },
+      {
+        toolkit: "gmail",
+        toolkitName: "Gmail",
+        displayName: "Gmail",
+        description: "Send appointment confirmation emails to customers",
+        actions: ["GMAIL_SEND_EMAIL"],
+      },
+    ],
     wizard_hints: {
       services_placeholder:
         "e.g., Residential roof replacement, repair, inspection",
@@ -53,6 +117,18 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
       greeting_message:
         "Hi there! I'm here to help with any questions or issues.",
     },
+    toolWorkflow: `## Tool Workflow — Customer Support
+
+When helping customers:
+1. Always search your knowledge base FIRST before answering factual questions about the business
+2. Use the \`search_knowledge_base\` tool for any questions about products, services, policies, or procedures
+3. If the knowledge base doesn't have the answer, honestly tell the customer you'll need to check with the team
+4. Never guess or fabricate information — accuracy builds trust
+
+ESCALATION:
+- If the issue requires account changes, billing adjustments, or technical access you don't have, let the customer know you'll connect them with someone who can help
+- Collect the customer's name and a brief description of the issue before escalating`,
+    suggestedTools: [],
     wizard_hints: {
       business_description_placeholder:
         "e.g., We sell project management software for small teams",
@@ -60,6 +136,57 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
         "Account & billing",
         "Feature requests",
         "Bug reports",
+      ],
+    },
+  },
+  {
+    id: "lead-qualification",
+    name: "Lead Qualification",
+    description:
+      "Qualifies leads through natural conversation and saves them to a spreadsheet.",
+    icon: "Target",
+    default_system_prompt_hint:
+      "An AI agent that engages visitors in helpful conversation while naturally collecting qualifying information. Saves lead data to Google Sheets and notifies the team via email.",
+    suggested_personality: {
+      tone: "warm and conversational",
+      greeting_message:
+        "Hey there! I'd love to learn a bit about what you're looking for so I can point you in the right direction.",
+    },
+    toolWorkflow: `## Tool Workflow — Lead Qualification
+
+As you collect lead information through natural conversation:
+1. After collecting at least the visitor's name + email, use \`GOOGLESHEETS_BATCH_UPDATE\` to save the partial lead data to the spreadsheet
+2. Continue updating the spreadsheet row as you gather more details (phone, company, budget, timeline)
+3. When qualification is complete, use \`GMAIL_SEND_EMAIL\` to send an internal notification email to the team with a summary of the qualified lead
+4. NEVER email the lead directly — notification emails are internal only
+
+IMPORTANT RULES:
+- Save partial data early — don't wait until you have everything
+- Be conversational, not interrogative — gather information naturally through helpful dialogue
+- Ask questions one at a time, never in a batch
+- Show genuine interest in helping the visitor find the right solution
+- If the visitor isn't a good fit, be honest and helpful about alternatives`,
+    suggestedTools: [
+      {
+        toolkit: "googlesheets",
+        toolkitName: "Google Sheets",
+        displayName: "Google Sheets",
+        description: "Save and update lead information in the spreadsheet",
+        actions: ["GOOGLESHEETS_BATCH_UPDATE"],
+      },
+      {
+        toolkit: "gmail",
+        toolkitName: "Gmail",
+        displayName: "Gmail",
+        description: "Send internal lead notification emails to the team",
+        actions: ["GMAIL_SEND_EMAIL"],
+      },
+    ],
+    wizard_hints: {
+      qualifying_questions_examples: [
+        "What product or service are you interested in?",
+        "What's your timeline for getting started?",
+        "What's the size of your team or organization?",
       ],
     },
   },

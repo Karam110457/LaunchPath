@@ -207,6 +207,7 @@ export function buildSubagentTool(
             resolvedToolKeys: Object.keys(tools),
             failures,
             hasKnowledgeBase,
+            toolGuidelines: (targetAgent.tool_guidelines as string | null) ?? undefined,
           });
 
           // Build messages — include optional context

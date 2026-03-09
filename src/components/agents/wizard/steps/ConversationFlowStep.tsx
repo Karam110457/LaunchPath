@@ -18,13 +18,15 @@ import { OptionCard } from "@/components/flows/OptionCard";
 import type {
   AppointmentBookerConfig,
   CustomerSupportConfig,
+  LeadQualificationConfig,
 } from "@/types/agent-wizard";
 
 interface ConversationFlowStepProps {
-  templateId: "appointment-booker" | "customer-support";
+  templateId: "appointment-booker" | "customer-support" | "lead-qualification";
   qualifyingQuestions: string[];
   appointmentBookerConfig: AppointmentBookerConfig;
   customerSupportConfig: CustomerSupportConfig;
+  leadQualificationConfig: LeadQualificationConfig;
   businessDescription: string;
   scrapedContent: string;
   faqs: Array<{ question: string; answer: string }>;
@@ -35,6 +37,9 @@ interface ConversationFlowStepProps {
   onUpdateCustomerSupport: (
     updater: (prev: CustomerSupportConfig) => CustomerSupportConfig,
   ) => void;
+  onUpdateLeadQualification: (
+    updater: (prev: LeadQualificationConfig) => LeadQualificationConfig,
+  ) => void;
 }
 
 export function ConversationFlowStep({
@@ -42,12 +47,14 @@ export function ConversationFlowStep({
   qualifyingQuestions,
   appointmentBookerConfig,
   customerSupportConfig,
+  leadQualificationConfig,
   businessDescription,
   scrapedContent,
   faqs,
   onQuestionsChange,
   onUpdateAppointmentBooker,
   onUpdateCustomerSupport,
+  onUpdateLeadQualification,
 }: ConversationFlowStepProps) {
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
@@ -88,17 +95,21 @@ export function ConversationFlowStep({
         <h2 className="text-xl font-semibold tracking-tight">
           {templateId === "appointment-booker"
             ? "Customize your conversation flow"
-            : "Configure support behavior"}
+            : templateId === "lead-qualification"
+              ? "Configure lead qualification"
+              : "Configure support behavior"}
         </h2>
         <p className="text-sm text-muted-foreground">
           {templateId === "appointment-booker"
             ? "Define the questions your agent asks to qualify leads and how it handles bookings."
-            : "Choose how your agent handles issues and responds to visitors."}
+            : templateId === "lead-qualification"
+              ? "Define the information your agent collects and how it notifies your team."
+              : "Choose how your agent handles issues and responds to visitors."}
         </p>
       </div>
 
-      {/* Questions — only for appointment-booker */}
-      {templateId === "appointment-booker" && (
+      {/* Questions — for appointment-booker and lead-qualification */}
+      {(templateId === "appointment-booker" || templateId === "lead-qualification") && (
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <Label>Qualifying questions</Label>
@@ -160,6 +171,11 @@ export function ConversationFlowStep({
           <AppointmentBookerOptions
             config={appointmentBookerConfig}
             onUpdate={onUpdateAppointmentBooker}
+          />
+        ) : templateId === "lead-qualification" ? (
+          <LeadQualificationOptions
+            config={leadQualificationConfig}
+            onUpdate={onUpdateLeadQualification}
           />
         ) : (
           <CustomerSupportOptions
@@ -422,6 +438,117 @@ function CustomerSupportOptions({
             selected={config.response_style === "detailed"}
             onSelect={() =>
               onUpdate((prev) => ({ ...prev, response_style: "detailed" }))
+            }
+          />
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Lead Qualification Options
+// ---------------------------------------------------------------------------
+
+function LeadQualificationOptions({
+  config,
+  onUpdate,
+}: {
+  config: LeadQualificationConfig;
+  onUpdate: (
+    updater: (prev: LeadQualificationConfig) => LeadQualificationConfig,
+  ) => void;
+}) {
+  return (
+    <>
+      <div className="space-y-3">
+        <Label>Lead capture fields</Label>
+        <p className="text-xs text-muted-foreground">
+          Name and email are always captured. Toggle additional fields.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <FieldToggle label="Name" enabled disabled />
+          <FieldToggle label="Email" enabled disabled />
+          <FieldToggle
+            label="Phone"
+            enabled={config.lead_fields.phone}
+            onToggle={() =>
+              onUpdate((prev) => ({
+                ...prev,
+                lead_fields: {
+                  ...prev.lead_fields,
+                  phone: !prev.lead_fields.phone,
+                },
+              }))
+            }
+          />
+          <FieldToggle
+            label="Company"
+            enabled={config.lead_fields.company}
+            onToggle={() =>
+              onUpdate((prev) => ({
+                ...prev,
+                lead_fields: {
+                  ...prev.lead_fields,
+                  company: !prev.lead_fields.company,
+                },
+              }))
+            }
+          />
+          <FieldToggle
+            label="Budget"
+            enabled={config.lead_fields.budget}
+            onToggle={() =>
+              onUpdate((prev) => ({
+                ...prev,
+                lead_fields: {
+                  ...prev.lead_fields,
+                  budget: !prev.lead_fields.budget,
+                },
+              }))
+            }
+          />
+          <FieldToggle
+            label="Timeline"
+            enabled={config.lead_fields.timeline}
+            onToggle={() =>
+              onUpdate((prev) => ({
+                ...prev,
+                lead_fields: {
+                  ...prev.lead_fields,
+                  timeline: !prev.lead_fields.timeline,
+                },
+              }))
+            }
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>When a lead is qualified</Label>
+        <div className="space-y-2 pt-1">
+          <OptionCard
+            value="email_team"
+            label="Email team with lead summary"
+            description="Sends an internal notification with the lead details to your team"
+            selected={config.notification_behavior === "email_team"}
+            onSelect={() =>
+              onUpdate((prev) => ({
+                ...prev,
+                notification_behavior: "email_team",
+              }))
+            }
+          />
+          <OptionCard
+            value="sheet_only"
+            label="Save to spreadsheet only"
+            description="Leads are saved to Google Sheets without email notifications"
+            selected={config.notification_behavior === "sheet_only"}
+            onSelect={() =>
+              onUpdate((prev) => ({
+                ...prev,
+                notification_behavior: "sheet_only",
+              }))
             }
           />
         </div>

@@ -242,6 +242,7 @@ export async function runAgentChat(
           behaviorConfig?: Record<string, unknown>;
         }
       | null,
+    toolGuidelines: (agent.tool_guidelines as string | null) ?? undefined,
   });
 
   // -------------------------------------------------------------------------
