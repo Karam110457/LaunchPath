@@ -186,7 +186,11 @@ export function NewCampaignForm({ agents, lockedClientId, redirectBase }: NewCam
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={saving || !name.trim() || !agentId}>
+            <Button
+              type="submit"
+              disabled={saving || !name.trim() || !agentId}
+              className="shadow-md gradient-accent-bg text-white hover:scale-[1.02] transition-transform border-0"
+            >
               {saving ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />

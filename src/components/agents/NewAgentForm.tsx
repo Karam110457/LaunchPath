@@ -86,14 +86,14 @@ export function NewAgentForm({ businesses }: NewAgentFormProps) {
                   className={cn(
                     "transition-all cursor-pointer h-full",
                     isSelected
-                      ? "border-primary ring-1 ring-primary/20"
-                      : "hover:border-primary/30",
+                      ? "border-[#FF8C00] ring-1 ring-[#FF8C00]/20 bg-gradient-to-r from-[#FF8C00]/5 to-[#9D50BB]/5"
+                      : "hover:border-[#FF8C00]/30",
                   )}
                 >
                   <CardContent className="pt-6">
                     <div className="flex items-start gap-3">
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <Icon className="h-4 w-4 text-primary" />
+                      <div className="h-8 w-8 rounded-lg bg-gradient-to-r from-[#FF8C00]/10 to-[#9D50BB]/10 flex items-center justify-center shrink-0">
+                        <Icon className="h-4 w-4 text-[#FF8C00]" />
                       </div>
                       <div>
                         <h3 className="font-medium text-sm">
@@ -161,6 +161,7 @@ export function NewAgentForm({ businesses }: NewAgentFormProps) {
           onClick={handleGenerate}
           disabled={!canGenerate || isLoading}
           size="lg"
+          className="shadow-md gradient-accent-bg text-white hover:scale-[1.02] transition-transform border-0"
         >
           Build Agent
           <ArrowRight className="h-4 w-4 ml-2" />

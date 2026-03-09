@@ -129,7 +129,7 @@ export function PreviewPanel({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="mt-4 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
+                className="mt-4 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#FF8C00]/10 text-[#FF8C00] text-xs font-medium hover:bg-[#FF8C00]/20 transition-colors"
               >
                 <Upload className="w-3.5 h-3.5" />
                 Upload a screenshot instead

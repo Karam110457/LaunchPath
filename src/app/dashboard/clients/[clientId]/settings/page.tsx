@@ -178,7 +178,7 @@ export default function ClientSettingsPage() {
           <button
             onClick={handleSave}
             disabled={saving || !name.trim()}
-            className="px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 text-sm font-medium rounded-lg shadow-md gradient-accent-bg text-white hover:scale-[1.02] transition-transform border-0 disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save Changes"}
           </button>
@@ -216,7 +216,7 @@ export default function ClientSettingsPage() {
           <button
             type="submit"
             disabled={inviting || !inviteEmail}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md shadow-md gradient-accent-bg text-white hover:scale-[1.02] transition-transform border-0 disabled:opacity-50"
           >
             <Send className="size-3.5" />
             {inviting ? "..." : "Invite"}

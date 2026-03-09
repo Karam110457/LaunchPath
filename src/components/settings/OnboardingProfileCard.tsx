@@ -36,6 +36,50 @@ function getLabel(
   return options.find((o) => o.value === value)?.label ?? value;
 }
 
+function SettingsOptionCard({
+  value,
+  label,
+  description,
+  selected,
+  onSelect,
+}: {
+  value: string;
+  label: string;
+  description?: string;
+  selected: boolean;
+  onSelect: (value: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(value)}
+      className={`w-full text-left px-5 py-4 rounded-xl border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/50 ${
+        selected
+          ? "border-[#FF8C00] bg-gradient-to-r from-[#FF8C00]/10 to-[#9D50BB]/10 shadow-sm shadow-[#FF8C00]/10"
+          : "border-border bg-card hover:border-[#FF8C00]/40 hover:bg-[#FF8C00]/5"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className={`font-medium text-sm ${selected ? "text-[#FF8C00]" : ""}`}>
+            {label}
+          </div>
+          {description && (
+            <div className="text-xs text-muted-foreground mt-0.5">
+              {description}
+            </div>
+          )}
+        </div>
+        {selected && (
+          <div className="shrink-0 h-5 w-5 rounded-full gradient-accent-bg flex items-center justify-center border-0">
+            <Check className="h-3 w-3 text-white" />
+          </div>
+        )}
+      </div>
+    </button>
+  );
+}
+
 export function OnboardingProfileCard({ profile }: OnboardingProfileCardProps) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -140,7 +184,7 @@ export function OnboardingProfileCard({ profile }: OnboardingProfileCardProps) {
               ) : (
                 <div className="space-y-2">
                   {step.options?.map((opt) => (
-                    <OptionCard
+                    <SettingsOptionCard
                       key={opt.value}
                       value={opt.value}
                       label={opt.label}
@@ -166,7 +210,7 @@ export function OnboardingProfileCard({ profile }: OnboardingProfileCardProps) {
             </p>
           )}
 
-          <Button onClick={handleSave} disabled={isPending}>
+          <Button onClick={handleSave} disabled={isPending} className="shadow-md gradient-accent-bg text-white hover:scale-[1.02] transition-transform border-0">
             {isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

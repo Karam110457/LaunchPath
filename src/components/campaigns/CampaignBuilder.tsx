@@ -252,6 +252,7 @@ export function CampaignBuilder({
               size="sm"
               onClick={handleDeploy}
               disabled={saving || deploying}
+              className="shadow-md gradient-accent-bg text-white hover:scale-[1.02] transition-transform border-0"
             >
               {deploying ? (
                 <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
