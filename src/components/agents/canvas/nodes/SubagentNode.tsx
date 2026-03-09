@@ -1,11 +1,12 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useContext } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { motion } from "framer-motion";
-import { Bot } from "lucide-react";
+import { Bot, Plus } from "lucide-react";
 import type { SubagentNodeData } from "../canvas-types";
 import { ShineBorder } from "@/components/ui/shine-border";
+import { CanvasActionsContext } from "../canvas-context";
 import { NODE_ENTER, NODE_DRAG, NODE_EXIT } from "../animation-constants";
 
 const NODE_W = 280;
@@ -14,6 +15,7 @@ const NODE_H = 128;
 export const SubagentNode = memo(function SubagentNode({ data, dragging }: NodeProps) {
   const d = data as unknown as SubagentNodeData;
   const isExiting = (data as Record<string, unknown>)._exiting === true;
+  const { openCatalogForAgent } = useContext(CanvasActionsContext);
 
   return (
     <motion.div
@@ -56,6 +58,15 @@ export const SubagentNode = memo(function SubagentNode({ data, dragging }: NodeP
               Sub-Agent
             </span>
           </div>
+
+          {/* Add Tool button */}
+          <button
+            onClick={(e) => { e.stopPropagation(); openCatalogForAgent(d.subagentId); }}
+            className="shrink-0 w-8 h-8 rounded-full border border-dashed border-amber-500/40 hover:border-amber-500 bg-amber-500/10 hover:bg-amber-500/20 flex items-center justify-center transition-colors z-20"
+            title="Add tool"
+          >
+            <Plus className="w-4 h-4 text-amber-500" strokeWidth={2} />
+          </button>
 
           <Handle
             type="source"
