@@ -45,66 +45,94 @@ export default async function ClientsPage() {
 
       <div className="relative z-10 flex flex-col flex-1 h-full">
         <TopNav />
-        <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 space-y-6">
-          <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
+        <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 space-y-8">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+        <div className="space-y-2">
+          <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">Clients</h1>
+          <p className="text-muted-foreground text-lg">Manage your deployed AI campaigns and clients.</p>
+        </div>
         <Link
           href="/dashboard/clients/new"
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+          className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-full shadow-md gradient-accent-bg text-white hover:scale-[1.02] transition-transform border-0"
         >
           <Plus className="size-4" />
           New Client
         </Link>
       </div>
 
+      <div className="w-full h-px bg-border/40" />
+
       {shaped.length === 0 && (!unlinkedCampaigns || unlinkedCampaigns.length === 0) ? (
-        <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground">
-          No clients yet. Create your first client to start deploying campaigns.
+        <div className="text-center py-20 px-6 rounded-3xl border border-dashed border-border/60 bg-card/30">
+          <Megaphone className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+          <h3 className="text-lg font-medium">No clients yet</h3>
+          <p className="text-muted-foreground text-sm mt-1 max-w-sm mx-auto">
+            Create your first client to start deploying campaigns.
+          </p>
         </div>
       ) : (
         <>
           {shaped.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {shaped.map((client) => (
                 <Link
                   key={client.id}
                   href={`/dashboard/clients/${client.id}`}
-                  className="rounded-lg border bg-card p-5 hover:border-primary/30 transition-colors space-y-3"
+                  className="group relative cursor-pointer outline-none overflow-hidden rounded-[32px] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 border border-black/5 dark:border-[#2A2A2A] hover:bg-white dark:hover:bg-[#252525] hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between min-h-[220px]"
                 >
-                  <div className="flex items-center gap-3">
-                    {client.logo_url ? (
-                      <img
-                        src={client.logo_url}
-                        alt={client.name}
-                        className="size-8 rounded object-cover"
-                      />
-                    ) : (
-                      <span className="size-8 rounded bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
-                        {client.name.charAt(0).toUpperCase()}
+                  <div className="p-6 flex flex-col h-full">
+                    {/* Top section */}
+                    <div className="flex items-start justify-between mb-4">
+                      {client.logo_url ? (
+                        <div className="w-[52px] h-[52px] rounded-[18px] bg-white dark:bg-[#252525] flex items-center justify-center shrink-0 border border-black/5 dark:border-[#333333] shadow-sm group-hover:scale-105 transition-transform overflow-hidden">
+                          <img
+                            src={client.logo_url}
+                            alt={client.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-[52px] h-[52px] rounded-[18px] bg-white dark:bg-[#252525] flex items-center justify-center shrink-0 border border-black/5 dark:border-[#333333] shadow-sm group-hover:scale-105 transition-transform">
+                          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#FF8C00] to-[#9D50BB]">
+                            {client.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      <span
+                        className={`text-xs px-3 py-1 rounded-full font-medium ${client.status === "active"
+                            ? "bg-gradient-to-r from-[#FF8C00]/10 to-[#9D50BB]/10 text-neutral-900 dark:text-neutral-100 border border-[#FF8C00]/20"
+                            : client.status === "paused"
+                              ? "bg-yellow-500/10 text-yellow-600 border border-yellow-500/20"
+                              : "bg-muted text-muted-foreground border border-border"
+                          }`}
+                      >
+                        {client.status.charAt(0).toUpperCase() + client.status.slice(1)}
                       </span>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold truncate">{client.name}</h3>
-                      {client.website && (
-                        <p className="text-xs text-muted-foreground truncate">
+                    </div>
+
+                    {/* Middle section */}
+                    <div className="flex-1 min-w-0 mb-4 px-1">
+                      <h3 className="font-semibold text-xl mb-1 truncate text-neutral-800 dark:text-neutral-200 group-hover:text-neutral-900 dark:group-hover:text-neutral-100 transition-colors">
+                        {client.name}
+                      </h3>
+                      {client.website ? (
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400 truncate">
                           {client.website}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400 italic">
+                          No website provided
                         </p>
                       )}
                     </div>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${client.status === "active"
-                          ? "bg-emerald-500/10 text-emerald-600"
-                          : client.status === "paused"
-                            ? "bg-yellow-500/10 text-yellow-600"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                    >
-                      {client.status}
-                    </span>
+
+                    {/* Bottom section */}
+                    <div className="flex items-center justify-between pt-4 border-t border-border/40 mt-auto">
+                      <div className="text-xs text-muted-foreground font-medium">
+                        {client.campaign_count} campaign{client.campaign_count !== 1 ? "s" : ""}
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {client.campaign_count} campaign{client.campaign_count !== 1 ? "s" : ""}
-                  </p>
                 </Link>
               ))}
             </div>
@@ -144,14 +172,14 @@ export default async function ClientsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span
-                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${campaign.status === "active"
-                              ? "bg-emerald-500/10 text-emerald-600"
+                          className={`text-xs px-3 py-1 rounded-full font-medium ${campaign.status === "active"
+                              ? "bg-gradient-to-r from-[#FF8C00]/10 to-[#9D50BB]/10 text-neutral-900 dark:text-neutral-100 border border-[#FF8C00]/20"
                               : campaign.status === "paused"
-                                ? "bg-yellow-500/10 text-yellow-600"
-                                : "bg-muted text-muted-foreground"
+                                ? "bg-yellow-500/10 text-yellow-600 border border-yellow-500/20"
+                                : "bg-muted text-muted-foreground border border-border"
                             }`}
                         >
-                          {campaign.status}
+                          {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
                         </span>
                         {shaped.length > 0 && (
                           <AssignClientDropdown

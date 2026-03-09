@@ -90,12 +90,12 @@ export function OnboardingProfileCard({ profile }: OnboardingProfileCardProps) {
 
   if (isEditing) {
     return (
-      <Card>
-        <CardHeader>
+      <Card className="rounded-[32px] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 border border-black/5 dark:border-[#2A2A2A] shadow-none">
+        <CardHeader className="px-8 pt-8">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Onboarding Profile</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-xl font-semibold">Onboarding Profile</CardTitle>
+              <CardDescription className="text-neutral-500 dark:text-neutral-400 mt-1">
                 Edit your profile answers. Changes affect future recommendations.
               </CardDescription>
             </div>
@@ -108,7 +108,7 @@ export function OnboardingProfileCard({ profile }: OnboardingProfileCardProps) {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 px-8 pb-8">
           {ONBOARDING_STEPS.map((step) => (
             <div key={step.id} className="space-y-2">
               <h4 className="text-sm font-medium">{step.question}</h4>
@@ -185,12 +185,12 @@ export function OnboardingProfileCard({ profile }: OnboardingProfileCardProps) {
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="rounded-[32px] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 border border-black/5 dark:border-[#2A2A2A] shadow-none">
+      <CardHeader className="px-8 pt-8">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Onboarding Profile</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-xl font-semibold">Onboarding Profile</CardTitle>
+            <CardDescription className="text-neutral-500 dark:text-neutral-400 mt-1">
               Your profile shapes AI recommendations and the Start Business flow.
             </CardDescription>
           </div>
@@ -200,14 +200,14 @@ export function OnboardingProfileCard({ profile }: OnboardingProfileCardProps) {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 px-8 pb-8">
         {summaryItems.map((item) => (
           <div
             key={item.label}
-            className="flex items-start justify-between gap-4 py-2 border-b border-border/50 last:border-0"
+            className="flex items-start justify-between gap-4 py-3 border-b border-border/50 last:border-0"
           >
-            <span className="text-sm text-muted-foreground">{item.label}</span>
-            <span className="text-sm font-medium text-right">{item.value}</span>
+            <span className="text-sm text-neutral-500 dark:text-neutral-400">{item.label}</span>
+            <span className="text-sm font-medium text-right text-neutral-900 dark:text-neutral-100">{item.value}</span>
           </div>
         ))}
       </CardContent>
