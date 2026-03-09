@@ -240,7 +240,7 @@ function AgentCanvasInner({
   }, [isDirty, formState, agent.id, buildPayload, router]);
 
   // ─── Undo / Redo ──────────────────────────────────────────────────────
-  const { push: pushUndo, undo, redo, canUndo, canRedo, undoLabel, redoLabel } = useUndoRedo();
+  const { push: pushUndo, undo, redo, clear: clearUndo, canUndo, canRedo, undoLabel, redoLabel } = useUndoRedo();
   const isUndoingRef = useRef(false);
   const editingToolSnapshotRef = useRef<AgentToolResponse | null>(null);
 
@@ -1316,59 +1316,22 @@ function AgentCanvasInner({
     }
   }, [agentTools, subagentDetails, agent.id, setupTool, composioSetup, fetchTools, fetchSubagents, notifySaved, setToolEnabled, pushUndo, setEdges, persistLayout, autoConnectTool]);
 
-  const handleToolDeleted = useCallback(async (deletedTool?: AgentToolResponse) => {
+  const handleToolDeleted = useCallback(async () => {
     setSetupTool(null);
     setComposioSetup(null);
     await Promise.all([fetchTools(), fetchSubagents()]);
     notifySaved();
-
-    if (deletedTool) {
-      const ownerAgentId = deletedTool.agent_id;
-      let lastCreatedId: string | null = null;
-      pushUndo({
-        label: `Deleted ${deletedTool.display_name}`,
-        undo: async () => {
-          isUndoingRef.current = true;
-          const res = await fetch(`/api/agents/${ownerAgentId}/tools`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              tool_type: deletedTool.tool_type,
-              display_name: deletedTool.display_name,
-              description: deletedTool.description,
-              config: deletedTool.config,
-              is_enabled: deletedTool.is_enabled,
-            }),
-          });
-          if (res.ok) {
-            const json = await res.json();
-            lastCreatedId = json.tool?.id ?? null;
-            await Promise.all([fetchTools(), fetchSubagents()]);
-            if (lastCreatedId) {
-              autoConnectTool(ownerAgentId, lastCreatedId, deletedTool.tool_type, deletedTool.config as Record<string, unknown>);
-            }
-          } else {
-            await Promise.all([fetchTools(), fetchSubagents()]);
-          }
-          isUndoingRef.current = false;
-        },
-        redo: async () => {
-          if (lastCreatedId) {
-            isUndoingRef.current = true;
-            await fetch(`/api/agents/${ownerAgentId}/tools/${lastCreatedId}`, { method: "DELETE" });
-            await Promise.all([fetchTools(), fetchSubagents()]);
-            isUndoingRef.current = false;
-          }
-        },
-      });
-    }
-  }, [fetchTools, fetchSubagents, notifySaved, pushUndo, autoConnectTool]);
+    // Tool deletion invalidates prior undo history (old entries reference
+    // the deleted tool's node/edges and produce phantom undos).
+    clearUndo();
+  }, [fetchTools, fetchSubagents, notifySaved, clearUndo]);
 
   const handleSubagentDeleted = useCallback(async () => {
     setModal({ type: "none" });
     await Promise.all([fetchTools(), fetchSubagents()]);
     notifySaved();
-  }, [fetchTools, fetchSubagents, notifySaved]);
+    clearUndo();
+  }, [fetchTools, fetchSubagents, notifySaved, clearUndo]);
 
   // Helper: find a tool record by id across parent + all sub-agents
   const findToolRecord = useCallback(

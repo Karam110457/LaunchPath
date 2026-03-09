@@ -60,10 +60,15 @@ export function useUndoRedo() {
     }
   }, [future]);
 
+  const clear = useCallback(() => {
+    setPast([]);
+    setFuture([]);
+  }, []);
+
   const canUndo = past.length > 0;
   const canRedo = future.length > 0;
   const undoLabel = past.length > 0 ? past[past.length - 1].label : "";
   const redoLabel = future.length > 0 ? future[future.length - 1].label : "";
 
-  return { push, undo, redo, canUndo, canRedo, undoLabel, redoLabel };
+  return { push, undo, redo, clear, canUndo, canRedo, undoLabel, redoLabel };
 }
