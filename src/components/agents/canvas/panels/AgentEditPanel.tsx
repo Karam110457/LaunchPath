@@ -45,6 +45,27 @@ const MODEL_OPTIONS = [
   { value: "claude-haiku-3-5-20241022", label: "Claude Haiku 3.5" },
 ];
 
+const LANGUAGE_OPTIONS = [
+  { value: "en", label: "English" },
+  { value: "es", label: "Spanish" },
+  { value: "fr", label: "French" },
+  { value: "de", label: "German" },
+  { value: "pt", label: "Portuguese" },
+  { value: "it", label: "Italian" },
+  { value: "nl", label: "Dutch" },
+  { value: "ar", label: "Arabic" },
+  { value: "zh", label: "Chinese (Simplified)" },
+  { value: "ja", label: "Japanese" },
+  { value: "ko", label: "Korean" },
+  { value: "ru", label: "Russian" },
+  { value: "hi", label: "Hindi" },
+  { value: "tr", label: "Turkish" },
+  { value: "pl", label: "Polish" },
+  { value: "sv", label: "Swedish" },
+  { value: "da", label: "Danish" },
+  { value: "he", label: "Hebrew" },
+];
+
 const TONE_PRESETS = [
   { value: "friendly and approachable", label: "Friendly", desc: "Warm, gets to the point" },
   { value: "professional and polished", label: "Professional", desc: "Formal, trustworthy" },
@@ -158,6 +179,21 @@ export function AgentEditPanel({
                 className="text-sm"
                 placeholder="What does this agent do?"
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-language" className="text-xs">Language</Label>
+              <select
+                id="edit-language"
+                value={formState.language}
+                onChange={(e) => update("language", e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                {LANGUAGE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </section>
 

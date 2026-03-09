@@ -70,6 +70,7 @@ export interface AgentFormState {
   description: string;
   tone: string;
   greetingMessage: string;
+  language: string;
   model: string;
   systemPrompt: string;
   wizardConfig: WizardConfig | null;

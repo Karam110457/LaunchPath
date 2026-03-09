@@ -233,7 +233,7 @@ export async function runAgentChat(
     failures,
     hasKnowledgeBase,
     personality: agent.personality as
-      | { tone?: string; greeting_message?: string }
+      | { tone?: string; greeting_message?: string; language?: string }
       | null,
     wizardConfig: agent.wizard_config as
       | {

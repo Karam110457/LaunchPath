@@ -63,6 +63,7 @@ import { useComposioConnections } from "@/hooks/useComposioConnections";
 function buildFormChangeLabel(old: AgentFormState, next: AgentFormState): string {
   if (old.name !== next.name) return `Changed name to "${next.name}"`;
   if (old.tone !== next.tone) return `Changed tone`;
+  if (old.language !== next.language) return `Changed language`;
   if (old.model !== next.model) return `Changed model`;
   if (old.greetingMessage !== next.greetingMessage) return "Changed greeting message";
   if (old.systemPrompt !== next.systemPrompt) return "Changed system prompt";
@@ -106,6 +107,7 @@ export interface AgentCanvasPageProps {
     tone?: string;
     greeting_message?: string;
     avatar_emoji?: string;
+    language?: string;
   } | null;
   initialDocuments: Array<{
     id: string;
@@ -135,6 +137,7 @@ function AgentCanvasInner({
     description: agent.description ?? "",
     tone: personality?.tone ?? "",
     greetingMessage: personality?.greeting_message ?? "",
+    language: personality?.language ?? "en",
     model: agent.model,
     systemPrompt: agent.system_prompt,
     wizardConfig: (agent.wizard_config as WizardConfig) ?? null,
@@ -178,6 +181,7 @@ function AgentCanvasInner({
     personality: {
       tone: formState.tone.trim() || undefined,
       greeting_message: formState.greetingMessage.trim() || undefined,
+      language: formState.language || undefined,
     },
     model: formState.model,
     wizard_config: formState.wizardConfig,

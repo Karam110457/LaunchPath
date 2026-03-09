@@ -31,8 +31,8 @@ export interface AssemblePromptInput {
   resolvedToolKeys: string[];
   /** Tool failures from buildAgentTools() */
   failures: ToolFailure[];
-  /** Structured personality settings (tone, greeting). */
-  personality?: { tone?: string; greeting_message?: string } | null;
+  /** Structured personality settings (tone, greeting, language). */
+  personality?: { tone?: string; greeting_message?: string; language?: string } | null;
   /** Structured wizard config (qualifying questions, behavior). */
   wizardConfig?: {
     templateId?: string;
@@ -92,6 +92,19 @@ export function assemblePrompt(input: AssemblePromptInput): AssemblePromptResult
   if (input.personality?.tone) {
     directives.push(
       `Communication style: Maintain a ${input.personality.tone} tone throughout the conversation.`
+    );
+  }
+
+  if (input.personality?.language && input.personality.language !== "en") {
+    const langNames: Record<string, string> = {
+      es: "Spanish", fr: "French", de: "German", pt: "Portuguese",
+      it: "Italian", nl: "Dutch", ar: "Arabic", zh: "Chinese (Simplified)",
+      ja: "Japanese", ko: "Korean", ru: "Russian", hi: "Hindi",
+      tr: "Turkish", pl: "Polish", sv: "Swedish", da: "Danish", he: "Hebrew",
+    };
+    const langName = langNames[input.personality.language] ?? input.personality.language;
+    directives.push(
+      `Language: Always respond in ${langName}. Regardless of what language the user writes in, all your responses must be in ${langName}.`
     );
   }
 
