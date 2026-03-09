@@ -107,7 +107,7 @@ export function LeftCatalogPanel({ targetAgent, onToolClick, onClearTarget, pare
     };
 
     const itemClass = isSubagentMode
-        ? "group flex flex-col items-center justify-start pt-4 pb-2 h-[106px] bg-amber-50/50 canvas-dark:bg-amber-950/20 border border-amber-200/30 canvas-dark:border-amber-800/30 rounded-3xl cursor-pointer hover:bg-amber-50 canvas-dark:hover:bg-amber-950/40 hover:shadow-md hover:border-amber-300/50 canvas-dark:hover:border-amber-700/50 transition-all"
+        ? "group flex flex-col items-center justify-start pt-4 pb-2 h-[106px] bg-[#f8f9fa] canvas-dark:bg-[#1E1E1E]/80 border border-black/5 canvas-dark:border-[#2A2A2A] rounded-3xl cursor-pointer hover:bg-white canvas-dark:hover:bg-[#252525] hover:shadow-md transition-all"
         : "group flex flex-col items-center justify-start pt-4 pb-2 h-[106px] bg-[#f8f9fa] canvas-dark:bg-[#1E1E1E]/80 border border-black/5 canvas-dark:border-[#2A2A2A] rounded-3xl cursor-grab active:cursor-grabbing hover:bg-white canvas-dark:hover:bg-[#252525] hover:shadow-md transition-all";
 
     return (
@@ -115,7 +115,7 @@ export function LeftCatalogPanel({ targetAgent, onToolClick, onClearTarget, pare
             className={cn(
                 "absolute top-6 left-6 bottom-6 z-20 flex flex-col backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] overflow-hidden",
                 isSubagentMode
-                    ? "bg-white/80 canvas-dark:bg-[#141414]/95 border border-amber-300/40 canvas-dark:border-amber-800/40"
+                    ? "bg-white/80 canvas-dark:bg-[#141414]/95 relative before:absolute before:inset-0 before:z-[-1] before:p-[1.5px] before:rounded-[inherit] before:bg-gradient-to-br before:from-[#FF8C00] before:to-[#9D50BB] before:[mask-image:linear-gradient(white,white),linear-gradient(white,white)] before:[mask-clip:content-box,border-box] before:[mask-composite:exclude]"
                     : "bg-white/70 canvas-dark:bg-[#141414]/90 border border-white/60 canvas-dark:border-[#242424]"
             )}
             animate={{
@@ -148,14 +148,14 @@ export function LeftCatalogPanel({ targetAgent, onToolClick, onClearTarget, pare
                     >
                         {/* Subagent mode banner */}
                         {isSubagentMode && (
-                            <div className="mx-4 mt-4 mb-0 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                                <Plus className="w-3.5 h-3.5 text-amber-500 shrink-0" strokeWidth={2.5} />
-                                <span className="text-[11px] font-semibold text-amber-600 canvas-dark:text-amber-400 truncate flex-1">
+                            <div className="mx-4 mt-4 mb-0 flex items-center gap-2 px-3 py-2.5 rounded-xl gradient-accent-bg shadow-md">
+                                <Plus className="w-3.5 h-3.5 text-white shrink-0" strokeWidth={2.5} />
+                                <span className="text-[11px] font-semibold text-white truncate flex-1">
                                     Adding to {targetAgent.name}
                                 </span>
                                 <button
                                     onClick={onClearTarget}
-                                    className="shrink-0 hover:text-amber-700 canvas-dark:hover:text-amber-300 text-amber-500/70 transition-colors"
+                                    className="shrink-0 hover:text-white text-white/70 transition-colors"
                                 >
                                     <X className="w-3.5 h-3.5" strokeWidth={2.5} />
                                 </button>

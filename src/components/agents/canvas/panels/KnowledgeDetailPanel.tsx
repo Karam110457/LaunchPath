@@ -399,18 +399,22 @@ function FileUploadForm({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const ALLOWED_TYPES = [
+  const ALLOWED_TYPES = new Set([
     "application/pdf",
     "text/plain",
     "text/markdown",
+    "text/x-markdown",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "text/csv",
-  ];
+  ]);
+  // Fallback: browsers often report .md as application/octet-stream
+  const ALLOWED_EXTENSIONS = new Set(["pdf", "txt", "md", "docx", "csv"]);
 
   const handleFiles = useCallback((files: FileList | File[]) => {
     const fileArray = Array.from(files);
     for (const file of fileArray) {
-      if (!ALLOWED_TYPES.includes(file.type)) {
+      const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+      if (!ALLOWED_TYPES.has(file.type) && !ALLOWED_EXTENSIONS.has(ext)) {
         setError(`"${file.name}" is not a supported format.`);
         return;
       }

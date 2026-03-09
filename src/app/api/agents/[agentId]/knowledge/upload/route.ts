@@ -21,9 +21,12 @@ const ALLOWED_MIME = new Set([
   "application/pdf",
   "text/plain",
   "text/markdown",
+  "text/x-markdown",
+  "application/octet-stream", // browsers often report .md files as this
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "text/csv",
 ]);
+const ALLOWED_EXTENSIONS = new Set(["pdf", "txt", "md", "docx", "csv"]);
 
 export async function POST(
   request: NextRequest,
@@ -78,7 +81,8 @@ export async function POST(
     return NextResponse.json({ error: "File too large (max 25MB)" }, { status: 400 });
   }
 
-  if (!ALLOWED_MIME.has(file.type)) {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (!ALLOWED_MIME.has(file.type) && !ALLOWED_EXTENSIONS.has(ext)) {
     return NextResponse.json(
       { error: "File type not supported. Use PDF, TXT, MD, DOCX, or CSV." },
       { status: 400 }
@@ -118,18 +122,19 @@ export async function POST(
       throw new Error(`Storage upload failed: ${uploadError.message}`);
     }
 
-    // Extract text
+    // Extract text — use extension as fallback when MIME is ambiguous
     let text: string;
-    if (file.type === "application/pdf") {
+    if (file.type === "application/pdf" || ext === "pdf") {
       text = await extractPdfText(fileBuffer);
     } else if (
       file.type ===
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || ext === "docx"
     ) {
       text = await extractDocxText(fileBuffer);
-    } else if (file.type === "text/csv") {
+    } else if (file.type === "text/csv" || ext === "csv") {
       text = extractCsvText(fileBuffer);
     } else {
+      // TXT, MD, or any text-based format with misreported MIME
       text = fileBuffer.toString("utf-8");
     }
 
