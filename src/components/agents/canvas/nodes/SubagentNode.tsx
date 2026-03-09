@@ -75,7 +75,7 @@ export const SubagentNode = memo(function SubagentNode({ data, dragging }: NodeP
             id="bottom-left"
             isConnectableStart={false}
             style={{ left: "25%", bottom: "-8px" }}
-            className="!bg-transparent !w-1 !h-1 !border-0 !min-w-0 !min-h-0 !opacity-0"
+            className="!bg-transparent !w-2.5 !h-2.5 !border-0 !min-w-0 !min-h-0 !opacity-0"
           />
           <Handle
             type="source"
@@ -83,10 +83,20 @@ export const SubagentNode = memo(function SubagentNode({ data, dragging }: NodeP
             id="bottom-right"
             isConnectableStart={false}
             style={{ left: "75%", bottom: "-8px" }}
-            className="!bg-transparent !w-1 !h-1 !border-0 !min-w-0 !min-h-0 !opacity-0"
+            className="!bg-transparent !w-2.5 !h-2.5 !border-0 !min-w-0 !min-h-0 !opacity-0"
           />
         </div>
       </ShineBorder>
+
+      {/* Handle labels on hover */}
+      <div className="relative mt-1 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" style={{ width: NODE_W }}>
+        <span className="absolute text-[11px] font-medium text-neutral-500 canvas-dark:text-neutral-400" style={{ left: "25%", transform: "translateX(-50%)" }}>
+          Knowledge
+        </span>
+        <span className="absolute text-[11px] font-medium text-neutral-500 canvas-dark:text-neutral-400" style={{ left: "75%", transform: "translateX(-50%)" }}>
+          Tools
+        </span>
+      </div>
     </motion.div>
   );
 });
