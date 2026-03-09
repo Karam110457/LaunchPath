@@ -1616,7 +1616,7 @@ function AgentCanvasInner({
       <LeftCatalogPanel
         targetAgent={catalogTargetAgent}
         onClearTarget={() => setCatalogTargetAgent(null)}
-        onToolClick={(type, _payload) => {
+        onToolClick={(type, payload) => {
           const tgt = catalogTargetAgent;
           if (!tgt) return;
 
@@ -1631,11 +1631,45 @@ function AgentCanvasInner({
               setCatalogTargetAgent(null);
               setModal({ type: "subagent-knowledge", agentId: tgt.id });
             })();
-          } else if (type === "composio") {
-            // Preserve agentId for the composio flow (catalog → app library → setup)
-            pendingComposioAgentRef.current = tgt.id;
-            setCatalogTargetAgent(null);
-            setAppLibraryOpen(true);
+          } else if (type === "composio" && payload) {
+            // Create tool directly — same as parent drag-and-drop flow
+            const { toolkit, name, icon } = payload as { toolkit: string; name: string; icon: string };
+            void (async () => {
+              const res = await fetch(`/api/agents/${tgt.id}/tools`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  tool_type: "composio",
+                  display_name: name,
+                  description: `Use ${name} actions.`,
+                  config: { toolkit, toolkit_name: name, toolkit_icon: icon },
+                  is_enabled: false,
+                }),
+              });
+              if (!res.ok) { toast.error("Failed to create tool"); return; }
+              // Refetch — handleToolSaved-style auto-edge creation
+              await Promise.all([fetchTools(), fetchSubagents()]);
+              notifySaved();
+              // Auto-create edge for the new tool
+              const json = await res.json();
+              if (json.tool) {
+                const nodeId = `sa-${tgt.id}-tool-${json.tool.id}`;
+                const sourceNode = `subagent-${tgt.id}`;
+                const edgeId = `e-${sourceNode}-${nodeId}`;
+                setEdges((prev) => {
+                  if (prev.some(e => e.id === edgeId)) return prev;
+                  const updated = addEdge(
+                    { id: edgeId, source: sourceNode, sourceHandle: "bottom-right", target: nodeId, type: "dashedEdge" },
+                    prev
+                  );
+                  const ls = layoutStateRef.current;
+                  const ns = { ...ls, edges: updated.filter(e => !e.id.endsWith("-knowledge")) };
+                  setLayoutState(ns); persistLayout(ns);
+                  return updated;
+                });
+                setToolEnabled(tgt.id, json.tool.id, true);
+              }
+            })();
           } else {
             // webhook, http, mcp → open setup dialog for the subagent
             setCatalogTargetAgent(null);
