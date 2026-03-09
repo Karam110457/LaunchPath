@@ -447,7 +447,7 @@ function AgentMessage({ message }: { message: AgentChatMessage }) {
   if (message.role === "user") {
     return (
       <div className="flex justify-end" title={timeLabel}>
-        <div className="max-w-[75%] rounded-2xl rounded-tr-sm px-4 py-2.5 bg-primary text-primary-foreground text-sm">
+        <div className="max-w-[75%] rounded-2xl rounded-tr-sm px-4 py-2.5 bg-primary text-primary-foreground dark:bg-white dark:text-black canvas-dark:bg-white canvas-dark:text-black text-sm">
           {message.content}
         </div>
       </div>
