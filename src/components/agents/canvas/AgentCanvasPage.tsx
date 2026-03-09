@@ -459,6 +459,9 @@ function AgentCanvasInner({
                 isEnabled: st.is_enabled,
                 toolkitIcon: stCfg?.toolkit_icon,
                 toolkitSlug: stCfg?.toolkit,
+                needsAuth: st.tool_type === "composio" && stCfg?.toolkit
+                  ? (composioConnectionsLoading ? false : !isComposioConnected(stCfg.toolkit))
+                  : undefined,
               };
             });
           const kbCounts = detail?.knowledgeCounts ?? { total: 0, ready: 0, processing: 0 };
@@ -483,7 +486,7 @@ function AgentCanvasInner({
           };
         })
         .filter((sa) => sa.subagentId),
-    [agentTools, subagentDetails, agent.id]
+    [agentTools, subagentDetails, agent.id, isComposioConnected, composioConnectionsLoading]
   );
 
   // Canvas summary for TopBar: sub-agent count + total tool count (main + all sub-agents)
@@ -1063,7 +1066,7 @@ function AgentCanvasInner({
     existingToolTypes: string[];
   } | null>(null);
   // Subagent left-panel mode: when set, LeftCatalogPanel shows click-to-add UI
-  const [catalogTargetAgent, setCatalogTargetAgent] = useState<{ id: string; name: string } | null>(null);
+  const [catalogTargetAgent, setCatalogTargetAgent] = useState<{ id: string; name: string; hasKnowledge?: boolean } | null>(null);
   // Preserve agentId across modal transitions (catalog → app library → composio setup)
   const pendingComposioAgentRef = useRef<string | null>(null);
   const [setupTool, setSetupTool] = useState<{
@@ -1323,6 +1326,8 @@ function AgentCanvasInner({
       const targetAgentId = agent.id;
 
       if (type === "knowledge") {
+        // Only allow one knowledge base per agent
+        if (hasKnowledge) return;
         void (async () => {
           await fetch(`/api/agents/${targetAgentId}`, {
             method: "PATCH",
@@ -1330,8 +1335,9 @@ function AgentCanvasInner({
             body: JSON.stringify({ knowledge_enabled: true, skip_version: true }),
           });
           setHasKnowledge(true);
-          const newPos = { ...layoutState.positions, "knowledge": position };
-          const newState = { ...layoutState, positions: newPos };
+          const ls = layoutStateRef.current;
+          const newPos = { ...ls.positions, "knowledge": position };
+          const newState = { ...ls, positions: newPos };
           setLayoutState(newState);
           persistLayout(newState);
 
@@ -1561,7 +1567,7 @@ function AgentCanvasInner({
     } catch (e) {
       console.error("Drop failed", e);
     }
-  }, [agent.id, getNodes, screenToFlowPosition, layoutState, persistLayout, fetchTools, fetchSubagents, isComposioConnected, pushUndo, setEdges, setToolEnabled]);
+  }, [agent.id, getNodes, screenToFlowPosition, layoutState, persistLayout, fetchTools, fetchSubagents, isComposioConnected, pushUndo, setEdges, setToolEnabled, hasKnowledge]);
 
   const onNodeDoubleClick: NodeMouseHandler = useCallback(
     (_event, node) => {
@@ -1616,6 +1622,7 @@ function AgentCanvasInner({
       <LeftCatalogPanel
         targetAgent={catalogTargetAgent}
         onClearTarget={() => setCatalogTargetAgent(null)}
+        parentHasKnowledge={hasKnowledge}
         onToolClick={(type, payload) => {
           const tgt = catalogTargetAgent;
           if (!tgt) return;
@@ -1683,7 +1690,7 @@ function AgentCanvasInner({
           value={{
             openCatalogForAgent: (saId: string) => {
               const sa = subagentNodeItems.find((s) => s.subagentId === saId);
-              setCatalogTargetAgent({ id: saId, name: sa?.name ?? "Sub-Agent" });
+              setCatalogTargetAgent({ id: saId, name: sa?.name ?? "Sub-Agent", hasKnowledge: sa?.hasKnowledge ?? false });
             },
             onDeleteEdge,
           }}

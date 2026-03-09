@@ -29,12 +29,14 @@ const CUSTOM_TOOLS: {
     ];
 
 interface LeftCatalogPanelProps {
-    targetAgent?: { id: string; name: string } | null;
+    targetAgent?: { id: string; name: string; hasKnowledge?: boolean } | null;
     onToolClick?: (type: string, payload?: Record<string, unknown>) => void;
     onClearTarget?: () => void;
+    /** Whether the parent agent already has a knowledge base (hides option in drag mode) */
+    parentHasKnowledge?: boolean;
 }
 
-export function LeftCatalogPanel({ targetAgent, onToolClick, onClearTarget }: LeftCatalogPanelProps) {
+export function LeftCatalogPanel({ targetAgent, onToolClick, onClearTarget, parentHasKnowledge }: LeftCatalogPanelProps) {
     const [apps, setApps] = useState<ComposioApp[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
@@ -77,12 +79,19 @@ export function LeftCatalogPanel({ targetAgent, onToolClick, onClearTarget }: Le
 
     const filteredCustom = useMemo(() => {
         const base = isSubagentMode
-            ? CUSTOM_TOOLS.filter(t => t.type !== "subagent") // No sub-sub-agents
-            : CUSTOM_TOOLS;
+            ? CUSTOM_TOOLS.filter(t => {
+                if (t.type === "subagent") return false; // No sub-sub-agents
+                if (t.type === "knowledge" && targetAgent?.hasKnowledge) return false; // Already has knowledge
+                return true;
+            })
+            : CUSTOM_TOOLS.filter(t => {
+                if (t.type === "knowledge" && parentHasKnowledge) return false; // Parent already has knowledge
+                return true;
+            });
         if (!search.trim()) return base;
         const q = search.toLowerCase().trim();
         return base.filter(t => t.name.toLowerCase().includes(q));
-    }, [search, isSubagentMode]);
+    }, [search, isSubagentMode, targetAgent?.hasKnowledge, parentHasKnowledge]);
 
     // Handle Drag Start (only in normal mode)
     const onDragStart = (e: React.DragEvent, type: string, payload: Record<string, unknown> = {}) => {

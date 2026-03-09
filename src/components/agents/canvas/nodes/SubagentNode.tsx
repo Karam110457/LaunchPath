@@ -75,7 +75,7 @@ export const SubagentNode = memo(function SubagentNode({ data, dragging }: NodeP
             id="bottom-left"
             isConnectableStart={false}
             style={{ left: "25%", bottom: "-8px" }}
-            className="!bg-transparent !w-0 !h-0 !border-0 !min-w-0 !min-h-0"
+            className="!bg-transparent !w-1 !h-1 !border-0 !min-w-0 !min-h-0 !opacity-0"
           />
           <Handle
             type="source"
@@ -83,7 +83,7 @@ export const SubagentNode = memo(function SubagentNode({ data, dragging }: NodeP
             id="bottom-right"
             isConnectableStart={false}
             style={{ left: "75%", bottom: "-8px" }}
-            className="!bg-transparent !w-0 !h-0 !border-0 !min-w-0 !min-h-0"
+            className="!bg-transparent !w-1 !h-1 !border-0 !min-w-0 !min-h-0 !opacity-0"
           />
         </div>
       </ShineBorder>
