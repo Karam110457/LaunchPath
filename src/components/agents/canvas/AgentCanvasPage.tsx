@@ -67,7 +67,6 @@ function buildFormChangeLabel(old: AgentFormState, next: AgentFormState): string
   if (old.greetingMessage !== next.greetingMessage) return "Changed greeting message";
   if (old.systemPrompt !== next.systemPrompt) return "Changed system prompt";
   if (old.description !== next.description) return "Changed description";
-  if (old.status !== next.status) return `Changed status to ${next.status}`;
   return "Changed agent settings";
 }
 
@@ -98,7 +97,6 @@ export interface AgentCanvasPageProps {
     description: string | null;
     system_prompt: string;
     model: string;
-    status: string;
     created_at: string;
     wizard_config?: WizardConfig | null;
     canvas_layout?: any; // We parse this below
@@ -138,7 +136,6 @@ function AgentCanvasInner({
     tone: personality?.tone ?? "",
     greetingMessage: personality?.greeting_message ?? "",
     model: agent.model,
-    status: agent.status,
     systemPrompt: agent.system_prompt,
     wizardConfig: (agent.wizard_config as WizardConfig) ?? null,
   }), [agent, personality]);
@@ -183,7 +180,6 @@ function AgentCanvasInner({
       greeting_message: formState.greetingMessage.trim() || undefined,
     },
     model: formState.model,
-    status: formState.status,
     wizard_config: formState.wizardConfig,
   }), [formState]);
 

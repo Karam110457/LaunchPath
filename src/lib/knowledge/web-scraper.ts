@@ -1,13 +1,15 @@
 /**
- * Website content scraper using fetch + cheerio.
- * Extracts main text content from a URL.
+ * Website content scraper using Defuddle + Jina AI Reader.
+ *
+ * Tier 1 (static HTML): fetch + Defuddle for algorithmic content extraction.
+ * Tier 2 (JS-rendered SPAs): Jina AI Reader with readerlm-v2 for ML-based extraction.
  */
 
-import * as cheerio from "cheerio";
+import { Defuddle } from "defuddle/node";
 
 const MAX_CONTENT_LENGTH = 100 * 1024; // 100KB text limit
 const FETCH_TIMEOUT_MS = 10_000;
-const SPARSE_CONTENT_THRESHOLD = 200; // chars — below this, cheerio likely failed on a JS-heavy site
+const SPARSE_CONTENT_THRESHOLD = 200; // chars — below this, Defuddle likely failed on a JS-heavy site
 const JINA_TIMEOUT_MS = 15_000; // Jina renders JS so it's slower
 
 /** Browser-like headers to avoid 403 blocks from sites that reject bots. */
@@ -51,8 +53,12 @@ function validateUrl(url: string): boolean {
   }
 }
 
-/** Primary scraper: fetch + cheerio static HTML parsing. */
-async function scrapeWithCheerio(url: string): Promise<ScrapedContent> {
+/**
+ * Primary scraper: fetch + Defuddle content extraction.
+ * Defuddle scores DOM nodes to identify the main content area algorithmically,
+ * strips navigation/sidebar/footer/ads, and returns clean markdown.
+ */
+async function scrapeWithDefuddle(url: string): Promise<ScrapedContent> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
@@ -72,15 +78,26 @@ async function scrapeWithCheerio(url: string): Promise<ScrapedContent> {
     }
 
     const html = await response.text();
-    return extractContent(html);
+    const result = await Defuddle(html, url, { markdown: true });
+
+    const content = (result.content || "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
+      .slice(0, MAX_CONTENT_LENGTH);
+
+    return {
+      title: result.title || "Untitled",
+      content,
+    };
   } finally {
     clearTimeout(timeout);
   }
 }
 
 /**
- * Fallback scraper using Jina AI Reader.
- * Jina renders JavaScript, extracts main content, and returns markdown.
+ * Fallback scraper using Jina AI Reader with readerlm-v2.
+ * Jina renders JavaScript, then its ML model extracts main content
+ * and returns clean markdown (stripping UI chrome, navigation, etc.).
  * Free tier, no API key required.
  */
 async function scrapeWithJina(url: string): Promise<ScrapedContent> {
@@ -92,7 +109,11 @@ async function scrapeWithJina(url: string): Promise<ScrapedContent> {
   try {
     const response = await fetch(jinaUrl, {
       signal: controller.signal,
-      headers: { Accept: "text/plain" },
+      headers: {
+        Accept: "text/plain",
+        "x-engine": "readerlm-v2",
+        "x-retain-images": "none",
+      },
     });
 
     if (!response.ok) {
@@ -133,17 +154,17 @@ export async function scrapeWebsite(url: string): Promise<ScrapedContent> {
     throw new Error("Invalid or blocked URL");
   }
 
-  // Primary: cheerio (fast, no external dependency)
-  const cheerioResult = await scrapeWithCheerio(url);
+  // Primary: Defuddle (algorithmic content extraction from static HTML)
+  const defuddleResult = await scrapeWithDefuddle(url);
 
-  // Check if cheerio extracted enough content
-  const cleanedLength = cheerioResult.content.replace(/\s+/g, " ").trim().length;
+  // Check if Defuddle extracted enough content
+  const cleanedLength = defuddleResult.content.replace(/\s+/g, " ").trim().length;
 
   if (cleanedLength >= SPARSE_CONTENT_THRESHOLD) {
-    return cheerioResult;
+    return defuddleResult;
   }
 
-  // Fallback: Jina AI Reader (handles JS-rendered sites)
+  // Fallback: Jina AI Reader with readerlm-v2 (handles JS-rendered sites)
   try {
     const jinaResult = await scrapeWithJina(url);
     const jinaCleanedLength = jinaResult.content.replace(/\s+/g, " ").trim().length;
@@ -152,53 +173,9 @@ export async function scrapeWebsite(url: string): Promise<ScrapedContent> {
       return jinaResult;
     }
   } catch {
-    // Jina failed — fall through to cheerio result
+    // Jina failed — fall through to Defuddle result
   }
 
-  // Return cheerio result even if sparse (better than nothing)
-  return cheerioResult;
-}
-
-/** Extract main text content from HTML. */
-function extractContent(html: string): ScrapedContent {
-  const $ = cheerio.load(html);
-
-  // Remove non-content elements
-  $("script, style, noscript, iframe, svg, nav, footer, header").remove();
-  $("[role='navigation'], [role='banner'], [role='contentinfo']").remove();
-  $(".nav, .navbar, .footer, .sidebar, .menu, .cookie-banner, .popup").remove();
-
-  const title = $("title").text().trim() || $("h1").first().text().trim() || "Untitled";
-
-  // Try to find main content area
-  let contentEl = $("main, article, [role='main']").first();
-  if (!contentEl.length) {
-    contentEl = $(".content, .main, #content, #main, .post, .article").first();
-  }
-  if (!contentEl.length) {
-    contentEl = $("body");
-  }
-
-  // Extract text, preserving paragraph structure
-  let text = "";
-  contentEl.find("p, h1, h2, h3, h4, h5, h6, li, td, th, blockquote, pre").each((_, el) => {
-    const elText = $(el).text().trim();
-    if (elText) {
-      text += elText + "\n\n";
-    }
-  });
-
-  // Fallback: if no structured content found, use all text
-  if (!text.trim()) {
-    text = contentEl.text();
-  }
-
-  // Clean and truncate
-  const cleaned = text
-    .replace(/[ \t]+/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()
-    .slice(0, MAX_CONTENT_LENGTH);
-
-  return { title, content: cleaned };
+  // Return Defuddle result even if sparse (better than nothing)
+  return defuddleResult;
 }

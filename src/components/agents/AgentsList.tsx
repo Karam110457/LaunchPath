@@ -2,9 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useMemo } from "react";
-import { Copy, Trash2, Loader2, Search, Bot, Plus, Activity, Pause, FileEdit } from "lucide-react";
+import { Copy, Trash2, Loader2, Search, Bot, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -19,13 +18,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { cn } from "@/lib/utils";
+
 
 interface AgentListItem {
   id: string;
   name: string;
   description: string | null;
-  status: string;
   personality: unknown;
   template_id: string | null;
   created_at: string;
@@ -36,35 +34,17 @@ interface AgentsListProps {
   userFullName?: string;
 }
 
-const STATUS_STYLES: Record<string, { label: string; variant: "default" | "secondary" | "outline"; className?: string }> = {
-  draft: { label: "Draft", variant: "secondary" },
-  active: {
-    label: "Active",
-    variant: "outline",
-    className: "bg-white dark:bg-[#252525] border-black/5 dark:border-[#333333] text-neutral-900 dark:text-neutral-100"
-  },
-  paused: { label: "Paused", variant: "outline" },
-};
-
-const STATUS_FILTERS = ["all", "draft", "active", "paused"] as const;
 
 export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) {
   const router = useRouter();
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const filtered = useMemo(() => {
     return agents.filter((a) => {
-      const matchesSearch = !search || a.name.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus = statusFilter === "all" || a.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      return !search || a.name.toLowerCase().includes(search.toLowerCase());
     });
-  }, [agents, search, statusFilter]);
-
-  const activeCount = agents.filter(a => a.status === "active").length;
-  const draftCount = agents.filter(a => a.status === "draft").length;
-  const pausedCount = agents.filter(a => a.status === "paused").length;
+  }, [agents, search]);
 
   const handleDelete = async (agentId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -114,34 +94,14 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
           </p>
         </div>
 
-        {/* Dashboard Stats */}
-        <div className="flex gap-4 md:gap-8 overflow-x-auto pb-2 -mx-6 px-6 lg:mx-0 lg:px-0 lg:pb-0 hide-scrollbar">
-          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-[#2A2A2A] shadow-sm">
-            <div className="w-[52px] h-[52px] rounded-[18px] bg-[#f8f9fa] dark:bg-[#252525] border border-black/5 dark:border-[#333333] flex items-center justify-center">
-              <Bot className="w-6 h-6" style={{ stroke: "url(#primary-icon-gradient)" }} />
-            </div>
-            <div>
-              <p className="text-3xl font-semibold leading-none text-neutral-900 dark:text-neutral-100">{agents.length}</p>
-              <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mt-1">Total Agents</p>
-            </div>
+        {/* Agent count */}
+        <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-[#2A2A2A] shadow-sm">
+          <div className="w-[52px] h-[52px] rounded-[18px] bg-[#f8f9fa] dark:bg-[#252525] border border-black/5 dark:border-[#333333] flex items-center justify-center">
+            <Bot className="w-6 h-6" style={{ stroke: "url(#primary-icon-gradient)" }} />
           </div>
-          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-[#2A2A2A] shadow-sm">
-            <div className="w-[52px] h-[52px] rounded-[18px] bg-[#f8f9fa] dark:bg-[#252525] border border-black/5 dark:border-[#333333] flex items-center justify-center">
-              <Activity className="w-6 h-6" style={{ stroke: "url(#primary-icon-gradient)" }} />
-            </div>
-            <div>
-              <p className="text-3xl font-semibold leading-none text-neutral-900 dark:text-neutral-100">{activeCount}</p>
-              <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mt-1">Active</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-[#2A2A2A] shadow-sm">
-            <div className="w-[52px] h-[52px] rounded-[18px] bg-[#f8f9fa] dark:bg-[#252525] border border-black/5 dark:border-[#333333] flex items-center justify-center">
-              <FileEdit className="w-6 h-6" style={{ stroke: "url(#primary-icon-gradient)" }} />
-            </div>
-            <div>
-              <p className="text-3xl font-semibold leading-none text-neutral-900 dark:text-neutral-100">{draftCount}</p>
-              <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mt-1">Drafts</p>
-            </div>
+          <div>
+            <p className="text-3xl font-semibold leading-none text-neutral-900 dark:text-neutral-100">{agents.length}</p>
+            <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mt-1">Total Agents</p>
           </div>
         </div>
       </div>
@@ -150,33 +110,14 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
 
       {/* Controls */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 dark:text-neutral-500" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search agents..."
-              className="w-full bg-white dark:bg-[#151515] border border-neutral-200/60 dark:border-[#2A2A2A] rounded-xl h-10 pl-9 pr-4 text-sm text-neutral-900 dark:text-neutral-200 shadow-sm placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-200 dark:focus-visible:ring-[#2A2A2A]"
-            />
-          </div>
-          <div className="flex bg-white dark:bg-[#151515] p-1 rounded-full border border-neutral-200/60 dark:border-[#2A2A2A] shadow-sm overflow-x-auto hide-scrollbar">
-            {STATUS_FILTERS.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setStatusFilter(s)}
-                className={cn(
-                  "px-4 py-1.5 text-sm font-medium rounded-full transition-[color,background-color,box-shadow] duration-150 capitalize whitespace-nowrap",
-                  statusFilter === s
-                    ? "bg-foreground text-background shadow-md"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 dark:text-neutral-500" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search agents..."
+            className="w-full bg-white dark:bg-[#151515] border border-neutral-200/60 dark:border-[#2A2A2A] rounded-xl h-10 pl-9 pr-4 text-sm text-neutral-900 dark:text-neutral-200 shadow-sm placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-200 dark:focus-visible:ring-[#2A2A2A]"
+          />
         </div>
         <Button asChild className="rounded-full shadow-md gradient-accent-bg text-white hover:scale-[1.02] transition-transform border-0" size="lg">
           <Link href="/dashboard/agents/new">
@@ -200,8 +141,6 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 stagger-enter">
           {filtered.map((agent, i) => {
-            const statusInfo = STATUS_STYLES[agent.status] ?? STATUS_STYLES.draft;
-
             return (
               <Card
                 key={agent.id}
@@ -210,14 +149,11 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
                 className="group relative cursor-pointer outline-none overflow-hidden rounded-[32px] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 border border-black/5 dark:border-[#2A2A2A] hover:bg-white dark:hover:bg-[#252525] hover:shadow-md hover:-translate-y-1 transition-[transform,box-shadow,background-color] duration-200"
               >
                 <CardContent className="p-6 h-full flex flex-col justify-between min-h-[220px]">
-                  {/* Top section: Icon and Status */}
-                  <div className="flex items-start justify-between mb-4">
+                  {/* Top section: Icon */}
+                  <div className="mb-4">
                     <div className="w-[52px] h-[52px] rounded-[18px] bg-white dark:bg-[#252525] flex items-center justify-center shrink-0 border border-black/5 dark:border-[#333333] shadow-sm group-hover:scale-105 transition-transform">
                       <Bot className="w-7 h-7" style={{ stroke: "url(#primary-icon-gradient)" }} />
                     </div>
-                    <Badge variant={statusInfo.variant} className={cn("rounded-full px-3 capitalize font-medium border-black/5 dark:border-[#333333]", statusInfo.className)}>
-                      {statusInfo.label}
-                    </Badge>
                   </div>
 
                   {/* Middle section: Info */}

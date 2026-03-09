@@ -71,7 +71,6 @@ export interface AgentFormState {
   tone: string;
   greetingMessage: string;
   model: string;
-  status: string;
   systemPrompt: string;
   wizardConfig: WizardConfig | null;
 }
