@@ -250,11 +250,21 @@ function AgentCanvasInner({
 
   // Inline status pill (replaces sonner toast for undo/redo feedback)
   const [undoToast, setUndoToast] = useState<string | null>(null);
+  const [undoToastFading, setUndoToastFading] = useState(false);
   const undoToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const undoToastFadeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showUndoToast = useCallback((msg: string) => {
     if (undoToastTimerRef.current) clearTimeout(undoToastTimerRef.current);
+    if (undoToastFadeRef.current) clearTimeout(undoToastFadeRef.current);
+    setUndoToastFading(false);
     setUndoToast(msg);
-    undoToastTimerRef.current = setTimeout(() => setUndoToast(null), 1500);
+    undoToastTimerRef.current = setTimeout(() => {
+      setUndoToastFading(true);
+      undoToastFadeRef.current = setTimeout(() => {
+        setUndoToast(null);
+        setUndoToastFading(false);
+      }, 300);
+    }, 1500);
   }, []);
 
   // Debounced formState undo tracking (1s debounce batches keystrokes)
@@ -302,9 +312,15 @@ function AgentCanvasInner({
       if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
       e.preventDefault();
       if (e.shiftKey) {
-        if (canRedo) { void redo(); showUndoToast(`Redone: ${redoLabel}`); }
+        if (canRedo) {
+          const label = redoLabel;
+          void redo().then(ok => showUndoToast(ok ? `Redone: ${label}` : `Redo failed: ${label}`));
+        }
       } else {
-        if (canUndo) { void undo(); showUndoToast(`Undone: ${undoLabel}`); }
+        if (canUndo) {
+          const label = undoLabel;
+          void undo().then(ok => showUndoToast(ok ? `Undone: ${label}` : `Undo failed: ${label}`));
+        }
       }
     };
     window.addEventListener("keydown", handler);
@@ -551,6 +567,10 @@ function AgentCanvasInner({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
+  // Ref mirrors edges for use in callbacks (avoids stale closures)
+  const edgesRef = useRef(edges);
+  edgesRef.current = edges;
+
   // ─── Animated node removal ────────────────────────────────────────────────
   // Must match NODE_EXIT.transition.duration (250ms) in animation-constants.ts
   const ANIMATED_EXIT_MS = 250;
@@ -756,13 +776,14 @@ function AgentCanvasInner({
   );
 
   const onNodeDragStop: OnNodeDrag = useCallback(
-    (_event, _node, allNodes) => {
+    (_event, node, allNodes) => {
       const oldPositions = dragStartPositionsRef.current;
-      const updatedPositions = { ...layoutState.positions };
+      const ls = layoutStateRef.current;
+      const updatedPositions = { ...ls.positions };
       for (const n of allNodes) {
         updatedPositions[n.id] = { x: Math.round(n.position.x), y: Math.round(n.position.y) };
       }
-      const newState = { ...layoutState, positions: updatedPositions };
+      const newState = { ...ls, positions: updatedPositions };
       setLayoutState(newState);
       persistLayout(newState);
 
@@ -773,11 +794,12 @@ function AgentCanvasInner({
       });
 
       if (moved) {
-        const oldLayoutPositions = { ...layoutState.positions, ...oldPositions };
+        const dragLabel = allNodes.length === 1 ? `Moved ${getNodeDisplayName(node)}` : "Moved nodes";
         pushUndo({
-          label: "Moved nodes",
+          label: dragLabel,
           undo: () => {
-            const undoState = { ...layoutState, positions: oldLayoutPositions };
+            const cur = layoutStateRef.current;
+            const undoState = { ...cur, positions: { ...cur.positions, ...oldPositions } };
             setLayoutState(undoState);
             persistLayout(undoState);
             setNodes((nds) =>
@@ -788,8 +810,10 @@ function AgentCanvasInner({
             );
           },
           redo: () => {
-            setLayoutState(newState);
-            persistLayout(newState);
+            const cur = layoutStateRef.current;
+            const redoState = { ...cur, positions: { ...cur.positions, ...updatedPositions } };
+            setLayoutState(redoState);
+            persistLayout(redoState);
             setNodes((nds) =>
               nds.map((n) => updatedPositions[n.id]
                 ? { ...n, position: updatedPositions[n.id] }
@@ -800,7 +824,7 @@ function AgentCanvasInner({
         });
       }
     },
-    [layoutState, persistLayout, pushUndo, setNodes]
+    [persistLayout, pushUndo, setNodes]
   );
 
   // Restrict which handles can connect to which node types.
@@ -896,6 +920,35 @@ function AgentCanvasInner({
     [agent.id]
   );
 
+  // Helper: auto-create edge for a tool and enable it (used by undo/redo closures)
+  const autoConnectTool = useCallback(
+    (ownerAgentId: string, toolId: string, toolType: string, config?: Record<string, unknown>) => {
+      const isSubagentTool = ownerAgentId !== agent.id;
+      const nodeId = toolType === "subagent"
+        ? `subagent-${(config as { target_agent_id?: string })?.target_agent_id}`
+        : isSubagentTool
+          ? `sa-${ownerAgentId}-tool-${toolId}`
+          : `tool-${toolId}`;
+      const sourceNode = isSubagentTool ? `subagent-${ownerAgentId}` : "agent";
+      const edgeId = `e-${sourceNode}-${nodeId}`;
+
+      setEdges((prev) => {
+        if (prev.some(e => e.id === edgeId)) return prev;
+        const updated = addEdge(
+          { id: edgeId, source: sourceNode, sourceHandle: "bottom-right", target: nodeId, type: "dashedEdge" },
+          prev
+        );
+        const ls = layoutStateRef.current;
+        const newState = { ...ls, edges: updated.filter(e => !e.id.endsWith("-knowledge")) };
+        setLayoutState(newState);
+        persistLayout(newState);
+        return updated;
+      });
+      setToolEnabled(ownerAgentId, toolId, true);
+    },
+    [agent.id, setEdges, persistLayout, setToolEnabled]
+  );
+
   const onConnect = useCallback(
     (params: Connection) => {
       const { source, target } = params;
@@ -963,9 +1016,10 @@ function AgentCanvasInner({
 
       // Capture removed edges before applying (skip auto-generated knowledge edges)
       const removedEdges: Edge[] = [];
+      const currentEdges = edgesRef.current;
       for (const change of changes) {
         if (change.type === "remove") {
-          const found = edges.find((e: Edge) => e.id === change.id);
+          const found = currentEdges.find((e: Edge) => e.id === change.id);
           if (found && !found.id.endsWith("-knowledge")) removedEdges.push(found);
         }
       }
@@ -1000,7 +1054,7 @@ function AgentCanvasInner({
       const toastMsg = removedEdges.length === 1
         ? `${names[0]} disconnected`
         : `${removedEdges.length} connections removed`;
-      toast.info(toastMsg, { duration: 2000 });
+      showUndoToast(toastMsg);
 
       pushUndo({
         label: removedEdges.length === 1 ? `Disconnected ${names[0]}` : `Disconnected ${removedEdges.length} edges`,
@@ -1042,13 +1096,13 @@ function AgentCanvasInner({
         },
       });
     },
-    [edges, nodes, onEdgesChange, persistLayout, setEdges, resolveToolFromNodeId, setToolEnabled, pushUndo]
+    [onEdgesChange, persistLayout, setEdges, resolveToolFromNodeId, setToolEnabled, pushUndo, showUndoToast]
   );
 
   // ─── Edge deletion via DashedEdge X button ──────────────────────────────
   const onDeleteEdge = useCallback(
     (edgeId: string) => {
-      const edge = edges.find(e => e.id === edgeId);
+      const edge = edgesRef.current.find(e => e.id === edgeId);
       if (!edge || !edge.target) return;
       if (edge.id.endsWith("-knowledge")) return;
 
@@ -1068,7 +1122,7 @@ function AgentCanvasInner({
 
       if (resolved) setToolEnabled(resolved.agentId, resolved.toolId, false);
 
-      toast.info(`${displayName} disconnected`, { duration: 2000 });
+      showUndoToast(`${displayName} disconnected`);
 
       pushUndo({
         label: `Disconnected ${displayName}`,
@@ -1098,7 +1152,7 @@ function AgentCanvasInner({
         },
       });
     },
-    [edges, nodes, resolveToolFromNodeId, setToolEnabled, setEdges, persistLayout, pushUndo]
+    [nodes, resolveToolFromNodeId, setToolEnabled, setEdges, persistLayout, pushUndo, showUndoToast]
   );
 
   // ─── Interaction ─────────────────────────────────────────────────────────
@@ -1224,9 +1278,16 @@ function AgentCanvasInner({
             });
             if (res.ok) {
               const json = await res.json();
-              if (json.tool) currentToolId = json.tool.id;
+              if (json.tool) {
+                currentToolId = json.tool.id;
+                await Promise.all([fetchTools(), fetchSubagents()]);
+                autoConnectTool(ownerAgentId, json.tool.id, tool.tool_type, tool.config as Record<string, unknown>);
+              } else {
+                await Promise.all([fetchTools(), fetchSubagents()]);
+              }
+            } else {
+              await Promise.all([fetchTools(), fetchSubagents()]);
             }
-            await Promise.all([fetchTools(), fetchSubagents()]);
             isUndoingRef.current = false;
           },
         });
@@ -1257,7 +1318,7 @@ function AgentCanvasInner({
         setToolEnabled(ownerAgentId, tool.id, true);
       }
     }
-  }, [agentTools, subagentDetails, agent.id, setupTool, composioSetup, fetchTools, fetchSubagents, notifySaved, setToolEnabled, pushUndo, setEdges, persistLayout]);
+  }, [agentTools, subagentDetails, agent.id, setupTool, composioSetup, fetchTools, fetchSubagents, notifySaved, setToolEnabled, pushUndo, setEdges, persistLayout, autoConnectTool]);
 
   const handleToolDeleted = useCallback(async (deletedTool?: AgentToolResponse) => {
     setSetupTool(null);
@@ -1286,8 +1347,13 @@ function AgentCanvasInner({
           if (res.ok) {
             const json = await res.json();
             lastCreatedId = json.tool?.id ?? null;
+            await Promise.all([fetchTools(), fetchSubagents()]);
+            if (lastCreatedId) {
+              autoConnectTool(ownerAgentId, lastCreatedId, deletedTool.tool_type, deletedTool.config as Record<string, unknown>);
+            }
+          } else {
+            await Promise.all([fetchTools(), fetchSubagents()]);
           }
-          await Promise.all([fetchTools(), fetchSubagents()]);
           isUndoingRef.current = false;
         },
         redo: async () => {
@@ -1300,7 +1366,7 @@ function AgentCanvasInner({
         },
       });
     }
-  }, [fetchTools, fetchSubagents, notifySaved, pushUndo]);
+  }, [fetchTools, fetchSubagents, notifySaved, pushUndo, autoConnectTool]);
 
   const handleSubagentDeleted = useCallback(async () => {
     setModal({ type: "none" });
@@ -1531,8 +1597,14 @@ function AgentCanvasInner({
                     is_enabled: false,
                   }),
                 });
-                if (r.ok) { const j = await r.json(); if (j.tool) currentToolId = j.tool.id; }
-                await fetchTools();
+                if (r.ok) {
+                  const j = await r.json();
+                  if (j.tool) {
+                    currentToolId = j.tool.id;
+                    await fetchTools();
+                    autoConnectTool(targetAgentId, j.tool.id, "composio", { toolkit, toolkit_name: name, toolkit_icon: icon });
+                  } else { await fetchTools(); }
+                } else { await fetchTools(); }
                 isUndoingRef.current = false;
               },
             });
@@ -1634,8 +1706,14 @@ function AgentCanvasInner({
                     is_enabled: false,
                   }),
                 });
-                if (r.ok) { const j = await r.json(); if (j.tool) currentToolId = j.tool.id; }
-                await fetchTools();
+                if (r.ok) {
+                  const j = await r.json();
+                  if (j.tool) {
+                    currentToolId = j.tool.id;
+                    await fetchTools();
+                    autoConnectTool(targetAgentId, j.tool.id, toolType, {});
+                  } else { await fetchTools(); }
+                } else { await fetchTools(); }
                 isUndoingRef.current = false;
               },
             });
@@ -1648,7 +1726,7 @@ function AgentCanvasInner({
     } catch (e) {
       console.error("Drop failed", e);
     }
-  }, [agent.id, getNodes, screenToFlowPosition, layoutState, persistLayout, fetchTools, fetchSubagents, isComposioConnected, pushUndo, setEdges, setToolEnabled, hasKnowledge]);
+  }, [agent.id, getNodes, screenToFlowPosition, layoutState, persistLayout, fetchTools, fetchSubagents, isComposioConnected, pushUndo, setEdges, setToolEnabled, hasKnowledge, autoConnectTool]);
 
   const onNodeDoubleClick: NodeMouseHandler = useCallback(
     (_event, node) => {
@@ -1865,7 +1943,9 @@ function AgentCanvasInner({
 
       {/* Undo/Redo inline status pill */}
       {undoToast && (
-        <div className="absolute bottom-[68px] left-6 md:left-[320px] z-30 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div
+          className={`absolute bottom-[68px] left-6 md:left-[320px] z-30 transition-opacity duration-300 ${undoToastFading ? "opacity-0" : "opacity-100 animate-in fade-in slide-in-from-bottom-2 duration-200"}`}
+        >
           <div className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/80 canvas-dark:bg-neutral-800/80 backdrop-blur-md border border-white/60 canvas-dark:border-neutral-700/40 text-neutral-700 canvas-dark:text-neutral-300 shadow-sm">
             {undoToast}
           </div>
@@ -1875,7 +1955,7 @@ function AgentCanvasInner({
       {/* Undo/Redo + Zoom controls */}
       <div className="absolute bottom-6 left-6 md:left-[320px] z-30 flex items-center gap-1 bg-white/70 canvas-dark:bg-[#1C1C1C]/70 backdrop-blur-xl border border-white/60 canvas-dark:border-[#2A2A2A]/50 shadow-sm rounded-xl p-1.5">
         <button
-          onClick={() => { if (canUndo) { void undo(); showUndoToast(`Undone: ${undoLabel}`); } }}
+          onClick={() => { if (canUndo) { const l = undoLabel; void undo().then(ok => showUndoToast(ok ? `Undone: ${l}` : `Undo failed: ${l}`)); } }}
           disabled={!canUndo}
           className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-800 canvas-dark:hover:text-neutral-200 hover:bg-black/5 canvas-dark:hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           title={canUndo ? `Undo: ${undoLabel}` : "Nothing to undo"}
@@ -1883,7 +1963,7 @@ function AgentCanvasInner({
           <Undo2 className="w-4 h-4" />
         </button>
         <button
-          onClick={() => { if (canRedo) { void redo(); showUndoToast(`Redone: ${redoLabel}`); } }}
+          onClick={() => { if (canRedo) { const l = redoLabel; void redo().then(ok => showUndoToast(ok ? `Redone: ${l}` : `Redo failed: ${l}`)); } }}
           disabled={!canRedo}
           className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-800 canvas-dark:hover:text-neutral-200 hover:bg-black/5 canvas-dark:hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           title={canRedo ? `Redo: ${redoLabel}` : "Nothing to redo"}
