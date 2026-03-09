@@ -25,7 +25,7 @@ export default async function ClientCampaignsPage({
         <h2 className="text-lg font-semibold">Campaigns</h2>
         <Link
           href={`/dashboard/clients/${clientId}/campaigns/new`}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg shadow-md gradient-accent-bg text-white hover:scale-[1.02] transition-transform border-0"
         >
           <Plus className="size-4" />
           New Campaign
@@ -53,15 +53,15 @@ export default async function ClientCampaignsPage({
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-sm truncate">{campaign.name}</h3>
                   <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    className={`text-xs px-3 py-1 rounded-full font-medium ${
                       campaign.status === "active"
-                        ? "bg-emerald-500/10 text-emerald-600"
+                        ? "bg-gradient-to-r from-[#FF8C00]/10 to-[#9D50BB]/10 text-neutral-900 dark:text-neutral-100 border border-[#FF8C00]/20"
                         : campaign.status === "paused"
-                          ? "bg-yellow-500/10 text-yellow-600"
-                          : "bg-muted text-muted-foreground"
+                          ? "bg-yellow-500/10 text-yellow-600 border border-yellow-500/20"
+                          : "bg-muted text-muted-foreground border border-border"
                     }`}
                   >
-                    {campaign.status}
+                    {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
                   </span>
                 </div>
                 {agent?.name && (

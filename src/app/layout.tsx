@@ -54,7 +54,7 @@ export default function RootLayout({
       >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           {children}
-          <Toaster theme="dark" position="bottom-left" richColors closeButton />
+          <Toaster theme="system" position="bottom-left" richColors closeButton />
         </ThemeProvider>
       </body>
     </html>

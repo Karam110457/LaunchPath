@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext } from "react";
+import { useTheme } from "next-themes";
 
 type CanvasTheme = "light" | "dark";
 
@@ -9,39 +10,20 @@ interface CanvasThemeContextValue {
   toggleTheme: () => void;
 }
 
-const STORAGE_KEY = "canvas-theme";
-
 const CanvasThemeContext = createContext<CanvasThemeContextValue>({
   theme: "light",
   toggleTheme: () => {},
 });
 
 export function CanvasThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<CanvasTheme>("light");
+  const { theme: globalTheme, setTheme: setGlobalTheme } = useTheme();
 
-  // Hydrate from localStorage on mount
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY) as CanvasTheme | null;
-      if (stored === "light" || stored === "dark") {
-        setTheme(stored);
-      }
-    } catch {
-      // SSR or localStorage unavailable
-    }
-  }, []);
+  // Derive canvas theme from the global next-themes value
+  const theme: CanvasTheme = globalTheme === "dark" ? "dark" : "light";
 
   const toggleTheme = useCallback(() => {
-    setTheme((prev) => {
-      const next = prev === "light" ? "dark" : "light";
-      try {
-        localStorage.setItem(STORAGE_KEY, next);
-      } catch {
-        // ignore
-      }
-      return next;
-    });
-  }, []);
+    setGlobalTheme(globalTheme === "dark" ? "light" : "dark");
+  }, [globalTheme, setGlobalTheme]);
 
   return (
     <CanvasThemeContext.Provider value={{ theme, toggleTheme }}>
