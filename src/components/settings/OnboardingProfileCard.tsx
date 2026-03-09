@@ -22,7 +22,7 @@ import {
 } from "@/types/onboarding";
 import { updateProfile } from "@/app/actions/update-profile";
 import type { Tables } from "@/types/database";
-import { Edit2, Save, X, Loader2 } from "lucide-react";
+import { Edit2, Save, X, Loader2, Check } from "lucide-react";
 
 interface OnboardingProfileCardProps {
   profile: Tables<"user_profiles">;
