@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
@@ -5,8 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 /**
  * Use in Server Components or Server Actions to require an authenticated user.
  * Redirects to /login if not signed in. Returns the Supabase user.
+ * Wrapped with React cache() so duplicate calls within the same request are deduped.
  */
-export async function requireAuth(): Promise<User> {
+export const requireAuth = cache(async (): Promise<User> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -18,7 +20,7 @@ export async function requireAuth(): Promise<User> {
   }
 
   return user;
-}
+});
 
 /**
  * Optional: get user without redirect. Use when you need to branch on auth state.

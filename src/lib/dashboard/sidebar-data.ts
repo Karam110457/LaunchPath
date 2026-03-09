@@ -15,11 +15,26 @@ export interface SidebarUser {
 export async function getSidebarData(userId: string, email?: string) {
   const supabase = await createClient();
 
-  const { data: systems } = await supabase
-    .from("user_systems")
-    .select("id, status, current_step, offer, chosen_recommendation")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+  // Run all queries in parallel — systems + counts
+  const [{ data: systems }, { count: agentCount }, { count: clientCount }, { count: campaignCount }] = await Promise.all([
+    supabase
+      .from("user_systems")
+      .select("id, status, current_step, offer, chosen_recommendation")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("ai_agents")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
+    supabase
+      .from("clients")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
+    supabase
+      .from("campaigns")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
+  ]);
 
   const rawSystems = (systems ?? []).map((s) => {
     const offer = s.offer as { segment?: string } | null;
@@ -49,22 +64,6 @@ export async function getSidebarData(userId: string, email?: string) {
     ...s,
     name: s.name || nameMap.get(s.id) || "New Business",
   }));
-
-  // Count user's agents, clients, and campaigns (lightweight head-only queries)
-  const [{ count: agentCount }, { count: clientCount }, { count: campaignCount }] = await Promise.all([
-    supabase
-      .from("ai_agents")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId),
-    supabase
-      .from("clients")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId),
-    supabase
-      .from("campaigns")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId),
-  ]);
 
   const displayName = email ? email.split("@")[0] : "User";
 
