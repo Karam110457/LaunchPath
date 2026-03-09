@@ -96,12 +96,13 @@ export default async function ClientOverviewPage({
     : { data: [] };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
+    <div className="p-6 max-w-5xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
       {/* Stats grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-enter">
+        {stats.map((stat, i) => (
           <div
             key={stat.label}
+            style={{ '--stagger': i } as React.CSSProperties}
             className="rounded-lg border bg-card p-5 space-y-1"
           >
             <p className="text-sm text-muted-foreground">{stat.label}</p>

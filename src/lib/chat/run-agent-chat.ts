@@ -13,7 +13,11 @@
 import { streamText, stepCountIs } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { logger } from "@/lib/security/logger";
-import { retrieveContextWithMetadata } from "@/lib/knowledge/rag";
+import {
+  retrieveContextWithMetadata,
+  loadAllChunks,
+  SMALL_KB_THRESHOLD,
+} from "@/lib/knowledge/rag";
 import type { RagChunk } from "@/lib/knowledge/rag";
 import { buildAgentTools } from "@/lib/tools/builder";
 import { assemblePrompt } from "@/lib/agents/assemble-prompt";
@@ -177,21 +181,36 @@ export async function runAgentChat(
   const hasKnowledgeBase = (docCount ?? 0) > 0;
 
   if (hasKnowledgeBase) {
-    // Automatic RAG retrieval (backward compat — pre-loads context)
-    const recentUserMsgs = conversationHistory
-      .filter((m) => m.role === "user")
-      .slice(-2)
-      .map((m) => m.content);
-    recentUserMsgs.push(userMessage);
-    const retrievalQuery = recentUserMsgs.join("\n");
+    // Check total chunk count to decide retrieval strategy
+    const { count: chunkCount } = await supabase
+      .from("agent_knowledge_chunks")
+      .select("id", { count: "exact", head: true })
+      .eq("agent_id", agentId);
 
-    const ragResult = await retrieveContextWithMetadata(
-      agentId,
-      retrievalQuery,
-      supabase
-    );
-    ragContext = ragResult.contextString;
-    ragChunks = ragResult.chunks;
+    const totalChunks = chunkCount ?? 0;
+
+    if (totalChunks <= SMALL_KB_THRESHOLD && totalChunks > 0) {
+      // Small knowledge base — inject ALL chunks directly (no embedding, no threshold)
+      const allResult = await loadAllChunks(agentId, supabase);
+      ragContext = allResult.contextString;
+      ragChunks = allResult.chunks;
+    } else {
+      // Larger knowledge base — similarity search with embedding
+      const recentUserMsgs = conversationHistory
+        .filter((m) => m.role === "user")
+        .slice(-2)
+        .map((m) => m.content);
+      recentUserMsgs.push(userMessage);
+      const retrievalQuery = recentUserMsgs.join("\n");
+
+      const ragResult = await retrieveContextWithMetadata(
+        agentId,
+        retrievalQuery,
+        supabase
+      );
+      ragContext = ragResult.contextString;
+      ragChunks = ragResult.chunks;
+    }
 
     // Auto-inject knowledge search tool (agent can call explicitly)
     const { toolName, toolDef } = buildKnowledgeTool(agentId, supabase);

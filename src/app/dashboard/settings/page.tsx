@@ -23,7 +23,7 @@ export default async function SettingsPage() {
 
       <div className="relative z-10 flex flex-col flex-1 h-full">
         <TopNav />
-        <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 space-y-8">
+        <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
           <div className="space-y-2">
             <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">Settings</h1>
             <p className="text-muted-foreground text-lg">Manage your account and preferences.</p>
@@ -31,8 +31,8 @@ export default async function SettingsPage() {
           
           <div className="w-full h-px bg-border/40" />
 
-          <div className="grid gap-6 max-w-4xl">
-            <Card className="rounded-[32px] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 border border-black/5 dark:border-[#2A2A2A] shadow-none">
+          <div className="grid gap-6 max-w-4xl stagger-enter">
+            <Card style={{ '--stagger': 0 } as React.CSSProperties} className="rounded-[32px] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 border border-black/5 dark:border-[#2A2A2A] shadow-none">
           <CardHeader className="px-8 pt-8">
             <CardTitle className="text-xl font-semibold">Profile</CardTitle>
             <CardDescription className="text-neutral-500 dark:text-neutral-400">Your personal information.</CardDescription>
@@ -47,7 +47,7 @@ export default async function SettingsPage() {
 
         {profile && <OnboardingProfileCard profile={profile} />}
 
-        <Card className="rounded-[32px] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 border border-black/5 dark:border-[#2A2A2A] shadow-none">
+        <Card style={{ '--stagger': 2 } as React.CSSProperties} className="rounded-[32px] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 border border-black/5 dark:border-[#2A2A2A] shadow-none">
           <CardHeader className="px-8 pt-8">
             <CardTitle className="text-xl font-semibold">Subscription</CardTitle>
             <CardDescription className="text-neutral-500 dark:text-neutral-400">Manage your plan and billing.</CardDescription>

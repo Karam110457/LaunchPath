@@ -198,13 +198,14 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
           </p>
         </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filtered.map((agent) => {
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 stagger-enter">
+          {filtered.map((agent, i) => {
             const statusInfo = STATUS_STYLES[agent.status] ?? STATUS_STYLES.draft;
 
             return (
               <Card
                 key={agent.id}
+                style={{ '--stagger': i } as React.CSSProperties}
                 onClick={() => router.push(`/dashboard/agents/${agent.id}`)}
                 className="group relative cursor-pointer outline-none overflow-hidden rounded-[32px] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 border border-black/5 dark:border-[#2A2A2A] hover:bg-white dark:hover:bg-[#252525] hover:shadow-md hover:-translate-y-1 transition-[transform,box-shadow,background-color] duration-200"
               >

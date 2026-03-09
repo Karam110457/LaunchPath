@@ -20,7 +20,7 @@ export default async function ClientCampaignsPage({
     .order("created_at", { ascending: false });
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
+    <div className="p-6 max-w-5xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Campaigns</h2>
         <Link
@@ -37,8 +37,8 @@ export default async function ClientCampaignsPage({
           No campaigns yet. Create one to deploy an AI agent for this client.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {campaigns.map((campaign) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger-enter">
+          {campaigns.map((campaign, i) => {
             const agent = campaign.ai_agents as unknown as {
               name: string;
               personality: Record<string, unknown> | null;
@@ -48,6 +48,7 @@ export default async function ClientCampaignsPage({
               <Link
                 key={campaign.id}
                 href={`/dashboard/clients/${clientId}/campaigns/${campaign.id}`}
+                style={{ '--stagger': i } as React.CSSProperties}
                 className="rounded-lg border bg-card p-5 hover:border-primary/30 transition-colors space-y-3"
               >
                 <div className="flex items-center justify-between">

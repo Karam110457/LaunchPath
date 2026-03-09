@@ -453,11 +453,41 @@
  * duration and removing delay makes the reveal instant or near-instant so it feels
  * intentional rather than broken.
  */
+/* Staggered content entrance — use with CSS var --stagger on each child */
+@keyframes content-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stagger-enter > * {
+  animation: content-enter 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(min(var(--stagger, 0), 8) * 50ms);
+}
+
 @media (max-width: 768px),
 (hover: none) {
   [class*="animate-in"] {
     animation-duration: 0.25s !important;
     animation-delay: 0s !important;
+  }
+
+  .stagger-enter > * {
+    animation-duration: 0.15s !important;
+    animation-delay: 0s !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-in"],
+  .stagger-enter > * {
+    animation: none !important;
+    opacity: 1 !important;
   }
 }
 

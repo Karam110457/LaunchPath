@@ -43,7 +43,7 @@ export default async function ClientConversationsPage({
     : { data: [] };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
+    <div className="p-6 max-w-5xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
       <h2 className="text-lg font-semibold">Conversations</h2>
       <ConversationList
         conversations={conversations ?? []}

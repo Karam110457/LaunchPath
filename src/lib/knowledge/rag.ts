@@ -7,6 +7,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 const SIMILARITY_THRESHOLD = 0.3;
 
+/** Below this chunk count, inject ALL chunks — no similarity search needed. */
+export const SMALL_KB_THRESHOLD = 15;
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -140,6 +143,65 @@ export async function retrieveContextWithMetadata(
     return { contextString, chunks: ragChunks };
   } catch (err) {
     console.error("RAG retrieval failed:", err);
+    return { contextString: "", chunks: [] };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Small knowledge base: load ALL chunks (no embedding, no similarity search)
+// ---------------------------------------------------------------------------
+
+/**
+ * Load every chunk for an agent directly from the DB.
+ * Used when the total chunk count is small enough to inject everything
+ * into the system prompt — faster and more reliable than similarity search.
+ *
+ * No embedding call, no similarity threshold. Every chunk is included.
+ */
+export async function loadAllChunks(
+  agentId: string,
+  supabase: SupabaseClient
+): Promise<RagResult> {
+  try {
+    const { data: rows, error } = await supabase
+      .from("agent_knowledge_chunks")
+      .select(
+        "id, content, document_id, agent_knowledge_documents!inner(source_name, source_type, status)"
+      )
+      .eq("agent_id", agentId)
+      .eq("agent_knowledge_documents.status", "ready")
+      .order("document_id")
+      .order("chunk_index");
+
+    if (error || !rows || rows.length === 0) {
+      return { contextString: "", chunks: [] };
+    }
+
+    const ragChunks: RagChunk[] = rows.map((r) => {
+      const doc = r.agent_knowledge_documents as unknown as {
+        source_name: string;
+        source_type: string;
+      };
+      return {
+        content: r.content as string,
+        similarity: 1, // all content is included — treat as perfect match
+        sourceName: doc.source_name,
+        sourceType: doc.source_type,
+        documentId: r.document_id as string,
+      };
+    });
+
+    const contextParts = ragChunks.map((c) => c.content);
+    const contextString =
+      "The following is your complete knowledge base. Use this information to answer questions. " +
+      "If the answer is not in the knowledge base, say so honestly.\n\n" +
+      "---\n" +
+      contextParts.join("\n---\n") +
+      "\n---";
+
+    return { contextString, chunks: ragChunks };
+  } catch (err) {
+    console.error("loadAllChunks failed:", err);
     return { contextString: "", chunks: [] };
   }
 }

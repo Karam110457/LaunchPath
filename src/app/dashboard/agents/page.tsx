@@ -26,7 +26,7 @@ export default async function AgentsPage() {
 
       <div className="relative z-10 flex flex-col flex-1 h-full">
         <TopNav />
-        <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8">
+        <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
           {hasAgents ? <AgentsList agents={agents} userFullName={user.user_metadata?.full_name || user.email?.split("@")[0] || "there"} /> : <EmptyAgents />}
         </div>
       </div>

@@ -130,7 +130,7 @@ export default function ClientSettingsPage() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
+    <div className="p-6 max-w-3xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
       {/* Client Info */}
       <div className="rounded-lg border bg-card p-5 space-y-4">
         <h2 className="text-sm font-semibold">Client Information</h2>

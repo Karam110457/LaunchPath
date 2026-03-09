@@ -17,7 +17,11 @@ import { z } from "zod";
 import { logger } from "@/lib/security/logger";
 import { buildAgentTools } from "../builder";
 import { assemblePrompt } from "@/lib/agents/assemble-prompt";
-import { retrieveContextWithMetadata } from "@/lib/knowledge/rag";
+import {
+  retrieveContextWithMetadata,
+  loadAllChunks,
+  SMALL_KB_THRESHOLD,
+} from "@/lib/knowledge/rag";
 import { buildKnowledgeTool } from "./knowledge";
 import type { SubagentConfig, AgentToolRecord } from "../types";
 import type { ToolBuildContext } from "../builder";
@@ -162,12 +166,30 @@ export function buildSubagentTool(
           const hasKnowledgeBase = (docCount ?? 0) > 0;
 
           if (hasKnowledgeBase) {
-            const ragResult = await retrieveContextWithMetadata(
-              config.target_agent_id,
-              params.message,
-              context.supabase
-            );
-            ragContext = ragResult.contextString;
+            // Check total chunk count for small KB optimization
+            const { count: chunkCount } = await context.supabase
+              .from("agent_knowledge_chunks")
+              .select("id", { count: "exact", head: true })
+              .eq("agent_id", config.target_agent_id);
+
+            const totalChunks = chunkCount ?? 0;
+
+            if (totalChunks <= SMALL_KB_THRESHOLD && totalChunks > 0) {
+              // Small KB — inject all chunks directly
+              const allResult = await loadAllChunks(
+                config.target_agent_id,
+                context.supabase
+              );
+              ragContext = allResult.contextString;
+            } else {
+              // Larger KB — similarity search
+              const ragResult = await retrieveContextWithMetadata(
+                config.target_agent_id,
+                params.message,
+                context.supabase
+              );
+              ragContext = ragResult.contextString;
+            }
 
             // Auto-inject knowledge search tool for subagent
             const { toolName, toolDef } = buildKnowledgeTool(

@@ -45,7 +45,7 @@ export default async function ClientsPage() {
 
       <div className="relative z-10 flex flex-col flex-1 h-full">
         <TopNav />
-        <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 space-y-8">
+        <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
         <div className="space-y-2">
           <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">Clients</h1>
@@ -73,11 +73,12 @@ export default async function ClientsPage() {
       ) : (
         <>
           {shaped.length > 0 && (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {shaped.map((client) => (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 stagger-enter">
+              {shaped.map((client, i) => (
                 <Link
                   key={client.id}
                   href={`/dashboard/clients/${client.id}`}
+                  style={{ '--stagger': i } as React.CSSProperties}
                   className="group relative cursor-pointer outline-none overflow-hidden rounded-[32px] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 border border-black/5 dark:border-[#2A2A2A] hover:bg-white dark:hover:bg-[#252525] hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between min-h-[220px]"
                 >
                   <div className="p-6 flex flex-col h-full">
