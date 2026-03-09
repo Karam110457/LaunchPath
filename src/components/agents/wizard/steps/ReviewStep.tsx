@@ -4,10 +4,12 @@ import {
   Pencil,
   Calendar,
   LifeBuoy,
+  Target,
   Globe,
   MessageSquare,
   FileText,
   Bot,
+  Plug,
 } from "lucide-react";
 import {
   Card,
@@ -17,6 +19,25 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { AgentWizardState } from "@/types/agent-wizard";
+import { getTemplateById } from "@/lib/agents/templates";
+
+const TEMPLATE_META: Record<
+  string,
+  { label: string; icon: React.ReactNode }
+> = {
+  "appointment-booker": {
+    label: "Appointment Booker",
+    icon: <Calendar className="w-4 h-4 text-primary" />,
+  },
+  "customer-support": {
+    label: "Customer Support",
+    icon: <LifeBuoy className="w-4 h-4 text-primary" />,
+  },
+  "lead-qualification": {
+    label: "Lead Qualification",
+    icon: <Target className="w-4 h-4 text-primary" />,
+  },
+};
 
 interface ReviewStepProps {
   state: AgentWizardState;
@@ -29,11 +50,15 @@ export function ReviewStep({
   businessName,
   onGoToStep,
 }: ReviewStepProps) {
-  const isAppointment = state.templateId === "appointment-booker";
   const scannedPages = state.discoveredPages.filter(
     (p) => p.selected && p.status === "done",
   );
   const questions = state.qualifyingQuestions.filter((q) => q.trim());
+  const template = state.templateId ? getTemplateById(state.templateId) : null;
+  const selectedTools = (template?.suggestedTools ?? []).filter((t) =>
+    state.selectedToolkits.includes(t.toolkit),
+  );
+  const meta = state.templateId ? TEMPLATE_META[state.templateId] : null;
 
   return (
     <div className="space-y-6">
@@ -50,13 +75,9 @@ export function ReviewStep({
         {/* Agent Type */}
         <ReviewCard title="Agent Type" stepIndex={0} onEdit={onGoToStep}>
           <div className="flex items-center gap-2">
-            {isAppointment ? (
-              <Calendar className="w-4 h-4 text-primary" />
-            ) : (
-              <LifeBuoy className="w-4 h-4 text-primary" />
-            )}
+            {meta?.icon}
             <span className="text-sm font-medium">
-              {isAppointment ? "Appointment Booker" : "Customer Support"}
+              {meta?.label ?? "Unknown"}
             </span>
           </div>
         </ReviewCard>
@@ -126,7 +147,9 @@ export function ReviewStep({
             {questions.length > 0 && (
               <div>
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Qualifying Questions
+                  {state.templateId === "customer-support"
+                    ? "Triage Questions"
+                    : "Qualifying Questions"}
                 </span>
                 <ul className="mt-1 space-y-0.5">
                   {questions.map((q, i) => (
@@ -137,7 +160,7 @@ export function ReviewStep({
                 </ul>
               </div>
             )}
-            {isAppointment ? (
+            {state.templateId === "appointment-booker" ? (
               <AppointmentReview config={state.appointmentBookerConfig} />
             ) : state.templateId === "lead-qualification" ? (
               <LeadQualReview config={state.leadQualificationConfig} />
@@ -147,8 +170,29 @@ export function ReviewStep({
           </div>
         </ReviewCard>
 
+        {/* Integrations */}
+        <ReviewCard title="Integrations" stepIndex={4} onEdit={onGoToStep}>
+          {selectedTools.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {selectedTools.map((t) => (
+                <div
+                  key={t.toolkit}
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground"
+                >
+                  <Plug className="w-3.5 h-3.5" />
+                  {t.toolkitName}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">
+              No integrations selected
+            </p>
+          )}
+        </ReviewCard>
+
         {/* Agent Identity */}
-        <ReviewCard title="Agent Identity" stepIndex={4} onEdit={onGoToStep}>
+        <ReviewCard title="Agent Identity" stepIndex={5} onEdit={onGoToStep}>
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Bot className="w-4 h-4 text-primary" />
@@ -275,6 +319,9 @@ function LeadQualReview({
   if (config.lead_fields.company) fields.push("Company");
   if (config.lead_fields.budget) fields.push("Budget");
   if (config.lead_fields.timeline) fields.push("Timeline");
+  config.lead_fields.custom_fields
+    .filter((f) => f.trim())
+    .forEach((f) => fields.push(f));
 
   return (
     <>
@@ -292,11 +339,11 @@ function LeadQualReview({
       </div>
       <div>
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          Notification
+          Where Leads Go
         </span>
         <p className="text-muted-foreground mt-0.5">
           {config.notification_behavior === "email_team"
-            ? "Email team with lead summary"
+            ? "Email team + save to spreadsheet"
             : "Save to spreadsheet only"}
         </p>
       </div>

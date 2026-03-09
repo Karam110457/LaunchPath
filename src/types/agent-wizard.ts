@@ -48,6 +48,7 @@ export interface LeadQualificationConfig {
     company: boolean;
     budget: boolean;
     timeline: boolean;
+    custom_fields: string[];
   };
   notification_behavior: "email_team" | "sheet_only";
 }
@@ -77,7 +78,10 @@ export interface AgentWizardState {
   customerSupportConfig: CustomerSupportConfig;
   leadQualificationConfig: LeadQualificationConfig;
 
-  // Step 5: Agent Identity
+  // Step 5: Integrations (tool preview)
+  selectedToolkits: string[];
+
+  // Step 6: Agent Identity
   agentName: string;
   agentDescription: string;
   tone: string;
@@ -94,6 +98,7 @@ export interface WizardStepDef {
     | "business-context"
     | "knowledge-base"
     | "conversation-flow"
+    | "integrations"
     | "agent-identity"
     | "review";
   label: string;
@@ -104,6 +109,7 @@ export const WIZARD_STEPS: WizardStepDef[] = [
   { id: "business-context", label: "Your Business" },
   { id: "knowledge-base", label: "Knowledge Base" },
   { id: "conversation-flow", label: "Conversation Flow" },
+  { id: "integrations", label: "Integrations" },
   { id: "agent-identity", label: "Agent Identity" },
   { id: "review", label: "Review" },
 ];
@@ -132,9 +138,10 @@ export function createInitialWizardState(): AgentWizardState {
       response_style: "detailed",
     },
     leadQualificationConfig: {
-      lead_fields: { phone: true, company: true, budget: false, timeline: false },
+      lead_fields: { phone: true, company: true, budget: false, timeline: false, custom_fields: [] },
       notification_behavior: "email_team",
     },
+    selectedToolkits: [],
     agentName: "",
     agentDescription: "",
     tone: "",
@@ -161,4 +168,5 @@ export interface WizardGenerationPayload {
   faqs: Array<{ question: string; answer: string }>;
   scrapedPages: Array<{ url: string; title: string; content: string }>;
   files: Array<{ name: string; extractedText: string }>;
+  selectedToolkits?: string[];
 }

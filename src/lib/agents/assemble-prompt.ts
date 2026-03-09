@@ -126,14 +126,19 @@ export function assemblePrompt(input: AssemblePromptInput): AssemblePromptResult
     const bc = input.wizardConfig.behaviorConfig;
 
     if (bc.lead_fields) {
-      const fields = bc.lead_fields as Record<string, boolean>;
+      const fields = bc.lead_fields as Record<string, unknown>;
       const active = [
         "name",
         "email",
         ...Object.entries(fields)
-          .filter(([, v]) => v)
+          .filter(([k, v]) => k !== "custom_fields" && v === true)
           .map(([k]) => k),
       ];
+      // Add custom fields if present
+      const customFields = fields.custom_fields;
+      if (Array.isArray(customFields)) {
+        active.push(...customFields.filter((f: unknown) => typeof f === "string" && f.trim()));
+      }
       directives.push(
         `Lead capture: Collect the following fields from the visitor: ${active.join(", ")}.`
       );

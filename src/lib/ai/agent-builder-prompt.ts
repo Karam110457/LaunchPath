@@ -138,6 +138,7 @@ export function buildAgentGenerationContext(input: {
           company?: boolean;
           budget?: boolean;
           timeline?: boolean;
+          custom_fields?: string[];
         };
         notification_behavior?: string;
       };
@@ -155,6 +156,10 @@ export function buildAgentGenerationContext(input: {
       if (lc.lead_fields?.company) fields.push("company");
       if (lc.lead_fields?.budget) fields.push("budget range");
       if (lc.lead_fields?.timeline) fields.push("timeline");
+      const customFields = (lc.lead_fields?.custom_fields ?? []).filter(
+        (f) => f.trim(),
+      );
+      fields.push(...customFields);
       lines.push(`Lead fields to capture: ${fields.join(", ")}`);
 
       lines.push(

@@ -88,6 +88,7 @@ export function AgentEditPanel({
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [goalChangedNote, setGoalChangedNote] = useState<string | null>(null);
 
   const hasWizard = formState.wizardConfig !== null;
   const enabledTools = tools.filter((t) => t.is_enabled);
@@ -157,8 +158,73 @@ export function AgentEditPanel({
       }).catch(() => {
         // Non-critical — tool_guidelines will be stale until next save
       });
+
+      // Show confirmation
+      setGoalChangedNote(`Switched to ${template.name}. Behavior settings have been reset to defaults.`);
+      setTimeout(() => setGoalChangedNote(null), 4000);
     },
     [formState.wizardConfig, setFormState, agentId],
+  );
+
+  const handleAdoptGoal = useCallback(
+    (templateId: string) => {
+      const template = getTemplateById(templateId);
+      if (!template) return;
+
+      let behaviorConfig: Record<string, unknown> = {};
+      if (templateId === "appointment-booker") {
+        behaviorConfig = {
+          lead_fields: { phone: true, company: false, custom_fields: [] },
+          booking_behavior: "collect_and_follow_up",
+        };
+      } else if (templateId === "customer-support") {
+        behaviorConfig = {
+          escalation_mode: "escalate_complex",
+          response_style: "detailed",
+        };
+      } else if (templateId === "lead-qualification") {
+        behaviorConfig = {
+          lead_fields: { phone: true, company: true, budget: false, timeline: false, custom_fields: [] },
+          notification_behavior: "email_team",
+        };
+      }
+
+      setFormState((prev) => ({
+        ...prev,
+        tone: prev.tone || template.suggested_personality.tone,
+        greetingMessage: prev.greetingMessage || template.suggested_personality.greeting_message,
+        wizardConfig: {
+          templateId: templateId as WizardConfig["templateId"],
+          behaviorConfig,
+          personality: {
+            tone: prev.tone || template.suggested_personality.tone,
+            greeting_message:
+              prev.greetingMessage || template.suggested_personality.greeting_message,
+          },
+        },
+      }));
+
+      // Persist tool_guidelines + wizard_config
+      fetch(`/api/agents/${agentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tool_guidelines: template.toolWorkflow,
+          wizard_config: {
+            templateId,
+            behaviorConfig,
+            personality: {
+              tone: formState.tone || template.suggested_personality.tone,
+              greeting_message:
+                formState.greetingMessage || template.suggested_personality.greeting_message,
+            },
+          },
+        }),
+      }).catch(() => {
+        // Non-critical
+      });
+    },
+    [setFormState, agentId, formState.tone, formState.greetingMessage],
   );
 
   const handleDelete = async () => {
@@ -222,6 +288,11 @@ export function AgentEditPanel({
                     />
                   ))}
                 </div>
+                {goalChangedNote && (
+                  <p className="text-[11px] text-primary/80 bg-primary/5 border border-primary/10 rounded-md px-3 py-2 animate-in fade-in duration-200">
+                    {goalChangedNote}
+                  </p>
+                )}
               </section>
               <hr className="border-border" />
             </>
@@ -365,26 +436,44 @@ export function AgentEditPanel({
             </>
           )}
 
-          {/* ── Qualifying Questions (appointment-booker and lead-qualification) ── */}
-          {hasWizard && (formState.wizardConfig!.templateId === "appointment-booker" || formState.wizardConfig!.templateId === "lead-qualification") && (
+          {/* ── Qualifying / Triage Questions (all wizard templates) ── */}
+          {hasWizard && (
             <>
               <hr className="border-border" />
               <QuestionsSection
                 questions={formState.wizardConfig!.qualifyingQuestions ?? []}
                 onUpdate={updateWizardConfig}
+                isSupport={formState.wizardConfig!.templateId === "customer-support"}
               />
             </>
           )}
 
-          {/* Info note for prompt-created agents */}
+          {/* Goal adoption for prompt-created agents */}
           {!hasWizard && (
             <>
               <hr className="border-border" />
-              <p className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
-                This agent was created from a prompt. Use the{" "}
-                <span className="font-medium text-foreground">Advanced</span>{" "}
-                tab to edit the system prompt directly.
-              </p>
+              <div className="rounded-lg border border-dashed p-4 space-y-3">
+                <div>
+                  <p className="text-xs font-medium">Set a conversation goal</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Add guided behavior settings to this agent by choosing a goal.
+                    You can still edit the system prompt on the Advanced tab.
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  {AGENT_TEMPLATES.map((tmpl) => (
+                    <button
+                      key={tmpl.id}
+                      type="button"
+                      onClick={() => handleAdoptGoal(tmpl.id)}
+                      className="w-full flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs hover:border-primary/30 hover:bg-primary/5 transition-all"
+                    >
+                      <span className="font-medium">{tmpl.name}</span>
+                      <span className="text-muted-foreground">— {tmpl.description}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </>
           )}
         </div>
@@ -569,14 +658,18 @@ function buildDirectivesPreview(formState: AgentFormState): string | null {
   const bc = formState.wizardConfig?.behaviorConfig;
   if (bc) {
     if (bc.lead_fields) {
-      const fields = bc.lead_fields as Record<string, boolean>;
+      const fields = bc.lead_fields as Record<string, unknown>;
       const active = [
         "name",
         "email",
         ...Object.entries(fields)
-          .filter(([, v]) => v)
+          .filter(([k, v]) => k !== "custom_fields" && v === true)
           .map(([k]) => k),
       ];
+      const customFields = fields.custom_fields;
+      if (Array.isArray(customFields)) {
+        active.push(...customFields.filter((f: unknown) => typeof f === "string" && (f as string).trim()));
+      }
       lines.push(
         `- Lead capture: Collect the following fields: ${active.join(", ")}.`
       );
@@ -930,9 +1023,11 @@ function BehaviorSection({
 function QuestionsSection({
   questions,
   onUpdate,
+  isSupport,
 }: {
   questions: string[];
   onUpdate: (updater: (prev: WizardConfig) => WizardConfig) => void;
+  isSupport?: boolean;
 }) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -964,10 +1059,12 @@ function QuestionsSection({
   return (
     <section className="space-y-3">
       <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Qualifying Questions
+        {isSupport ? "Triage Questions" : "Qualifying Questions"}
       </h3>
       <p className="text-[11px] text-muted-foreground">
-        Questions your agent asks to understand what the visitor needs.
+        {isSupport
+          ? "Questions your agent asks to understand the visitor's issue."
+          : "Questions your agent asks to understand what the visitor needs."}
       </p>
 
       {questions.length === 0 ? (

@@ -18,6 +18,7 @@ import { ChooseTypeStep } from "./steps/ChooseTypeStep";
 import { BusinessContextStep } from "./steps/BusinessContextStep";
 import { KnowledgeBaseStep } from "./steps/KnowledgeBaseStep";
 import { ConversationFlowStep } from "./steps/ConversationFlowStep";
+import { IntegrationsStep } from "./steps/IntegrationsStep";
 import { AgentIdentityStep } from "./steps/AgentIdentityStep";
 import { ReviewStep } from "./steps/ReviewStep";
 
@@ -174,14 +175,16 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
 
   function handleNext() {
     if (stepIndex < totalSteps - 1) {
-      // Pre-fill personality from template when leaving step 1
+      // Pre-fill personality + tools from template when leaving step 1
       if (currentStep.id === "choose-type" && state.templateId) {
         const template = getTemplateById(state.templateId);
-        if (template && !state.tone && !state.greetingMessage) {
+        if (template) {
           setState((prev) => ({
             ...prev,
-            tone: template.suggested_personality.tone,
-            greetingMessage: template.suggested_personality.greeting_message,
+            tone: prev.tone || template.suggested_personality.tone,
+            greetingMessage: prev.greetingMessage || template.suggested_personality.greeting_message,
+            // Auto-select all suggested tools
+            selectedToolkits: template.suggestedTools.map((t) => t.toolkit),
           }));
         }
       }
@@ -250,6 +253,7 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
       })),
       scrapedPages: scannedPages,
       files: filesPayload,
+      selectedToolkits: state.selectedToolkits,
     };
 
     startGeneration({ wizardConfig: payload });
@@ -347,6 +351,19 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
             }
           />
         ) : null;
+
+      case "integrations": {
+        const template = state.templateId ? getTemplateById(state.templateId) : null;
+        return (
+          <IntegrationsStep
+            suggestedTools={template?.suggestedTools ?? []}
+            selectedToolkits={state.selectedToolkits}
+            onSelectedToolkitsChange={(toolkits) =>
+              updateState("selectedToolkits", toolkits)
+            }
+          />
+        );
+      }
 
       case "agent-identity":
         return (

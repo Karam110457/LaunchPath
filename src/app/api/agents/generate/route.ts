@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
       faqs?: Array<{ question: string; answer: string }>;
       scrapedPages?: Array<{ url: string; title: string; content: string }>;
       files?: Array<{ name: string; extractedText: string }>;
+      selectedToolkits?: string[];
     };
   };
   try {
@@ -206,34 +207,43 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Auto-add suggested Composio tools from template
+          // Auto-add suggested Composio tools from template (filtered by user selection)
           if (template?.suggestedTools?.length) {
-            try {
-              for (const tool of template.suggestedTools) {
-                await supabase.from("agent_tools").insert({
-                  agent_id: newAgent.id,
-                  user_id: user.id,
-                  tool_type: "composio",
-                  display_name: tool.displayName,
-                  description: tool.description,
-                  config: {
-                    toolkit: tool.toolkit,
-                    toolkit_name: tool.toolkitName,
-                    enabled_actions: tool.actions,
-                  },
-                  is_enabled: true,
+            const selectedToolkits = wizardConfig?.selectedToolkits;
+            const toolsToAdd = selectedToolkits
+              ? template.suggestedTools.filter((t) =>
+                  selectedToolkits.includes(t.toolkit),
+                )
+              : template.suggestedTools;
+
+            if (toolsToAdd.length > 0) {
+              try {
+                for (const tool of toolsToAdd) {
+                  await supabase.from("agent_tools").insert({
+                    agent_id: newAgent.id,
+                    user_id: user.id,
+                    tool_type: "composio",
+                    display_name: tool.displayName,
+                    description: tool.description,
+                    config: {
+                      toolkit: tool.toolkit,
+                      toolkit_name: tool.toolkitName,
+                      enabled_actions: tool.actions,
+                    },
+                    is_enabled: true,
+                  });
+                }
+                logger.info("Auto-added template tools", {
+                  agentId: newAgent.id,
+                  toolCount: toolsToAdd.length,
+                });
+              } catch (toolErr) {
+                // Tool auto-config failed — agent still exists, user can add manually
+                logger.warn("Failed to auto-add template tools", {
+                  agentId: newAgent.id,
+                  error: toolErr instanceof Error ? toolErr.message : String(toolErr),
                 });
               }
-              logger.info("Auto-added template tools", {
-                agentId: newAgent.id,
-                toolCount: template.suggestedTools.length,
-              });
-            } catch (toolErr) {
-              // Tool auto-config failed — agent still exists, user can add manually
-              logger.warn("Failed to auto-add template tools", {
-                agentId: newAgent.id,
-                error: toolErr instanceof Error ? toolErr.message : String(toolErr),
-              });
             }
           }
 

@@ -94,43 +94,68 @@ export function ConversationFlowStep({
       <div className="space-y-2">
         <h2 className="text-xl font-semibold tracking-tight">
           {templateId === "appointment-booker"
-            ? "Customize your conversation flow"
+            ? "Configure appointments"
             : templateId === "lead-qualification"
-              ? "Configure lead qualification"
+              ? "Configure lead capture"
               : "Configure support behavior"}
         </h2>
         <p className="text-sm text-muted-foreground">
           {templateId === "appointment-booker"
-            ? "Define the questions your agent asks to qualify leads and how it handles bookings."
+            ? "Set up the fields your agent collects and how it handles bookings."
             : templateId === "lead-qualification"
-              ? "Define the information your agent collects and how it notifies your team."
+              ? "Choose what information your agent collects and where leads are sent."
               : "Choose how your agent handles issues and responds to visitors."}
         </p>
       </div>
 
-      {/* Questions — for appointment-booker and lead-qualification */}
-      {(templateId === "appointment-booker" || templateId === "lead-qualification") && (
-      <div className="space-y-3">
+      {/* Template-specific config panels */}
+      {templateId === "appointment-booker" ? (
+        <AppointmentBookerOptions
+          config={appointmentBookerConfig}
+          onUpdate={onUpdateAppointmentBooker}
+        />
+      ) : templateId === "lead-qualification" ? (
+        <LeadQualificationOptions
+          config={leadQualificationConfig}
+          onUpdate={onUpdateLeadQualification}
+        />
+      ) : (
+        <CustomerSupportOptions
+          config={customerSupportConfig}
+          onUpdate={onUpdateCustomerSupport}
+        />
+      )}
+
+      {/* Qualifying questions — for all template types */}
+      <div className="border-t pt-6 space-y-3">
         <div className="flex items-center justify-between">
-          <Label>Qualifying questions</Label>
+          <div>
+            <Label>
+              {templateId === "customer-support"
+                ? "Triage questions"
+                : "Qualifying questions"}
+            </Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {templateId === "customer-support"
+                ? "Questions to understand the visitor's issue before helping."
+                : "Questions your agent asks to qualify leads before proceeding."}
+            </p>
+          </div>
           <Button
             type="button"
             size="sm"
             onClick={handleGenerateQuestions}
             disabled={generating}
-            className="gap-1.5"
+            className="gap-1.5 shrink-0"
           >
             {generating ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <Sparkles className="w-4 h-4" />
             )}
-            Generate questions
+            Generate
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Questions your agent asks to qualify leads before booking.
-        </p>
 
         {genError && (
           <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
@@ -160,29 +185,8 @@ export function ConversationFlowStep({
           className="gap-1.5"
         >
           <Plus className="w-3.5 h-3.5" />
-          Add custom question
+          Add question
         </Button>
-      </div>
-      )}
-
-      {/* Template-specific config */}
-      <div className="border-t pt-6 space-y-4">
-        {templateId === "appointment-booker" ? (
-          <AppointmentBookerOptions
-            config={appointmentBookerConfig}
-            onUpdate={onUpdateAppointmentBooker}
-          />
-        ) : templateId === "lead-qualification" ? (
-          <LeadQualificationOptions
-            config={leadQualificationConfig}
-            onUpdate={onUpdateLeadQualification}
-          />
-        ) : (
-          <CustomerSupportOptions
-            config={customerSupportConfig}
-            onUpdate={onUpdateCustomerSupport}
-          />
-        )}
       </div>
     </div>
   );
@@ -290,6 +294,77 @@ function QuestionList({
 }
 
 // ---------------------------------------------------------------------------
+// Custom Fields List (add/remove inline)
+// ---------------------------------------------------------------------------
+
+function CustomFieldsList({
+  fields,
+  onChange,
+}: {
+  fields: string[];
+  onChange: (fields: string[]) => void;
+}) {
+  const [newField, setNewField] = useState("");
+
+  function addField() {
+    const name = newField.trim();
+    if (!name) return;
+    if (fields.some((f) => f.toLowerCase() === name.toLowerCase())) return;
+    onChange([...fields, name]);
+    setNewField("");
+  }
+
+  return (
+    <div className="space-y-2">
+      {fields.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {fields.map((f, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border bg-muted/50 text-foreground"
+            >
+              {f}
+              <button
+                type="button"
+                onClick={() => onChange(fields.filter((_, idx) => idx !== i))}
+                className="p-0.5 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <Input
+          value={newField}
+          onChange={(e) => setNewField(e.target.value)}
+          placeholder="e.g., Address, Project Size"
+          className="h-8 text-sm flex-1"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addField();
+            }
+          }}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={addField}
+          disabled={!newField.trim()}
+          className="gap-1 h-8 shrink-0"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Add
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Appointment Booker Options
 // ---------------------------------------------------------------------------
 
@@ -303,12 +378,15 @@ function AppointmentBookerOptions({
   ) => void;
 }) {
   return (
-    <>
-      <div className="space-y-3">
-        <Label>Lead capture fields</Label>
-        <p className="text-xs text-muted-foreground">
-          Name and email are always captured. Toggle additional fields.
-        </p>
+    <div className="space-y-6">
+      {/* Lead Capture Fields */}
+      <div className="space-y-3 rounded-lg border p-4">
+        <div>
+          <Label className="text-sm font-medium">Lead capture fields</Label>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Information your agent collects from visitors. Name and email are always required.
+          </p>
+        </div>
         <div className="flex flex-wrap gap-2">
           <FieldToggle label="Name" enabled disabled />
           <FieldToggle label="Email" enabled disabled />
@@ -339,15 +417,28 @@ function AppointmentBookerOptions({
             }
           />
         </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Custom fields</Label>
+          <CustomFieldsList
+            fields={config.lead_fields.custom_fields}
+            onChange={(custom_fields) =>
+              onUpdate((prev) => ({
+                ...prev,
+                lead_fields: { ...prev.lead_fields, custom_fields },
+              }))
+            }
+          />
+        </div>
       </div>
 
+      {/* After Qualification */}
       <div className="space-y-2">
         <Label>What happens after qualification?</Label>
         <div className="space-y-2 pt-1">
           <OptionCard
             value="book_directly"
-            label="Book directly"
-            description="The agent books an appointment on the calendar"
+            label="Book directly on calendar"
+            description="Your agent checks availability and books appointments automatically"
             selected={config.booking_behavior === "book_directly"}
             onSelect={() =>
               onUpdate((prev) => ({
@@ -358,8 +449,8 @@ function AppointmentBookerOptions({
           />
           <OptionCard
             value="collect_and_follow_up"
-            label="Collect info and follow up"
-            description="The agent captures lead details for you to follow up manually"
+            label="Collect info for follow-up"
+            description="Your agent captures lead details so you can reach out manually"
             selected={config.booking_behavior === "collect_and_follow_up"}
             onSelect={() =>
               onUpdate((prev) => ({
@@ -370,7 +461,7 @@ function AppointmentBookerOptions({
           />
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -388,14 +479,17 @@ function CustomerSupportOptions({
   ) => void;
 }) {
   return (
-    <>
+    <div className="space-y-6">
       <div className="space-y-2">
         <Label>Escalation behavior</Label>
+        <p className="text-xs text-muted-foreground">
+          What should your agent do when it can&apos;t resolve an issue?
+        </p>
         <div className="space-y-2 pt-1">
           <OptionCard
             value="always_available"
             label="Handle everything"
-            description="The agent tries to resolve all issues without escalating"
+            description="The agent tries to resolve all issues using its knowledge base"
             selected={config.escalation_mode === "always_available"}
             onSelect={() =>
               onUpdate((prev) => ({
@@ -407,7 +501,7 @@ function CustomerSupportOptions({
           <OptionCard
             value="escalate_complex"
             label="Escalate complex issues"
-            description="The agent hands off to a human when it can't resolve an issue"
+            description="The agent hands off to a human when it can't find an answer"
             selected={config.escalation_mode === "escalate_complex"}
             onSelect={() =>
               onUpdate((prev) => ({
@@ -421,6 +515,9 @@ function CustomerSupportOptions({
 
       <div className="space-y-2">
         <Label>Response style</Label>
+        <p className="text-xs text-muted-foreground">
+          How detailed should your agent&apos;s answers be?
+        </p>
         <div className="space-y-2 pt-1">
           <OptionCard
             value="concise"
@@ -434,7 +531,7 @@ function CustomerSupportOptions({
           <OptionCard
             value="detailed"
             label="Detailed explanations"
-            description="Thorough, step-by-step responses with context"
+            description="Thorough, step-by-step responses with extra context"
             selected={config.response_style === "detailed"}
             onSelect={() =>
               onUpdate((prev) => ({ ...prev, response_style: "detailed" }))
@@ -442,7 +539,7 @@ function CustomerSupportOptions({
           />
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -460,12 +557,15 @@ function LeadQualificationOptions({
   ) => void;
 }) {
   return (
-    <>
-      <div className="space-y-3">
-        <Label>Lead capture fields</Label>
-        <p className="text-xs text-muted-foreground">
-          Name and email are always captured. Toggle additional fields.
-        </p>
+    <div className="space-y-6">
+      {/* Lead Capture Fields */}
+      <div className="space-y-3 rounded-lg border p-4">
+        <div>
+          <Label className="text-sm font-medium">Lead capture fields</Label>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Information your agent collects through natural conversation. Name and email are always required.
+          </p>
+        </div>
         <div className="flex flex-wrap gap-2">
           <FieldToggle label="Name" enabled disabled />
           <FieldToggle label="Email" enabled disabled />
@@ -522,15 +622,31 @@ function LeadQualificationOptions({
             }
           />
         </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Custom fields</Label>
+          <CustomFieldsList
+            fields={config.lead_fields.custom_fields}
+            onChange={(custom_fields) =>
+              onUpdate((prev) => ({
+                ...prev,
+                lead_fields: { ...prev.lead_fields, custom_fields },
+              }))
+            }
+          />
+        </div>
       </div>
 
+      {/* Where to Send Leads */}
       <div className="space-y-2">
-        <Label>When a lead is qualified</Label>
+        <Label>Where to send qualified leads</Label>
+        <p className="text-xs text-muted-foreground">
+          How should your team be notified when a lead is qualified?
+        </p>
         <div className="space-y-2 pt-1">
           <OptionCard
             value="email_team"
-            label="Email team with lead summary"
-            description="Sends an internal notification with the lead details to your team"
+            label="Email notification + spreadsheet"
+            description="Saves lead to Google Sheets and emails your team with a summary"
             selected={config.notification_behavior === "email_team"}
             onSelect={() =>
               onUpdate((prev) => ({
@@ -541,8 +657,8 @@ function LeadQualificationOptions({
           />
           <OptionCard
             value="sheet_only"
-            label="Save to spreadsheet only"
-            description="Leads are saved to Google Sheets without email notifications"
+            label="Spreadsheet only"
+            description="Saves leads to Google Sheets without sending email notifications"
             selected={config.notification_behavior === "sheet_only"}
             onSelect={() =>
               onUpdate((prev) => ({
@@ -553,7 +669,7 @@ function LeadQualificationOptions({
           />
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
