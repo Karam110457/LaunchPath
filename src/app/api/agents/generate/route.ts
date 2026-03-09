@@ -6,6 +6,7 @@ import { agentGenerationOutputSchema } from "@/lib/ai/schemas";
 import { buildAgentGenerationContext } from "@/lib/ai/agent-builder-prompt";
 import { getTemplateById } from "@/lib/agents/templates";
 import { withRateLimitRetry } from "@/lib/ai/rate-limit-retry";
+import { getComposioClient } from "@/lib/composio/client";
 import { chunkText } from "@/lib/knowledge/chunking";
 import { embedTexts } from "@/lib/knowledge/embeddings";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -218,6 +219,11 @@ export async function POST(request: NextRequest) {
 
             if (toolsToAdd.length > 0) {
               try {
+                // Fetch toolkit logos from Composio so canvas shows real icons
+                const toolkitLogos = await fetchToolkitLogos(
+                  toolsToAdd.map((t) => t.toolkit),
+                );
+
                 for (const tool of toolsToAdd) {
                   await supabase.from("agent_tools").insert({
                     agent_id: newAgent.id,
@@ -228,6 +234,7 @@ export async function POST(request: NextRequest) {
                     config: {
                       toolkit: tool.toolkit,
                       toolkit_name: tool.toolkitName,
+                      toolkit_icon: toolkitLogos[tool.toolkit] ?? undefined,
                       enabled_actions: tool.actions,
                     },
                     is_enabled: true,
@@ -302,6 +309,43 @@ export async function POST(request: NextRequest) {
       Connection: "keep-alive",
     },
   });
+}
+
+// ---------------------------------------------------------------------------
+// Post-generation knowledge processing
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Fetch toolkit logos from Composio
+// ---------------------------------------------------------------------------
+
+async function fetchToolkitLogos(
+  toolkitSlugs: string[],
+): Promise<Record<string, string>> {
+  try {
+    const composio = getComposioClient();
+    const allToolkits = (await composio.toolkits.get({
+      sortBy: "usage",
+      limit: 200,
+    })) as unknown as Array<{
+      slug: string;
+      meta?: { logo?: string };
+    }>;
+
+    const logos: Record<string, string> = {};
+    const slugSet = new Set(toolkitSlugs);
+
+    for (const tk of allToolkits) {
+      if (slugSet.has(tk.slug) && tk.meta?.logo) {
+        logos[tk.slug] = tk.meta.logo;
+      }
+    }
+
+    return logos;
+  } catch {
+    // Non-critical — tools will show fallback icons
+    return {};
+  }
 }
 
 // ---------------------------------------------------------------------------

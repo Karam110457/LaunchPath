@@ -33,11 +33,11 @@ export function IntegrationsStep({
     setLoadingLogos(true);
 
     fetch("/api/composio/apps")
-      .then((res) => (res.ok ? res.json() : []))
-      .then((apps: ToolkitLogo[]) => {
+      .then((res) => (res.ok ? res.json() : { apps: [] }))
+      .then((data: { apps: ToolkitLogo[] }) => {
         if (cancelled) return;
         const map: Record<string, string | null> = {};
-        for (const app of apps) {
+        for (const app of data.apps) {
           map[app.toolkit] = app.logo ?? null;
         }
         setLogos(map);
