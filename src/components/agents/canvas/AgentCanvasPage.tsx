@@ -1699,6 +1699,11 @@ function AgentCanvasInner({
             const kbY = saPos.y + 260;
 
             // Optimistic: add knowledge node + edge immediately
+            // NOTE: Do NOT call setLayoutState here — it would change layoutState,
+            // causing useCanvasLayout to recompute layoutNodes WITHOUT the subagent
+            // knowledge node (since subagentDetails hasn't updated yet), which would
+            // trigger the merge useEffect to mark this optimistic node as _exiting.
+            // Position is persisted after fetchSubagents() completes instead.
             setNodes((prev) => [
               ...prev,
               {
@@ -1722,13 +1727,6 @@ function AgentCanvasInner({
               );
             });
 
-            // Save position
-            const ls = layoutStateRef.current;
-            const newPos = { ...ls.positions, [kbId]: { x: kbX, y: kbY } };
-            const newState = { ...ls, positions: newPos };
-            setLayoutState(newState);
-            persistLayout(newState);
-
             // PATCH async (with rollback on failure)
             void (async () => {
               const res = await fetch(`/api/agents/${tgt.id}`, {
@@ -1743,6 +1741,12 @@ function AgentCanvasInner({
                 return;
               }
               await fetchSubagents();
+              // Persist position AFTER fetchSubagents so layoutNodes includes the knowledge node
+              const ls = layoutStateRef.current;
+              const newPos = { ...ls.positions, [kbId]: { x: kbX, y: kbY } };
+              const newState = { ...ls, positions: newPos };
+              setLayoutState(newState);
+              persistLayout(newState);
               setCatalogTargetAgent(null);
               setModal({ type: "subagent-knowledge", agentId: tgt.id });
             })();

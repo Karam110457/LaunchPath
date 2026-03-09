@@ -149,14 +149,17 @@ Margin range depends on which model tier the user is primarily consuming.
 
 | | **Launch** ($29/mo) | **Build** ($79/mo) | **Agency** ($249/mo) |
 |--|--|--|--|
-| **Positioning** | "Ship your first AI agent" | "Scale to multiple agents & channels" | "Run it as a business" |
+| **Positioning** | "Ship your first AI agent" | "Scale to multiple agents & clients" | "Run it as a business" |
 | **Included credits** | 500 | 2,500 | 10,000 |
 | **Builder AI** | 30 messages/day | 100 messages/day | Unlimited |
 | **Sub-accounts (clients)** | 1 | 5 | Unlimited |
-| **Channels** | Web chat | Web + email + voice | All channels |
+| **Channels** | All (web, email, voice) | All | All |
 | **Agents** | Unlimited | Unlimited | Unlimited |
 | **Demos** | Basic | Custom-branded | White-label |
-| **Knowledge sources** | 3 per agent | 10 per agent | Unlimited |
+| **Proposal generator** | No | Yes | Yes |
+| **ROI dashboard** | Basic | Full | Full + white-label |
+| **Client health monitoring** | No | No | Yes |
+| **Integrated billing (Stripe)** | No | Yes | Yes (white-label) |
 | **Support** | Community | Priority | Dedicated |
 
 ### Credit Add-On Dropdown (within each plan)
@@ -238,7 +241,10 @@ Sub-accounts are the strongest natural upgrade trigger:
 | Client portal access | Yes | Yes | Yes |
 | Custom branding | No | Basic (logo + colors) | Full white-label |
 | Client-facing demos | Basic | Custom-branded | White-label (your brand removed) |
-| Client billing/invoicing | No | No | Future feature |
+| ROI dashboard | Basic | Full | Full + white-label |
+| Integrated billing (Stripe) | No | Yes | Yes (white-label) |
+| Client health scores | No | No | Yes |
+| Auto monthly reports | No | Yes | Yes (branded) |
 
 ### Monetization Insight
 
@@ -330,30 +336,77 @@ Credits are bundled into plan price with a dropdown to upgrade credit amount wit
 
 ### Where LaunchPath Differentiates
 
+The competitor builds an **agent builder**. LaunchPath builds an **agency operating system**.
+
 | Dimension | Competitor | LaunchPath | Why it matters |
 |-----------|-----------|------------|---------------|
-| **Tier names** | Starter / Growth / Scale | Launch / Build / Agency | Reflects beginner journey, avoids direct copy |
-| **Positioning framing** | "For the first client" (agency-first) | "Ship your first AI agent" (builder-first) | Our audience is beginners, not established agencies |
-| **Primary upgrade driver** | Sub-accounts + credits | Channels + builder AI + sub-accounts | Multiple expansion vectors, not just client count |
-| **Channel gating** | Not visibly gated | Web only → Web+Email+Voice → All | Creates clear upgrade reason beyond credits |
+| **Core identity** | "Build AI agents" | "Launch your AI agency" | We help users build a business, not just a bot |
+| **Tier names** | Starter / Growth / Scale | Launch / Build / Agency | Reflects the beginner → agency journey |
+| **Positioning** | "For the first client" (agency-first) | "Ship your first AI agent" (builder-first) | Our audience is beginners, not established agencies |
 | **Builder AI visibility** | Not surfaced in pricing | Explicitly shown (30/100/Unlimited per day) | Our viral feature — make it a visible differentiator |
-| **Knowledge source limits** | Not visibly gated | 3 → 10 → Unlimited per agent | Another natural expansion point |
-| **Top-tier pricing** | $297/mo | $249/mo | Slightly undercut — more accessible for our audience |
+| **Channels** | Unclear gating | All channels on all plans | No artificial friction — agents should work everywhere |
+| **ROI dashboard** | None | Auto-generated, client-facing | Solves the #1 reason clients churn: can't see value |
+| **Proposal generator** | None | AI-generated from agent config | Solves beginners' biggest fear: "what do I send them?" |
+| **Integrated billing** | None | Stripe-connected, white-label | Agency owners bill clients directly through the platform |
+| **Client health scores** | None | Usage trends, churn risk alerts | Prevents silent churn — agency owners see problems early |
+| **Top-tier pricing** | $297/mo | $249/mo | Slightly undercut, more accessible for our audience |
 
-### Differentiation Strategy Summary
+### The Full Agency Lifecycle (Our Moat)
 
-1. **Don't compete on credits alone** — the competitor already does credit-based pricing. Instead, gate by **capabilities** (channels, knowledge, builder AI power) so credits are just one axis of value.
-2. **Lead with the builder AI** — it's the viral hook and they don't surface it in pricing. Making it a visible, gated feature positions LaunchPath as "the AI that builds AI" — distinct from just another agent platform.
-3. **Frame around the user's journey** — "Launch → Build → Agency" tells a story. It says "you'll grow here" which resonates with beginners more than generic tier labels.
-4. **Undercut slightly on the top tier** — $249 vs $297 makes LaunchPath feel more accessible without racing to the bottom. The $29 and $79 tiers are close enough to feel competitive.
-5. **Channel gating is unique leverage** — if the competitor gives all channels on all plans, LaunchPath's gating creates friction. But it also creates a much clearer "why upgrade" story — and most Launch users only need web chat anyway.
+Competitors only help with step 3. LaunchPath helps with **all 6 steps**:
+
+```
+1. CHOOSE NICHE        → Niche selection wizard + vertical templates
+2. BUILD AGENT         → AI-powered builder (the part everyone has)
+3. CREATE PROPOSAL     → Auto-generated proposal + pricing recommendation
+4. DEMO TO CLIENT      → Interactive sandboxed demo environment
+5. DEPLOY & BILL       → Sub-account + Stripe billing + campaign launch
+6. PROVE ROI & GROW    → ROI dashboard + health scores + expansion prompts
+```
+
+Steps 1, 3, 5, and 6 are where LaunchPath creates distance from every competitor.
+
+### Business Model Guidance (Built Into the Platform)
+
+Most beginners fail not because they can't build the agent, but because they don't know how to price and sell it. LaunchPath should guide users toward proven models:
+
+**Model A: Starter Retainer + Performance Bonus (Recommended for beginners)**
+- Base: $500-$1,500/mo retainer (covers platform cost + basic maintenance)
+- Bonus: +$5 per qualified lead, +$2 per appointment booked, etc.
+- Why it works: Low base = easy client yes. Performance component grows income as agent proves itself.
+
+**Model B: Outcome-Based with Minimum (Emerging standard)**
+- Charge per successful outcome (resolved ticket, booked appointment, qualified lead)
+- Monthly minimum ensures baseline revenue (e.g., $3/lead, $500/mo minimum)
+- Why it works: Clients love paying only for results. High-performing agents = more revenue than flat retainers.
+
+**Model C: Tiered SaaS Resale (Lowest risk)**
+- White-label the platform, charge $197-$497/mo per client
+- Agent included as part of a "package" (AI receptionist + dashboard + monthly report)
+- Why it works: Predictable revenue, no custom work. 2-3 clients cover platform costs.
+
+LaunchPath should surface these models during agent setup: *"For a dental receptionist agent, agencies typically charge $X/mo. Here are 3 pricing models with pros/cons."*
+
+### Key Differentiating Features (Roadmap)
+
+| Feature | What it does | Impact | Difficulty |
+|---------|-------------|--------|------------|
+| **ROI Dashboard** | Auto-generated client-facing performance metrics | Highest — solves #1 churn reason | Medium |
+| **Proposal Generator** | AI creates branded proposals from agent config | High — directly increases close rate | Medium |
+| **Niche Agent Templates** | Pre-built agents with vertical context (dental, real estate, etc.) | High — removes "what do I build?" paralysis | Low-Medium |
+| **Integrated Stripe Billing** | Agency owners bill clients through LaunchPath | High — eliminates separate invoicing tools | Medium |
+| **Client Health Monitoring** | Usage trends, churn risk alerts, expansion prompts | High — prevents silent churn | Medium |
+| **Pricing Recommender** | Suggests pricing based on agent type + market data | Medium — gives pricing confidence | Low |
+| **Sales Script Library** | Outreach templates, demo scripts, objection handlers per vertical | Medium — helps with the hardest part (selling) | Low |
+| **Monthly Auto-Reports** | Branded performance reports sent to clients automatically | Medium — saves 6hrs/client/month | Medium |
 
 ### What NOT to Copy
 
 - Don't use a "Marketplace" feature as a tier differentiator unless we actually build one
 - Don't use identical tier names (Starter/Growth/Scale)
 - Don't tie credit pricing 1:1 to plan price (e.g., "$25/mo plan = $25/mo credits") — decouple them for flexibility
-- Don't position around client count in marketing copy — position around the builder's own growth
+- Don't position around client count in marketing copy — position around the user's business growth
+- Don't compete on agent building alone — that's a commodity. Compete on the full business lifecycle.
 
 ---
 
@@ -409,6 +462,10 @@ Add as a **power-user feature** once the platform has traction:
 | Sonnet for builder, not Opus | Reliable for structured tool calls, 5-10x cheaper than Opus |
 | Rate limits on builder, not credits | Builder cost is fixed overhead — rate limits keep it predictable |
 | Credit top-ups over hard cutoffs | Users hitting limits should be upsold, not blocked |
+| All channels on all plans | No artificial friction — agents should work everywhere from day one |
+| Agency OS, not just agent builder | Competitors only do "build." We do the full lifecycle: niche → build → propose → demo → deploy → prove ROI |
+| Business model guidance built in | Beginners fail at pricing and selling, not building. Guide them to proven models. |
+| ROI dashboard as core feature | #1 reason clients churn is unclear value. Auto-generated ROI solves this. |
 
 ---
 
