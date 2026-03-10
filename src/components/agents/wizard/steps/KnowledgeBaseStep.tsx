@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   Globe,
   MessageSquare,
@@ -26,7 +26,26 @@ import {
 } from "@/components/ui/tabs";
 import type { DiscoveredPage, WizardFaq, WizardFile } from "@/types/agent-wizard";
 
+const KB_GUIDANCE: Record<string, { heading: string; description: string }> = {
+  "appointment-booker": {
+    heading: "Build your knowledge base",
+    description:
+      "Help your agent answer questions about your services, pricing, and availability while booking appointments.",
+  },
+  "customer-support": {
+    heading: "Build your knowledge base",
+    description:
+      "This is critical — your support agent relies on this information to answer customer questions accurately. Add as much content as possible.",
+  },
+  "lead-qualification": {
+    heading: "Build your knowledge base",
+    description:
+      "Give your agent product and service details so it can have informed conversations with potential leads.",
+  },
+};
+
 interface KnowledgeBaseStepProps {
+  templateId: string | null;
   discoveredPages: DiscoveredPage[];
   faqs: WizardFaq[];
   files: WizardFile[];
@@ -37,6 +56,7 @@ interface KnowledgeBaseStepProps {
 }
 
 export function KnowledgeBaseStep({
+  templateId,
   discoveredPages,
   faqs,
   files,
@@ -48,14 +68,19 @@ export function KnowledgeBaseStep({
   const selectedPages = discoveredPages.filter((p) => p.selected);
   const scannedPages = selectedPages.filter((p) => p.status === "done");
 
+  const guidance = KB_GUIDANCE[templateId ?? ""] ?? {
+    heading: "Build your knowledge base",
+    description: "Give your agent the information it needs to help your customers.",
+  };
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold tracking-tight">
-          Build your knowledge base
+          {guidance.heading}
         </h2>
         <p className="text-sm text-muted-foreground">
-          Give your agent the information it needs to help your customers.
+          {guidance.description}
         </p>
       </div>
 
@@ -136,13 +161,20 @@ function WebsiteTab({
   onPagesChange: (pages: DiscoveredPage[]) => void;
 }) {
   const [scanning, setScanning] = useState(false);
+  const autoScanFired = useRef(false);
   const selectedPages = discoveredPages.filter((p) => p.selected);
 
-  async function handleScanPages() {
-    if (selectedPages.length === 0) return;
+  // Ref to hold latest pages for the scan function without re-creating it
+  const pagesRef = useRef(discoveredPages);
+  pagesRef.current = discoveredPages;
+
+  const scanPages = useCallback(async () => {
+    const pages = pagesRef.current;
+    const hasUnscanned = pages.some((p) => p.selected && p.status !== "done" && p.status !== "scraping");
+    if (!hasUnscanned) return;
 
     setScanning(true);
-    const updated = [...discoveredPages];
+    const updated = [...pages];
 
     for (let i = 0; i < updated.length; i++) {
       if (!updated[i].selected) continue;
@@ -177,7 +209,19 @@ function WebsiteTab({
     }
 
     setScanning(false);
-  }
+  }, [onPagesChange]);
+
+  // Auto-scan unscanned pages when the tab first mounts
+  useEffect(() => {
+    if (autoScanFired.current) return;
+    const hasUnscanned = discoveredPages.some(
+      (p) => p.selected && p.status === "pending",
+    );
+    if (hasUnscanned) {
+      autoScanFired.current = true;
+      scanPages();
+    }
+  }, [discoveredPages, scanPages]);
 
   if (discoveredPages.length === 0) {
     return (
@@ -198,20 +242,22 @@ function WebsiteTab({
     <div className="space-y-4 pt-3">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {doneCount} of {selectedCount} selected pages scanned
+          {scanning
+            ? "Scanning your pages..."
+            : `${doneCount} of ${selectedCount} selected pages scanned`}
         </p>
         <Button
           type="button"
           size="sm"
-          onClick={handleScanPages}
-          disabled={scanning || selectedCount === 0}
+          onClick={scanPages}
+          disabled={scanning || selectedCount === 0 || doneCount === selectedCount}
         >
           {scanning ? (
             <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
           ) : (
             <Globe className="w-4 h-4 mr-1.5" />
           )}
-          Scan selected pages
+          {doneCount > 0 && doneCount < selectedCount ? "Retry failed" : "Scan selected pages"}
         </Button>
       </div>
 

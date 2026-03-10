@@ -178,6 +178,21 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
     }
   }
 
+  /** Non-blocking hint shown below navigation (doesn't prevent proceeding) */
+  function getStepHint(): string | null {
+    if (currentStep.id !== "knowledge-base") return null;
+    const hasKB =
+      state.discoveredPages.some((p) => p.selected && p.status === "done") ||
+      state.faqs.length > 0 ||
+      state.files.length > 0;
+    if (hasKB) return null;
+
+    if (state.templateId === "customer-support") {
+      return "Your support agent needs a knowledge base to answer questions accurately. Consider adding content before continuing.";
+    }
+    return "Adding knowledge base content helps your agent give more accurate, business-specific answers.";
+  }
+
   // ---------------------------------------------------------------------------
   // Navigation
   // ---------------------------------------------------------------------------
@@ -315,6 +330,7 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
       case "knowledge-base":
         return (
           <KnowledgeBaseStep
+            templateId={state.templateId}
             discoveredPages={state.discoveredPages}
             faqs={state.faqs}
             files={state.files}
@@ -447,6 +463,11 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
         {getValidationError() && (
           <p className="text-xs text-muted-foreground text-center">
             {getValidationError()}
+          </p>
+        )}
+        {!getValidationError() && getStepHint() && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+            {getStepHint()}
           </p>
         )}
         <div className="flex items-center justify-between">

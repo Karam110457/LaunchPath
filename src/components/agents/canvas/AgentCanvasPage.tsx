@@ -727,6 +727,23 @@ function AgentCanvasInner({
         }
       }
 
+      // 4. Auto-create edges for tool/subagent nodes that have no connection
+      //    (e.g. tools auto-added by the wizard generate route)
+      const connectedTargets = new Set(updated.map(e => e.target));
+      for (const ln of layoutNodes) {
+        if (ln.id.startsWith("tool-") && !connectedTargets.has(ln.id)) {
+          const edgeId = `e-agent-${ln.id}`;
+          if (!currentIds.has(edgeId)) {
+            updated.push({ id: edgeId, source: "agent", sourceHandle: "bottom-right", target: ln.id, type: "dashedEdge" });
+          }
+        } else if (ln.id.startsWith("subagent-") && !connectedTargets.has(ln.id)) {
+          const edgeId = `e-agent-${ln.id}`;
+          if (!currentIds.has(edgeId)) {
+            updated.push({ id: edgeId, source: "agent", sourceHandle: "bottom-right", target: ln.id, type: "dashedEdge" });
+          }
+        }
+      }
+
       // No-op check: avoid unnecessary re-renders
       if (updated.length === currentEdges.length && updated.every((e, i) => e.id === currentEdges[i]?.id)) {
         return currentEdges;
