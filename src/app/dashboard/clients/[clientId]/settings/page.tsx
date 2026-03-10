@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Send, Trash2 } from "lucide-react";
+import { Send, Trash2, Palette, Upload } from "lucide-react";
 
 interface Client {
   id: string;
@@ -20,6 +20,13 @@ interface Member {
   created_at: string;
 }
 
+interface Branding {
+  primary_color: string | null;
+  accent_color: string | null;
+  logo_url: string | null;
+  favicon_url: string | null;
+}
+
 export default function ClientSettingsPage() {
   const { clientId } = useParams<{ clientId: string }>();
   const router = useRouter();
@@ -34,6 +41,13 @@ export default function ClientSettingsPage() {
   const [email, setEmail] = useState("");
   const [website, setWebsite] = useState("");
   const [status, setStatus] = useState("active");
+
+  // Branding
+  const [brandingLogoUrl, setBrandingLogoUrl] = useState("");
+  const [primaryColor, setPrimaryColor] = useState("#FF8C00");
+  const [accentColor, setAccentColor] = useState("#9D50BB");
+  const [savingBranding, setSavingBranding] = useState(false);
+  const [brandingMsg, setBrandingMsg] = useState<string | null>(null);
 
   // Invite
   const [inviteEmail, setInviteEmail] = useState("");
@@ -50,6 +64,11 @@ export default function ClientSettingsPage() {
     setEmail(data.client.email ?? "");
     setWebsite(data.client.website ?? "");
     setStatus(data.client.status);
+    if (data.branding) {
+      setBrandingLogoUrl(data.branding.logo_url ?? "");
+      setPrimaryColor(data.branding.primary_color ?? "#FF8C00");
+      setAccentColor(data.branding.accent_color ?? "#9D50BB");
+    }
     setLoading(false);
   }, [clientId]);
 
@@ -75,6 +94,24 @@ export default function ClientSettingsPage() {
       setSaveMsg("Failed to save");
     }
     setSaving(false);
+  }
+
+  async function handleSaveBranding() {
+    setSavingBranding(true);
+    setBrandingMsg(null);
+    const res = await fetch(`/api/clients/${clientId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        branding: {
+          primary_color: primaryColor,
+          accent_color: accentColor,
+          logo_url: brandingLogoUrl.trim() || null,
+        },
+      }),
+    });
+    setBrandingMsg(res.ok ? "Branding saved" : "Failed to save branding");
+    setSavingBranding(false);
   }
 
   async function handleInvite(e: React.FormEvent) {
@@ -184,6 +221,101 @@ export default function ClientSettingsPage() {
           </button>
           {saveMsg && (
             <span className="text-xs text-muted-foreground">{saveMsg}</span>
+          )}
+        </div>
+      </div>
+
+      {/* Portal Branding */}
+      <div className="rounded-lg border bg-card p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Palette className="size-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold">Portal Branding</h2>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Customize how the client portal looks for this client and their team members.
+        </p>
+        <div className="grid gap-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Logo URL</label>
+            <div className="flex items-center gap-3">
+              {brandingLogoUrl ? (
+                <img
+                  src={brandingLogoUrl}
+                  alt="Logo preview"
+                  className="size-10 rounded-xl object-cover border border-black/5 dark:border-[#333333] shadow-sm"
+                />
+              ) : (
+                <div className="size-10 rounded-xl bg-gradient-to-br from-[#FF8C00]/15 to-[#9D50BB]/10 border border-black/5 dark:border-[#333333] flex items-center justify-center shadow-sm">
+                  <Upload className="size-4 text-muted-foreground" />
+                </div>
+              )}
+              <input
+                type="url"
+                value={brandingLogoUrl}
+                onChange={(e) => setBrandingLogoUrl(e.target.value)}
+                placeholder="https://example.com/logo.png"
+                className="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Primary Color</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={primaryColor}
+                  onChange={(e) => setPrimaryColor(e.target.value)}
+                  className="size-10 rounded-lg border cursor-pointer"
+                />
+                <span className="text-sm text-muted-foreground font-mono">{primaryColor}</span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Accent Color</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={accentColor}
+                  onChange={(e) => setAccentColor(e.target.value)}
+                  className="size-10 rounded-lg border cursor-pointer"
+                />
+                <span className="text-sm text-muted-foreground font-mono">{accentColor}</span>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-border/40 bg-muted/30 p-4">
+            <p className="text-xs font-medium mb-2">Preview</p>
+            <div className="flex items-center gap-3">
+              {brandingLogoUrl ? (
+                <img src={brandingLogoUrl} alt="" className="size-8 rounded-lg object-cover" />
+              ) : (
+                <div
+                  className="size-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
+                  style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
+                >
+                  {name.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div
+                className="h-8 px-4 rounded-full text-white text-xs font-medium flex items-center"
+                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
+              >
+                Sample Button
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleSaveBranding}
+            disabled={savingBranding}
+            className="px-4 py-2 text-sm font-medium rounded-lg shadow-md gradient-accent-bg text-white hover:scale-[1.02] transition-transform border-0 disabled:opacity-50"
+          >
+            {savingBranding ? "Saving..." : "Save Branding"}
+          </button>
+          {brandingMsg && (
+            <span className="text-xs text-muted-foreground">{brandingMsg}</span>
           )}
         </div>
       </div>

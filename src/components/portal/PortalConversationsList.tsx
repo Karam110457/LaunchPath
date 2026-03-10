@@ -86,16 +86,16 @@ export function PortalConversationsList({ campaigns }: PortalConversationsListPr
       />
 
       {isLoading ? (
-        <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-14 text-center text-muted-foreground animate-skeleton-pulse">
+        <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-14 text-center text-muted-foreground animate-skeleton-pulse">
           Loading conversations...
         </div>
       ) : conversations.length === 0 ? (
-        <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-14 text-center text-muted-foreground">
+        <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-14 text-center text-muted-foreground">
           No conversations found.
         </div>
       ) : (
         <>
-          <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm divide-y divide-border/30 overflow-hidden">
+          <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 divide-y divide-border/30 overflow-hidden">
             {conversations.map((conv) => (
               <Link
                 key={conv.id}

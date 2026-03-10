@@ -13,7 +13,7 @@ export function PortalConversationView({ conversationId }: PortalConversationVie
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-12 text-center text-muted-foreground">
+      <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-12 text-center text-muted-foreground">
         Loading conversation...
       </div>
     );
@@ -27,7 +27,7 @@ export function PortalConversationView({ conversationId }: PortalConversationVie
         onStatusChange={() => refresh()}
       />
 
-      <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm min-h-[400px] max-h-[600px] flex flex-col overflow-hidden">
+      <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 min-h-[400px] max-h-[600px] flex flex-col overflow-hidden">
         <LiveTranscript
           conversationId={conversationId}
           messages={messages}

@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { usePortal } from "@/contexts/PortalContext";
-import { Logo } from "@/components/Logo";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -49,36 +48,32 @@ export function PortalSidebar({ clientName, clientLogo, role }: PortalSidebarPro
   ];
 
   return (
-    <aside className="fixed z-50 w-[280px] bg-card/40 backdrop-blur-xl text-foreground hidden md:flex flex-col h-screen shrink-0 border-r border-border/40">
-      {/* Logo + Client identity */}
-      <div className="px-5 pt-6 pb-4 space-y-4">
-        <Link href={basePath} className="flex items-center gap-3 group">
-          <div className="flex items-center justify-center size-9 rounded-full border border-border/40 bg-card/60 backdrop-blur-md shadow-sm group-hover:bg-muted/50 transition-colors duration-150">
-            <Logo className="text-lg" />
-          </div>
-        </Link>
-
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl bg-muted/40 border border-border/30">
+    <aside className="fixed z-50 w-[280px] bg-background border-r border-border/40 text-foreground hidden md:flex flex-col h-screen shrink-0">
+      {/* Client identity — this is their portal, show their brand */}
+      <div className="px-5 pt-6 pb-4 shrink-0">
+        <Link href={basePath} className="flex items-center gap-3 px-1">
           {clientLogo ? (
-            <img src={clientLogo} alt={clientName} className="size-8 rounded-xl object-cover border border-border/40" />
+            <img src={clientLogo} alt={clientName} className="size-10 rounded-xl object-cover border border-black/5 dark:border-[#333333] shadow-sm" />
           ) : (
-            <div className="size-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center">
-              <span className="text-sm font-bold text-primary">{clientName.charAt(0).toUpperCase()}</span>
+            <div className="size-10 rounded-xl bg-white dark:bg-[#252525] border border-black/5 dark:border-[#333333] flex items-center justify-center shadow-sm">
+              <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#FF8C00] to-[#9D50BB]">
+                {clientName.charAt(0).toUpperCase()}
+              </span>
             </div>
           )}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold truncate">{clientName}</p>
             <p className="text-[11px] text-muted-foreground capitalize">{role}</p>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Quick action for admins */}
       {role === "admin" && (
-        <div className="px-5 pb-3">
+        <div className="px-5 pb-4 shrink-0">
           <Link
             href={`${basePath}/campaigns/new`}
-            className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-150 shadow-sm"
+            className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium rounded-full gradient-accent-bg text-white hover:scale-[1.02] transition-transform duration-150 shadow-md"
           >
             <Plus className="size-4" />
             New Campaign
@@ -87,8 +82,7 @@ export function PortalSidebar({ clientName, clientLogo, role }: PortalSidebarPro
       )}
 
       {/* Navigation */}
-      <nav className="px-3 pt-2 space-y-0.5 flex-1">
-        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-3">Navigation</p>
+      <nav className="px-3 space-y-0.5 flex-1 overflow-y-auto min-h-0">
         {navItems.map((item) => {
           const href = basePath + item.suffix;
           const isActive = item.exact
@@ -113,7 +107,7 @@ export function PortalSidebar({ clientName, clientLogo, role }: PortalSidebarPro
       </nav>
 
       {/* Bottom actions */}
-      <div className="px-3 pb-5 space-y-1">
+      <div className="px-3 pb-5 pt-2 space-y-1 shrink-0">
         <div className="h-px bg-border/40 mx-2 mb-3" />
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}

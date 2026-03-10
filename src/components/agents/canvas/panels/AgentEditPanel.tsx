@@ -342,8 +342,9 @@ export function AgentEditPanel({
             <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 flex items-start gap-2">
               <Info className="w-3.5 h-3.5 text-primary/70 mt-0.5 shrink-0" />
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Changes to tone, questions, and behavior take effect immediately
-                in conversations — no need to edit the raw system prompt.
+                Changes to tone, questions, and behavior are automatically
+                written into the system prompt. You can view and edit them
+                on the Prompt tab.
               </p>
             </div>
           )}

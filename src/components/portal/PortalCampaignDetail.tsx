@@ -163,15 +163,15 @@ export function PortalCampaignDetail({
       {activeTab === "overview" && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-4">
+            <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4">
               <p className="text-xs text-muted-foreground font-medium">Status</p>
               <p className="text-lg font-bold capitalize">{status}</p>
             </div>
-            <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-4">
+            <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4">
               <p className="text-xs text-muted-foreground font-medium">Conversations</p>
               <p className="text-lg font-bold">{conversationCount}</p>
             </div>
-            <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-4">
+            <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4">
               <p className="text-xs text-muted-foreground font-medium">Widget</p>
               <p className="text-lg font-bold">
                 {widgetChannel?.is_enabled ? "Live" : "Offline"}
@@ -261,7 +261,7 @@ export function PortalCampaignDetail({
                 <button
                   onClick={handleSaveConfig}
                   disabled={isSaving}
-                  className="px-6 py-2.5 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-150 disabled:opacity-50 shadow-sm"
+                  className="px-6 py-2.5 text-sm font-medium rounded-full gradient-accent-bg text-white hover:scale-[1.02] transition-transform transition-colors duration-150 disabled:opacity-50 shadow-sm"
                 >
                   {isSaving ? "Saving..." : "Save Changes"}
                 </button>

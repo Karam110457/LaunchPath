@@ -47,7 +47,7 @@ export function PortalNewCampaignForm({ agents }: PortalNewCampaignFormProps) {
 
   if (agents.length === 0) {
     return (
-      <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-8 text-center">
+      <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-8 text-center">
         <p className="text-muted-foreground">
           No agents have been assigned to your account yet. Please contact your agency to assign an agent.
         </p>
@@ -56,7 +56,7 @@ export function PortalNewCampaignForm({ agents }: PortalNewCampaignFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-6 space-y-5">
+    <form onSubmit={handleSubmit} className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-6 space-y-5">
       <div className="space-y-2">
         <label className="text-sm font-medium">Campaign Name</label>
         <input
@@ -94,7 +94,7 @@ export function PortalNewCampaignForm({ agents }: PortalNewCampaignFormProps) {
       <button
         type="submit"
         disabled={isSubmitting || !name.trim() || !agentId}
-        className="w-full px-5 py-2.5 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-150 disabled:opacity-50 shadow-sm"
+        className="w-full px-5 py-2.5 text-sm font-medium rounded-full gradient-accent-bg text-white hover:scale-[1.02] transition-transform transition-colors duration-150 disabled:opacity-50 shadow-sm"
       >
         {isSubmitting ? "Creating..." : "Create Campaign"}
       </button>

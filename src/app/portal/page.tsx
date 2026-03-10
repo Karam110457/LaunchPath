@@ -115,7 +115,7 @@ export default async function PortalDashboard() {
           <div className="flex items-center gap-2">
             <Link
               href="/portal/campaigns/new"
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-150 shadow-sm"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full gradient-accent-bg text-white hover:scale-[1.02] transition-transform transition-colors duration-150 shadow-sm"
             >
               <Plus className="size-4" />
               New Campaign
@@ -136,7 +136,7 @@ export default async function PortalDashboard() {
         {stats.map((stat, i) => (
           <div
             key={stat.label}
-            className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-4 space-y-1 animate-in fade-in slide-in-from-bottom-1 duration-300 fill-mode-both"
+            className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4 space-y-1 animate-in fade-in slide-in-from-bottom-1 duration-300 fill-mode-both"
             style={{ animationDelay: `${i * 50}ms` }}
           >
             <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
@@ -147,7 +147,7 @@ export default async function PortalDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Conversations */}
-        <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm overflow-hidden">
+        <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
             <h2 className="text-sm font-semibold">Recent Conversations</h2>
             <Link
@@ -210,7 +210,7 @@ export default async function PortalDashboard() {
         </div>
 
         {/* Campaign Status */}
-        <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm overflow-hidden">
+        <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
             <h2 className="text-sm font-semibold">Campaigns</h2>
             <Link

@@ -125,7 +125,7 @@ export default function PortalSettings() {
       </div>
 
       {/* Business info */}
-      <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-6 space-y-5">
+      <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-6 space-y-5">
         <h2 className="text-sm font-semibold">Business Information</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
@@ -173,7 +173,7 @@ export default function PortalSettings() {
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-150 disabled:opacity-50 shadow-sm"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full gradient-accent-bg text-white hover:scale-[1.02] transition-transform transition-colors duration-150 disabled:opacity-50 shadow-sm"
             >
               <Save className="size-4" />
               {isSaving ? "Saving..." : "Save Changes"}
@@ -186,13 +186,13 @@ export default function PortalSettings() {
       </div>
 
       {/* Team members */}
-      <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-6 space-y-5">
+      <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-6 space-y-5">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">Team Members</h2>
           {canInvite && (
             <button
               onClick={() => setShowInvite(!showInvite)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-150 shadow-sm"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full gradient-accent-bg text-white hover:scale-[1.02] transition-transform transition-colors duration-150 shadow-sm"
             >
               <UserPlus className="size-3.5" />
               Invite
@@ -227,7 +227,7 @@ export default function PortalSettings() {
             <button
               type="submit"
               disabled={isInviting}
-              className="px-5 py-2.5 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors duration-150 shadow-sm"
+              className="px-5 py-2.5 text-sm font-medium rounded-full gradient-accent-bg text-white hover:scale-[1.02] transition-transform disabled:opacity-50 transition-colors duration-150 shadow-sm"
             >
               {isInviting ? "Sending..." : "Send Invite"}
             </button>
@@ -249,8 +249,8 @@ export default function PortalSettings() {
                 style={{ animationDelay: `${i * 50}ms` }}
               >
                 <div className="flex items-center gap-3">
-                  <div className="size-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                    <Mail className="size-3.5 text-primary" />
+                  <div className="size-8 rounded-full bg-gradient-to-br from-[#FF8C00]/15 to-[#9D50BB]/10 flex items-center justify-center">
+                    <Mail className="size-3.5 text-[#FF8C00]" />
                   </div>
                   <div>
                     <p className="text-sm font-medium">
