@@ -70,10 +70,10 @@ const LANGUAGE_OPTIONS = [
 ];
 
 const TONE_PRESETS = [
-  { value: "friendly and approachable", label: "Friendly", desc: "Warm, gets to the point" },
-  { value: "professional and polished", label: "Professional", desc: "Formal, trustworthy" },
-  { value: "patient and supportive", label: "Patient", desc: "Thorough, never rushes" },
-  { value: "casual and conversational", label: "Casual", desc: "Relaxed, like a friend" },
+  { value: "friendly and approachable", label: "Friendly", desc: "Warm and helpful — like a good coworker" },
+  { value: "professional and polished", label: "Professional", desc: "Polished and trustworthy — great for corporate" },
+  { value: "patient and supportive", label: "Patient", desc: "Takes time to explain — never rushes the visitor" },
+  { value: "casual and conversational", label: "Casual", desc: "Relaxed and natural — like texting a friend" },
 ];
 
 function matchesPreset(tone: string): string | null {
@@ -380,9 +380,8 @@ export function AgentEditPanel({
               <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 flex items-start gap-2">
                 <Info className="w-3.5 h-3.5 text-primary/70 mt-0.5 shrink-0" />
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Changes to tone, questions, and behavior are automatically
-                  written into the system prompt. You can view and edit them
-                  on the Prompt tab.
+                  Changes here are automatically applied to your agent&apos;s
+                  instructions. You can view and fine-tune them on the Prompt tab.
                 </p>
               </div>
             )}
@@ -392,7 +391,7 @@ export function AgentEditPanel({
               <>
                 <section className="space-y-3">
                   <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Conversation Goal
+                    What should this agent do?
                   </h3>
                   <div className="space-y-2">
                     {AGENT_TEMPLATES.map((tmpl) => (
@@ -419,7 +418,7 @@ export function AgentEditPanel({
             {/* ── Identity ── */}
             <section className="space-y-3">
               <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Identity
+                Basic Info
               </h3>
               <div className="space-y-1.5">
                 <Label htmlFor="edit-name" className="text-xs">Name</Label>
@@ -464,68 +463,64 @@ export function AgentEditPanel({
             {/* ── Personality ── */}
           <section className="space-y-3">
             <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Personality
+              Tone & Greeting
             </h3>
+            <p className="text-[11px] text-muted-foreground -mt-1">
+              How your agent sounds and the first message visitors see.
+            </p>
 
             <div className="space-y-2">
-              <Label className="text-xs">Tone</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {TONE_PRESETS.map((preset) => (
-                  <button
-                    key={preset.value}
-                    type="button"
-                    onClick={() => {
-                      setShowCustomTone(false);
-                      update("tone", preset.value);
-                    }}
-                    className={cn(
-                      "flex items-start gap-2 rounded-lg border px-3 py-2.5 text-left transition-all",
-                      currentPreset === preset.value && !showCustomTone
-                        ? "border-transparent gradient-accent-border bg-gradient-to-br from-[#FF8C00]/8 to-[#9D50BB]/8"
-                        : "border-border hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5"
-                    )}
-                  >
-                    <div className="min-w-0">
-                      <p className={cn(
-                        "text-xs font-medium",
-                        currentPreset === preset.value && !showCustomTone ? "text-white" : ""
-                      )}>
-                        {preset.label}
-                      </p>
-                      <p className={cn(
-                        "text-[11px] leading-tight mt-0.5",
-                        currentPreset === preset.value && !showCustomTone ? "text-white/80" : "text-muted-foreground"
-                      )}>
-                        {preset.desc}
-                      </p>
-                    </div>
-                  </button>
-                ))}
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Tone</Label>
+                <button
+                  type="button"
+                  onClick={() => setShowCustomTone(!showCustomTone)}
+                  className="text-[11px] text-primary/70 hover:text-primary transition-colors"
+                >
+                  {showCustomTone ? "Pick a preset" : "Write your own"}
+                </button>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowCustomTone(true)}
-                className={cn(
-                  "flex items-center gap-2 w-full rounded-lg border px-3 py-2 text-left transition-all",
-                  showCustomTone
-                    ? "border-transparent gradient-accent-border bg-gradient-to-br from-[#FF8C00]/8 to-[#9D50BB]/8"
-                    : "border-border hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5"
-                )}
-              >
-                <Pencil className={cn("w-3.5 h-3.5", showCustomTone ? "text-white" : "text-muted-foreground")} />
-                <span className={cn("text-xs font-medium", showCustomTone ? "text-white" : "")}>
-                  Custom tone
-                </span>
-              </button>
-
-              {showCustomTone && (
+              {showCustomTone ? (
                 <Input
                   value={formState.tone}
                   onChange={(e) => update("tone", e.target.value)}
                   className="h-8 text-sm"
-                  placeholder="e.g., warm and empathetic"
+                  placeholder="e.g., warm and empathetic, short sentences"
                 />
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {TONE_PRESETS.map((preset) => (
+                    <button
+                      key={preset.value}
+                      type="button"
+                      onClick={() => {
+                        update("tone", preset.value);
+                      }}
+                      className={cn(
+                        "flex items-start gap-2 rounded-lg border px-3 py-2.5 text-left transition-all",
+                        currentPreset === preset.value
+                          ? "border-transparent gradient-accent-border bg-gradient-to-br from-[#FF8C00]/8 to-[#9D50BB]/8"
+                          : "border-border hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5"
+                      )}
+                    >
+                      <div className="min-w-0">
+                        <p className={cn(
+                          "text-xs font-medium",
+                          currentPreset === preset.value ? "text-white" : ""
+                        )}>
+                          {preset.label}
+                        </p>
+                        <p className={cn(
+                          "text-[11px] leading-tight mt-0.5",
+                          currentPreset === preset.value ? "text-white/80" : "text-muted-foreground"
+                        )}>
+                          {preset.desc}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
 
@@ -572,10 +567,10 @@ export function AgentEditPanel({
               <hr className="border-border" />
               <div className="rounded-lg border border-dashed p-4 space-y-3">
                 <div>
-                  <p className="text-xs font-medium">Set a conversation goal</p>
+                  <p className="text-xs font-medium">What should this agent do?</p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Add guided behavior settings to this agent by choosing a goal.
-                    You can still edit the system prompt on the Advanced tab.
+                    Pick a goal to unlock guided settings for your agent.
+                    You can still edit the prompt directly on the Prompt tab.
                   </p>
                 </div>
                 <div className="space-y-1.5">
@@ -804,13 +799,14 @@ function BehaviorSection({
     return (
       <section className="space-y-4">
         <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Behavior
+          Booking Settings
         </h3>
 
         <div className="space-y-2">
           <Label className="text-xs">Lead capture fields</Label>
           <p className="text-[11px] text-muted-foreground">
-            Name and email are always captured. Toggle additional fields.
+            Name and email are always collected. Turn on Phone if you need to
+            call or text leads, and Company if you serve businesses.
           </p>
           <div className="flex flex-wrap gap-2">
             <FieldToggle label="Name" enabled disabled />
@@ -1005,13 +1001,14 @@ function BehaviorSection({
     return (
       <section className="space-y-4">
         <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Behavior
+          Lead Capture Settings
         </h3>
 
         <div className="space-y-2">
           <Label className="text-xs">Lead capture fields</Label>
           <p className="text-[11px] text-muted-foreground">
-            Name and email are always captured. Toggle additional fields.
+            Name and email are always collected. Turn on Phone if you need to
+            call or text leads, and Company if you serve businesses.
           </p>
           <div className="flex flex-wrap gap-2">
             <FieldToggle label="Name" enabled disabled />
@@ -1088,7 +1085,7 @@ function BehaviorSection({
   return (
     <section className="space-y-4">
       <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Behavior
+        Support Settings
       </h3>
 
       <div className="space-y-2">
@@ -1172,6 +1169,9 @@ function BehaviorSection({
       {/* Forbidden topics */}
       <div className="space-y-1.5">
         <Label className="text-xs">Forbidden topics <span className="text-muted-foreground font-normal">(optional)</span></Label>
+        <p className="text-[11px] text-muted-foreground">
+          The agent will politely refuse to discuss these subjects.
+        </p>
         <TagList
           tags={forbiddenTopics}
           onChange={(v) => updateBc({ forbidden_topics: v })}

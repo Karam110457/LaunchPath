@@ -624,7 +624,8 @@ function AppointmentBookerOptions({
         <div>
           <Label className="text-sm font-medium">Lead capture fields</Label>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Information your agent collects from visitors. Name and email are always required.
+            Name and email are always collected. Turn on Phone if you need to
+            call or text leads, and Company if you serve businesses.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -1066,7 +1067,8 @@ function LeadCaptureOptions({
         <div>
           <Label className="text-sm font-medium">Lead capture fields</Label>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Contact information your agent collects. Name and email are always required.
+            Name and email are always collected. Turn on Phone if you need to
+            call or text leads, and Company if you serve businesses.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

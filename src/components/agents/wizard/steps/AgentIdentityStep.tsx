@@ -29,10 +29,10 @@ export function AgentIdentityStep({
     <div className="space-y-6">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold tracking-tight">
-          Give your agent an identity
+          Name your agent
         </h2>
         <p className="text-sm text-muted-foreground">
-          Name your agent and define how it presents itself to visitors.
+          Basic info about your agent and the first impression visitors get.
         </p>
       </div>
 
