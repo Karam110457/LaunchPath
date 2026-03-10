@@ -619,11 +619,11 @@ function AppointmentBookerOptions({
       <div className="space-y-3 rounded-lg border p-4">
         <div>
           <Label className="text-sm font-medium">
-            Service types
+            Appointment types
             <span className="text-muted-foreground font-normal ml-1">(optional)</span>
           </Label>
           <p className="text-xs text-muted-foreground mt-0.5">
-            If you offer multiple services, list them here. Your agent will ask which service the visitor needs.
+            If you offer different types of appointments, list them here. Your agent will ask which one the visitor needs.
           </p>
         </div>
         <CustomFieldsList

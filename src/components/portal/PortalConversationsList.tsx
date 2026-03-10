@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { usePortal } from "@/contexts/PortalContext";
 import { ConversationFilters } from "./ConversationFilters";
 
 interface Conversation {
@@ -28,6 +29,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export function PortalConversationsList({ campaigns }: PortalConversationsListProps) {
+  const { basePath } = usePortal();
   const searchParams = useSearchParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [total, setTotal] = useState(0);
@@ -97,7 +99,7 @@ export function PortalConversationsList({ campaigns }: PortalConversationsListPr
             {conversations.map((conv) => (
               <Link
                 key={conv.id}
-                href={`/portal/conversations/${conv.id}`}
+                href={`${basePath}/conversations/${conv.id}`}
                 className="flex items-start gap-3 px-5 py-3.5 hover:bg-muted/50 transition-colors"
               >
                 <div className="flex-1 min-w-0">

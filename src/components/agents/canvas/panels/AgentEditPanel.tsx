@@ -223,10 +223,11 @@ export function AgentEditPanel({
 
         const data = await res.json();
 
-        // Update local form state with new wizard config
+        // Update local form state with new wizard config + updated prompt
         setFormState((prev) => ({
           ...prev,
           wizardConfig: data.wizardConfig as WizardConfig,
+          ...(data.systemPrompt ? { systemPrompt: data.systemPrompt as string } : {}),
         }));
 
         // Refresh tools in parent
@@ -906,7 +907,7 @@ function BehaviorSection({
 
         {/* Service types */}
         <div className="space-y-1.5">
-          <Label className="text-xs">Service types <span className="text-muted-foreground font-normal">(optional)</span></Label>
+          <Label className="text-xs">Appointment types <span className="text-muted-foreground font-normal">(optional)</span></Label>
           <TagList
             tags={serviceTypes}
             onChange={(v) => updateBc({ service_types: v })}

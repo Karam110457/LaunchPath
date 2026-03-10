@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getTemplateById } from "@/lib/agents/templates";
 import { logger } from "@/lib/security/logger";
+import { generateConfigDirectives, updatePromptDirectives } from "@/lib/agents/config-directives";
 
 interface SwitchTemplateBody {
   newTemplateId: string;
@@ -35,7 +36,7 @@ export async function POST(
   // Verify agent ownership
   const { data: agent, error: agentErr } = await supabase
     .from("ai_agents")
-    .select("id, wizard_config")
+    .select("id, wizard_config, system_prompt, personality")
     .eq("id", agentId)
     .eq("user_id", user.id)
     .single();
@@ -129,18 +130,35 @@ export async function POST(
   // 3. Build default behavior config for new template
   const behaviorConfig = buildDefaultBehaviorConfig(newTemplateId);
 
-  // 4. Update agent with new wizard_config and tool_guidelines
+  // 4. Update agent with new wizard_config, tool_guidelines, and system_prompt directives
   const newWizardConfig = {
     ...oldWizardConfig,
     templateId: newTemplateId,
     behaviorConfig,
   };
 
+  // Regenerate config directives in the system prompt
+  const personality = agent.personality as { tone?: string; greeting_message?: string; language?: string } | null;
+  const newDirectives = generateConfigDirectives({
+    personality,
+    wizardConfig: {
+      templateId: newTemplateId,
+      qualifyingQuestions: (oldWizardConfig.qualifyingQuestions as string[] | undefined) ?? [],
+      behaviorConfig,
+    },
+    toolGuidelines: newTemplate.toolWorkflow,
+  });
+  const updatedPrompt = updatePromptDirectives(
+    (agent.system_prompt as string) ?? "",
+    newDirectives,
+  );
+
   const { error: updateErr } = await supabase
     .from("ai_agents")
     .update({
       wizard_config: newWizardConfig,
       tool_guidelines: newTemplate.toolWorkflow,
+      system_prompt: updatedPrompt,
     })
     .eq("id", agentId)
     .eq("user_id", user.id);
@@ -161,6 +179,7 @@ export async function POST(
   return NextResponse.json({
     ok: true,
     wizardConfig: newWizardConfig,
+    systemPrompt: updatedPrompt,
     tools: tools ?? [],
   });
 }

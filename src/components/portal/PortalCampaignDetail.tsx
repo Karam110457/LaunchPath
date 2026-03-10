@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Copy, Check, Globe, MessageSquare, Pause, Play } from "lucide-react";
+import { usePortal } from "@/contexts/PortalContext";
 
 interface PortalCampaignDetailProps {
   campaign: {
@@ -30,6 +31,7 @@ export function PortalCampaignDetail({
   appOrigin,
   role,
 }: PortalCampaignDetailProps) {
+  const { basePath } = usePortal();
   const router = useRouter();
   const isAdmin = role === "admin";
   const [status, setStatus] = useState(campaign.status);
@@ -99,7 +101,7 @@ export function PortalCampaignDetail({
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link
-          href="/portal/campaigns"
+          href={`${basePath}/campaigns`}
           className="p-1.5 rounded-md hover:bg-muted transition-colors"
         >
           <ArrowLeft className="size-4" />
@@ -178,7 +180,7 @@ export function PortalCampaignDetail({
           </div>
 
           <Link
-            href={`/portal/conversations?campaignId=${campaign.id}`}
+            href={`${basePath}/conversations?campaignId=${campaign.id}`}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border hover:bg-muted transition-colors"
           >
             <MessageSquare className="size-4" />

@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { usePortal } from "@/contexts/PortalContext";
 
 interface PortalNewCampaignFormProps {
   agents: Array<{ id: string; name: string }>;
 }
 
 export function PortalNewCampaignForm({ agents }: PortalNewCampaignFormProps) {
+  const { basePath } = usePortal();
   const router = useRouter();
   const [name, setName] = useState("");
   const [agentId, setAgentId] = useState(agents[0]?.id ?? "");
@@ -35,7 +37,7 @@ export function PortalNewCampaignForm({ agents }: PortalNewCampaignFormProps) {
       }
 
       const { campaign } = await res.json();
-      router.push(`/portal/campaigns/${campaign.id}`);
+      router.push(`${basePath}/campaigns/${campaign.id}`);
     } catch {
       setError("Something went wrong");
     } finally {

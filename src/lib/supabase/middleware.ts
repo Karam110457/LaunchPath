@@ -71,13 +71,16 @@ export async function updateSession(request: NextRequest) {
       }
     }
 
+    // Portal preview: agency users can access /portal/preview/[clientId]
+    const isPortalPreview = pathname.startsWith("/portal/preview/");
+
     // Client-role routing: redirect to/from portal
     if (isClientRole && isDashboardRoute) {
       const url = request.nextUrl.clone();
       url.pathname = "/portal";
       return NextResponse.redirect(url);
     }
-    if (!isClientRole && isPortalRoute) {
+    if (!isClientRole && isPortalRoute && !isPortalPreview) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);

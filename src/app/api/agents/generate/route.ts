@@ -7,6 +7,7 @@ import { buildAgentGenerationContext } from "@/lib/ai/agent-builder-prompt";
 import { getTemplateById } from "@/lib/agents/templates";
 import { withRateLimitRetry } from "@/lib/ai/rate-limit-retry";
 import { getComposioClient } from "@/lib/composio/client";
+import { generateConfigDirectives, updatePromptDirectives } from "@/lib/agents/config-directives";
 import { chunkText } from "@/lib/knowledge/chunking";
 import { embedTexts } from "@/lib/knowledge/embeddings";
 import { addContextToChunks } from "@/lib/knowledge/contextual-retrieval";
@@ -146,10 +147,21 @@ export async function POST(request: NextRequest) {
 
         enqueue({ type: "progress", label: "Saving your agent..." });
 
-        // Build final system prompt: AI-generated base + tool workflow (if template)
+        // Build final system prompt: AI-generated base + config directives
         let finalSystemPrompt = agentConfig.system_prompt;
-        if (template?.toolWorkflow) {
-          finalSystemPrompt += "\n\n" + template.toolWorkflow;
+
+        // Generate config directives from wizard settings and bake them into the prompt
+        const configDirectives = generateConfigDirectives({
+          personality: agentConfig.personality,
+          wizardConfig: wizardConfig ? {
+            templateId: wizardConfig.templateId,
+            qualifyingQuestions: wizardConfig.qualifyingQuestions,
+            behaviorConfig: wizardConfig.behaviorConfig,
+          } : null,
+          toolGuidelines: template?.toolWorkflow,
+        });
+        if (configDirectives) {
+          finalSystemPrompt = updatePromptDirectives(finalSystemPrompt, configDirectives);
         }
 
         const { data: newAgent, error: insertError } = await supabase

@@ -46,6 +46,7 @@ import { CanvasActionsContext } from "./canvas-context";
 import { CanvasThemeProvider, useCanvasTheme } from "./canvas-theme";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LeftCatalogPanel } from "./LeftCatalogPanel";
+import { generateConfigDirectives, updatePromptDirectives } from "@/lib/agents/config-directives";
 import { useCanvasLayout, type CanvasLayoutState } from "./useCanvasLayout";
 import type {
   PanelState,
@@ -102,6 +103,7 @@ export interface AgentCanvasPageProps {
     wizard_config?: WizardConfig | null;
     canvas_layout?: any; // We parse this below
     knowledge_enabled?: boolean;
+    tool_guidelines?: string | null;
   };
   personality: {
     tone?: string;
@@ -154,6 +156,45 @@ function AgentCanvasInner({
 
   const [formState, setFormState] = useState<AgentFormState>(formStateFromProps);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+
+  // ─── Sync config directives into systemPrompt when Basics fields change ─
+  // When wizardConfig or personality-related fields change, regenerate the
+  // Configuration Directives section in the system prompt so it's visible
+  // on the Advanced (Prompt) tab.
+  const directivesSourceRef = useRef<string>(""); // tracks last-generated directives fingerprint
+  useEffect(() => {
+    const wc = formState.wizardConfig;
+    const newDirectives = generateConfigDirectives({
+      personality: {
+        tone: formState.tone,
+        greeting_message: formState.greetingMessage,
+        language: formState.language,
+      },
+      wizardConfig: wc ? {
+        templateId: wc.templateId,
+        qualifyingQuestions: wc.qualifyingQuestions,
+        behaviorConfig: wc.behaviorConfig,
+      } : null,
+      toolGuidelines: agent.tool_guidelines ?? undefined,
+    });
+
+    // Fingerprint to avoid infinite loops: only update if directives actually changed
+    const fingerprint = newDirectives;
+    if (fingerprint === directivesSourceRef.current) return;
+    directivesSourceRef.current = fingerprint;
+
+    setFormState((prev) => {
+      const updated = updatePromptDirectives(prev.systemPrompt, newDirectives);
+      if (updated === prev.systemPrompt) return prev;
+      return { ...prev, systemPrompt: updated };
+    });
+  }, [
+    formState.wizardConfig,
+    formState.tone,
+    formState.greetingMessage,
+    formState.language,
+    agent.wizard_config,
+  ]);
 
   const isDirty = useMemo(() => {
     return (Object.keys(savedFormState) as (keyof AgentFormState)[]).some(

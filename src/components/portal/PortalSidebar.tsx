@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { usePortal } from "@/contexts/PortalContext";
 import { Logo } from "@/components/Logo";
 import {
   LayoutDashboard,
@@ -23,6 +24,7 @@ interface PortalSidebarProps {
 export function PortalSidebar({ clientName, clientLogo, role }: PortalSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { basePath } = usePortal();
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -33,23 +35,23 @@ export function PortalSidebar({ clientName, clientLogo, role }: PortalSidebarPro
 
   const navItems = [
     {
-      href: "/portal",
+      suffix: "",
       label: "Dashboard",
       icon: LayoutDashboard,
       exact: true,
     },
     {
-      href: "/portal/conversations",
+      suffix: "/conversations",
       label: "Conversations",
       icon: MessageSquare,
     },
     {
-      href: "/portal/campaigns",
+      suffix: "/campaigns",
       label: "Campaigns",
       icon: Megaphone,
     },
     {
-      href: "/portal/settings",
+      suffix: "/settings",
       label: "Settings",
       icon: Settings,
     },
@@ -59,7 +61,7 @@ export function PortalSidebar({ clientName, clientLogo, role }: PortalSidebarPro
     <aside className="fixed md:relative z-50 w-80 bg-background text-foreground hidden md:flex h-screen shrink-0 border-r border-border/40">
       {/* Column 1: Primary Icon Nav (w-16) */}
       <div className="w-16 flex flex-col items-center border-r border-border/40 py-4 h-full shrink-0">
-        <Link href="/portal" className="mb-8 flex items-center justify-center size-10 rounded-full hover:bg-muted transition-colors">
+        <Link href={basePath} className="mb-8 flex items-center justify-center size-10 rounded-full hover:bg-muted transition-colors">
           <Logo className="text-xl" />
         </Link>
 
@@ -67,10 +69,10 @@ export function PortalSidebar({ clientName, clientLogo, role }: PortalSidebarPro
 
         <nav className="flex flex-col items-center gap-4">
           <Link
-            href="/portal/settings"
+            href={`${basePath}/settings`}
             className={cn(
               "flex items-center justify-center size-10 rounded-full transition-all",
-              pathname.startsWith("/portal/settings")
+              pathname.startsWith(`${basePath}/settings`)
                 ? "bg-accent text-accent-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
@@ -111,7 +113,7 @@ export function PortalSidebar({ clientName, clientLogo, role }: PortalSidebarPro
         {role === "admin" && (
           <div className="px-4 pb-2">
             <Link
-              href="/portal/campaigns/new"
+              href={`${basePath}/campaigns/new`}
               className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium rounded-[14px] bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               <Plus className="size-4" />
@@ -124,13 +126,14 @@ export function PortalSidebar({ clientName, clientLogo, role }: PortalSidebarPro
         <nav className="px-4 pt-2 space-y-1 flex-1">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1 mt-2">Portal</p>
           {navItems.map((item) => {
+            const href = basePath + item.suffix;
             const isActive = item.exact
-              ? pathname === item.href
-              : pathname.startsWith(item.href);
+              ? pathname === href || pathname === href + "/"
+              : pathname.startsWith(href);
             return (
               <Link
-                key={item.href}
-                href={item.href}
+                key={item.suffix}
+                href={href}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 text-sm rounded-[14px] transition-all font-medium",
                   isActive

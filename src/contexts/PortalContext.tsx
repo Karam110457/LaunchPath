@@ -9,6 +9,8 @@ export interface PortalContextValue {
   role: "admin" | "viewer";
   clientName: string;
   clientLogo?: string | null;
+  /** Base path for portal links. Defaults to "/portal", preview mode uses "/portal/preview/[clientId]" */
+  basePath: string;
 }
 
 const PortalContext = createContext<PortalContextValue | null>(null);

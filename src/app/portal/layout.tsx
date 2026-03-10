@@ -37,7 +37,7 @@ export default async function PortalLayout({
 
   return (
     <PortalProvider
-      value={{ clientId, role, clientName, clientLogo }}
+      value={{ clientId, role, clientName, clientLogo, basePath: "/portal" }}
     >
       <div style={brandingStyles as React.CSSProperties}>
         <PortalShell
