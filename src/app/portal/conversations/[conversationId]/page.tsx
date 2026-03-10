@@ -43,16 +43,16 @@ export default async function PortalConversationDetail({
   const metadata = conversation.metadata as Record<string, unknown> | null;
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-4">
+    <div className="p-6 lg:p-8 max-w-3xl mx-auto space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
       <div className="flex items-center gap-3">
         <Link
           href="/portal/conversations"
-          className="p-1.5 rounded-md hover:bg-muted transition-colors"
+          className="p-2 rounded-xl border border-border/40 bg-card/60 backdrop-blur-md hover:bg-muted/50 transition-colors duration-150"
         >
           <ArrowLeft className="size-4" />
         </Link>
         <div>
-          <h1 className="text-xl font-bold tracking-tight">Conversation</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Conversation</h1>
           <p className="text-sm text-muted-foreground">
             {channel?.campaigns?.name} &middot; Session {conversation.session_id.slice(0, 8)}
           </p>

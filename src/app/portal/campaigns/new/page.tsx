@@ -25,8 +25,11 @@ export default async function PortalNewCampaign() {
   }).filter(Boolean) as Array<{ id: string; name: string }>;
 
   return (
-    <div className="p-6 max-w-xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">New Campaign</h1>
+    <div className="p-6 lg:p-8 max-w-xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">New Campaign</h1>
+        <p className="text-muted-foreground mt-1">Create a new campaign for your workspace</p>
+      </div>
       <PortalNewCampaignForm agents={agents} />
     </div>
   );

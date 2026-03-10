@@ -114,22 +114,18 @@ export default function PortalSettings() {
   }
 
   if (loading) {
-    return (
-      <div className="p-6 max-w-3xl mx-auto">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-32 bg-muted rounded" />
-          <div className="h-40 bg-muted rounded-lg" />
-        </div>
-      </div>
-    );
+    return null; // loading.tsx skeleton handles this
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+    <div className="p-6 lg:p-8 max-w-3xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+        <p className="text-muted-foreground mt-1">Manage your workspace and team</p>
+      </div>
 
       {/* Business info */}
-      <div className="rounded-xl border bg-card p-5 space-y-4">
+      <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-6 space-y-5">
         <h2 className="text-sm font-semibold">Business Information</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
@@ -139,7 +135,7 @@ export default function PortalSettings() {
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full px-4 py-2.5 text-sm rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors duration-150"
               />
             ) : (
               <p className="text-sm font-medium">{client?.name ?? "-"}</p>
@@ -152,7 +148,7 @@ export default function PortalSettings() {
                 type="email"
                 value={editEmail}
                 onChange={(e) => setEditEmail(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full px-4 py-2.5 text-sm rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors duration-150"
               />
             ) : (
               <p className="text-sm font-medium">{client?.email ?? "-"}</p>
@@ -165,7 +161,7 @@ export default function PortalSettings() {
                 type="url"
                 value={editWebsite}
                 onChange={(e) => setEditWebsite(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full px-4 py-2.5 text-sm rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors duration-150"
               />
             ) : (
               <p className="text-sm font-medium">{client?.website ?? "-"}</p>
@@ -177,26 +173,26 @@ export default function PortalSettings() {
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-150 disabled:opacity-50 shadow-sm"
             >
               <Save className="size-4" />
               {isSaving ? "Saving..." : "Save Changes"}
             </button>
             {saveMessage && (
-              <span className="text-xs text-emerald-600">{saveMessage}</span>
+              <span className="text-xs text-emerald-600 dark:text-emerald-400">{saveMessage}</span>
             )}
           </div>
         )}
       </div>
 
       {/* Team members */}
-      <div className="rounded-xl border bg-card p-5 space-y-4">
+      <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-6 space-y-5">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">Team Members</h2>
           {canInvite && (
             <button
               onClick={() => setShowInvite(!showInvite)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-150 shadow-sm"
             >
               <UserPlus className="size-3.5" />
               Invite
@@ -205,24 +201,24 @@ export default function PortalSettings() {
         </div>
 
         {showInvite && (
-          <form onSubmit={handleInvite} className="flex items-end gap-3 p-3 rounded-lg bg-muted/50">
-            <div className="flex-1 space-y-1">
+          <form onSubmit={handleInvite} className="flex items-end gap-3 p-4 rounded-xl border border-border/40 bg-muted/30 backdrop-blur-sm">
+            <div className="flex-1 space-y-1.5">
               <label className="text-xs font-medium">Email</label>
               <input
                 type="email"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="name@example.com"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full px-4 py-2.5 text-sm rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors duration-150"
                 required
               />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label className="text-xs font-medium">Role</label>
               <select
                 value={inviteRole}
                 onChange={(e) => setInviteRole(e.target.value as "admin" | "viewer")}
-                className="px-3 py-2 text-sm rounded-lg border border-border bg-background"
+                className="px-4 py-2.5 text-sm rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm transition-colors duration-150"
               >
                 <option value="viewer">Viewer</option>
                 <option value="admin">Admin</option>
@@ -231,7 +227,7 @@ export default function PortalSettings() {
             <button
               type="submit"
               disabled={isInviting}
-              className="px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              className="px-5 py-2.5 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors duration-150 shadow-sm"
             >
               {isInviting ? "Sending..." : "Send Invite"}
             </button>
@@ -245,14 +241,17 @@ export default function PortalSettings() {
         {members.length === 0 ? (
           <p className="text-sm text-muted-foreground">No members found.</p>
         ) : (
-          <div className="divide-y">
-            {members.map((member) => (
+          <div className="divide-y divide-border/30">
+            {members.map((member, i) => (
               <div
                 key={member.id}
-                className="flex items-center justify-between py-3"
+                className="flex items-center justify-between py-3.5 animate-in fade-in slide-in-from-bottom-1 duration-200 fill-mode-both"
+                style={{ animationDelay: `${i * 50}ms` }}
               >
                 <div className="flex items-center gap-3">
-                  <Mail className="size-4 text-muted-foreground" />
+                  <div className="size-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                    <Mail className="size-3.5 text-primary" />
+                  </div>
                   <div>
                     <p className="text-sm font-medium">
                       {member.email ?? `${member.user_id.slice(0, 8)}...`}
@@ -263,13 +262,13 @@ export default function PortalSettings() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs bg-muted px-2.5 py-1 rounded-full capitalize font-medium">
+                  <span className="text-xs bg-muted/50 px-2.5 py-1 rounded-full capitalize font-medium">
                     {member.role}
                   </span>
                   {canRemove && (
                     <button
                       onClick={() => handleRemoveMember(member.id)}
-                      className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      className="p-1.5 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors duration-150"
                       title="Remove member"
                     >
                       <Trash2 className="size-3.5" />

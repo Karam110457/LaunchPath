@@ -47,7 +47,7 @@ export function PortalNewCampaignForm({ agents }: PortalNewCampaignFormProps) {
 
   if (agents.length === 0) {
     return (
-      <div className="rounded-xl border bg-card p-8 text-center">
+      <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-8 text-center">
         <p className="text-muted-foreground">
           No agents have been assigned to your account yet. Please contact your agency to assign an agent.
         </p>
@@ -56,7 +56,7 @@ export function PortalNewCampaignForm({ agents }: PortalNewCampaignFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-6 space-y-5">
       <div className="space-y-2">
         <label className="text-sm font-medium">Campaign Name</label>
         <input
@@ -64,7 +64,7 @@ export function PortalNewCampaignForm({ agents }: PortalNewCampaignFormProps) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Website Support"
-          className="w-full px-4 py-2.5 text-sm rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+          className="w-full px-4 py-2.5 text-sm rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors duration-150"
           required
         />
       </div>
@@ -74,7 +74,7 @@ export function PortalNewCampaignForm({ agents }: PortalNewCampaignFormProps) {
         <select
           value={agentId}
           onChange={(e) => setAgentId(e.target.value)}
-          className="w-full px-4 py-2.5 text-sm rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+          className="w-full px-4 py-2.5 text-sm rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors duration-150"
         >
           {agents.map((agent) => (
             <option key={agent.id} value={agent.id}>
@@ -94,7 +94,7 @@ export function PortalNewCampaignForm({ agents }: PortalNewCampaignFormProps) {
       <button
         type="submit"
         disabled={isSubmitting || !name.trim() || !agentId}
-        className="w-full px-4 py-2.5 text-sm font-medium rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+        className="w-full px-5 py-2.5 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-150 disabled:opacity-50 shadow-sm"
       >
         {isSubmitting ? "Creating..." : "Create Campaign"}
       </button>

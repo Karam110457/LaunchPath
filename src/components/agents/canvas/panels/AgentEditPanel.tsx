@@ -96,6 +96,7 @@ function getDefaultBehaviorConfig(templateId: string): Record<string, unknown> {
       },
       service_types: [],
       cancellation_policy: "",
+      disqualification_criteria: [],
     };
   }
   if (templateId === "customer-support") {
@@ -135,6 +136,8 @@ export function AgentEditPanel({
     newTemplateId: string;
     toolsToRemove: string[];
     toolsToAdd: string[];
+    /** Pre-filled config for the new template's required fields */
+    config: Record<string, unknown>;
   } | null>(null);
   const [switching, setSwitching] = useState(false);
 
@@ -194,25 +197,35 @@ export function AgentEditPanel({
         .filter((t) => !currentToolkits.has(t.toolkit))
         .map((t) => t.displayName);
 
-      // If no tool changes, switch immediately without dialog
-      if (toolsToRemove.length === 0 && toolsToAdd.length === 0) {
-        void executeTemplateSwitch(newTemplateId, false, false);
-        return;
-      }
-
-      setSwitchDialog({ newTemplateId, toolsToRemove, toolsToAdd });
+      // Always show dialog so user can fill in required fields for the new template
+      setSwitchDialog({
+        newTemplateId,
+        toolsToRemove,
+        toolsToAdd,
+        config: getDefaultSwitchConfig(newTemplateId),
+      });
     },
     [formState.wizardConfig, tools],
   );
 
   const executeTemplateSwitch = useCallback(
-    async (newTemplateId: string, removeOldTools: boolean, addNewTools: boolean) => {
+    async (
+      newTemplateId: string,
+      removeOldTools: boolean,
+      addNewTools: boolean,
+      prefilledConfig?: Record<string, unknown>,
+    ) => {
       setSwitching(true);
       try {
         const res = await fetch(`/api/agents/${agentId}/switch-template`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ newTemplateId, removeOldTools, addNewTools }),
+          body: JSON.stringify({
+            newTemplateId,
+            removeOldTools,
+            addNewTools,
+            prefilledConfig,
+          }),
         });
 
         if (!res.ok) {
@@ -639,65 +652,26 @@ export function AgentEditPanel({
         </div>
       </TabsContent>
 
-      {/* Template switch confirmation dialog */}
+      {/* Template switch dialog with required fields */}
       {switchDialog && (
-        <AlertDialog open onOpenChange={(open) => { if (!open) setSwitchDialog(null); }}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Switch conversation goal?</AlertDialogTitle>
-              <AlertDialogDescription asChild>
-                <div className="space-y-3">
-                  <p>
-                    Switching to{" "}
-                    <span className="font-medium text-foreground">
-                      {getTemplateById(switchDialog.newTemplateId)?.name}
-                    </span>
-                    . Behavior settings will reset to defaults.
-                  </p>
-                  {switchDialog.toolsToRemove.length > 0 && (
-                    <div className="rounded-md border border-destructive/20 bg-destructive/5 p-2.5">
-                      <p className="text-xs font-medium text-destructive mb-1">Tools to remove:</p>
-                      <ul className="text-xs text-destructive/80 list-disc pl-4 space-y-0.5">
-                        {switchDialog.toolsToRemove.map((t) => (
-                          <li key={t}>{t}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {switchDialog.toolsToAdd.length > 0 && (
-                    <div className="rounded-md border border-primary/20 bg-primary/5 p-2.5">
-                      <p className="text-xs font-medium text-primary mb-1">Tools to add:</p>
-                      <ul className="text-xs text-primary/80 list-disc pl-4 space-y-0.5">
-                        {switchDialog.toolsToAdd.map((t) => (
-                          <li key={t}>{t}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={switching}>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                disabled={switching}
-                onClick={(e) => {
-                  e.preventDefault();
-                  void executeTemplateSwitch(
-                    switchDialog.newTemplateId,
-                    switchDialog.toolsToRemove.length > 0,
-                    switchDialog.toolsToAdd.length > 0,
-                  );
-                }}
-              >
-                {switching ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                ) : null}
-                Switch template
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <TemplateSwitchDialog
+          dialog={switchDialog}
+          switching={switching}
+          onConfigChange={(patch) =>
+            setSwitchDialog((prev) =>
+              prev ? { ...prev, config: { ...prev.config, ...patch } } : prev,
+            )
+          }
+          onCancel={() => setSwitchDialog(null)}
+          onConfirm={() => {
+            void executeTemplateSwitch(
+              switchDialog.newTemplateId,
+              switchDialog.toolsToRemove.length > 0,
+              switchDialog.toolsToAdd.length > 0,
+              switchDialog.config,
+            );
+          }}
+        />
       )}
 
     </Tabs>
@@ -912,6 +886,16 @@ function BehaviorSection({
             tags={serviceTypes}
             onChange={(v) => updateBc({ service_types: v })}
             placeholder="e.g., Consultation"
+          />
+        </div>
+
+        {/* Disqualification criteria */}
+        <div className="space-y-1.5">
+          <Label className="text-xs">Disqualification criteria <span className="text-muted-foreground font-normal">(optional)</span></Label>
+          <TagList
+            tags={(bc.disqualification_criteria ?? []) as string[]}
+            onChange={(v) => updateBc({ disqualification_criteria: v })}
+            placeholder="e.g., No budget, just browsing"
           />
         </div>
 
@@ -1465,4 +1449,353 @@ function formatTime(t: string): string {
   const suffix = h >= 12 ? "PM" : "AM";
   const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
   return `${h12}:${mStr} ${suffix}`;
+}
+
+// ---------------------------------------------------------------------------
+// Template Switch Dialog — collects required fields before switching
+// ---------------------------------------------------------------------------
+
+/** Default pre-fill config for the switch dialog (only required fields) */
+function getDefaultSwitchConfig(templateId: string): Record<string, unknown> {
+  if (templateId === "appointment-booker") {
+    return {
+      service_types: [],
+      availability: {
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        working_days: ["mon", "tue", "wed", "thu", "fri"],
+        start_time: "09:00",
+        end_time: "17:00",
+        appointment_duration: 30,
+        buffer_minutes: 15,
+        max_advance_days: 30,
+      },
+    };
+  }
+  if (templateId === "customer-support") {
+    return {
+      escalation_mode: "escalate_complex",
+    };
+  }
+  if (templateId === "lead-qualification") {
+    return {
+      icp_description: "",
+    };
+  }
+  return {};
+}
+
+/** Returns list of missing required field labels for the new template */
+function getSwitchValidationErrors(
+  templateId: string,
+  config: Record<string, unknown>,
+): string[] {
+  const errors: string[] = [];
+  if (templateId === "appointment-booker") {
+    const types = (config.service_types ?? []) as string[];
+    if (types.length === 0) errors.push("At least one appointment type");
+    const avail = config.availability as Record<string, unknown> | undefined;
+    if (!avail?.timezone) errors.push("Timezone");
+  }
+  if (templateId === "lead-qualification") {
+    if (!(config.icp_description as string)?.trim()) {
+      errors.push("Ideal customer profile");
+    }
+  }
+  // customer-support has no strictly required fields beyond the default
+  return errors;
+}
+
+function TemplateSwitchDialog({
+  dialog,
+  switching,
+  onConfigChange,
+  onCancel,
+  onConfirm,
+}: {
+  dialog: {
+    newTemplateId: string;
+    toolsToRemove: string[];
+    toolsToAdd: string[];
+    config: Record<string, unknown>;
+  };
+  switching: boolean;
+  onConfigChange: (patch: Record<string, unknown>) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const template = getTemplateById(dialog.newTemplateId);
+  const errors = getSwitchValidationErrors(dialog.newTemplateId, dialog.config);
+  const canSwitch = errors.length === 0;
+
+  return (
+    <AlertDialog open onOpenChange={(open) => { if (!open) onCancel(); }}>
+      <AlertDialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            Switch to {template?.name ?? dialog.newTemplateId}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            Fill in the required information for this agent type before switching.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <div className="space-y-4 py-2">
+          {/* Tool changes summary */}
+          {(dialog.toolsToRemove.length > 0 || dialog.toolsToAdd.length > 0) && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Tool changes
+              </p>
+              {dialog.toolsToRemove.length > 0 && (
+                <div className="rounded-md border border-destructive/20 bg-destructive/5 p-2.5">
+                  <p className="text-xs font-medium text-destructive mb-1">Remove:</p>
+                  <ul className="text-xs text-destructive/80 list-disc pl-4 space-y-0.5">
+                    {dialog.toolsToRemove.map((t) => (
+                      <li key={t}>{t}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {dialog.toolsToAdd.length > 0 && (
+                <div className="rounded-md border border-primary/20 bg-primary/5 p-2.5">
+                  <p className="text-xs font-medium text-primary mb-1">Add:</p>
+                  <ul className="text-xs text-primary/80 list-disc pl-4 space-y-0.5">
+                    {dialog.toolsToAdd.map((t) => (
+                      <li key={t}>{t}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Required fields for new template */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Required information
+            </p>
+            <SwitchConfigFields
+              templateId={dialog.newTemplateId}
+              config={dialog.config}
+              onChange={onConfigChange}
+            />
+          </div>
+        </div>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={switching}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={switching || !canSwitch}
+            onClick={(e) => {
+              e.preventDefault();
+              onConfirm();
+            }}
+          >
+            {switching ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+            ) : null}
+            Switch
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+/** Template-specific required fields rendered inside the switch dialog */
+function SwitchConfigFields({
+  templateId,
+  config,
+  onChange,
+}: {
+  templateId: string;
+  config: Record<string, unknown>;
+  onChange: (patch: Record<string, unknown>) => void;
+}) {
+  if (templateId === "appointment-booker") {
+    const types = (config.service_types ?? []) as string[];
+    const avail = (config.availability ?? {}) as Record<string, unknown>;
+
+    return (
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs">
+            Appointment types <span className="text-destructive">*</span>
+          </Label>
+          <p className="text-[11px] text-muted-foreground">
+            What kinds of appointments can visitors book?
+          </p>
+          <TagList
+            tags={types}
+            onChange={(v) => onChange({ service_types: v })}
+            placeholder="e.g., Consultation, Follow-up"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs">
+            Timezone <span className="text-destructive">*</span>
+          </Label>
+          <select
+            value={(avail.timezone as string) ?? ""}
+            onChange={(e) =>
+              onChange({ availability: { ...avail, timezone: e.target.value } })
+            }
+            className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs"
+          >
+            <option value="">Select timezone...</option>
+            {COMMON_TIMEZONES.map((tz) => (
+              <option key={tz} value={tz}>{tz.replace(/_/g, " ")}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Working hours</Label>
+            <select
+              value={(avail.start_time as string) ?? "09:00"}
+              onChange={(e) =>
+                onChange({ availability: { ...avail, start_time: e.target.value } })
+              }
+              className="w-full h-7 rounded-md border border-input bg-background px-2 text-xs"
+            >
+              {TIME_OPTIONS.map((t) => (
+                <option key={t} value={t}>{formatTime(t)}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">to</Label>
+            <select
+              value={(avail.end_time as string) ?? "17:00"}
+              onChange={(e) =>
+                onChange({ availability: { ...avail, end_time: e.target.value } })
+              }
+              className="w-full h-7 rounded-md border border-input bg-background px-2 text-xs"
+            >
+              {TIME_OPTIONS.map((t) => (
+                <option key={t} value={t}>{formatTime(t)}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Duration</Label>
+            <select
+              value={(avail.appointment_duration as number) ?? 30}
+              onChange={(e) =>
+                onChange({ availability: { ...avail, appointment_duration: Number(e.target.value) } })
+              }
+              className="w-full h-7 rounded-md border border-input bg-background px-2 text-xs"
+            >
+              {[15, 30, 45, 60, 90, 120].map((m) => (
+                <option key={m} value={m}>{m} min</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Buffer</Label>
+            <select
+              value={(avail.buffer_minutes as number) ?? 15}
+              onChange={(e) =>
+                onChange({ availability: { ...avail, buffer_minutes: Number(e.target.value) } })
+              }
+              className="w-full h-7 rounded-md border border-input bg-background px-2 text-xs"
+            >
+              {[0, 5, 10, 15, 30].map((m) => (
+                <option key={m} value={m}>{m === 0 ? "None" : `${m} min`}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (templateId === "customer-support") {
+    const mode = (config.escalation_mode as string) ?? "escalate_complex";
+    const contact = (config.escalation_contact as string) ?? "";
+
+    return (
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs">Escalation behavior</Label>
+          <div className="space-y-1.5">
+            <OptionCard
+              value="always_available"
+              label="Handle everything"
+              description="Agent resolves all issues without escalating"
+              selected={mode === "always_available"}
+              onSelect={() => onChange({ escalation_mode: "always_available" })}
+            />
+            <OptionCard
+              value="escalate_complex"
+              label="Escalate complex issues"
+              description="Hand off to a human when it can't resolve an issue"
+              selected={mode === "escalate_complex"}
+              onSelect={() => onChange({ escalation_mode: "escalate_complex" })}
+            />
+          </div>
+        </div>
+
+        {mode === "escalate_complex" && (
+          <div className="space-y-1">
+            <Label className="text-xs">Escalation contact</Label>
+            <Input
+              value={contact}
+              onChange={(e) => onChange({ escalation_contact: e.target.value })}
+              placeholder="e.g., support@company.com"
+              className="h-8 text-xs"
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (templateId === "lead-qualification") {
+    const icp = (config.icp_description as string) ?? "";
+    const disqual = (config.disqualification_criteria ?? []) as string[];
+
+    return (
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs">
+            Ideal customer profile <span className="text-destructive">*</span>
+          </Label>
+          <p className="text-[11px] text-muted-foreground">
+            Describe who your ideal customer is so the agent knows what "qualified" means.
+          </p>
+          <Textarea
+            value={icp}
+            onChange={(e) => onChange({ icp_description: e.target.value })}
+            placeholder="e.g., B2B SaaS companies with 10–200 employees looking for project management tools"
+            rows={3}
+            className="text-xs resize-none"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs">Disqualification criteria</Label>
+          <p className="text-[11px] text-muted-foreground">
+            When should the agent politely decline?
+          </p>
+          <TagList
+            tags={disqual}
+            onChange={(v) => onChange({ disqualification_criteria: v })}
+            placeholder="e.g., Budget under $500"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <p className="text-xs text-muted-foreground">
+      No additional configuration needed.
+    </p>
+  );
 }

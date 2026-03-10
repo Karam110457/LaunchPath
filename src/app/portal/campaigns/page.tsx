@@ -34,13 +34,16 @@ export default async function PortalCampaigns() {
   const statusTabs = ["all", "active", "paused", "draft"] as const;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
+    <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Campaigns</h1>
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Campaigns</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage your active campaigns and deployments</p>
+        </div>
         {role === "admin" && (
           <Link
             href="/portal/campaigns/new"
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-150 shadow-sm"
           >
             <Plus className="size-4" />
             New Campaign
@@ -49,12 +52,12 @@ export default async function PortalCampaigns() {
       </div>
 
       {!campaigns || campaigns.length === 0 ? (
-        <div className="rounded-xl border bg-card p-12 text-center">
+        <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-14 text-center">
           <p className="text-muted-foreground mb-4">No campaigns linked to your account yet.</p>
           {role === "admin" && (
             <Link
               href="/portal/campaigns/new"
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-150 shadow-sm"
             >
               <Plus className="size-4" />
               Create your first campaign
@@ -62,8 +65,8 @@ export default async function PortalCampaigns() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {campaigns.map((campaign) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {campaigns.map((campaign, i) => {
             const raw = campaign as Record<string, unknown>;
             const agent = raw.ai_agents as { name: string } | null;
             const channels = (raw.agent_channels ?? []) as Array<{ id: string; is_enabled: boolean; channel_type: string }>;
@@ -74,16 +77,17 @@ export default async function PortalCampaigns() {
               <Link
                 key={campaign.id}
                 href={`/portal/campaigns/${campaign.id}`}
-                className="rounded-xl border bg-card p-5 hover:border-primary/30 transition-colors space-y-3"
+                className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-5 hover:border-primary/30 hover:bg-card/80 transition-all duration-150 space-y-3 animate-in fade-in slide-in-from-bottom-1 duration-300 fill-mode-both"
+                style={{ animationDelay: `${i * 50}ms` }}
               >
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold">{campaign.name}</h3>
                   <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
                       campaign.status === "active"
-                        ? "bg-emerald-500/10 text-emerald-600"
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                         : campaign.status === "paused"
-                          ? "bg-amber-500/10 text-amber-600"
+                          ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
                           : "bg-zinc-500/10 text-zinc-500"
                     }`}
                   >
@@ -98,8 +102,8 @@ export default async function PortalCampaigns() {
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <span>{totalConvs} conversation{totalConvs !== 1 ? "s" : ""}</span>
                   {hasActiveWidget && (
-                    <span className="flex items-center gap-1">
-                      <span className="size-1.5 rounded-full bg-emerald-500" />
+                    <span className="flex items-center gap-1.5">
+                      <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       Widget live
                     </span>
                   )}

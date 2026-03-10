@@ -14,8 +14,11 @@ export default async function PortalConversations() {
     .order("name");
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Conversations</h1>
+    <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
+      <div>
+        <h1 className="text-3xl font-semibold tracking-tight">Conversations</h1>
+        <p className="text-sm text-muted-foreground mt-1">View and manage all conversations across your campaigns</p>
+      </div>
       <PortalConversationsList campaigns={campaigns ?? []} />
     </div>
   );

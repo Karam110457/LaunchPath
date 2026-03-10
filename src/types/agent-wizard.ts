@@ -46,6 +46,7 @@ export interface AppointmentBookerConfig {
   };
   service_types: string[];
   cancellation_policy: string;
+  disqualification_criteria: string[];
 }
 
 export interface CustomerSupportConfig {
@@ -161,6 +162,7 @@ export function createInitialWizardState(): AgentWizardState {
       },
       service_types: [],
       cancellation_policy: "",
+      disqualification_criteria: [],
     },
     customerSupportConfig: {
       escalation_mode: "escalate_complex",

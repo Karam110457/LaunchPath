@@ -89,6 +89,7 @@ export function buildAgentGenerationContext(input: {
         };
         service_types?: string[];
         cancellation_policy?: string;
+        disqualification_criteria?: string[];
       };
 
       const lines = ["AGENT TYPE: Appointment Booker"];
@@ -126,6 +127,9 @@ export function buildAgentGenerationContext(input: {
       }
       if (bc.cancellation_policy) {
         lines.push(`Cancellation policy: ${bc.cancellation_policy}`);
+      }
+      if (bc.disqualification_criteria?.length) {
+        lines.push(`Disqualification criteria: ${bc.disqualification_criteria.join("; ")}`);
       }
 
       parts.push(lines.join("\n"));

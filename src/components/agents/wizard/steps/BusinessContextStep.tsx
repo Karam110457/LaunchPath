@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Globe, Loader2, AlertCircle } from "lucide-react";
 import { OptionCard } from "@/components/flows/OptionCard";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,10 +39,40 @@ export function BusinessContextStep({
   const hasBusinesses = businesses.length > 0;
   const [discovering, setDiscovering] = useState(false);
   const [discoverError, setDiscoverError] = useState<string | null>(null);
+  const autoScanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastScannedUrlRef = useRef<string>("");
+
+  // Auto-scan: debounce 800ms after user stops typing a valid URL
+  useEffect(() => {
+    if (autoScanTimerRef.current) clearTimeout(autoScanTimerRef.current);
+
+    const trimmed = websiteUrl.trim();
+    if (!trimmed || discovering) return;
+    // Don't re-scan the same URL
+    if (trimmed === lastScannedUrlRef.current) return;
+    // Basic URL validation — must look like a real URL
+    try {
+      const parsed = new URL(trimmed.startsWith("http") ? trimmed : `https://${trimmed}`);
+      if (!parsed.hostname.includes(".")) return;
+    } catch {
+      return;
+    }
+
+    autoScanTimerRef.current = setTimeout(() => {
+      lastScannedUrlRef.current = trimmed;
+      handleDiscoverPages();
+    }, 800);
+
+    return () => {
+      if (autoScanTimerRef.current) clearTimeout(autoScanTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [websiteUrl]);
 
   async function handleDiscoverPages() {
     if (!websiteUrl.trim()) return;
 
+    lastScannedUrlRef.current = websiteUrl.trim();
     setDiscovering(true);
     setDiscoverError(null);
 

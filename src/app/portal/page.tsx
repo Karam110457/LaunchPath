@@ -105,21 +105,24 @@ export default async function PortalDashboard() {
   ];
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-8">
+    <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">Overview of your campaigns and conversations</p>
+        </div>
         {role === "admin" && (
           <div className="flex items-center gap-2">
             <Link
               href="/portal/campaigns/new"
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-150 shadow-sm"
             >
               <Plus className="size-4" />
               New Campaign
             </Link>
             <Link
               href="/portal/settings"
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-border hover:bg-muted transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full border border-border/40 bg-card/60 backdrop-blur-md hover:bg-muted/50 transition-colors duration-150"
             >
               <UserPlus className="size-4" />
               Invite
@@ -130,10 +133,11 @@ export default async function PortalDashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        {stats.map((stat) => (
+        {stats.map((stat, i) => (
           <div
             key={stat.label}
-            className="rounded-xl border bg-card p-4 space-y-1"
+            className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-4 space-y-1 animate-in fade-in slide-in-from-bottom-1 duration-300 fill-mode-both"
+            style={{ animationDelay: `${i * 50}ms` }}
           >
             <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
             <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
@@ -143,19 +147,19 @@ export default async function PortalDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Conversations */}
-        <div className="rounded-xl border bg-card">
-          <div className="flex items-center justify-between px-5 py-4 border-b">
+        <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
             <h2 className="text-sm font-semibold">Recent Conversations</h2>
             <Link
               href="/portal/conversations"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-150"
             >
               View all
             </Link>
           </div>
-          <div className="divide-y">
+          <div className="divide-y divide-border/30">
             {recentConversations.length === 0 ? (
-              <p className="px-5 py-8 text-sm text-muted-foreground text-center">
+              <p className="px-5 py-10 text-sm text-muted-foreground text-center">
                 No conversations yet
               </p>
             ) : (
@@ -169,7 +173,7 @@ export default async function PortalDashboard() {
                   <Link
                     key={conv.id}
                     href={`/portal/conversations/${conv.id}`}
-                    className="flex items-start gap-3 px-5 py-3 hover:bg-muted/50 transition-colors"
+                    className="flex items-start gap-3 px-5 py-3.5 hover:bg-muted/30 transition-colors duration-150"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -179,9 +183,9 @@ export default async function PortalDashboard() {
                         {conv.status !== "active" && (
                           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
                             conv.status === "human_takeover"
-                              ? "bg-blue-500/10 text-blue-600"
+                              ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
                               : conv.status === "paused"
-                              ? "bg-amber-500/10 text-amber-600"
+                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
                               : "bg-zinc-500/10 text-zinc-500"
                           }`}>
                             {conv.status === "human_takeover" ? "Takeover" : conv.status}
@@ -206,19 +210,19 @@ export default async function PortalDashboard() {
         </div>
 
         {/* Campaign Status */}
-        <div className="rounded-xl border bg-card">
-          <div className="flex items-center justify-between px-5 py-4 border-b">
+        <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
             <h2 className="text-sm font-semibold">Campaigns</h2>
             <Link
               href="/portal/campaigns"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-150"
             >
               View all
             </Link>
           </div>
-          <div className="divide-y">
+          <div className="divide-y divide-border/30">
             {(campaigns ?? []).length === 0 ? (
-              <p className="px-5 py-8 text-sm text-muted-foreground text-center">
+              <p className="px-5 py-10 text-sm text-muted-foreground text-center">
                 No campaigns yet
               </p>
             ) : (
@@ -226,14 +230,14 @@ export default async function PortalDashboard() {
                 <Link
                   key={camp.id}
                   href={`/portal/campaigns/${camp.id}`}
-                  className="flex items-center justify-between px-5 py-3 hover:bg-muted/50 transition-colors"
+                  className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/30 transition-colors duration-150"
                 >
                   <span className="text-sm font-medium">{camp.name}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
                     camp.status === "active"
-                      ? "bg-emerald-500/10 text-emerald-600"
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                       : camp.status === "paused"
-                      ? "bg-amber-500/10 text-amber-600"
+                      ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
                       : "bg-zinc-500/10 text-zinc-500"
                   }`}>
                     {camp.status}

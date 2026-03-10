@@ -22,9 +22,9 @@ interface PortalConversationsListProps {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  active: "bg-emerald-500/10 text-emerald-600",
-  paused: "bg-amber-500/10 text-amber-600",
-  human_takeover: "bg-blue-500/10 text-blue-600",
+  active: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  paused: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  human_takeover: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
   closed: "bg-zinc-500/10 text-zinc-500",
 };
 
@@ -86,21 +86,21 @@ export function PortalConversationsList({ campaigns }: PortalConversationsListPr
       />
 
       {isLoading ? (
-        <div className="rounded-xl border bg-card p-12 text-center text-muted-foreground">
-          Loading...
+        <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-14 text-center text-muted-foreground animate-skeleton-pulse">
+          Loading conversations...
         </div>
       ) : conversations.length === 0 ? (
-        <div className="rounded-xl border bg-card p-12 text-center text-muted-foreground">
+        <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-14 text-center text-muted-foreground">
           No conversations found.
         </div>
       ) : (
         <>
-          <div className="rounded-xl border bg-card divide-y">
+          <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm divide-y divide-border/30 overflow-hidden">
             {conversations.map((conv) => (
               <Link
                 key={conv.id}
                 href={`${basePath}/conversations/${conv.id}`}
-                className="flex items-start gap-3 px-5 py-3.5 hover:bg-muted/50 transition-colors"
+                className="flex items-start gap-3 px-5 py-3.5 hover:bg-muted/30 transition-colors duration-150"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -140,14 +140,14 @@ export function PortalConversationsList({ campaigns }: PortalConversationsListPr
                 <button
                   onClick={() => setOffset(Math.max(0, offset - limit))}
                   disabled={offset === 0}
-                  className="px-3 py-1.5 text-xs font-medium rounded-lg border hover:bg-muted transition-colors disabled:opacity-50"
+                  className="px-4 py-1.5 text-xs font-medium rounded-full border border-border/40 hover:bg-muted/50 transition-colors duration-150 disabled:opacity-50"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setOffset(offset + limit)}
                   disabled={offset + limit >= total}
-                  className="px-3 py-1.5 text-xs font-medium rounded-lg border hover:bg-muted transition-colors disabled:opacity-50"
+                  className="px-4 py-1.5 text-xs font-medium rounded-full border border-border/40 hover:bg-muted/50 transition-colors duration-150 disabled:opacity-50"
                 >
                   Next
                 </button>

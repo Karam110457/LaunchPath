@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getTemplateById } from "@/lib/agents/templates";
+import { getComposioClient } from "@/lib/composio/client";
 import { logger } from "@/lib/security/logger";
 import { generateConfigDirectives, updatePromptDirectives } from "@/lib/agents/config-directives";
 
@@ -8,6 +9,8 @@ interface SwitchTemplateBody {
   newTemplateId: string;
   removeOldTools: boolean;
   addNewTools: boolean;
+  /** Optional pre-filled config fields from the switch dialog */
+  prefilledConfig?: Record<string, unknown>;
 }
 
 export async function POST(
@@ -26,7 +29,7 @@ export async function POST(
   }
 
   const body = (await request.json()) as SwitchTemplateBody;
-  const { newTemplateId, removeOldTools, addNewTools } = body;
+  const { newTemplateId, removeOldTools, addNewTools, prefilledConfig } = body;
 
   const newTemplate = getTemplateById(newTemplateId);
   if (!newTemplate) {
@@ -102,6 +105,11 @@ export async function POST(
       (t) => !existingToolkits.has(t.toolkit),
     );
 
+    // Fetch toolkit logos so canvas shows real icons
+    const toolkitLogos = toolsToAdd.length > 0
+      ? await fetchToolkitLogos(toolsToAdd.map((t) => t.toolkit))
+      : {};
+
     for (const tool of toolsToAdd) {
       await supabase.from("agent_tools").insert({
         agent_id: agentId,
@@ -112,6 +120,7 @@ export async function POST(
         config: {
           toolkit: tool.toolkit,
           toolkit_name: tool.toolkitName,
+          toolkit_icon: toolkitLogos[tool.toolkit] ?? undefined,
           enabled_actions: tool.actions,
         },
         is_enabled: true,
@@ -127,8 +136,11 @@ export async function POST(
     }
   }
 
-  // 3. Build default behavior config for new template
-  const behaviorConfig = buildDefaultBehaviorConfig(newTemplateId);
+  // 3. Build default behavior config for new template, merged with pre-filled values
+  const behaviorConfig = {
+    ...buildDefaultBehaviorConfig(newTemplateId),
+    ...(prefilledConfig ?? {}),
+  };
 
   // 4. Update agent with new wizard_config, tool_guidelines, and system_prompt directives
   const newWizardConfig = {
@@ -200,6 +212,7 @@ function buildDefaultBehaviorConfig(templateId: string): Record<string, unknown>
       },
       service_types: [],
       cancellation_policy: "",
+      disqualification_criteria: [],
     };
   }
   if (templateId === "customer-support") {
@@ -222,4 +235,32 @@ function buildDefaultBehaviorConfig(templateId: string): Record<string, unknown>
     };
   }
   return {};
+}
+
+async function fetchToolkitLogos(
+  toolkitSlugs: string[],
+): Promise<Record<string, string>> {
+  try {
+    const composio = getComposioClient();
+    const allToolkits = (await composio.toolkits.get({
+      sortBy: "usage",
+      limit: 200,
+    })) as unknown as Array<{
+      slug: string;
+      meta?: { logo?: string };
+    }>;
+
+    const logos: Record<string, string> = {};
+    const slugSet = new Set(toolkitSlugs);
+
+    for (const tk of allToolkits) {
+      if (slugSet.has(tk.slug) && tk.meta?.logo) {
+        logos[tk.slug] = tk.meta.logo;
+      }
+    }
+
+    return logos;
+  } catch {
+    return {};
+  }
 }

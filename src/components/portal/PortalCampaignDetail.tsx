@@ -97,17 +97,17 @@ export function PortalCampaignDetail({
   ];
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="p-6 lg:p-8 max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link
           href={`${basePath}/campaigns`}
-          className="p-1.5 rounded-md hover:bg-muted transition-colors"
+          className="p-2 rounded-xl border border-border/40 bg-card/60 backdrop-blur-md hover:bg-muted/50 transition-colors duration-150"
         >
           <ArrowLeft className="size-4" />
         </Link>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold tracking-tight truncate">{campaign.name}</h1>
+          <h1 className="text-xl font-semibold tracking-tight truncate">{campaign.name}</h1>
           {campaign.agent_name && (
             <p className="text-sm text-muted-foreground">Agent: {campaign.agent_name}</p>
           )}
@@ -115,9 +115,9 @@ export function PortalCampaignDetail({
         <span
           className={`text-xs px-2.5 py-1 rounded-full font-medium ${
             status === "active"
-              ? "bg-emerald-500/10 text-emerald-600"
+              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
               : status === "paused"
-              ? "bg-amber-500/10 text-amber-600"
+              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
               : "bg-zinc-500/10 text-zinc-500"
           }`}
         >
@@ -127,10 +127,10 @@ export function PortalCampaignDetail({
           <button
             onClick={toggleStatus}
             disabled={isUpdating}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${
+            className={`inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-full transition-colors duration-150 disabled:opacity-50 ${
               status === "active"
-                ? "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20"
-                : "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
+                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20"
+                : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20"
             }`}
           >
             {status === "active" ? (
@@ -143,35 +143,35 @@ export function PortalCampaignDetail({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b">
+      <nav className="flex items-center p-1 rounded-full border border-border/40 bg-card/60 backdrop-blur-md w-fit">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-5 py-2 text-sm font-medium rounded-full transition-all duration-150 ${
               activeTab === tab.key
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+                ? "bg-foreground text-background shadow-md"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             }`}
           >
             {tab.label}
           </button>
         ))}
-      </div>
+      </nav>
 
       {/* Tab Content */}
       {activeTab === "overview" && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div className="rounded-xl border bg-card p-4">
+            <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-4">
               <p className="text-xs text-muted-foreground font-medium">Status</p>
               <p className="text-lg font-bold capitalize">{status}</p>
             </div>
-            <div className="rounded-xl border bg-card p-4">
+            <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-4">
               <p className="text-xs text-muted-foreground font-medium">Conversations</p>
               <p className="text-lg font-bold">{conversationCount}</p>
             </div>
-            <div className="rounded-xl border bg-card p-4">
+            <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-4">
               <p className="text-xs text-muted-foreground font-medium">Widget</p>
               <p className="text-lg font-bold">
                 {widgetChannel?.is_enabled ? "Live" : "Offline"}
@@ -181,7 +181,7 @@ export function PortalCampaignDetail({
 
           <Link
             href={`${basePath}/conversations?campaignId=${campaign.id}`}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border hover:bg-muted transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full border border-border/40 bg-card/60 backdrop-blur-md hover:bg-muted/50 transition-colors duration-150"
           >
             <MessageSquare className="size-4" />
             View Conversations
@@ -204,7 +204,7 @@ export function PortalCampaignDetail({
                     value={(config.welcomeMessage as string) ?? ""}
                     onChange={(e) => setConfig({ ...config, welcomeMessage: e.target.value })}
                     disabled={!isAdmin}
-                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 resize-none"
+                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 resize-none transition-colors duration-150"
                     rows={3}
                   />
                 </div>
@@ -232,7 +232,7 @@ export function PortalCampaignDetail({
                     value={(config.agentName as string) ?? ""}
                     onChange={(e) => setConfig({ ...config, agentName: e.target.value })}
                     disabled={!isAdmin}
-                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60"
+                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 transition-colors duration-150"
                   />
                 </div>
 
@@ -244,10 +244,10 @@ export function PortalCampaignDetail({
                         key={pos}
                         onClick={() => isAdmin && setConfig({ ...config, position: pos })}
                         disabled={!isAdmin}
-                        className={`px-4 py-2 text-sm rounded-lg border transition-colors ${
+                        className={`px-4 py-2 text-sm rounded-full border transition-colors duration-150 ${
                           (config.position ?? "right") === pos
-                            ? "bg-primary/10 border-primary text-foreground"
-                            : "hover:bg-muted"
+                            ? "bg-foreground text-background shadow-md border-transparent"
+                            : "border-border/40 hover:bg-muted/50"
                         } disabled:opacity-60`}
                       >
                         {pos.charAt(0).toUpperCase() + pos.slice(1)}
@@ -261,7 +261,7 @@ export function PortalCampaignDetail({
                 <button
                   onClick={handleSaveConfig}
                   disabled={isSaving}
-                  className="px-6 py-2.5 text-sm font-medium rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  className="px-6 py-2.5 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-150 disabled:opacity-50 shadow-sm"
                 >
                   {isSaving ? "Saving..." : "Save Changes"}
                 </button>
@@ -299,7 +299,7 @@ export function PortalCampaignDetail({
                   Add this snippet before the closing &lt;/body&gt; tag on your website.
                 </p>
                 <div className="relative">
-                  <pre className="rounded-xl bg-muted p-4 text-xs overflow-x-auto pr-12">
+                  <pre className="rounded-xl bg-muted/50 border border-border/30 p-4 text-xs overflow-x-auto pr-12 font-mono">
                     {embedCode}
                   </pre>
                   <button

@@ -157,6 +157,12 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
         return null;
 
       case "conversation-flow":
+        if (
+          state.templateId === "appointment-booker" &&
+          state.appointmentBookerConfig.service_types.length === 0
+        ) {
+          return "Add at least one appointment type (e.g., Consultation, Follow-up)";
+        }
         return null;
 
       case "integrations":

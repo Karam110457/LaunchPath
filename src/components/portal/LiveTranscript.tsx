@@ -80,7 +80,7 @@ export function LiveTranscript({ conversationId, messages, status }: LiveTranscr
       </div>
 
       {showInput && (
-        <div className="border-t border-border p-4">
+        <div className="border-t border-border/30 p-4">
           <div className="flex gap-2">
             <input
               type="text"
@@ -88,13 +88,13 @@ export function LiveTranscript({ conversationId, messages, status }: LiveTranscr
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
               placeholder="Type a message as a team member..."
-              className="flex-1 px-4 py-2.5 text-sm rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+              className="flex-1 px-4 py-2.5 text-sm rounded-full border border-border/40 bg-card/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-colors duration-150"
               disabled={isSending}
             />
             <button
               onClick={handleSend}
               disabled={!input.trim() || isSending}
-              className="px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="px-4 py-2.5 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-150 disabled:opacity-50 shadow-sm"
             >
               <Send className="size-4" />
             </button>

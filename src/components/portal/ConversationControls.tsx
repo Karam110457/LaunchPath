@@ -11,9 +11,9 @@ interface ConversationControlsProps {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  active: { label: "Active", color: "bg-emerald-500/10 text-emerald-600" },
-  paused: { label: "Paused", color: "bg-amber-500/10 text-amber-600" },
-  human_takeover: { label: "Human Takeover", color: "bg-blue-500/10 text-blue-600" },
+  active: { label: "Active", color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
+  paused: { label: "Paused", color: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
+  human_takeover: { label: "Human Takeover", color: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
   closed: { label: "Closed", color: "bg-zinc-500/10 text-zinc-500" },
 };
 
@@ -59,7 +59,7 @@ export function ConversationControls({
           <button
             onClick={() => updateStatus("human_takeover")}
             disabled={isUpdating}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-colors duration-150 disabled:opacity-50"
           >
             <Hand className="size-3.5" />
             Take Over
@@ -70,7 +70,7 @@ export function ConversationControls({
           <button
             onClick={() => updateStatus("paused")}
             disabled={isUpdating}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors duration-150 disabled:opacity-50"
           >
             <Pause className="size-3.5" />
             Pause
@@ -81,7 +81,7 @@ export function ConversationControls({
           <button
             onClick={() => updateStatus("active")}
             disabled={isUpdating}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors duration-150 disabled:opacity-50"
           >
             <Play className="size-3.5" />
             Resume AI
@@ -92,7 +92,7 @@ export function ConversationControls({
           <button
             onClick={() => updateStatus("closed")}
             disabled={isUpdating}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-zinc-500/10 text-zinc-500 hover:bg-zinc-500/20 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-full bg-zinc-500/10 text-zinc-500 hover:bg-zinc-500/20 transition-colors duration-150 disabled:opacity-50"
           >
             <X className="size-3.5" />
             Close

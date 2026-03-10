@@ -635,6 +635,25 @@ function AppointmentBookerOptions({
         />
       </div>
 
+      {/* Disqualification criteria */}
+      <div className="space-y-1.5">
+        <Label className="text-sm">
+          Disqualification criteria
+          <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+        </Label>
+        <p className="text-xs text-muted-foreground">
+          When should the agent politely decline to book? Since you have
+          qualifying questions, these help the agent know when someone isn&apos;t a fit.
+        </p>
+        <CustomFieldsList
+          fields={config.disqualification_criteria}
+          onChange={(v) =>
+            onUpdate((prev) => ({ ...prev, disqualification_criteria: v }))
+          }
+          placeholder="e.g., No budget, just browsing"
+        />
+      </div>
+
       {/* Cancellation policy */}
       <div className="space-y-1.5">
         <Label className="text-sm">
