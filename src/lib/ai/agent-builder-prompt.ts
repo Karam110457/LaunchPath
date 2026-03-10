@@ -15,10 +15,10 @@ You will receive a description of what kind of agent the user wants. You must ge
    - The agent's role and personality
    - Specific behaviors and conversation flow
    - What information to collect from the user
-   - When and how to use each tool
    - Tone guidelines
    - What NOT to do (boundaries)
    The system prompt should be written as direct instructions to the agent (second person: "You are...", "You should...").
+   Do NOT include tool workflow instructions or tool usage steps — those are appended separately after your output.
 
 4. **personality** — An object with:
    - tone: A short phrase describing communication style (e.g. "friendly and efficient", "warm and professional")

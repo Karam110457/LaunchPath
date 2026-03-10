@@ -9,6 +9,7 @@ import { withRateLimitRetry } from "@/lib/ai/rate-limit-retry";
 import { getComposioClient } from "@/lib/composio/client";
 import { chunkText } from "@/lib/knowledge/chunking";
 import { embedTexts } from "@/lib/knowledge/embeddings";
+import { addContextToChunks } from "@/lib/knowledge/contextual-retrieval";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export async function POST(request: NextRequest) {
@@ -145,6 +146,12 @@ export async function POST(request: NextRequest) {
 
         enqueue({ type: "progress", label: "Saving your agent..." });
 
+        // Build final system prompt: AI-generated base + tool workflow (if template)
+        let finalSystemPrompt = agentConfig.system_prompt;
+        if (template?.toolWorkflow) {
+          finalSystemPrompt += "\n\n" + template.toolWorkflow;
+        }
+
         const { data: newAgent, error: insertError } = await supabase
           .from("ai_agents")
           .insert({
@@ -152,13 +159,13 @@ export async function POST(request: NextRequest) {
             system_id: systemId ?? null,
             name: agentConfig.name,
             description: agentConfig.description,
-            system_prompt: agentConfig.system_prompt,
+            system_prompt: finalSystemPrompt,
             personality: agentConfig.personality,
             enabled_tools: [],
             template_id: templateId ?? null,
             model: "claude-sonnet-4-5-20250929",
             status: "draft",
-            tool_guidelines: template?.toolWorkflow ?? null,
+            tool_guidelines: null,
             wizard_config: wizardConfig
               ? {
                   templateId: wizardConfig.templateId,
@@ -207,9 +214,18 @@ export async function POST(request: NextRequest) {
               );
 
               if (kbResult.processed > 0) {
+                // Append KB usage note to the system prompt + enable KB flag
+                const kbNote =
+                  "\n\n## Knowledge Base\n" +
+                  "You have a knowledge base with uploaded documents and website content. " +
+                  "Relevant information is automatically provided with each message. " +
+                  "If you need to search for specific information, use the search_knowledge_base tool.";
                 await supabase
                   .from("ai_agents")
-                  .update({ knowledge_enabled: true })
+                  .update({
+                    knowledge_enabled: true,
+                    system_prompt: finalSystemPrompt + kbNote,
+                  })
                   .eq("id", newAgent.id);
               }
             }
@@ -413,7 +429,19 @@ async function processWizardKnowledge(
       return;
     }
 
-    const texts = chunks.map((c) => c.content);
+    let texts = chunks.map((c) => c.content);
+
+    // Contextual retrieval: prepend AI-generated context to each chunk
+    // so embeddings capture where the chunk fits within the document.
+    try {
+      texts = await addContextToChunks(sourceName, content, texts);
+    } catch (ctxErr) {
+      logger.warn("Contextual retrieval skipped", {
+        agentId,
+        docId: doc.id,
+        error: ctxErr instanceof Error ? ctxErr.message : String(ctxErr),
+      });
+    }
 
     // Try to embed; if OpenAI key is missing, store chunks without embeddings
     let embeddings: number[][] | null = null;

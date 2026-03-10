@@ -19,8 +19,8 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
-const TARGET_CHUNK_CHARS = 2000; // ~500 tokens
-const OVERLAP_CHARS = 400; // ~100 tokens
+const TARGET_CHUNK_CHARS = 3200; // ~800 tokens
+const OVERLAP_CHARS = 640; // ~160 tokens
 
 // ---------------------------------------------------------------------------
 // Markdown section types

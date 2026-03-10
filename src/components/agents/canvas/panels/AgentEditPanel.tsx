@@ -91,7 +91,6 @@ export function AgentEditPanel({
   const [goalChangedNote, setGoalChangedNote] = useState<string | null>(null);
 
   const hasWizard = formState.wizardConfig !== null;
-  const enabledTools = tools.filter((t) => t.is_enabled);
   const currentPreset = matchesPreset(formState.tone);
   const [showCustomTone, setShowCustomTone] = useState(
     !currentPreset && formState.tone.length > 0
@@ -250,7 +249,7 @@ export function AgentEditPanel({
             Basics
           </TabsTrigger>
           <TabsTrigger value="advanced" className="flex-1 text-xs">
-            Advanced
+            Prompt
           </TabsTrigger>
         </TabsList>
       </div>
@@ -500,63 +499,6 @@ export function AgentEditPanel({
             />
           </section>
 
-          {/* Config Directives preview (auto-generated from Basics tab settings) */}
-          {(() => {
-            const preview = buildDirectivesPreview(formState);
-            if (!preview) return null;
-            return (
-              <>
-                <hr className="border-border" />
-                <section className="space-y-3">
-                  <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Configuration Directives
-                    <span className="ml-1.5 text-[10px] font-normal normal-case tracking-normal text-primary/70">
-                      auto-generated from Basics tab
-                    </span>
-                  </h3>
-                  <p className="text-[11px] text-muted-foreground">
-                    These directives are built from your tone, questions, and behavior
-                    settings and appended to the system prompt at runtime.
-                  </p>
-                  <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-[11px] text-foreground/80 leading-relaxed whitespace-pre-wrap font-mono">
-                    {preview}
-                  </div>
-                </section>
-              </>
-            );
-          })()}
-
-          {/* Tools Available (read-only preview — auto-generated from tool descriptions) */}
-          {enabledTools.length > 0 && (
-            <>
-              <hr className="border-border" />
-              <section className="space-y-3">
-                <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Tools Available
-                  <span className="ml-1.5 text-[10px] font-normal normal-case tracking-normal text-primary/70">
-                    auto-generated
-                  </span>
-                </h3>
-                <p className="text-[11px] text-muted-foreground">
-                  This section is built from your connected tools and appended to
-                  the system prompt. Click a tool on the canvas to edit its trigger.
-                </p>
-                <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-1.5">
-                  {enabledTools.map((t) => (
-                    <p key={t.id} className="text-[11px] text-foreground/80 leading-relaxed">
-                      <span className="font-medium">{t.display_name}</span>:{" "}
-                      {t.description || (
-                        <span className="italic text-amber-400/70">
-                          No trigger set — click the tool to add one
-                        </span>
-                      )}
-                    </p>
-                  ))}
-                </div>
-              </section>
-            </>
-          )}
-
           <hr className="border-border" />
 
           {/* AI Model */}
@@ -637,73 +579,6 @@ export function AgentEditPanel({
 // ---------------------------------------------------------------------------
 // Config Directives Preview (mirrors assemblePrompt logic for UI display)
 // ---------------------------------------------------------------------------
-
-function buildDirectivesPreview(formState: AgentFormState): string | null {
-  const lines: string[] = [];
-
-  if (formState.tone?.trim()) {
-    lines.push(
-      `- Communication style: Maintain a ${formState.tone.trim()} tone throughout the conversation.`
-    );
-  }
-
-  const questions = formState.wizardConfig?.qualifyingQuestions?.filter(
-    (q) => q.trim()
-  );
-  if (questions?.length) {
-    const numbered = questions.map((q, i) => `  ${i + 1}. ${q}`).join("\n");
-    lines.push(`- Ask these qualifying questions during the conversation:\n${numbered}`);
-  }
-
-  const bc = formState.wizardConfig?.behaviorConfig;
-  if (bc) {
-    if (bc.lead_fields) {
-      const fields = bc.lead_fields as Record<string, unknown>;
-      const active = [
-        "name",
-        "email",
-        ...Object.entries(fields)
-          .filter(([k, v]) => k !== "custom_fields" && v === true)
-          .map(([k]) => k),
-      ];
-      const customFields = fields.custom_fields;
-      if (Array.isArray(customFields)) {
-        active.push(...customFields.filter((f: unknown) => typeof f === "string" && (f as string).trim()));
-      }
-      lines.push(
-        `- Lead capture: Collect the following fields: ${active.join(", ")}.`
-      );
-    }
-
-    if (bc.booking_behavior === "book_directly") {
-      lines.push("- After qualifying, book an appointment directly on the calendar.");
-    } else if (bc.booking_behavior === "collect_and_follow_up") {
-      lines.push(
-        "- After qualifying, collect contact details for manual follow-up."
-      );
-    }
-
-    if (bc.escalation_mode === "always_available") {
-      lines.push("- Handle all issues without escalating to a human agent.");
-    } else if (bc.escalation_mode === "escalate_complex") {
-      lines.push("- Escalate complex issues to a human agent.");
-    }
-
-    if (bc.response_style === "concise") {
-      lines.push("- Response style: Concise and direct.");
-    } else if (bc.response_style === "detailed") {
-      lines.push("- Response style: Thorough, step-by-step explanations.");
-    }
-
-    if (bc.notification_behavior === "email_team") {
-      lines.push("- Notification: Email team with qualified lead summary.");
-    } else if (bc.notification_behavior === "sheet_only") {
-      lines.push("- Notification: Save leads to spreadsheet only.");
-    }
-  }
-
-  return lines.length > 0 ? lines.join("\n") : null;
-}
 
 // ---------------------------------------------------------------------------
 // Behavior Section (template-specific)

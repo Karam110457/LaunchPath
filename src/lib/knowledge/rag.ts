@@ -8,7 +8,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 const SIMILARITY_THRESHOLD = 0.3;
 
 /** Below this chunk count, inject ALL chunks — no similarity search needed. */
-export const SMALL_KB_THRESHOLD = 15;
+export const SMALL_KB_THRESHOLD = 200;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -96,9 +96,11 @@ export async function retrieveContextWithMetadata(
   try {
     const queryEmbedding = await embedText(query);
 
+    // Hybrid search: combines vector similarity + BM25 keyword search via RRF
     const { data: chunks, error } = await supabase.rpc(
-      "match_knowledge_chunks_v2",
+      "hybrid_match_knowledge_chunks",
       {
+        query_text: query,
         query_embedding: JSON.stringify(queryEmbedding),
         match_agent_id: agentId,
         match_count: 5,
@@ -109,6 +111,7 @@ export async function retrieveContextWithMetadata(
       return { contextString: "", chunks: [] };
     }
 
+    // RRF scoring already ranks by combined relevance — filter low-scoring results
     const relevant = (
       chunks as Array<{
         id: string;
@@ -118,7 +121,7 @@ export async function retrieveContextWithMetadata(
         source_name: string;
         source_type: string;
       }>
-    ).filter((c) => c.similarity >= SIMILARITY_THRESHOLD);
+    ).filter((c) => c.similarity > 0);
 
     if (relevant.length === 0) {
       return { contextString: "", chunks: [] };
