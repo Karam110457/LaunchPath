@@ -7,6 +7,7 @@ import {
   TrendingUp,
   Hand,
   UserPlus,
+  Rocket,
 } from "lucide-react";
 
 export default async function PortalDashboard() {
@@ -99,21 +100,25 @@ export default async function PortalDashboard() {
     { label: "This Week", value: weekConversations, icon: TrendingUp },
     { label: "Total Conversations", value: totalConversations, icon: MessageSquare },
     { label: "Active Campaigns", value: activeCampaigns, icon: Megaphone },
-    { label: "Live Widgets", value: activeWidgets, icon: Megaphone },
+    { label: "Live Widgets", value: activeWidgets, icon: Rocket },
     { label: "Human Takeovers", value: takeoverCount, icon: Hand },
   ];
 
   return (
-    <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">Overview of your campaigns and conversations</p>
+    <div className="w-full max-w-7xl mx-auto px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+        <div className="space-y-2">
+          <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">
+            Dashboard
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Overview of your campaigns and conversations
+          </p>
         </div>
         {role === "admin" && (
           <Link
             href="/portal/settings"
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full border border-border/40 bg-card/60 backdrop-blur-md hover:bg-muted/50 transition-colors duration-150"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full border border-border/40 bg-card/60 backdrop-blur-md hover:bg-muted/50 transition-colors duration-150 shrink-0"
           >
             <UserPlus className="size-4" />
             Invite
@@ -121,24 +126,29 @@ export default async function PortalDashboard() {
         )}
       </div>
 
+      <div className="w-full h-px bg-border/40" />
+
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 stagger-enter">
         {stats.map((stat, i) => (
           <div
             key={stat.label}
-            className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4 space-y-1 animate-in fade-in slide-in-from-bottom-1 duration-300 fill-mode-both"
-            style={{ animationDelay: `${i * 50}ms` }}
+            style={{ '--stagger': i } as React.CSSProperties}
+            className="rounded-3xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4 space-y-1"
           >
-            <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
-            <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <stat.icon className="size-3.5 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
+            </div>
+            <p className="text-3xl font-semibold leading-none tracking-tight">{stat.value}</p>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Conversations */}
-        <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
+        <div className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border/30">
             <h2 className="text-sm font-semibold">Recent Conversations</h2>
             <Link
               href="/portal/conversations"
@@ -149,9 +159,10 @@ export default async function PortalDashboard() {
           </div>
           <div className="divide-y divide-border/30">
             {recentConversations.length === 0 ? (
-              <p className="px-5 py-10 text-sm text-muted-foreground text-center">
-                No conversations yet
-              </p>
+              <div className="px-6 py-14 text-center">
+                <MessageSquare className="size-8 text-muted-foreground/20 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">No conversations yet</p>
+              </div>
             ) : (
               recentConversations.map((conv) => {
                 const msgs = conv.messages ?? [];
@@ -162,8 +173,8 @@ export default async function PortalDashboard() {
                 return (
                   <Link
                     key={conv.id}
-                    href={`/portal/conversations/${conv.id}`}
-                    className="flex items-start gap-3 px-5 py-3.5 hover:bg-muted/30 transition-colors duration-150"
+                    href={`/portal/conversations?id=${conv.id}`}
+                    className="flex items-start gap-3 px-6 py-3.5 hover:bg-muted/30 transition-colors duration-150"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -200,8 +211,8 @@ export default async function PortalDashboard() {
         </div>
 
         {/* Campaign Status */}
-        <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
+        <div className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border/30">
             <h2 className="text-sm font-semibold">Campaigns</h2>
             <Link
               href="/portal/campaigns"
@@ -212,15 +223,16 @@ export default async function PortalDashboard() {
           </div>
           <div className="divide-y divide-border/30">
             {(campaigns ?? []).length === 0 ? (
-              <p className="px-5 py-10 text-sm text-muted-foreground text-center">
-                No campaigns yet
-              </p>
+              <div className="px-6 py-14 text-center">
+                <Megaphone className="size-8 text-muted-foreground/20 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">No campaigns yet</p>
+              </div>
             ) : (
               (campaigns ?? []).slice(0, 5).map((camp) => (
                 <Link
                   key={camp.id}
                   href={`/portal/campaigns/${camp.id}`}
-                  className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/30 transition-colors duration-150"
+                  className="flex items-center justify-between px-6 py-3.5 hover:bg-muted/30 transition-colors duration-150"
                 >
                   <span className="text-sm font-medium">{camp.name}</span>
                   <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${

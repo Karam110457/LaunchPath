@@ -59,12 +59,7 @@ export default async function PortalLayout({
         {impersonating && (
           <PreviewBanner clientName={clientName} clientId={clientId} />
         )}
-        <PortalShell
-          clientName={clientName}
-          clientLogo={clientLogo}
-          role={role}
-          previewMode={impersonating}
-        >
+        <PortalShell previewMode={impersonating}>
           {children}
         </PortalShell>
       </div>

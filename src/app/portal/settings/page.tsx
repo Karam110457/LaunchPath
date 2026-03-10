@@ -118,14 +118,16 @@ export default function PortalSettings() {
   }
 
   return (
-    <div className="p-6 lg:p-8 max-w-3xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground mt-1">Manage your workspace and team</p>
+    <div className="w-full max-w-7xl mx-auto px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
+      <div className="space-y-2">
+        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">Settings</h1>
+        <p className="text-muted-foreground text-lg">Manage your workspace and team</p>
       </div>
 
+      <div className="w-full h-px bg-border/40" />
+
       {/* Business info */}
-      <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-6 space-y-5">
+      <div className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-6 space-y-5">
         <h2 className="text-sm font-semibold">Business Information</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
@@ -186,7 +188,7 @@ export default function PortalSettings() {
       </div>
 
       {/* Team members */}
-      <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-6 space-y-5">
+      <div className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-6 space-y-5">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">Team Members</h2>
           {canInvite && (

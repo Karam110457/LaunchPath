@@ -111,7 +111,7 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
   }
 
   return (
-    <div className="flex h-full border border-border rounded-xl bg-background overflow-hidden">
+    <div className="flex h-full border border-black/5 dark:border-[#2A2A2A] rounded-[32px] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 overflow-hidden">
       {/* ---- Left panel: Conversation list ---- */}
       <div
         className={cn(
@@ -122,20 +122,20 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
         {/* Filters */}
         <div className="px-3 py-3 space-y-2 border-b border-border flex-shrink-0 bg-background/80 backdrop-blur-sm">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 dark:text-neutral-500" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search conversations..."
-              className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors"
+              className="w-full bg-white dark:bg-[#151515] border border-neutral-200/60 dark:border-[#2A2A2A] rounded-xl h-10 pl-9 pr-4 text-sm text-neutral-900 dark:text-neutral-200 shadow-sm placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-200 dark:focus-visible:ring-[#2A2A2A] focus:outline-none"
             />
           </div>
           <div className="flex gap-2">
             <select
               value={campaignId}
               onChange={(e) => setCampaignId(e.target.value)}
-              className="flex-1 min-w-0 px-3 py-1.5 text-xs rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors"
+              className="flex-1 min-w-0 px-3 py-1.5 text-xs rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] shadow-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-neutral-200 dark:focus-visible:ring-[#2A2A2A] transition-colors"
             >
               <option value="">All Campaigns</option>
               {campaigns.map((c) => (
@@ -145,7 +145,7 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="px-3 py-1.5 text-xs rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors"
+              className="px-3 py-1.5 text-xs rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] shadow-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-neutral-200 dark:focus-visible:ring-[#2A2A2A] transition-colors"
             >
               <option value="">All</option>
               <option value="active">Active</option>

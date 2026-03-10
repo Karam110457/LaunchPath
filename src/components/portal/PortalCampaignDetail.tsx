@@ -97,17 +97,17 @@ export function PortalCampaignDetail({
   ];
 
   return (
-    <div className="p-6 lg:p-8 max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
+    <div className="w-full max-w-7xl mx-auto px-6 py-8 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link
           href={`${basePath}/campaigns`}
-          className="p-2 rounded-xl border border-border/40 bg-card/60 backdrop-blur-md hover:bg-muted/50 transition-colors duration-150"
+          className="p-2.5 rounded-full border border-border/40 bg-card/60 backdrop-blur-md hover:bg-muted/50 transition-colors duration-150"
         >
           <ArrowLeft className="size-4" />
         </Link>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-semibold tracking-tight truncate">{campaign.name}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight truncate">{campaign.name}</h1>
           {campaign.agent_name && (
             <p className="text-sm text-muted-foreground">Agent: {campaign.agent_name}</p>
           )}
@@ -163,15 +163,15 @@ export function PortalCampaignDetail({
       {activeTab === "overview" && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4">
+            <div className="rounded-3xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4">
               <p className="text-xs text-muted-foreground font-medium">Status</p>
               <p className="text-lg font-bold capitalize">{status}</p>
             </div>
-            <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4">
+            <div className="rounded-3xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4">
               <p className="text-xs text-muted-foreground font-medium">Conversations</p>
               <p className="text-lg font-bold">{conversationCount}</p>
             </div>
-            <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4">
+            <div className="rounded-3xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4">
               <p className="text-xs text-muted-foreground font-medium">Widget</p>
               <p className="text-lg font-bold">
                 {widgetChannel?.is_enabled ? "Live" : "Offline"}

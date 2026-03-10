@@ -13,10 +13,10 @@ export default async function PortalConversations() {
     .order("name");
 
   return (
-    <div className="p-4 lg:p-6 h-[100dvh] flex flex-col">
-      <div className="mb-4 shrink-0">
-        <h1 className="text-2xl font-semibold tracking-tight">Conversations</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
+    <div className="w-full max-w-7xl mx-auto px-6 flex flex-col" style={{ height: "calc(100dvh - 80px)" }}>
+      <div className="mb-6 pt-2 shrink-0">
+        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">Conversations</h1>
+        <p className="text-muted-foreground text-lg mt-2">
           View and manage all conversations across your campaigns
         </p>
       </div>
