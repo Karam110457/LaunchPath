@@ -51,7 +51,7 @@ export async function updateSession(request: NextRequest) {
     const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/signup");
     const isApiRoute = pathname.startsWith("/api");
     const isDemoRoute = pathname.startsWith("/demo");
-    const isPortalRoute = pathname.startsWith("/portal");
+    const isPortalRoute = pathname === "/portal" || pathname.startsWith("/portal/");
     const isDashboardRoute = pathname.startsWith("/dashboard");
     const isPublicRoute =
       pathname === "/" ||
