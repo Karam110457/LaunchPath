@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Search,
   X,
@@ -131,40 +131,6 @@ export function AppLibraryModal({
 
     return result;
   }, [apps, activeCategory, search]);
-
-  // Incremental rendering — show BATCH_SIZE at a time, load more on scroll
-  const BATCH_SIZE = 60;
-  const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
-  const sentinelRef = useRef<HTMLDivElement>(null);
-
-  // Reset visible count when filters change
-  useEffect(() => {
-    setVisibleCount(BATCH_SIZE);
-  }, [activeCategory, search]);
-
-  const visibleApps = useMemo(
-    () => filteredApps.slice(0, visibleCount),
-    [filteredApps, visibleCount],
-  );
-  const hasMore = visibleCount < filteredApps.length;
-
-  // Intersection observer to load more when sentinel enters viewport
-  const loadMore = useCallback(() => {
-    setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filteredApps.length));
-  }, [filteredApps.length]);
-
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) loadMore();
-      },
-      { rootMargin: "200px" },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [loadMore]);
 
   // Get categories that have apps
   const availableCategories = useMemo(() => {
@@ -420,7 +386,7 @@ export function AppLibraryModal({
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-              {visibleApps.map((app) => {
+              {filteredApps.map((app) => {
                 const connected = isConnected(app.toolkit);
                 const isConnecting = connecting === app.toolkit;
 
@@ -564,12 +530,6 @@ export function AppLibraryModal({
             </div>
           )}
 
-          {/* Sentinel for infinite scroll */}
-          {hasMore && (
-            <div ref={sentinelRef} className="flex justify-center py-4">
-              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-            </div>
-          )}
         </div>
       </DialogContent>
     </Dialog>

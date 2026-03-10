@@ -49,7 +49,7 @@ export function PortalNewCampaignForm({ agents }: PortalNewCampaignFormProps) {
     return (
       <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-8 text-center">
         <p className="text-muted-foreground">
-          No agents have been assigned to your account yet. Please contact your agency to assign an agent.
+          No agents are available yet. Please contact your agency to set up an agent.
         </p>
       </div>
     );

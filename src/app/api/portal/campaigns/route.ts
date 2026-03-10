@@ -70,21 +70,6 @@ export async function POST(request: NextRequest) {
 
   const supabase = await createClient();
 
-  // Verify agent is assigned to this client
-  const { data: assignment } = await supabase
-    .from("client_agents")
-    .select("id")
-    .eq("client_id", clientId)
-    .eq("agent_id", body.agent_id)
-    .single();
-
-  if (!assignment) {
-    return NextResponse.json(
-      { error: "Agent is not assigned to this client" },
-      { status: 403 }
-    );
-  }
-
   // Look up the agency owner's user_id (campaigns.user_id must be agency owner for RLS chain)
   const { data: client } = await supabase
     .from("clients")
@@ -96,8 +81,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Client not found" }, { status: 404 });
   }
 
-  // Use service client to insert with agency owner's user_id
+  // Verify the agent belongs to the agency owner
   const serviceClient = createServiceClient();
+  const { data: agent } = await serviceClient
+    .from("ai_agents")
+    .select("id")
+    .eq("id", body.agent_id)
+    .eq("user_id", client.user_id)
+    .single();
+
+  if (!agent) {
+    return NextResponse.json({ error: "Agent not found" }, { status: 404 });
+  }
+
+  // Insert campaign with agency owner's user_id
   const { data: campaign, error } = await serviceClient
     .from("campaigns")
     .insert({

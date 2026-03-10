@@ -13,16 +13,23 @@ export default async function PortalNewCampaign() {
 
   const supabase = await createClient();
 
-  // Get assigned agents for this client
-  const { data: assignments } = await supabase
-    .from("client_agents")
-    .select("agent_id, ai_agents(id, name)")
-    .eq("client_id", clientId);
+  // Get the agency owner's ID via the client record
+  const { data: client } = await supabase
+    .from("clients")
+    .select("user_id")
+    .eq("id", clientId)
+    .single();
 
-  const agents = (assignments ?? []).map((a) => {
-    const agent = (a as Record<string, unknown>).ai_agents as { id: string; name: string } | null;
-    return agent ? { id: agent.id, name: agent.name } : null;
-  }).filter(Boolean) as Array<{ id: string; name: string }>;
+  // Fetch all agents belonging to the agency owner
+  const { data: agentRows } = client
+    ? await supabase
+        .from("ai_agents")
+        .select("id, name")
+        .eq("user_id", client.user_id)
+        .order("name")
+    : { data: [] };
+
+  const agents = (agentRows ?? []).map((a) => ({ id: a.id, name: a.name }));
 
   return (
     <div className="p-6 lg:p-8 max-w-xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
