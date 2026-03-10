@@ -126,7 +126,7 @@ export function AgentEditPanel({
       if (newTemplateId === "appointment-booker") {
         behaviorConfig = {
           lead_fields: { phone: true, company: false, custom_fields: [] },
-          booking_behavior: "collect_and_follow_up",
+          booking_behavior: "book_directly",
         };
       } else if (newTemplateId === "customer-support") {
         behaviorConfig = {
@@ -174,7 +174,7 @@ export function AgentEditPanel({
       if (templateId === "appointment-booker") {
         behaviorConfig = {
           lead_fields: { phone: true, company: false, custom_fields: [] },
-          booking_behavior: "collect_and_follow_up",
+          booking_behavior: "book_directly",
         };
       } else if (templateId === "customer-support") {
         behaviorConfig = {
@@ -598,9 +598,6 @@ function BehaviorSection({
       phone?: boolean;
       company?: boolean;
     };
-    const bookingBehavior =
-      (bc.booking_behavior as string) ?? "collect_and_follow_up";
-
     return (
       <section className="space-y-4">
         <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -647,41 +644,7 @@ function BehaviorSection({
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label className="text-xs">After qualifying</Label>
-          <div className="space-y-2">
-            <OptionCard
-              value="book_directly"
-              label="Book directly"
-              description="The agent books an appointment on the calendar"
-              selected={bookingBehavior === "book_directly"}
-              onSelect={() =>
-                onUpdate((prev) => ({
-                  ...prev,
-                  behaviorConfig: {
-                    ...prev.behaviorConfig,
-                    booking_behavior: "book_directly",
-                  },
-                }))
-              }
-            />
-            <OptionCard
-              value="collect_and_follow_up"
-              label="Collect info and follow up"
-              description="The agent captures lead details for you to follow up manually"
-              selected={bookingBehavior === "collect_and_follow_up"}
-              onSelect={() =>
-                onUpdate((prev) => ({
-                  ...prev,
-                  behaviorConfig: {
-                    ...prev.behaviorConfig,
-                    booking_behavior: "collect_and_follow_up",
-                  },
-                }))
-              }
-            />
-          </div>
-        </div>
+        {/* booking_behavior is always "book_directly" for appointment-booker */}
       </section>
     );
   }

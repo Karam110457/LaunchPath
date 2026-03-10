@@ -131,7 +131,7 @@ export function createInitialWizardState(): AgentWizardState {
     qualifyingQuestions: [],
     appointmentBookerConfig: {
       lead_fields: { phone: true, company: false, custom_fields: [] },
-      booking_behavior: "collect_and_follow_up",
+      booking_behavior: "book_directly",
     },
     customerSupportConfig: {
       escalation_mode: "escalate_complex",

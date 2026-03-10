@@ -50,6 +50,9 @@ export async function buildAgentTools(
   for (const agentTool of agentTools) {
     if (!agentTool.is_enabled) continue;
 
+    // Fallback description for the AI SDK tool() definition
+    const desc = agentTool.description || `${agentTool.display_name} tool`;
+
     try {
       switch (agentTool.tool_type) {
         case "webhook": {
@@ -61,7 +64,7 @@ export async function buildAgentTools(
           const { toolName, toolDef } = buildWebhookTool(
             cfg,
             agentTool.display_name,
-            agentTool.description
+            desc
           );
           // Avoid collisions — append _2, _3 etc.
           let key = toolName;
@@ -93,7 +96,7 @@ export async function buildAgentTools(
           const { toolName, toolDef } = buildHttpTool(
             cfg,
             agentTool.display_name,
-            agentTool.description
+            desc
           );
           let httpKey = toolName;
           let httpI = 2;
@@ -118,7 +121,7 @@ export async function buildAgentTools(
           const subResult = buildSubagentTool(
             agentTool.config as unknown as import("./types").SubagentConfig,
             agentTool.display_name,
-            agentTool.description,
+            desc,
             agentTool.agent_id,
             context
           );

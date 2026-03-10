@@ -9,11 +9,6 @@
  * the same output.
  */
 
-import type {
-  AgentToolRecord,
-  ComposioToolConfig,
-  ActionConfig,
-} from "@/lib/tools/types";
 import type { ToolFailure } from "@/lib/tools/integrations/composio";
 
 // ---------------------------------------------------------------------------
@@ -25,10 +20,10 @@ export interface AssemblePromptInput {
   systemPrompt: string;
   /** RAG context string (already retrieved). Empty string = no RAG. */
   ragContext: string;
-  /** Enabled tool records from agent_tools */
-  toolRecords: AgentToolRecord[];
-  /** Resolved tool keys from buildAgentTools() — for Composio action listing */
-  resolvedToolKeys: string[];
+  /** @deprecated No longer used — kept for call-site compatibility */
+  toolRecords?: unknown[];
+  /** @deprecated No longer used — kept for call-site compatibility */
+  resolvedToolKeys?: string[];
   /** Tool failures from buildAgentTools() */
   failures: ToolFailure[];
   /** Structured personality settings (tone, greeting, language). */
@@ -54,7 +49,7 @@ export interface AssemblePromptResult {
 
 export interface PromptSection {
   /** Section identifier */
-  id: "base" | "config-directives" | "rag" | "knowledge" | "tool-guidelines" | "tools" | "unavailable";
+  id: "base" | "config-directives" | "rag" | "knowledge" | "tool-guidelines" | "unavailable";
   /** Human-readable label */
   label: string;
   /** The raw text content of this section */
@@ -71,8 +66,6 @@ export function assemblePrompt(input: AssemblePromptInput): AssemblePromptResult
   const {
     systemPrompt,
     ragContext,
-    toolRecords,
-    resolvedToolKeys,
     failures,
   } = input;
 
@@ -254,85 +247,7 @@ export function assemblePrompt(input: AssemblePromptInput): AssemblePromptResult
     parts.push(input.toolGuidelines);
   }
 
-  // ── Section 3: Tools Available ─────────────────────────────────────────
-  const enabledTools = toolRecords.filter((t) => t.is_enabled);
-
-  if (enabledTools.length > 0 && resolvedToolKeys.length > 0) {
-    const toolLines: string[] = [];
-
-    for (const t of enabledTools) {
-      if (t.tool_type === "composio") {
-        const cfg = t.config as unknown as ComposioToolConfig;
-        const prefix = (cfg.toolkit ?? "")
-          .toUpperCase()
-          .replace(/[^A-Z0-9]/g, "");
-
-        // List actual tool keys this toolkit contributes
-        const actionKeys = resolvedToolKeys.filter(
-          (k) => k.startsWith(prefix + "_")
-        );
-
-        if (actionKeys.length > 0) {
-          const actionList = actionKeys
-            .map((k) => {
-              const friendly = k
-                .slice(prefix.length + 1)
-                .toLowerCase()
-                .replace(/_/g, " ");
-
-              // Note pinned and default params so agent knows about constraints
-              const actionCfg = cfg.action_configs?.[k];
-              const typed = actionCfg as ActionConfig | undefined;
-
-              const pinnedEntries = typed?.pinned_params
-                ? Object.entries(typed.pinned_params)
-                : [];
-              const defaultEntries = typed?.default_params
-                ? Object.entries(typed.default_params)
-                : [];
-
-              const pinnedNote =
-                pinnedEntries.length > 0
-                  ? ` (pre-configured: ${pinnedEntries
-                      .map(([pName, pVal]) => `${pName}="${pVal}"`)
-                      .join(", ")})`
-                  : "";
-              const defaultNote =
-                defaultEntries.length > 0
-                  ? ` (defaults: ${defaultEntries
-                      .map(([pName, pVal]) => `${pName}="${pVal}"`)
-                      .join(", ")})`
-                  : "";
-
-              return `  - \`${k}\` — ${friendly}${pinnedNote}${defaultNote}`;
-            })
-            .join("\n");
-          toolLines.push(
-            `- **${t.display_name}** (${cfg.toolkit_name ?? cfg.toolkit}): ${t.description}\n  Available actions:\n${actionList}`
-          );
-        } else {
-          toolLines.push(`- **${t.display_name}**: ${t.description}`);
-        }
-      } else {
-        toolLines.push(`- **${t.display_name}**: ${t.description}`);
-      }
-    }
-
-    const toolsSection =
-      `## Tools Available\n` +
-      `You have the following tools. Use them proactively — if the user's request matches a tool's purpose, call the tool rather than just describing what you would do. Do not ask for permission to use a tool when the user's intent is clear.\n\n` +
-      toolLines.join("\n");
-
-    sections.push({
-      id: "tools",
-      label: "Tools Available",
-      content: toolsSection,
-      source: "auto",
-    });
-    parts.push(toolsSection);
-  }
-
-  // ── Section 4: Unavailable Tools ────────────────────────────────────
+  // ── Section 3: Unavailable Tools ────────────────────────────────────
   if (failures.length > 0) {
     const failureLines = failures
       .map((f) => `- **${f.displayName}** (${f.toolkit}): ${f.reason}`)

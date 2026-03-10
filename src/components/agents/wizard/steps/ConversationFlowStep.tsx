@@ -431,36 +431,7 @@ function AppointmentBookerOptions({
         </div>
       </div>
 
-      {/* After Qualification */}
-      <div className="space-y-2">
-        <Label>What happens after qualification?</Label>
-        <div className="space-y-2 pt-1">
-          <OptionCard
-            value="book_directly"
-            label="Book directly on calendar"
-            description="Your agent checks availability and books appointments automatically"
-            selected={config.booking_behavior === "book_directly"}
-            onSelect={() =>
-              onUpdate((prev) => ({
-                ...prev,
-                booking_behavior: "book_directly",
-              }))
-            }
-          />
-          <OptionCard
-            value="collect_and_follow_up"
-            label="Collect info for follow-up"
-            description="Your agent captures lead details so you can reach out manually"
-            selected={config.booking_behavior === "collect_and_follow_up"}
-            onSelect={() =>
-              onUpdate((prev) => ({
-                ...prev,
-                booking_behavior: "collect_and_follow_up",
-              }))
-            }
-          />
-        </div>
-      </div>
+      {/* booking_behavior is always "book_directly" for appointment-booker */}
     </div>
   );
 }
