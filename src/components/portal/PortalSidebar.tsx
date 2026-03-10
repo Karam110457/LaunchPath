@@ -11,7 +11,6 @@ import {
   Megaphone,
   Settings,
   LogOut,
-  Plus,
   Moon,
   Sun,
 } from "lucide-react";
@@ -70,19 +69,6 @@ export function PortalSidebar({ clientName, clientLogo, role }: PortalSidebarPro
           </div>
         </Link>
       </div>
-
-      {/* Quick action for admins */}
-      {role === "admin" && (
-        <div className="px-5 pb-4 shrink-0">
-          <Link
-            href={`${basePath}/campaigns/new`}
-            className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium rounded-full gradient-accent-bg text-white hover:scale-[1.02] transition-transform duration-150 shadow-md"
-          >
-            <Plus className="size-4" />
-            New Campaign
-          </Link>
-        </div>
-      )}
 
       {/* Navigation */}
       <nav className="px-3 space-y-0.5 flex-1 overflow-y-auto min-h-0">

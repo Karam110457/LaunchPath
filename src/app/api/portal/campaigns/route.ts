@@ -1,14 +1,11 @@
 /**
  * Portal Campaigns API
  * GET  /api/portal/campaigns — list client's campaigns with counts
- * POST /api/portal/campaigns — create campaign (admin only)
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
 import { requireClientAuth } from "@/lib/auth/guards";
-import { canPerform } from "@/lib/auth/portal-permissions";
 import { logger } from "@/lib/security/logger";
 
 export async function GET() {
@@ -46,71 +43,4 @@ export async function GET() {
   });
 
   return NextResponse.json({ campaigns: shaped });
-}
-
-export async function POST(request: NextRequest) {
-  const { clientId, role, user } = await requireClientAuth();
-
-  if (!canPerform(role, "campaign.create")) {
-    return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
-  }
-
-  const body = (await request.json()) as {
-    name?: string;
-    agent_id?: string;
-  };
-
-  if (!body.name?.trim()) {
-    return NextResponse.json({ error: "name is required" }, { status: 400 });
-  }
-
-  if (!body.agent_id) {
-    return NextResponse.json({ error: "agent_id is required" }, { status: 400 });
-  }
-
-  const supabase = await createClient();
-
-  // Look up the agency owner's user_id (campaigns.user_id must be agency owner for RLS chain)
-  const { data: client } = await supabase
-    .from("clients")
-    .select("user_id")
-    .eq("id", clientId)
-    .single();
-
-  if (!client) {
-    return NextResponse.json({ error: "Client not found" }, { status: 404 });
-  }
-
-  // Verify the agent belongs to the agency owner
-  const serviceClient = createServiceClient();
-  const { data: agent } = await serviceClient
-    .from("ai_agents")
-    .select("id")
-    .eq("id", body.agent_id)
-    .eq("user_id", client.user_id)
-    .single();
-
-  if (!agent) {
-    return NextResponse.json({ error: "Agent not found" }, { status: 404 });
-  }
-
-  // Insert campaign with agency owner's user_id
-  const { data: campaign, error } = await serviceClient
-    .from("campaigns")
-    .insert({
-      user_id: client.user_id,
-      agent_id: body.agent_id,
-      client_id: clientId,
-      name: body.name.trim(),
-      status: "draft",
-    })
-    .select("*")
-    .single();
-
-  if (error) {
-    logger.error("Portal: failed to create campaign", { error, clientId, userId: user.id });
-    return NextResponse.json({ error: "Failed to create campaign" }, { status: 500 });
-  }
-
-  return NextResponse.json({ campaign }, { status: 201 });
 }

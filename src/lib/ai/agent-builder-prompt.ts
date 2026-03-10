@@ -56,6 +56,8 @@ export function buildAgentGenerationContext(input: {
     qualifyingQuestions?: string[];
     faqs?: Array<{ question: string; answer: string }>;
     scrapedPages?: Array<{ url: string; title: string; content: string }>;
+    /** Pre-extracted business facts from website content (Haiku pass). */
+    websiteSummary?: string;
   } | null;
 }): string {
   const parts: string[] = [];
@@ -229,10 +231,14 @@ export function buildAgentGenerationContext(input: {
       );
     }
 
-    // Scraped page summaries — give the builder agent context
-    const pages = wc.scrapedPages ?? [];
-    if (pages.length > 0) {
-      const summary = pages
+    // Website facts — pre-extracted by Haiku for cost efficiency
+    if (wc.websiteSummary) {
+      parts.push(
+        `BUSINESS FACTS FROM WEBSITE (use these to write a tailored, specific system prompt — reference actual services, policies, and terminology):\n${wc.websiteSummary}`,
+      );
+    } else if (wc.scrapedPages?.length) {
+      // Fallback: raw truncated content (if Haiku extraction was skipped/failed)
+      const summary = wc.scrapedPages
         .map((p) => `- ${p.title} (${p.url}): ${p.content.slice(0, 500)}...`)
         .join("\n");
       parts.push(

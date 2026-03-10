@@ -4,7 +4,6 @@
  */
 
 export type PortalAction =
-  | "campaign.create"
   | "campaign.update"
   | "campaign.toggle_status"
   | "conversation.takeover"
@@ -17,7 +16,6 @@ export type PortalAction =
   | "settings.remove_member";
 
 const ADMIN_ACTIONS = new Set<PortalAction>([
-  "campaign.create",
   "campaign.update",
   "campaign.toggle_status",
   "conversation.takeover",

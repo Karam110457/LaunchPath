@@ -6,7 +6,6 @@ import {
   Megaphone,
   TrendingUp,
   Hand,
-  Plus,
   UserPlus,
 } from "lucide-react";
 
@@ -112,22 +111,13 @@ export default async function PortalDashboard() {
           <p className="text-sm text-muted-foreground mt-1">Overview of your campaigns and conversations</p>
         </div>
         {role === "admin" && (
-          <div className="flex items-center gap-2">
-            <Link
-              href="/portal/campaigns/new"
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full gradient-accent-bg text-white hover:scale-[1.02] transition-transform transition-colors duration-150 shadow-sm"
-            >
-              <Plus className="size-4" />
-              New Campaign
-            </Link>
-            <Link
-              href="/portal/settings"
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full border border-border/40 bg-card/60 backdrop-blur-md hover:bg-muted/50 transition-colors duration-150"
-            >
-              <UserPlus className="size-4" />
-              Invite
-            </Link>
-          </div>
+          <Link
+            href="/portal/settings"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full border border-border/40 bg-card/60 backdrop-blur-md hover:bg-muted/50 transition-colors duration-150"
+          >
+            <UserPlus className="size-4" />
+            Invite
+          </Link>
         )}
       </div>
 

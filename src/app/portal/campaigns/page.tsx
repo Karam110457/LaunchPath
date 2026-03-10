@@ -1,10 +1,9 @@
 import { requireClientAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { Plus } from "lucide-react";
 
 export default async function PortalCampaigns() {
-  const { clientId, role } = await requireClientAuth();
+  const { clientId } = await requireClientAuth();
   const supabase = await createClient();
 
   const { data: campaigns } = await supabase
@@ -38,31 +37,13 @@ export default async function PortalCampaigns() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Campaigns</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage your active campaigns and deployments</p>
+          <p className="text-sm text-muted-foreground mt-1">View your active campaigns and deployments</p>
         </div>
-        {role === "admin" && (
-          <Link
-            href="/portal/campaigns/new"
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full gradient-accent-bg text-white hover:scale-[1.02] transition-transform transition-colors duration-150 shadow-sm"
-          >
-            <Plus className="size-4" />
-            New Campaign
-          </Link>
-        )}
       </div>
 
       {!campaigns || campaigns.length === 0 ? (
         <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-14 text-center">
-          <p className="text-muted-foreground mb-4">No campaigns linked to your account yet.</p>
-          {role === "admin" && (
-            <Link
-              href="/portal/campaigns/new"
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full gradient-accent-bg text-white hover:scale-[1.02] transition-transform transition-colors duration-150 shadow-sm"
-            >
-              <Plus className="size-4" />
-              Create your first campaign
-            </Link>
-          )}
+          <p className="text-muted-foreground">No campaigns have been set up for your account yet.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

@@ -33,7 +33,7 @@ export async function GET(
   // 'status' column from 20260315_portal_upgrade migration (not yet in generated types)
   const { data: row } = await supabase
     .from("channel_conversations")
-    .select("messages")
+    .select("*")
     .eq("channel_id", channelId)
     .eq("session_id", sessionId)
     .single();

@@ -8,6 +8,7 @@ import { getTemplateById } from "@/lib/agents/templates";
 import { withRateLimitRetry } from "@/lib/ai/rate-limit-retry";
 import { getComposioClient } from "@/lib/composio/client";
 import { generateConfigDirectives, updatePromptDirectives } from "@/lib/agents/config-directives";
+import { extractWebsiteFacts } from "@/lib/ai/extract-website-facts";
 import { chunkText } from "@/lib/knowledge/chunking";
 import { embedTexts } from "@/lib/knowledge/embeddings";
 import { addContextToChunks } from "@/lib/knowledge/contextual-retrieval";
@@ -104,13 +105,6 @@ export async function POST(request: NextRequest) {
         }
       : null;
 
-  const context = buildAgentGenerationContext({
-    userPrompt: prompt ?? "",
-    templateContext,
-    businessContext,
-    wizardConfig: wizardConfig ?? null,
-  });
-
   const encoder = new TextEncoder();
 
   const sseStream = new ReadableStream({
@@ -122,7 +116,26 @@ export async function POST(request: NextRequest) {
       };
 
       try {
+        // ── Extract website facts via Haiku before building context ──
+        let websiteSummary: string | undefined;
+        if (wizardConfig?.scrapedPages?.length) {
+          enqueue({ type: "progress", label: "Analyzing your website content..." });
+          const facts = await extractWebsiteFacts(wizardConfig.scrapedPages);
+          if (facts.summary) {
+            websiteSummary = facts.summary;
+          }
+        }
+
         enqueue({ type: "progress", label: "Understanding your requirements..." });
+
+        const context = buildAgentGenerationContext({
+          userPrompt: prompt ?? "",
+          templateContext,
+          businessContext,
+          wizardConfig: wizardConfig
+            ? { ...wizardConfig, websiteSummary }
+            : null,
+        });
 
         const agent = mastra.getAgent("agent-builder");
         const result = await withRateLimitRetry(() =>

@@ -155,15 +155,14 @@ export async function POST(
     conversationHistory = body.messages.slice(-MAX_HISTORY_MESSAGES);
   } else {
     // Stateful mode: load from channel_conversations
-    // Select includes 'status' added by 20260315_portal_upgrade migration
+    // 'status' column added by migration, not in generated types yet — use '*' and cast
     const { data: existingRow } = await supabase
       .from("channel_conversations")
-      .select("id, messages")
+      .select("*")
       .eq("channel_id", channel.id)
       .eq("session_id", body.sessionId)
       .single();
 
-    // Cast to include status column (added via migration, not yet in generated types)
     const existing = existingRow as typeof existingRow & { status?: string } | null;
 
     if (existing) {
