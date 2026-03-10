@@ -61,13 +61,16 @@ export function hasRole(user: User, role: AppRole): boolean {
 
 /**
  * Use in Portal Server Components to require a client member login.
+ * Also supports agency owner impersonation via the `portal-impersonate` cookie.
  * Redirects to /login if not signed in, or /login?error=no_access if not a client member.
  */
 export async function requireClientAuth(): Promise<{
   user: User;
   clientId: string;
   role: "admin" | "viewer";
+  impersonating?: boolean;
 }> {
+  const { cookies } = await import("next/headers");
   const supabase = await createClient();
   const {
     data: { user },
@@ -76,6 +79,30 @@ export async function requireClientAuth(): Promise<{
 
   if (error || !user) {
     redirect("/login");
+  }
+
+  // Check for agency owner impersonation
+  const cookieStore = await cookies();
+  const impersonateClientId = cookieStore.get("portal-impersonate")?.value;
+
+  if (impersonateClientId) {
+    // Verify the user actually owns this client
+    const { data: client } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("id", impersonateClientId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (client) {
+      return {
+        user,
+        clientId: impersonateClientId,
+        role: "admin",
+        impersonating: true,
+      };
+    }
+    // If verification fails, fall through to normal client member check
   }
 
   // Get client membership

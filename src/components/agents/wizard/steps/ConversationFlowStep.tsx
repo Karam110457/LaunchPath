@@ -189,6 +189,40 @@ export function ConversationFlowStep({
           Add question
         </Button>
       </div>
+
+      {/* Disqualification criteria — shown for templates with qualifying questions */}
+      {(templateId === "appointment-booker" || templateId === "lead-qualification") && (
+        <div className="space-y-3 rounded-lg border p-4">
+          <div>
+            <Label className="text-sm font-medium">
+              Disqualification criteria
+              <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+            </Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              When should the agent politely decline? These help the agent know when someone isn&apos;t a fit based on the qualifying questions above.
+            </p>
+          </div>
+          <CustomFieldsList
+            fields={
+              templateId === "appointment-booker"
+                ? appointmentBookerConfig.disqualification_criteria
+                : leadQualificationConfig.disqualification_criteria
+            }
+            onChange={(v) => {
+              if (templateId === "appointment-booker") {
+                onUpdateAppointmentBooker((prev) => ({ ...prev, disqualification_criteria: v }));
+              } else {
+                onUpdateLeadQualification((prev) => ({ ...prev, disqualification_criteria: v }));
+              }
+            }}
+            placeholder={
+              templateId === "appointment-booker"
+                ? "e.g., No budget, just browsing"
+                : "e.g., Budget under $500, No decision-making authority"
+            }
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -620,10 +654,10 @@ function AppointmentBookerOptions({
         <div>
           <Label className="text-sm font-medium">
             Appointment types
-            <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+            <span className="text-destructive ml-1">*</span>
           </Label>
           <p className="text-xs text-muted-foreground mt-0.5">
-            If you offer different types of appointments, list them here. Your agent will ask which one the visitor needs.
+            What kinds of appointments can visitors book? Add at least one.
           </p>
         </div>
         <CustomFieldsList
@@ -632,25 +666,6 @@ function AppointmentBookerOptions({
             onUpdate((prev) => ({ ...prev, service_types }))
           }
           placeholder="e.g., Consultation, Follow-up, Demo"
-        />
-      </div>
-
-      {/* Disqualification criteria */}
-      <div className="space-y-1.5">
-        <Label className="text-sm">
-          Disqualification criteria
-          <span className="text-muted-foreground font-normal ml-1">(optional)</span>
-        </Label>
-        <p className="text-xs text-muted-foreground">
-          When should the agent politely decline to book? Since you have
-          qualifying questions, these help the agent know when someone isn&apos;t a fit.
-        </p>
-        <CustomFieldsList
-          fields={config.disqualification_criteria}
-          onChange={(v) =>
-            onUpdate((prev) => ({ ...prev, disqualification_criteria: v }))
-          }
-          placeholder="e.g., No budget, just browsing"
         />
       </div>
 
@@ -991,25 +1006,6 @@ function LeadQualificationOptions({
         </p>
       </div>
 
-      {/* Disqualification criteria */}
-      <div className="space-y-3 rounded-lg border p-4">
-        <div>
-          <Label className="text-sm font-medium">
-            Disqualification criteria
-            <span className="text-muted-foreground font-normal ml-1">(optional)</span>
-          </Label>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Leads matching these criteria will be politely disqualified.
-          </p>
-        </div>
-        <CustomFieldsList
-          fields={config.disqualification_criteria}
-          onChange={(disqualification_criteria) =>
-            onUpdate((prev) => ({ ...prev, disqualification_criteria }))
-          }
-          placeholder="e.g., Budget under $500, No decision-making authority"
-        />
-      </div>
     </div>
   );
 }

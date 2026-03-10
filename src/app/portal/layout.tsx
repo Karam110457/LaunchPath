@@ -2,13 +2,14 @@ import { requireClientAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalProvider } from "@/contexts/PortalContext";
+import { PreviewBanner } from "@/components/portal/PreviewBanner";
 
 export default async function PortalLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { clientId, role } = await requireClientAuth();
+  const { clientId, role, impersonating } = await requireClientAuth();
   const supabase = await createClient();
 
   const [clientRes, brandingRes] = await Promise.all([
@@ -37,13 +38,17 @@ export default async function PortalLayout({
 
   return (
     <PortalProvider
-      value={{ clientId, role, clientName, clientLogo, basePath: "/portal" }}
+      value={{ clientId, role, clientName, clientLogo, basePath: "/portal", impersonating }}
     >
       <div style={brandingStyles as React.CSSProperties}>
+        {impersonating && (
+          <PreviewBanner clientName={clientName} clientId={clientId} />
+        )}
         <PortalShell
           clientName={clientName}
           clientLogo={clientLogo}
           role={role}
+          previewMode={impersonating}
         >
           {children}
         </PortalShell>
