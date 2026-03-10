@@ -44,8 +44,9 @@ export default function ClientSettingsPage() {
 
   // Branding
   const [brandingLogoUrl, setBrandingLogoUrl] = useState("");
-  const [primaryColor, setPrimaryColor] = useState("#FF8C00");
-  const [accentColor, setAccentColor] = useState("#9D50BB");
+  const [accentColor, setAccentColor] = useState("#FF8C00");
+  const [useGradient, setUseGradient] = useState(true);
+  const [gradientEndColor, setGradientEndColor] = useState("#9D50BB");
   const [savingBranding, setSavingBranding] = useState(false);
   const [brandingMsg, setBrandingMsg] = useState<string | null>(null);
 
@@ -66,8 +67,13 @@ export default function ClientSettingsPage() {
     setStatus(data.client.status);
     if (data.branding) {
       setBrandingLogoUrl(data.branding.logo_url ?? "");
-      setPrimaryColor(data.branding.primary_color ?? "#FF8C00");
-      setAccentColor(data.branding.accent_color ?? "#9D50BB");
+      setAccentColor(data.branding.primary_color ?? "#FF8C00");
+      if (data.branding.accent_color) {
+        setUseGradient(true);
+        setGradientEndColor(data.branding.accent_color);
+      } else {
+        setUseGradient(false);
+      }
     }
     setLoading(false);
   }, [clientId]);
@@ -104,8 +110,8 @@ export default function ClientSettingsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         branding: {
-          primary_color: primaryColor,
-          accent_color: accentColor,
+          primary_color: accentColor,
+          accent_color: useGradient ? gradientEndColor : null,
           logo_url: brandingLogoUrl.trim() || null,
         },
       }),
@@ -113,6 +119,10 @@ export default function ClientSettingsPage() {
     setBrandingMsg(res.ok ? "Branding saved" : "Failed to save branding");
     setSavingBranding(false);
   }
+
+  const accentBg = useGradient
+    ? `linear-gradient(135deg, ${accentColor}, ${gradientEndColor})`
+    : accentColor;
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
@@ -232,7 +242,7 @@ export default function ClientSettingsPage() {
           <h2 className="text-sm font-semibold">Portal Branding</h2>
         </div>
         <p className="text-xs text-muted-foreground">
-          Customize how the client portal looks for this client and their team members.
+          Customize the accent color and logo for this client&apos;s portal. The base theme (light/dark) is handled automatically.
         </p>
         <div className="grid gap-4">
           <div className="space-y-1.5">
@@ -258,50 +268,87 @@ export default function ClientSettingsPage() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Primary Color</label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={primaryColor}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="size-10 rounded-lg border cursor-pointer"
-                />
-                <span className="text-sm text-muted-foreground font-mono">{primaryColor}</span>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Accent Color</label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={accentColor}
-                  onChange={(e) => setAccentColor(e.target.value)}
-                  className="size-10 rounded-lg border cursor-pointer"
-                />
-                <span className="text-sm text-muted-foreground font-mono">{accentColor}</span>
-              </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Accent Color</label>
+            <p className="text-xs text-muted-foreground">
+              Used for buttons, active states, and highlights across the portal.
+            </p>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={accentColor}
+                onChange={(e) => setAccentColor(e.target.value)}
+                className="size-10 rounded-lg border cursor-pointer"
+              />
+              <span className="text-sm text-muted-foreground font-mono">{accentColor}</span>
             </div>
           </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setUseGradient(!useGradient)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${
+                  useGradient ? "bg-foreground" : "bg-muted-foreground/30"
+                }`}
+              >
+                <span
+                  className={`inline-block size-3.5 transform rounded-full bg-background transition-transform duration-200 ${
+                    useGradient ? "translate-x-[18px]" : "translate-x-[3px]"
+                  }`}
+                />
+              </button>
+              <div>
+                <label className="text-sm font-medium">Gradient Mode</label>
+                <p className="text-xs text-muted-foreground">
+                  Blend accent into a second color for buttons and highlights.
+                </p>
+              </div>
+            </div>
+            {useGradient && (
+              <div className="flex items-center gap-3 pl-12 animate-in fade-in slide-in-from-top-1 duration-200">
+                <input
+                  type="color"
+                  value={gradientEndColor}
+                  onChange={(e) => setGradientEndColor(e.target.value)}
+                  className="size-10 rounded-lg border cursor-pointer"
+                />
+                <span className="text-sm text-muted-foreground font-mono">{gradientEndColor}</span>
+              </div>
+            )}
+          </div>
+
           <div className="rounded-xl border border-border/40 bg-muted/30 p-4">
-            <p className="text-xs font-medium mb-2">Preview</p>
+            <p className="text-xs font-medium mb-3">Preview</p>
             <div className="flex items-center gap-3">
               {brandingLogoUrl ? (
                 <img src={brandingLogoUrl} alt="" className="size-8 rounded-lg object-cover" />
               ) : (
                 <div
                   className="size-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
-                  style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
+                  style={{ background: accentBg }}
                 >
                   {name.charAt(0).toUpperCase()}
                 </div>
               )}
               <div
                 className="h-8 px-4 rounded-full text-white text-xs font-medium flex items-center"
-                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
+                style={{ background: accentBg }}
               >
-                Sample Button
+                New Campaign
+              </div>
+              <div
+                className="h-8 px-4 rounded-full text-xs font-medium flex items-center"
+                style={{
+                  background: useGradient
+                    ? `linear-gradient(135deg, ${accentColor}15, ${gradientEndColor}10)`
+                    : `${accentColor}15`,
+                  color: accentColor,
+                }}
+              >
+                Active
               </div>
             </div>
           </div>

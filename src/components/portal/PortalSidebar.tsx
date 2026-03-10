@@ -27,7 +27,7 @@ interface PortalSidebarProps {
 export function PortalSidebar({ clientName, clientLogo, role }: PortalSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { basePath } = usePortal();
+  const { basePath, impersonating } = usePortal();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -48,7 +48,10 @@ export function PortalSidebar({ clientName, clientLogo, role }: PortalSidebarPro
   ];
 
   return (
-    <aside className="fixed z-50 w-[280px] bg-background border-r border-border/40 text-foreground hidden md:flex flex-col h-screen shrink-0">
+    <aside className={cn(
+      "fixed z-50 w-[280px] bg-background border-r border-border/40 text-foreground hidden md:flex flex-col shrink-0",
+      impersonating ? "top-10 h-[calc(100vh-2.5rem)]" : "h-screen"
+    )}>
       {/* Client identity — this is their portal, show their brand */}
       <div className="px-5 pt-6 pb-4 shrink-0">
         <Link href={basePath} className="flex items-center gap-3 px-1">

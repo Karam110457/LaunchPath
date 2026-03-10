@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Loader2,
@@ -33,6 +33,7 @@ import {
 import type { AgentToolResponse } from "@/lib/tools/types";
 import type { AgentFormState, WizardConfig } from "../canvas-types";
 import { AGENT_TEMPLATES, getTemplateById } from "@/lib/agents/templates";
+import { useModalExpanded } from "./NodeModal";
 
 interface AgentEditPanelProps {
   agentId: string;
@@ -321,109 +322,130 @@ export function AgentEditPanel({
     }
   };
 
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const isExpanded = useModalExpanded();
+
   return (
-    <Tabs defaultValue="basics" className="w-full">
-      <div className="px-5 pt-4">
-        <TabsList className="w-full">
-          <TabsTrigger value="basics" className="flex-1 text-xs">
+    <Tabs
+      ref={tabsRef}
+      defaultValue="basics"
+      className="w-full h-full flex flex-col"
+      onValueChange={() => {
+        // Scroll the parent overflow container to top when switching tabs
+        const scrollParent = tabsRef.current?.closest("[data-scroll-container]")
+          ?? tabsRef.current?.parentElement;
+        scrollParent?.scrollTo({ top: 0, behavior: "instant" });
+      }}
+    >
+      <div className={cn("pt-4 shrink-0", isExpanded ? "px-8" : "px-5")}>
+        <TabsList className={isExpanded ? "w-auto" : "w-full"}>
+          <TabsTrigger value="basics" className={cn("text-xs", !isExpanded && "flex-1")}>
             Basics
           </TabsTrigger>
-          <TabsTrigger value="advanced" className="flex-1 text-xs">
+          <TabsTrigger value="advanced" className={cn("text-xs", !isExpanded && "flex-1")}>
             Prompt
           </TabsTrigger>
         </TabsList>
       </div>
 
       {/* ═══════════════════════ BASICS TAB ═══════════════════════ */}
-      <TabsContent value="basics">
-        <div className="p-5 space-y-5">
-          {/* ── Live sync banner (wizard agents) ── */}
-          {hasWizard && (
-            <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 flex items-start gap-2">
-              <Info className="w-3.5 h-3.5 text-primary/70 mt-0.5 shrink-0" />
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Changes to tone, questions, and behavior are automatically
-                written into the system prompt. You can view and edit them
-                on the Prompt tab.
-              </p>
-            </div>
-          )}
+      <TabsContent value="basics" className="flex-1 min-h-0">
+        {/* In expanded mode: two-column grid. In panel mode: single column */}
+        <div className={cn(
+          isExpanded
+            ? "grid grid-cols-[1fr_1fr] gap-8 p-8 h-full items-start"
+            : "p-5 space-y-5"
+        )}>
 
-          {/* ── Conversation Goal (wizard agents only) ── */}
-          {hasWizard && (
-            <>
-              <section className="space-y-3">
-                <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Conversation Goal
-                </h3>
-                <div className="space-y-2">
-                  {AGENT_TEMPLATES.map((tmpl) => (
-                    <OptionCard
-                      key={tmpl.id}
-                      value={tmpl.id}
-                      label={tmpl.name}
-                      description={tmpl.description}
-                      selected={formState.wizardConfig!.templateId === tmpl.id}
-                      onSelect={() => handleGoalChange(tmpl.id)}
-                    />
+          {/* ── LEFT COLUMN (or single-column top half) ── */}
+          <div className="space-y-5">
+            {/* ── Live sync banner (wizard agents) ── */}
+            {hasWizard && (
+              <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 flex items-start gap-2">
+                <Info className="w-3.5 h-3.5 text-primary/70 mt-0.5 shrink-0" />
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Changes to tone, questions, and behavior are automatically
+                  written into the system prompt. You can view and edit them
+                  on the Prompt tab.
+                </p>
+              </div>
+            )}
+
+            {/* ── Conversation Goal (wizard agents only) ── */}
+            {hasWizard && (
+              <>
+                <section className="space-y-3">
+                  <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Conversation Goal
+                  </h3>
+                  <div className="space-y-2">
+                    {AGENT_TEMPLATES.map((tmpl) => (
+                      <OptionCard
+                        key={tmpl.id}
+                        value={tmpl.id}
+                        label={tmpl.name}
+                        description={tmpl.description}
+                        selected={formState.wizardConfig!.templateId === tmpl.id}
+                        onSelect={() => handleGoalChange(tmpl.id)}
+                      />
+                    ))}
+                  </div>
+                  {goalChangedNote && (
+                    <p className="text-[11px] text-primary/80 bg-primary/5 border border-primary/10 rounded-md px-3 py-2 animate-in fade-in duration-200">
+                      {goalChangedNote}
+                    </p>
+                  )}
+                </section>
+                <hr className="border-border" />
+              </>
+            )}
+
+            {/* ── Identity ── */}
+            <section className="space-y-3">
+              <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Identity
+              </h3>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-name" className="text-xs">Name</Label>
+                <Input
+                  id="edit-name"
+                  value={formState.name}
+                  onChange={(e) => update("name", e.target.value)}
+                  className="h-9 text-sm"
+                  placeholder="Agent name"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-description" className="text-xs">Description</Label>
+                <Textarea
+                  id="edit-description"
+                  value={formState.description}
+                  onChange={(e) => update("description", e.target.value)}
+                  rows={2}
+                  className="text-sm"
+                  placeholder="What does this agent do?"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-language" className="text-xs">Language</Label>
+                <select
+                  id="edit-language"
+                  value={formState.language}
+                  onChange={(e) => update("language", e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  {LANGUAGE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
-                </div>
-                {goalChangedNote && (
-                  <p className="text-[11px] text-primary/80 bg-primary/5 border border-primary/10 rounded-md px-3 py-2 animate-in fade-in duration-200">
-                    {goalChangedNote}
-                  </p>
-                )}
-              </section>
-              <hr className="border-border" />
-            </>
-          )}
+                </select>
+              </div>
+            </section>
 
-          {/* ── Identity ── */}
-          <section className="space-y-3">
-            <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Identity
-            </h3>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-name" className="text-xs">Name</Label>
-              <Input
-                id="edit-name"
-                value={formState.name}
-                onChange={(e) => update("name", e.target.value)}
-                className="h-9 text-sm"
-                placeholder="Agent name"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-description" className="text-xs">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={formState.description}
-                onChange={(e) => update("description", e.target.value)}
-                rows={2}
-                className="text-sm"
-                placeholder="What does this agent do?"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-language" className="text-xs">Language</Label>
-              <select
-                id="edit-language"
-                value={formState.language}
-                onChange={(e) => update("language", e.target.value)}
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                {LANGUAGE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </section>
+            <hr className="border-border" />
 
-          <hr className="border-border" />
-
-          {/* ── Personality ── */}
+            {/* ── Personality ── */}
           <section className="space-y-3">
             <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Personality
@@ -505,20 +527,14 @@ export function AgentEditPanel({
             </div>
           </section>
 
-          {/* ── Behavior (wizard agents only) ── */}
-          {hasWizard && (
+          {/* In panel mode, behavior/questions continue in the same column */}
+          {!isExpanded && hasWizard && (
             <>
               <hr className="border-border" />
               <BehaviorSection
                 wizardConfig={formState.wizardConfig!}
                 onUpdate={updateWizardConfig}
               />
-            </>
-          )}
-
-          {/* ── Qualifying / Triage Questions (all wizard templates) ── */}
-          {hasWizard && (
-            <>
               <hr className="border-border" />
               <QuestionsSection
                 questions={formState.wizardConfig!.qualifyingQuestions ?? []}
@@ -556,14 +572,36 @@ export function AgentEditPanel({
               </div>
             </>
           )}
+          </div>{/* end left column / single column */}
+
+          {/* ── RIGHT COLUMN (expanded only): Behavior + Questions ── */}
+          {isExpanded && hasWizard && (
+            <div className="space-y-5">
+              <BehaviorSection
+                wizardConfig={formState.wizardConfig!}
+                onUpdate={updateWizardConfig}
+              />
+              <hr className="border-border" />
+              <QuestionsSection
+                questions={formState.wizardConfig!.qualifyingQuestions ?? []}
+                onUpdate={updateWizardConfig}
+                isSupport={formState.wizardConfig!.templateId === "customer-support"}
+              />
+            </div>
+          )}
+
         </div>
       </TabsContent>
 
       {/* ═══════════════════════ ADVANCED TAB ═══════════════════════ */}
-      <TabsContent value="advanced">
-        <div className="p-5 space-y-5">
-          {/* System Prompt */}
-          <section className="space-y-3">
+      <TabsContent value="advanced" className="flex-1 min-h-0">
+        <div className={cn(
+          isExpanded
+            ? "grid grid-cols-[2fr_1fr] gap-8 p-8 h-full items-start"
+            : "p-5 space-y-5"
+        )}>
+          {/* ── LEFT COLUMN: System Prompt (fills available height in expanded) ── */}
+          <section className={cn("space-y-3", isExpanded && "h-full flex flex-col")}>
             <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               System Prompt
             </h3>
@@ -574,82 +612,85 @@ export function AgentEditPanel({
             <Textarea
               value={formState.systemPrompt}
               onChange={(e) => update("systemPrompt", e.target.value)}
-              rows={10}
-              className="text-sm font-mono"
+              rows={isExpanded ? 30 : 10}
+              className={cn("text-sm font-mono", isExpanded && "flex-1 min-h-[400px] resize-y")}
               placeholder="Instructions for how the agent should behave..."
             />
           </section>
 
-          <hr className="border-border" />
+          {/* ── RIGHT COLUMN (or continuation in panel mode) ── */}
+          <div className="space-y-5">
+            {!isExpanded && <hr className="border-border" />}
 
-          {/* AI Model */}
-          <section className="space-y-3">
-            <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              AI Model
-            </h3>
-            <select
-              id="edit-model"
-              value={formState.model}
-              onChange={(e) => update("model", e.target.value)}
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              {MODEL_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </section>
+            {/* AI Model */}
+            <section className="space-y-3">
+              <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                AI Model
+              </h3>
+              <select
+                id="edit-model"
+                value={formState.model}
+                onChange={(e) => update("model", e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                {MODEL_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </section>
 
-          {/* Error */}
-          {error && <p className="text-xs text-destructive">{error}</p>}
+            {/* Error */}
+            {error && <p className="text-xs text-destructive">{error}</p>}
 
-          {/* Danger Zone */}
-          <section className="border-t border-destructive/20 pt-5 mt-2">
-            <h3 className="text-xs font-medium text-destructive uppercase tracking-wide mb-2">
-              Danger Zone
-            </h3>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive border-destructive/30 hover:bg-destructive/10"
-                  disabled={deleting}
-                >
-                  {deleting ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                      Deleting...
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                      Delete Agent
-                    </>
-                  )}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete this agent?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This permanently deletes the agent, all knowledge documents,
-                    and conversation history. This cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDelete}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            {/* Danger Zone */}
+            <section className="border-t border-destructive/20 pt-5 mt-2">
+              <h3 className="text-xs font-medium text-destructive uppercase tracking-wide mb-2">
+                Danger Zone
+              </h3>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                    disabled={deleting}
                   >
-                    Delete Agent
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </section>
+                    {deleting ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                        Delete Agent
+                      </>
+                    )}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this agent?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This permanently deletes the agent, all knowledge documents,
+                      and conversation history. This cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete Agent
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </section>
+          </div>
         </div>
       </TabsContent>
 

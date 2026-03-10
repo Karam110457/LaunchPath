@@ -1,9 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Maximize2, Minimize2 } from "lucide-react";
 import { FADE } from "../animation-constants";
+
+// ---------------------------------------------------------------------------
+// Context so children can adapt layout to expanded state
+// ---------------------------------------------------------------------------
+
+const ModalExpandedContext = createContext(false);
+export function useModalExpanded() {
+  return useContext(ModalExpandedContext);
+}
+
+// ---------------------------------------------------------------------------
+// NodeModal
+// ---------------------------------------------------------------------------
 
 interface NodeModalProps {
   onClose: () => void;
@@ -11,17 +24,14 @@ interface NodeModalProps {
   children: React.ReactNode;
 }
 
-// Spring config shared by both panel and fullscreen transitions
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 28 };
 
-// Panel mode: slide in from right
 const panelVariants = {
   initial: { x: 24, opacity: 0 },
   animate: { x: 0, opacity: 1 },
   exit: { x: 24, opacity: 0 },
 };
 
-// Fullscreen mode: scale up from center
 const fullscreenVariants = {
   initial: { opacity: 0, scale: 0.97 },
   animate: { opacity: 1, scale: 1 },
@@ -35,15 +45,11 @@ export function NodeModal({
 }: NodeModalProps) {
   const [expanded, setExpanded] = useState(false);
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (expanded) {
-          setExpanded(false);
-        } else {
-          onClose();
-        }
+        if (expanded) setExpanded(false);
+        else onClose();
       }
     };
     window.addEventListener("keydown", handler);
@@ -51,7 +57,7 @@ export function NodeModal({
   }, [onClose, expanded]);
 
   return (
-    <>
+    <ModalExpandedContext.Provider value={expanded}>
       {/* Backdrop */}
       <motion.div
         className="fixed inset-0 z-[40]"
@@ -72,7 +78,7 @@ export function NodeModal({
           /* ── Fullscreen mode ──────────────────────────────────── */
           <motion.div
             key="fullscreen"
-            className="fixed inset-4 sm:inset-8 z-50 flex flex-col bg-white/90 canvas-dark:bg-neutral-900/90 text-neutral-900 canvas-dark:text-neutral-100 backdrop-blur-2xl border border-white/60 canvas-dark:border-neutral-700/40 shadow-[0_24px_80px_rgba(0,0,0,0.12)] rounded-2xl overflow-hidden"
+            className="fixed inset-4 sm:inset-6 z-50 flex flex-col bg-white/95 canvas-dark:bg-neutral-900/95 text-neutral-900 canvas-dark:text-neutral-100 backdrop-blur-2xl border border-white/60 canvas-dark:border-neutral-700/40 shadow-[0_24px_80px_rgba(0,0,0,0.12)] rounded-2xl overflow-hidden"
             variants={fullscreenVariants}
             initial="initial"
             animate="animate"
@@ -80,7 +86,7 @@ export function NodeModal({
             transition={SPRING}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200/50 canvas-dark:border-neutral-700/50 flex-shrink-0">
+            <div className="flex items-center justify-between px-8 py-4 border-b border-neutral-200/50 canvas-dark:border-neutral-700/50 flex-shrink-0">
               <h2 className="text-base font-semibold text-neutral-900 canvas-dark:text-neutral-100 tracking-tight">
                 {title}
               </h2>
@@ -101,11 +107,9 @@ export function NodeModal({
               </div>
             </div>
 
-            {/* Content — wider in fullscreen */}
-            <div className="flex-1 overflow-y-auto">
-              <div className="max-w-2xl mx-auto px-1">
-                {children}
-              </div>
+            {/* Content — full width, children handle their own layout */}
+            <div className="flex-1 overflow-y-auto" data-scroll-container>
+              {children}
             </div>
           </motion.div>
         ) : (
@@ -151,12 +155,12 @@ export function NodeModal({
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto px-1">
+            <div className="flex-1 overflow-y-auto px-1" data-scroll-container>
               {children}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </>
+    </ModalExpandedContext.Provider>
   );
 }
