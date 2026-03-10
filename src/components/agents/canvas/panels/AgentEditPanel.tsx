@@ -728,6 +728,11 @@ export function AgentEditPanel({
         <TemplateSwitchDialog
           dialog={switchDialog}
           switching={switching}
+          currentQualificationMode={
+            (formState.wizardConfig?.behaviorConfig?.qualification_mode as string) ?? "describe"
+          }
+          hasQuestions={(formState.wizardConfig?.qualifyingQuestions ?? []).length > 0}
+          hasIcp={!!((formState.wizardConfig?.behaviorConfig?.icp_description as string)?.trim())}
           onConfigChange={(patch) =>
             setSwitchDialog((prev) =>
               prev ? { ...prev, config: { ...prev.config, ...patch } } : prev,
@@ -1506,11 +1511,11 @@ function LeadFilteringSection({
         </div>
       )}
 
-      {/* Dealbreakers — always shown */}
+      {/* Reasons to decline — always shown */}
       <div className="space-y-1.5 pt-1">
-        <Label className="text-xs">Dealbreakers <span className="text-muted-foreground font-normal">(optional)</span></Label>
+        <Label className="text-xs">Reasons to decline a lead <span className="text-muted-foreground font-normal">(optional)</span></Label>
         <p className="text-[11px] text-muted-foreground">
-          If a visitor matches any of these, the agent will politely let them know it&apos;s not the right fit.
+          If a visitor matches any of these, the agent will politely let them know you can&apos;t help them right now.
         </p>
         <TagList
           tags={disqualificationCriteria}
@@ -1737,6 +1742,9 @@ function getSwitchValidationErrors(
 function TemplateSwitchDialog({
   dialog,
   switching,
+  currentQualificationMode,
+  hasQuestions,
+  hasIcp,
   onConfigChange,
   onKeepQuestionsChange,
   onCancel,
@@ -1750,6 +1758,9 @@ function TemplateSwitchDialog({
     keepQuestions: boolean;
   };
   switching: boolean;
+  currentQualificationMode: string;
+  hasQuestions: boolean;
+  hasIcp: boolean;
   onConfigChange: (patch: Record<string, unknown>) => void;
   onKeepQuestionsChange: (keep: boolean) => void;
   onCancel: () => void;
@@ -1760,6 +1771,9 @@ function TemplateSwitchDialog({
   const canSwitch = errors.length === 0;
   const isTargetSupport = dialog.newTemplateId === "customer-support";
 
+  // Determine if there's anything worth keeping from lead filtering
+  const hasFilteringData = currentQualificationMode === "describe" ? hasIcp : hasQuestions;
+
   return (
     <AlertDialog open onOpenChange={(open) => { if (!open) onCancel(); }}>
       <AlertDialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
@@ -1768,7 +1782,7 @@ function TemplateSwitchDialog({
             Switch to {template?.name ?? dialog.newTemplateId}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Behavior settings{!isTargetSupport ? ", ICP, and disqualification criteria" : ""} will be reset for the new goal.
+            Behavior settings and lead filtering will be reset for the new goal.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -1802,32 +1816,42 @@ function TemplateSwitchDialog({
             </div>
           )}
 
-          {/* Keep qualifying questions toggle */}
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Qualifying questions
-            </p>
-            <label className="flex items-center gap-2.5 rounded-lg border px-3 py-2.5 cursor-pointer hover:bg-muted/30 transition-colors">
-              <input
-                type="checkbox"
-                checked={dialog.keepQuestions}
-                onChange={(e) => onKeepQuestionsChange(e.target.checked)}
-                className="rounded border-border"
-              />
-              <div>
-                <p className="text-xs font-medium">
-                  {isTargetSupport
-                    ? "Keep qualifying questions as triage questions"
-                    : "Keep existing qualifying questions"}
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  {isTargetSupport
-                    ? "Your current qualifying questions will be repurposed as triage questions."
-                    : "Carry over your qualifying questions to the new goal."}
-                </p>
-              </div>
-            </label>
-          </div>
+          {/* Keep lead filtering data toggle */}
+          {hasFilteringData && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Lead filtering
+              </p>
+              <label className="flex items-center gap-2.5 rounded-lg border px-3 py-2.5 cursor-pointer hover:bg-muted/30 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={dialog.keepQuestions}
+                  onChange={(e) => onKeepQuestionsChange(e.target.checked)}
+                  className="rounded border-border"
+                />
+                <div>
+                  <p className="text-xs font-medium">
+                    {currentQualificationMode === "describe"
+                      ? isTargetSupport
+                        ? "Keep your ideal customer description as context"
+                        : "Keep your ideal customer description"
+                      : isTargetSupport
+                        ? "Keep your questions as triage questions"
+                        : "Keep your existing questions"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {currentQualificationMode === "describe"
+                      ? isTargetSupport
+                        ? "Your customer description will be carried over as background context."
+                        : "Your customer description will be carried over to the new goal."
+                      : isTargetSupport
+                        ? "Your current questions will be repurposed as triage questions."
+                        : "Your current questions will be carried over to the new goal."}
+                  </p>
+                </div>
+              </label>
+            </div>
+          )}
 
           {/* Required fields for new template */}
           <div className="space-y-2">

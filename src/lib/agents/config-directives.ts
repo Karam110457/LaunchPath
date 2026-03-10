@@ -220,7 +220,7 @@ export function generateConfigDirectives(input: DirectivesInput): string {
     const disqualCriteria = bc.disqualification_criteria as string[] | undefined;
     if (disqualCriteria?.length) {
       directives.push(
-        `Dealbreakers: ${disqualCriteria.join("; ")}. If a visitor matches any of these, politely let them know it's not the right fit.`
+        `Reasons to decline a lead: ${disqualCriteria.join("; ")}. If a visitor matches any of these, politely let them know you can't help them right now.`
       );
     }
 

@@ -139,9 +139,23 @@ export async function POST(
   }
 
   // 3. Build default behavior config for new template, merged with pre-filled values
+  const defaultBc = buildDefaultBehaviorConfig(newTemplateId);
+  const oldBc = (oldWizardConfig.behaviorConfig ?? {}) as Record<string, unknown>;
+  const oldQualMode = (oldBc.qualification_mode as string) ?? "describe";
+
+  // When keeping lead filtering data, preserve the mode + relevant content
+  const keepOverrides: Record<string, unknown> = {};
+  if (keepQuestions) {
+    keepOverrides.qualification_mode = oldQualMode;
+    if (oldQualMode === "describe" && oldBc.icp_description) {
+      keepOverrides.icp_description = oldBc.icp_description;
+    }
+  }
+
   const behaviorConfig = {
-    ...buildDefaultBehaviorConfig(newTemplateId),
+    ...defaultBc,
     ...(prefilledConfig ?? {}),
+    ...keepOverrides,
   };
 
   // 4. Update agent with new wizard_config, tool_guidelines, and system_prompt directives

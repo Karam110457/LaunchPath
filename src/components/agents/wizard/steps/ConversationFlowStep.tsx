@@ -411,14 +411,14 @@ function WizardLeadFilteringSection({
         </div>
       )}
 
-      {/* Dealbreakers — always shown */}
+      {/* Reasons to decline — always shown */}
       <div className="space-y-2 rounded-lg border p-4">
         <Label className="text-sm font-medium">
-          Dealbreakers
+          Reasons to decline a lead
           <span className="text-muted-foreground font-normal ml-1">(optional)</span>
         </Label>
         <p className="text-xs text-muted-foreground">
-          If a visitor matches any of these, the agent will politely let them know it&apos;s not the right fit.
+          If a visitor matches any of these, the agent will politely let them know you can&apos;t help them right now.
         </p>
         <CustomFieldsList
           fields={disqualificationCriteria}
