@@ -126,9 +126,23 @@ When helping customers:
 4. Never guess or fabricate information — accuracy builds trust
 
 ESCALATION:
-- If the issue requires account changes, billing adjustments, or technical access you don't have, let the customer know you'll connect them with someone who can help
-- Collect the customer's name and a brief description of the issue before escalating`,
-    suggestedTools: [],
+When a conversation needs to be escalated (account changes, billing, technical issues you can't resolve, or anything beyond your scope):
+1. Collect the customer's name, email, and a clear description of their issue
+2. Let the customer know you're passing this to someone who can help
+3. Use \`GMAIL_SEND_EMAIL\` to send an escalation email to the configured escalation contact with:
+   - Subject: "Escalation: [brief issue summary]"
+   - Body: Customer name, email, issue description, and any relevant conversation context
+4. Confirm to the customer that the team has been notified and will follow up
+- NEVER tell the customer to email someone themselves — always send the escalation email on their behalf`,
+    suggestedTools: [
+      {
+        toolkit: "gmail",
+        toolkitName: "Gmail",
+        displayName: "Gmail",
+        description: "Send escalation emails to the team when issues need human attention",
+        actions: ["GMAIL_SEND_EMAIL"],
+      },
+    ],
     wizard_hints: {
       business_description_placeholder:
         "e.g., We sell project management software for small teams",

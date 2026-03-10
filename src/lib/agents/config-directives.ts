@@ -184,7 +184,7 @@ export function generateConfigDirectives(input: DirectivesInput): string {
     const escalationContact = bc.escalation_contact as string | undefined;
     if (escalationContact) {
       directives.push(
-        `When escalating, direct the customer to: ${escalationContact}`
+        `When escalating, use GMAIL_SEND_EMAIL to send an escalation email to ${escalationContact} with the customer's name, email, issue description, and relevant conversation context. Never tell the customer to email someone themselves — send it on their behalf.`
       );
     }
 
@@ -226,7 +226,9 @@ export function generateConfigDirectives(input: DirectivesInput): string {
 
     const notifEmail = bc.notification_email as string | undefined;
     if (notifEmail && bc.notification_behavior === "email_team") {
-      directives.push(`Send lead notification emails to: ${notifEmail}`);
+      directives.push(
+        `When a lead is qualified, use GMAIL_SEND_EMAIL to send an internal notification to ${notifEmail} with the lead summary. Never email the lead directly.`
+      );
     }
   }
 

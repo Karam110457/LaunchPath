@@ -1054,6 +1054,9 @@ function BehaviorSection({
         {notificationBehavior === "email_team" && (
           <div className="space-y-1">
             <Label className="text-xs">Notification email</Label>
+            <p className="text-[11px] text-muted-foreground">
+              Your agent will email this address with a lead summary via Gmail.
+            </p>
             <Input
               type="email"
               value={notificationEmail}
@@ -1108,11 +1111,15 @@ function BehaviorSection({
         </div>
       </div>
 
-      {/* Escalation contact */}
+      {/* Escalation email */}
       {escalationMode === "escalate_complex" && (
         <div className="space-y-1">
-          <Label className="text-xs">Escalation contact</Label>
+          <Label className="text-xs">Escalation email</Label>
+          <p className="text-[11px] text-muted-foreground">
+            Your agent will email this address with a summary when it can&apos;t resolve an issue.
+          </p>
           <Input
+            type="email"
             value={escalationContact}
             onChange={(e) => updateBc({ escalation_contact: e.target.value })}
             placeholder="e.g., support@company.com"
@@ -2027,8 +2034,12 @@ function SwitchConfigFields({
 
         {mode === "escalate_complex" && (
           <div className="space-y-1">
-            <Label className="text-xs">Escalation contact</Label>
+            <Label className="text-xs">Escalation email</Label>
+            <p className="text-[11px] text-muted-foreground">
+              Your agent will email this address with a summary when it can&apos;t resolve an issue.
+            </p>
             <Input
+              type="email"
               value={contact}
               onChange={(e) => onChange({ escalation_contact: e.target.value })}
               placeholder="e.g., support@company.com"

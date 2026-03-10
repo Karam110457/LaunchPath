@@ -160,10 +160,10 @@ export function buildAgentGenerationContext(input: {
       }
 
       lines.push(
-        `Escalation: ${sc.escalation_mode === "always_available" ? "Handle everything, never escalate" : "Escalate complex issues to a human agent"}`,
+        `Escalation: ${sc.escalation_mode === "always_available" ? "Handle everything, never escalate" : "Escalate complex issues by sending an email to the team via Gmail"}`,
       );
       if (sc.escalation_contact) {
-        lines.push(`Escalation contact: ${sc.escalation_contact}`);
+        lines.push(`Escalation email (send escalation emails here via Gmail): ${sc.escalation_contact}`);
       }
       lines.push(
         `Response style: ${sc.response_style === "concise" ? "Keep answers short and direct" : "Provide detailed, thorough explanations"}`,

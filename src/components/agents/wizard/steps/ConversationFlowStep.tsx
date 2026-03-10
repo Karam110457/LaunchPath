@@ -971,21 +971,22 @@ function CustomerSupportOptions({
         </div>
       </div>
 
-      {/* Escalation contact — only when escalation is enabled */}
+      {/* Escalation email — only when escalation is enabled */}
       {config.escalation_mode === "escalate_complex" && (
         <div className="space-y-1.5">
-          <Label className="text-sm">Escalation contact</Label>
+          <Label className="text-sm">Escalation email</Label>
+          <p className="text-xs text-muted-foreground">
+            Your agent will email this address with a summary when it can&apos;t resolve an issue.
+          </p>
           <Input
+            type="email"
             value={config.escalation_contact}
             onChange={(e) =>
               onUpdate((prev) => ({ ...prev, escalation_contact: e.target.value }))
             }
-            placeholder="e.g., support@company.com or 'live chat transfer'"
+            placeholder="e.g., support@company.com"
             className="text-sm"
           />
-          <p className="text-xs text-muted-foreground">
-            Where should your agent direct visitors when escalating?
-          </p>
         </div>
       )}
 
@@ -1153,6 +1154,9 @@ function LeadCaptureOptions({
       {config.notification_behavior === "email_team" && (
         <div className="space-y-1.5">
           <Label className="text-sm">Notification email</Label>
+          <p className="text-xs text-muted-foreground">
+            Your agent will email this address with a lead summary via Gmail.
+          </p>
           <Input
             type="email"
             value={config.notification_email}
@@ -1162,9 +1166,6 @@ function LeadCaptureOptions({
             placeholder="e.g., sales@company.com"
             className="text-sm"
           />
-          <p className="text-xs text-muted-foreground">
-            Your team will receive lead summaries at this address.
-          </p>
         </div>
       )}
     </div>
