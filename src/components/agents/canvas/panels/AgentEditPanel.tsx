@@ -98,6 +98,7 @@ function getDefaultBehaviorConfig(templateId: string): Record<string, unknown> {
       service_types: [],
       cancellation_policy: "",
       disqualification_criteria: [],
+      icp_description: "",
     };
   }
   if (templateId === "customer-support") {
@@ -110,9 +111,9 @@ function getDefaultBehaviorConfig(templateId: string): Record<string, unknown> {
       forbidden_topics: [],
     };
   }
-  if (templateId === "lead-qualification") {
+  if (templateId === "lead-capture" || templateId === "lead-qualification") {
     return {
-      lead_fields: { phone: true, company: true, budget: false, timeline: false, custom_fields: [] },
+      lead_fields: { phone: true, company: true, custom_fields: [] },
       notification_behavior: "email_team",
       notification_email: "",
       icp_description: "",
@@ -139,6 +140,7 @@ export function AgentEditPanel({
     toolsToAdd: string[];
     /** Pre-filled config for the new template's required fields */
     config: Record<string, unknown>;
+    keepQuestions: boolean;
   } | null>(null);
   const [switching, setSwitching] = useState(false);
 
@@ -204,6 +206,7 @@ export function AgentEditPanel({
         toolsToRemove,
         toolsToAdd,
         config: getDefaultSwitchConfig(newTemplateId),
+        keepQuestions: false,
       });
     },
     [formState.wizardConfig, tools],
@@ -215,6 +218,7 @@ export function AgentEditPanel({
       removeOldTools: boolean,
       addNewTools: boolean,
       prefilledConfig?: Record<string, unknown>,
+      keepQuestions?: boolean,
     ) => {
       setSwitching(true);
       try {
@@ -226,6 +230,7 @@ export function AgentEditPanel({
             removeOldTools,
             addNewTools,
             prefilledConfig,
+            keepQuestions: keepQuestions ?? false,
           }),
         });
 
@@ -549,6 +554,15 @@ export function AgentEditPanel({
                 onUpdate={updateWizardConfig}
                 isSupport={formState.wizardConfig!.templateId === "customer-support"}
               />
+              {formState.wizardConfig!.templateId !== "customer-support" && (
+                <>
+                  <hr className="border-border" />
+                  <QualificationSection
+                    wizardConfig={formState.wizardConfig!}
+                    onUpdate={updateWizardConfig}
+                  />
+                </>
+              )}
             </>
           )}
 
@@ -595,6 +609,15 @@ export function AgentEditPanel({
                 onUpdate={updateWizardConfig}
                 isSupport={formState.wizardConfig!.templateId === "customer-support"}
               />
+              {formState.wizardConfig!.templateId !== "customer-support" && (
+                <>
+                  <hr className="border-border" />
+                  <QualificationSection
+                    wizardConfig={formState.wizardConfig!}
+                    onUpdate={updateWizardConfig}
+                  />
+                </>
+              )}
             </div>
           )}
 
@@ -712,6 +735,11 @@ export function AgentEditPanel({
               prev ? { ...prev, config: { ...prev.config, ...patch } } : prev,
             )
           }
+          onKeepQuestionsChange={(keep) =>
+            setSwitchDialog((prev) =>
+              prev ? { ...prev, keepQuestions: keep } : prev,
+            )
+          }
           onCancel={() => setSwitchDialog(null)}
           onConfirm={() => {
             void executeTemplateSwitch(
@@ -719,6 +747,7 @@ export function AgentEditPanel({
               switchDialog.toolsToRemove.length > 0,
               switchDialog.toolsToAdd.length > 0,
               switchDialog.config,
+              switchDialog.keepQuestions,
             );
           }}
         />
@@ -939,16 +968,6 @@ function BehaviorSection({
           />
         </div>
 
-        {/* Disqualification criteria */}
-        <div className="space-y-1.5">
-          <Label className="text-xs">Disqualification criteria <span className="text-muted-foreground font-normal">(optional)</span></Label>
-          <TagList
-            tags={(bc.disqualification_criteria ?? []) as string[]}
-            onChange={(v) => updateBc({ disqualification_criteria: v })}
-            placeholder="e.g., No budget, just browsing"
-          />
-        </div>
-
         {/* Cancellation policy */}
         <div className="space-y-1">
           <Label className="text-xs">Cancellation policy <span className="text-muted-foreground font-normal">(optional)</span></Label>
@@ -964,19 +983,15 @@ function BehaviorSection({
     );
   }
 
-  // Lead qualification
-  if (wizardConfig.templateId === "lead-qualification") {
+  // Lead capture
+  if (wizardConfig.templateId === "lead-capture" || wizardConfig.templateId === "lead-qualification") {
     const leadFields = (bc.lead_fields ?? {}) as {
       phone?: boolean;
       company?: boolean;
-      budget?: boolean;
-      timeline?: boolean;
     };
     const notificationBehavior =
       (bc.notification_behavior as string) ?? "email_team";
     const notificationEmail = (bc.notification_email as string) ?? "";
-    const icpDescription = (bc.icp_description as string) ?? "";
-    const disqualificationCriteria = (bc.disqualification_criteria ?? []) as string[];
 
     const updateBc = (patch: Record<string, unknown>) =>
       onUpdate((prev) => ({
@@ -1012,25 +1027,11 @@ function BehaviorSection({
                 updateBc({ lead_fields: { ...leadFields, company: !leadFields.company } })
               }
             />
-            <FieldToggle
-              label="Budget"
-              enabled={!!leadFields.budget}
-              onToggle={() =>
-                updateBc({ lead_fields: { ...leadFields, budget: !leadFields.budget } })
-              }
-            />
-            <FieldToggle
-              label="Timeline"
-              enabled={!!leadFields.timeline}
-              onToggle={() =>
-                updateBc({ lead_fields: { ...leadFields, timeline: !leadFields.timeline } })
-              }
-            />
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs">When a lead is qualified</Label>
+          <Label className="text-xs">When a lead is captured</Label>
           <div className="space-y-2">
             <OptionCard
               value="email_team"
@@ -1062,28 +1063,6 @@ function BehaviorSection({
             />
           </div>
         )}
-
-        {/* ICP */}
-        <div className="space-y-1">
-          <Label className="text-xs">Ideal customer profile</Label>
-          <Textarea
-            value={icpDescription}
-            onChange={(e) => updateBc({ icp_description: e.target.value })}
-            placeholder="e.g., B2B SaaS companies with 10–200 employees"
-            rows={2}
-            className="text-xs resize-none"
-          />
-        </div>
-
-        {/* Disqualification criteria */}
-        <div className="space-y-1.5">
-          <Label className="text-xs">Disqualification criteria <span className="text-muted-foreground font-normal">(optional)</span></Label>
-          <TagList
-            tags={disqualificationCriteria}
-            onChange={(v) => updateBc({ disqualification_criteria: v })}
-            placeholder="e.g., Budget under $500"
-          />
-        </div>
       </section>
     );
   }
@@ -1338,6 +1317,62 @@ function QuestionsSection({
 }
 
 // ---------------------------------------------------------------------------
+// Shared Qualification (ICP + disqualification) — appointment-booker & lead-capture
+// ---------------------------------------------------------------------------
+
+function QualificationSection({
+  wizardConfig,
+  onUpdate,
+}: {
+  wizardConfig: WizardConfig;
+  onUpdate: (fn: (prev: WizardConfig) => WizardConfig) => void;
+}) {
+  const bc = wizardConfig.behaviorConfig;
+  const icpDescription = (bc.icp_description as string) ?? "";
+  const disqualificationCriteria = (bc.disqualification_criteria ?? []) as string[];
+
+  const updateBc = (patch: Record<string, unknown>) =>
+    onUpdate((prev) => ({
+      ...prev,
+      behaviorConfig: { ...prev.behaviorConfig, ...patch },
+    }));
+
+  return (
+    <section className="space-y-3">
+      <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Qualification
+      </h3>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs">Ideal customer profile</Label>
+        <p className="text-[11px] text-muted-foreground">
+          Describe who your ideal customer is so the agent knows what &ldquo;qualified&rdquo; means.
+        </p>
+        <Textarea
+          value={icpDescription}
+          onChange={(e) => updateBc({ icp_description: e.target.value })}
+          placeholder="e.g., B2B SaaS companies with 10–200 employees looking for project management tools"
+          rows={2}
+          className="text-xs resize-none"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs">Disqualification criteria <span className="text-muted-foreground font-normal">(optional)</span></Label>
+        <p className="text-[11px] text-muted-foreground">
+          When should the agent politely decline or deprioritize a lead?
+        </p>
+        <TagList
+          tags={disqualificationCriteria}
+          onChange={(v) => updateBc({ disqualification_criteria: v })}
+          placeholder="e.g., No budget, just browsing"
+        />
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Field Toggle (pill button)
 // ---------------------------------------------------------------------------
 
@@ -1526,10 +1561,8 @@ function getDefaultSwitchConfig(templateId: string): Record<string, unknown> {
       escalation_mode: "escalate_complex",
     };
   }
-  if (templateId === "lead-qualification") {
-    return {
-      icp_description: "",
-    };
+  if (templateId === "lead-capture" || templateId === "lead-qualification") {
+    return {};
   }
   return {};
 }
@@ -1546,11 +1579,7 @@ function getSwitchValidationErrors(
     const avail = config.availability as Record<string, unknown> | undefined;
     if (!avail?.timezone) errors.push("Timezone");
   }
-  if (templateId === "lead-qualification") {
-    if (!(config.icp_description as string)?.trim()) {
-      errors.push("Ideal customer profile");
-    }
-  }
+  // lead-capture has no strictly required fields in the switch dialog
   // customer-support has no strictly required fields beyond the default
   return errors;
 }
@@ -1559,6 +1588,7 @@ function TemplateSwitchDialog({
   dialog,
   switching,
   onConfigChange,
+  onKeepQuestionsChange,
   onCancel,
   onConfirm,
 }: {
@@ -1567,15 +1597,18 @@ function TemplateSwitchDialog({
     toolsToRemove: string[];
     toolsToAdd: string[];
     config: Record<string, unknown>;
+    keepQuestions: boolean;
   };
   switching: boolean;
   onConfigChange: (patch: Record<string, unknown>) => void;
+  onKeepQuestionsChange: (keep: boolean) => void;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
   const template = getTemplateById(dialog.newTemplateId);
   const errors = getSwitchValidationErrors(dialog.newTemplateId, dialog.config);
   const canSwitch = errors.length === 0;
+  const isTargetSupport = dialog.newTemplateId === "customer-support";
 
   return (
     <AlertDialog open onOpenChange={(open) => { if (!open) onCancel(); }}>
@@ -1585,7 +1618,7 @@ function TemplateSwitchDialog({
             Switch to {template?.name ?? dialog.newTemplateId}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Fill in the required information for this agent type before switching.
+            Behavior settings{!isTargetSupport ? ", ICP, and disqualification criteria" : ""} will be reset for the new goal.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -1619,10 +1652,37 @@ function TemplateSwitchDialog({
             </div>
           )}
 
+          {/* Keep qualifying questions toggle */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Qualifying questions
+            </p>
+            <label className="flex items-center gap-2.5 rounded-lg border px-3 py-2.5 cursor-pointer hover:bg-muted/30 transition-colors">
+              <input
+                type="checkbox"
+                checked={dialog.keepQuestions}
+                onChange={(e) => onKeepQuestionsChange(e.target.checked)}
+                className="rounded border-border"
+              />
+              <div>
+                <p className="text-xs font-medium">
+                  {isTargetSupport
+                    ? "Keep qualifying questions as triage questions"
+                    : "Keep existing qualifying questions"}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {isTargetSupport
+                    ? "Your current qualifying questions will be repurposed as triage questions."
+                    : "Carry over your qualifying questions to the new goal."}
+                </p>
+              </div>
+            </label>
+          </div>
+
           {/* Required fields for new template */}
           <div className="space-y-2">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Required information
+              Configuration
             </p>
             <SwitchConfigFields
               templateId={dialog.newTemplateId}
@@ -1802,43 +1862,6 @@ function SwitchConfigFields({
             />
           </div>
         )}
-      </div>
-    );
-  }
-
-  if (templateId === "lead-qualification") {
-    const icp = (config.icp_description as string) ?? "";
-    const disqual = (config.disqualification_criteria ?? []) as string[];
-
-    return (
-      <div className="space-y-3">
-        <div className="space-y-1.5">
-          <Label className="text-xs">
-            Ideal customer profile <span className="text-destructive">*</span>
-          </Label>
-          <p className="text-[11px] text-muted-foreground">
-            Describe who your ideal customer is so the agent knows what "qualified" means.
-          </p>
-          <Textarea
-            value={icp}
-            onChange={(e) => onChange({ icp_description: e.target.value })}
-            placeholder="e.g., B2B SaaS companies with 10–200 employees looking for project management tools"
-            rows={3}
-            className="text-xs resize-none"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label className="text-xs">Disqualification criteria</Label>
-          <p className="text-[11px] text-muted-foreground">
-            When should the agent politely decline?
-          </p>
-          <TagList
-            tags={disqual}
-            onChange={(v) => onChange({ disqualification_criteria: v })}
-            placeholder="e.g., Budget under $500"
-          />
-        </div>
       </div>
     );
   }

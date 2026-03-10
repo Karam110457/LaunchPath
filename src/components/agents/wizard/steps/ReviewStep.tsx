@@ -33,8 +33,12 @@ const TEMPLATE_META: Record<
     label: "Customer Support",
     icon: <LifeBuoy className="w-4 h-4 text-primary" />,
   },
+  "lead-capture": {
+    label: "Lead Capture",
+    icon: <Target className="w-4 h-4 text-primary" />,
+  },
   "lead-qualification": {
-    label: "Lead Qualification",
+    label: "Lead Capture",
     icon: <Target className="w-4 h-4 text-primary" />,
   },
 };
@@ -163,8 +167,8 @@ export function ReviewStep({
             )}
             {state.templateId === "appointment-booker" ? (
               <AppointmentReview config={state.appointmentBookerConfig} />
-            ) : state.templateId === "lead-qualification" ? (
-              <LeadQualReview config={state.leadQualificationConfig} />
+            ) : state.templateId === "lead-capture" || state.templateId === "lead-qualification" ? (
+              <LeadCaptureReview config={state.leadCaptureConfig} />
             ) : (
               <SupportReview config={state.customerSupportConfig} />
             )}
@@ -307,19 +311,17 @@ function AppointmentReview({
 }
 
 // ---------------------------------------------------------------------------
-// Lead Qualification Review
+// Lead Capture Review
 // ---------------------------------------------------------------------------
 
-function LeadQualReview({
+function LeadCaptureReview({
   config,
 }: {
-  config: AgentWizardState["leadQualificationConfig"];
+  config: AgentWizardState["leadCaptureConfig"];
 }) {
   const fields = ["Name", "Email"];
   if (config.lead_fields.phone) fields.push("Phone");
   if (config.lead_fields.company) fields.push("Company");
-  if (config.lead_fields.budget) fields.push("Budget");
-  if (config.lead_fields.timeline) fields.push("Timeline");
   config.lead_fields.custom_fields
     .filter((f) => f.trim())
     .forEach((f) => fields.push(f));

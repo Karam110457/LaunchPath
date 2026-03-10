@@ -200,7 +200,7 @@ export function generateConfigDirectives(input: DirectivesInput): string {
       );
     }
 
-    // ── Lead Qualification: ICP & disqualification ─────────────────────
+    // ── Shared Qualification: ICP & disqualification (appointment-booker + lead-capture) ──
     const icpDesc = bc.icp_description as string | undefined;
     if (icpDesc) {
       directives.push(

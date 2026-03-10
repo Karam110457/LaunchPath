@@ -140,10 +140,10 @@ ESCALATION:
     },
   },
   {
-    id: "lead-qualification",
-    name: "Lead Qualification",
+    id: "lead-capture",
+    name: "Lead Capture",
     description:
-      "Qualifies leads through natural conversation and saves them to a spreadsheet.",
+      "Captures lead details through conversation and saves them to a spreadsheet.",
     icon: "Target",
     default_system_prompt_hint:
       "An AI agent that engages visitors in helpful conversation while naturally collecting qualifying information. Saves lead data to Google Sheets and notifies the team via email.",
@@ -193,5 +193,7 @@ IMPORTANT RULES:
 ];
 
 export function getTemplateById(id: string): AgentTemplate | undefined {
-  return AGENT_TEMPLATES.find((t) => t.id === id);
+  // Backward compat: old "lead-qualification" ID maps to "lead-capture"
+  const normalizedId = id === "lead-qualification" ? "lead-capture" : id;
+  return AGENT_TEMPLATES.find((t) => t.id === normalizedId);
 }

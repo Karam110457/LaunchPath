@@ -37,6 +37,12 @@ const KB_GUIDANCE: Record<string, { heading: string; description: string }> = {
     description:
       "This is critical — your support agent relies on this information to answer customer questions accurately. Add as much content as possible.",
   },
+  "lead-capture": {
+    heading: "Build your knowledge base",
+    description:
+      "Give your agent product and service details so it can have informed conversations with potential leads.",
+  },
+  // Backward compat
   "lead-qualification": {
     heading: "Build your knowledge base",
     description:

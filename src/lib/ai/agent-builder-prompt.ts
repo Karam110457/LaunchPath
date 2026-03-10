@@ -173,11 +173,10 @@ export function buildAgentGenerationContext(input: {
       }
 
       parts.push(lines.join("\n"));
-    } else if (wc.templateId === "lead-qualification") {
+    } else if (wc.templateId === "lead-capture" || wc.templateId === "lead-qualification") {
       const lc = wc.behaviorConfig as {
         lead_fields?: {
-          phone?: boolean; company?: boolean; budget?: boolean;
-          timeline?: boolean; custom_fields?: string[];
+          phone?: boolean; company?: boolean; custom_fields?: string[];
         };
         notification_behavior?: string;
         notification_email?: string;
@@ -185,7 +184,7 @@ export function buildAgentGenerationContext(input: {
         disqualification_criteria?: string[];
       };
 
-      const lines = ["AGENT TYPE: Lead Qualification"];
+      const lines = ["AGENT TYPE: Lead Capture"];
 
       if (questions.length > 0) {
         lines.push(
@@ -196,8 +195,6 @@ export function buildAgentGenerationContext(input: {
       const fields = ["name (always)", "email (always)"];
       if (lc.lead_fields?.phone) fields.push("phone");
       if (lc.lead_fields?.company) fields.push("company");
-      if (lc.lead_fields?.budget) fields.push("budget range");
-      if (lc.lead_fields?.timeline) fields.push("timeline");
       const customFields = (lc.lead_fields?.custom_fields ?? []).filter(
         (f) => f.trim(),
       );
@@ -205,7 +202,7 @@ export function buildAgentGenerationContext(input: {
       lines.push(`Lead fields to capture: ${fields.join(", ")}`);
 
       lines.push(
-        `Notification: ${lc.notification_behavior === "email_team" ? "Email team with lead summary when qualification is complete" : "Save leads to spreadsheet only"}`,
+        `Notification: ${lc.notification_behavior === "email_team" ? "Email team with lead summary when captured" : "Save leads to spreadsheet only"}`,
       );
       if (lc.notification_email && lc.notification_behavior === "email_team") {
         lines.push(`Notification email: ${lc.notification_email}`);

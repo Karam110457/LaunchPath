@@ -46,7 +46,9 @@ export interface AppointmentBookerConfig {
   };
   service_types: string[];
   cancellation_policy: string;
+  /** Shared qualification fields — stored in behaviorConfig for DB simplicity */
   disqualification_criteria: string[];
+  icp_description: string;
 }
 
 export interface CustomerSupportConfig {
@@ -58,19 +60,21 @@ export interface CustomerSupportConfig {
   forbidden_topics: string[];
 }
 
-export interface LeadQualificationConfig {
+export interface LeadCaptureConfig {
   lead_fields: {
     phone: boolean;
     company: boolean;
-    budget: boolean;
-    timeline: boolean;
     custom_fields: string[];
   };
   notification_behavior: "email_team" | "sheet_only";
   notification_email: string;
-  icp_description: string;
+  /** Shared qualification fields — stored in behaviorConfig for DB simplicity */
   disqualification_criteria: string[];
+  icp_description: string;
 }
+
+/** @deprecated Use LeadCaptureConfig — kept for backward compat */
+export type LeadQualificationConfig = LeadCaptureConfig;
 
 // ---------------------------------------------------------------------------
 // Wizard state (accumulated across all 6 steps)
@@ -78,7 +82,7 @@ export interface LeadQualificationConfig {
 
 export interface AgentWizardState {
   // Step 1: Agent Type
-  templateId: "appointment-booker" | "customer-support" | "lead-qualification" | null;
+  templateId: "appointment-booker" | "customer-support" | "lead-capture" | "lead-qualification" | null;
 
   // Step 2: Your Business
   businessContextMode: "link_system" | "describe" | null;
@@ -95,7 +99,7 @@ export interface AgentWizardState {
   qualifyingQuestions: string[];
   appointmentBookerConfig: AppointmentBookerConfig;
   customerSupportConfig: CustomerSupportConfig;
-  leadQualificationConfig: LeadQualificationConfig;
+  leadCaptureConfig: LeadCaptureConfig;
 
   // Step 5: Integrations (tool preview)
   selectedToolkits: string[];
@@ -163,6 +167,7 @@ export function createInitialWizardState(): AgentWizardState {
       service_types: [],
       cancellation_policy: "",
       disqualification_criteria: [],
+      icp_description: "",
     },
     customerSupportConfig: {
       escalation_mode: "escalate_complex",
@@ -172,8 +177,8 @@ export function createInitialWizardState(): AgentWizardState {
       after_hours_message: "",
       forbidden_topics: [],
     },
-    leadQualificationConfig: {
-      lead_fields: { phone: true, company: true, budget: false, timeline: false, custom_fields: [] },
+    leadCaptureConfig: {
+      lead_fields: { phone: true, company: true, custom_fields: [] },
       notification_behavior: "email_team",
       notification_email: "",
       icp_description: "",
@@ -197,7 +202,7 @@ export interface WizardGenerationPayload {
   businessDescription?: string;
   agentName: string;
   agentDescription: string;
-  behaviorConfig: AppointmentBookerConfig | CustomerSupportConfig | LeadQualificationConfig;
+  behaviorConfig: AppointmentBookerConfig | CustomerSupportConfig | LeadCaptureConfig;
   personality: {
     tone: string;
     greeting_message: string;

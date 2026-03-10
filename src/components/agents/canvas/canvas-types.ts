@@ -57,7 +57,7 @@ export interface AddToolNodeData {
 
 // Structured wizard configuration (stored in ai_agents.wizard_config JSONB)
 export interface WizardConfig {
-  templateId: "appointment-booker" | "customer-support" | "lead-qualification";
+  templateId: "appointment-booker" | "customer-support" | "lead-capture" | "lead-qualification";
   businessDescription?: string;
   qualifyingQuestions?: string[];
   behaviorConfig: Record<string, unknown>;

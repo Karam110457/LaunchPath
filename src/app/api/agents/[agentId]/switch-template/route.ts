@@ -11,6 +11,8 @@ interface SwitchTemplateBody {
   addNewTools: boolean;
   /** Optional pre-filled config fields from the switch dialog */
   prefilledConfig?: Record<string, unknown>;
+  /** Whether to keep qualifying questions from the old template */
+  keepQuestions?: boolean;
 }
 
 export async function POST(
@@ -29,7 +31,7 @@ export async function POST(
   }
 
   const body = (await request.json()) as SwitchTemplateBody;
-  const { newTemplateId, removeOldTools, addNewTools, prefilledConfig } = body;
+  const { newTemplateId, removeOldTools, addNewTools, prefilledConfig, keepQuestions } = body;
 
   const newTemplate = getTemplateById(newTemplateId);
   if (!newTemplate) {
@@ -147,6 +149,8 @@ export async function POST(
     ...oldWizardConfig,
     templateId: newTemplateId,
     behaviorConfig,
+    // Clear qualifying questions unless user chose to keep them
+    ...(keepQuestions ? {} : { qualifyingQuestions: [] }),
   };
 
   // Regenerate config directives in the system prompt
@@ -155,7 +159,9 @@ export async function POST(
     personality,
     wizardConfig: {
       templateId: newTemplateId,
-      qualifyingQuestions: (oldWizardConfig.qualifyingQuestions as string[] | undefined) ?? [],
+      qualifyingQuestions: keepQuestions
+        ? ((oldWizardConfig.qualifyingQuestions as string[] | undefined) ?? [])
+        : [],
       behaviorConfig,
     },
     toolGuidelines: newTemplate.toolWorkflow,
@@ -213,6 +219,7 @@ function buildDefaultBehaviorConfig(templateId: string): Record<string, unknown>
       service_types: [],
       cancellation_policy: "",
       disqualification_criteria: [],
+      icp_description: "",
     };
   }
   if (templateId === "customer-support") {
@@ -225,9 +232,9 @@ function buildDefaultBehaviorConfig(templateId: string): Record<string, unknown>
       forbidden_topics: [],
     };
   }
-  if (templateId === "lead-qualification") {
+  if (templateId === "lead-capture" || templateId === "lead-qualification") {
     return {
-      lead_fields: { phone: true, company: true, budget: false, timeline: false, custom_fields: [] },
+      lead_fields: { phone: true, company: true, custom_fields: [] },
       notification_behavior: "email_team",
       notification_email: "",
       icp_description: "",

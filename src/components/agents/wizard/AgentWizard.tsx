@@ -247,8 +247,8 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
     const behaviorConfig =
       state.templateId === "appointment-booker"
         ? state.appointmentBookerConfig
-        : state.templateId === "lead-qualification"
-          ? state.leadQualificationConfig
+        : state.templateId === "lead-capture" || state.templateId === "lead-qualification"
+          ? state.leadCaptureConfig
           : state.customerSupportConfig;
 
     const scannedPages = state.discoveredPages
@@ -354,7 +354,7 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
             qualifyingQuestions={state.qualifyingQuestions}
             appointmentBookerConfig={state.appointmentBookerConfig}
             customerSupportConfig={state.customerSupportConfig}
-            leadQualificationConfig={state.leadQualificationConfig}
+            leadCaptureConfig={state.leadCaptureConfig}
             businessDescription={state.businessDescription}
             scrapedContent={scrapedContent}
             faqs={state.faqs.map((f) => ({
@@ -374,10 +374,10 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
                 customerSupportConfig: updater(prev.customerSupportConfig),
               }))
             }
-            onUpdateLeadQualification={(updater) =>
+            onUpdateLeadCapture={(updater) =>
               setState((prev) => ({
                 ...prev,
-                leadQualificationConfig: updater(prev.leadQualificationConfig),
+                leadCaptureConfig: updater(prev.leadCaptureConfig),
               }))
             }
           />

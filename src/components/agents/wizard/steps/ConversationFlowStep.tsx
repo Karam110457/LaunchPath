@@ -19,15 +19,15 @@ import { OptionCard } from "@/components/flows/OptionCard";
 import type {
   AppointmentBookerConfig,
   CustomerSupportConfig,
-  LeadQualificationConfig,
+  LeadCaptureConfig,
 } from "@/types/agent-wizard";
 
 interface ConversationFlowStepProps {
-  templateId: "appointment-booker" | "customer-support" | "lead-qualification";
+  templateId: string;
   qualifyingQuestions: string[];
   appointmentBookerConfig: AppointmentBookerConfig;
   customerSupportConfig: CustomerSupportConfig;
-  leadQualificationConfig: LeadQualificationConfig;
+  leadCaptureConfig: LeadCaptureConfig;
   businessDescription: string;
   scrapedContent: string;
   faqs: Array<{ question: string; answer: string }>;
@@ -38,8 +38,8 @@ interface ConversationFlowStepProps {
   onUpdateCustomerSupport: (
     updater: (prev: CustomerSupportConfig) => CustomerSupportConfig,
   ) => void;
-  onUpdateLeadQualification: (
-    updater: (prev: LeadQualificationConfig) => LeadQualificationConfig,
+  onUpdateLeadCapture: (
+    updater: (prev: LeadCaptureConfig) => LeadCaptureConfig,
   ) => void;
 }
 
@@ -48,15 +48,16 @@ export function ConversationFlowStep({
   qualifyingQuestions,
   appointmentBookerConfig,
   customerSupportConfig,
-  leadQualificationConfig,
+  leadCaptureConfig,
   businessDescription,
   scrapedContent,
   faqs,
   onQuestionsChange,
   onUpdateAppointmentBooker,
   onUpdateCustomerSupport,
-  onUpdateLeadQualification,
+  onUpdateLeadCapture,
 }: ConversationFlowStepProps) {
+  const isLeadCapture = templateId === "lead-capture" || templateId === "lead-qualification";
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
 
@@ -96,14 +97,14 @@ export function ConversationFlowStep({
         <h2 className="text-xl font-semibold tracking-tight">
           {templateId === "appointment-booker"
             ? "Configure appointments"
-            : templateId === "lead-qualification"
+            : isLeadCapture
               ? "Configure lead capture"
               : "Configure support behavior"}
         </h2>
         <p className="text-sm text-muted-foreground">
           {templateId === "appointment-booker"
             ? "Set up the fields your agent collects and how it handles bookings."
-            : templateId === "lead-qualification"
+            : isLeadCapture
               ? "Choose what information your agent collects and where leads are sent."
               : "Choose how your agent handles issues and responds to visitors."}
         </p>
@@ -115,10 +116,10 @@ export function ConversationFlowStep({
           config={appointmentBookerConfig}
           onUpdate={onUpdateAppointmentBooker}
         />
-      ) : templateId === "lead-qualification" ? (
-        <LeadQualificationOptions
-          config={leadQualificationConfig}
-          onUpdate={onUpdateLeadQualification}
+      ) : isLeadCapture ? (
+        <LeadCaptureOptions
+          config={leadCaptureConfig}
+          onUpdate={onUpdateLeadCapture}
         />
       ) : (
         <CustomerSupportOptions
@@ -190,37 +191,62 @@ export function ConversationFlowStep({
         </Button>
       </div>
 
-      {/* Disqualification criteria — shown for templates with qualifying questions */}
-      {(templateId === "appointment-booker" || templateId === "lead-qualification") && (
-        <div className="space-y-3 rounded-lg border p-4">
+      {/* Qualification settings — shared for appointment-booker + lead-capture */}
+      {(templateId === "appointment-booker" || isLeadCapture) && (
+        <div className="space-y-4 rounded-lg border p-4">
+          <div>
+            <Label className="text-sm font-medium">
+              Ideal customer profile
+              <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+            </Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Describe your ideal customer so the agent can prioritize the right leads.
+            </p>
+            <Textarea
+              value={
+                templateId === "appointment-booker"
+                  ? appointmentBookerConfig.icp_description
+                  : leadCaptureConfig.icp_description
+              }
+              onChange={(e) => {
+                if (templateId === "appointment-booker") {
+                  onUpdateAppointmentBooker((prev) => ({ ...prev, icp_description: e.target.value }));
+                } else {
+                  onUpdateLeadCapture((prev) => ({ ...prev, icp_description: e.target.value }));
+                }
+              }}
+              placeholder="e.g., B2B SaaS companies with 10–200 employees looking for project management tools"
+              rows={2}
+              className="mt-2 text-sm"
+            />
+          </div>
+
           <div>
             <Label className="text-sm font-medium">
               Disqualification criteria
               <span className="text-muted-foreground font-normal ml-1">(optional)</span>
             </Label>
             <p className="text-xs text-muted-foreground mt-0.5">
-              When should the agent politely decline? These help the agent know when someone isn&apos;t a fit based on the qualifying questions above.
+              When should the agent politely decline? These help the agent know when someone isn&apos;t a fit.
             </p>
+            <div className="mt-2">
+              <CustomFieldsList
+                fields={
+                  templateId === "appointment-booker"
+                    ? appointmentBookerConfig.disqualification_criteria
+                    : leadCaptureConfig.disqualification_criteria
+                }
+                onChange={(v) => {
+                  if (templateId === "appointment-booker") {
+                    onUpdateAppointmentBooker((prev) => ({ ...prev, disqualification_criteria: v }));
+                  } else {
+                    onUpdateLeadCapture((prev) => ({ ...prev, disqualification_criteria: v }));
+                  }
+                }}
+                placeholder="e.g., No budget, just browsing"
+              />
+            </div>
           </div>
-          <CustomFieldsList
-            fields={
-              templateId === "appointment-booker"
-                ? appointmentBookerConfig.disqualification_criteria
-                : leadQualificationConfig.disqualification_criteria
-            }
-            onChange={(v) => {
-              if (templateId === "appointment-booker") {
-                onUpdateAppointmentBooker((prev) => ({ ...prev, disqualification_criteria: v }));
-              } else {
-                onUpdateLeadQualification((prev) => ({ ...prev, disqualification_criteria: v }));
-              }
-            }}
-            placeholder={
-              templateId === "appointment-booker"
-                ? "e.g., No budget, just browsing"
-                : "e.g., Budget under $500, No decision-making authority"
-            }
-          />
         </div>
       )}
     </div>
@@ -844,16 +870,16 @@ function CustomerSupportOptions({
 }
 
 // ---------------------------------------------------------------------------
-// Lead Qualification Options
+// Lead Capture Options
 // ---------------------------------------------------------------------------
 
-function LeadQualificationOptions({
+function LeadCaptureOptions({
   config,
   onUpdate,
 }: {
-  config: LeadQualificationConfig;
+  config: LeadCaptureConfig;
   onUpdate: (
-    updater: (prev: LeadQualificationConfig) => LeadQualificationConfig,
+    updater: (prev: LeadCaptureConfig) => LeadCaptureConfig,
   ) => void;
 }) {
   return (
@@ -863,7 +889,7 @@ function LeadQualificationOptions({
         <div>
           <Label className="text-sm font-medium">Lead capture fields</Label>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Information your agent collects through natural conversation. Name and email are always required.
+            Contact information your agent collects. Name and email are always required.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -895,32 +921,6 @@ function LeadQualificationOptions({
               }))
             }
           />
-          <FieldToggle
-            label="Budget"
-            enabled={config.lead_fields.budget}
-            onToggle={() =>
-              onUpdate((prev) => ({
-                ...prev,
-                lead_fields: {
-                  ...prev.lead_fields,
-                  budget: !prev.lead_fields.budget,
-                },
-              }))
-            }
-          />
-          <FieldToggle
-            label="Timeline"
-            enabled={config.lead_fields.timeline}
-            onToggle={() =>
-              onUpdate((prev) => ({
-                ...prev,
-                lead_fields: {
-                  ...prev.lead_fields,
-                  timeline: !prev.lead_fields.timeline,
-                },
-              }))
-            }
-          />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">Custom fields</Label>
@@ -940,7 +940,7 @@ function LeadQualificationOptions({
       <div className="space-y-2">
         <Label>Where to send qualified leads</Label>
         <p className="text-xs text-muted-foreground">
-          How should your team be notified when a lead is qualified?
+          How should your team be notified when a lead is captured?
         </p>
         <div className="space-y-2 pt-1">
           <OptionCard
@@ -988,24 +988,6 @@ function LeadQualificationOptions({
           </p>
         </div>
       )}
-
-      {/* Ideal Customer Profile */}
-      <div className="space-y-1.5">
-        <Label className="text-sm">Ideal customer profile</Label>
-        <Textarea
-          value={config.icp_description}
-          onChange={(e) =>
-            onUpdate((prev) => ({ ...prev, icp_description: e.target.value }))
-          }
-          placeholder="e.g., B2B SaaS companies with 10–200 employees looking for project management tools"
-          rows={3}
-          className="text-sm resize-none"
-        />
-        <p className="text-xs text-muted-foreground">
-          Describe your ideal customer so the agent can prioritize the right leads.
-        </p>
-      </div>
-
     </div>
   );
 }

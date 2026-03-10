@@ -14,7 +14,7 @@ const ICON_MAP: Record<
 
 interface ChooseTypeStepProps {
   templateId: string | null;
-  onSelect: (id: "appointment-booker" | "customer-support" | "lead-qualification") => void;
+  onSelect: (id: "appointment-booker" | "customer-support" | "lead-capture") => void;
 }
 
 export function ChooseTypeStep({ templateId, onSelect }: ChooseTypeStepProps) {
@@ -41,7 +41,7 @@ export function ChooseTypeStep({ templateId, onSelect }: ChooseTypeStepProps) {
               type="button"
               onClick={() =>
                 onSelect(
-                  template.id as "appointment-booker" | "customer-support" | "lead-qualification",
+                  template.id as "appointment-booker" | "customer-support" | "lead-capture",
                 )
               }
               className={`

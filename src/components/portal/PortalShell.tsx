@@ -17,7 +17,7 @@ export function PortalShell({ children, clientName, clientLogo, role, previewMod
       <GlobalBackground />
       <PortalSidebar clientName={clientName} clientLogo={clientLogo} role={role} />
       <div className="relative z-10 flex-1 flex flex-col md:ml-[280px] min-w-0">
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto min-h-0">
           {children}
         </main>
       </div>
