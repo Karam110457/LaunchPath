@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Loader2,
@@ -325,6 +325,15 @@ export function AgentEditPanel({
   const tabsRef = useRef<HTMLDivElement>(null);
   const isExpanded = useModalExpanded();
 
+  // Always start scrolled to the top when the panel mounts
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      const scrollParent = tabsRef.current?.closest("[data-scroll-container]")
+        ?? tabsRef.current?.parentElement;
+      scrollParent?.scrollTo({ top: 0 });
+    });
+  }, []);
+
   return (
     <Tabs
       ref={tabsRef}
@@ -509,7 +518,6 @@ export function AgentEditPanel({
                   onChange={(e) => update("tone", e.target.value)}
                   className="h-8 text-sm"
                   placeholder="e.g., warm and empathetic"
-                  autoFocus
                 />
               )}
             </div>
