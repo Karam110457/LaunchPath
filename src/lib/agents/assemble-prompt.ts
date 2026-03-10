@@ -176,6 +176,91 @@ export function assemblePrompt(input: AssemblePromptInput): AssemblePromptResult
         "Save qualified leads to the spreadsheet only. Do not send email notifications."
       );
     }
+
+    // ── Appointment Booker: availability & scheduling ──────────────────
+    const avail = bc.availability as {
+      timezone?: string;
+      working_days?: string[];
+      start_time?: string;
+      end_time?: string;
+      appointment_duration?: number;
+      buffer_minutes?: number;
+      max_advance_days?: number;
+    } | undefined;
+
+    if (avail?.working_days?.length && avail.start_time && avail.end_time) {
+      const dayMap: Record<string, string> = {
+        mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday",
+        fri: "Friday", sat: "Saturday", sun: "Sunday",
+      };
+      const dayNames = avail.working_days.map((d) => dayMap[d] ?? d).join(", ");
+      const tz = avail.timezone ? ` (${avail.timezone})` : "";
+      directives.push(
+        `Scheduling: Only book appointments on ${dayNames}, ${avail.start_time}–${avail.end_time}${tz}. ` +
+        `Each appointment is ${avail.appointment_duration ?? 30} minutes with ${avail.buffer_minutes ?? 0} minutes buffer. ` +
+        `Allow booking up to ${avail.max_advance_days ?? 30} days in advance.`
+      );
+    }
+
+    const serviceTypes = bc.service_types as string[] | undefined;
+    if (serviceTypes?.length) {
+      directives.push(
+        `Services offered: ${serviceTypes.join(", ")}. Ask which service the visitor needs.`
+      );
+    }
+
+    const cancelPolicy = bc.cancellation_policy as string | undefined;
+    if (cancelPolicy) {
+      directives.push(
+        `Cancellation policy: ${cancelPolicy}. Communicate this to the visitor after booking.`
+      );
+    }
+
+    // ── Customer Support: escalation & hours ───────────────────────────
+    const escalationContact = bc.escalation_contact as string | undefined;
+    if (escalationContact) {
+      directives.push(
+        `When escalating, direct the customer to: ${escalationContact}`
+      );
+    }
+
+    const businessHours = bc.business_hours as string | undefined;
+    if (businessHours) {
+      directives.push(`Business hours: ${businessHours}.`);
+      const afterHoursMsg = bc.after_hours_message as string | undefined;
+      if (afterHoursMsg) {
+        directives.push(
+          `Outside business hours, respond with: "${afterHoursMsg}"`
+        );
+      }
+    }
+
+    const forbiddenTopics = bc.forbidden_topics as string[] | undefined;
+    if (forbiddenTopics?.length) {
+      directives.push(
+        `NEVER discuss: ${forbiddenTopics.join(", ")}. Politely redirect if asked.`
+      );
+    }
+
+    // ── Lead Qualification: ICP & disqualification ─────────────────────
+    const icpDesc = bc.icp_description as string | undefined;
+    if (icpDesc) {
+      directives.push(
+        `Ideal customer profile: ${icpDesc}. Prioritize leads matching this profile.`
+      );
+    }
+
+    const disqualCriteria = bc.disqualification_criteria as string[] | undefined;
+    if (disqualCriteria?.length) {
+      directives.push(
+        `Disqualify leads matching: ${disqualCriteria.join("; ")}. Be polite but transparent about fit.`
+      );
+    }
+
+    const notifEmail = bc.notification_email as string | undefined;
+    if (notifEmail && bc.notification_behavior === "email_team") {
+      directives.push(`Send lead notification emails to: ${notifEmail}`);
+    }
   }
 
   if (directives.length > 0) {

@@ -26,7 +26,9 @@
       "Bash(grep -l \"tool_guidelines\\\\|wizard_config\" /c/Dev/LaunchPath/supabase/migrations/*.sql)",
       "Bash(find /c/Dev/LaunchPath/src/app/api/agents/[agentId]/tools -name \"route.ts\" -type f)",
       "mcp__claude_ai_Supabase__execute_sql",
-      "Bash(npm install defuddle jsdom)"
+      "Bash(npm install defuddle jsdom)",
+      "Bash(grep -E \"\\\\.\\(sql|ts\\)$\")",
+      "Bash(ls -la \"/c/Dev/LaunchPath/src/app/\\(auth\\)/\")"
     ]
   }
 }

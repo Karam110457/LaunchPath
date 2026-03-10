@@ -1224,23 +1224,6 @@ export function ComposioToolSetup({
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto px-6 pb-5 space-y-5 pt-5">
-            {/* Agent instructions */}
-            <div>
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Agent instructions
-              </label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={2}
-                className="mt-1.5 w-full px-3 py-2 bg-muted/30 border border-border/50 rounded-lg text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder:text-muted-foreground/50"
-                placeholder={`e.g. Use ${toolkitName} when the user asks to send emails or check their inbox`}
-              />
-              <p className="text-[10px] text-muted-foreground/60 mt-1">
-                Tells your agent when and how to use {toolkitName}.
-              </p>
-            </div>
-
             {/* Connected account */}
             <div className="flex items-center justify-between rounded-lg border border-border/40 bg-muted/20 px-3 py-2.5">
               <div className="flex items-center gap-2 min-w-0">

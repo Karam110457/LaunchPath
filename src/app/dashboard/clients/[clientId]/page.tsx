@@ -1,6 +1,7 @@
 import { requireAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { ConversationList } from "@/components/conversations/ConversationList";
+import { AgentAssignment } from "@/components/clients/AgentAssignment";
 import Link from "next/link";
 import { Megaphone, MessageSquare } from "lucide-react";
 
@@ -86,6 +87,13 @@ export default async function ClientOverviewPage({
     campaignNames?.forEach((c) => campaignNameMap.set(c.id, c.name));
   }
 
+  // Get all agents for assignment UI
+  const { data: allAgents } = await supabase
+    .from("ai_agents")
+    .select("id, name")
+    .eq("user_id", user.id)
+    .order("name");
+
   const { data: recentConversations } = channelIds.length > 0
     ? await supabase
         .from("channel_conversations")
@@ -127,6 +135,12 @@ export default async function ClientOverviewPage({
           View all conversations
         </Link>
       </div>
+
+      {/* Agent Assignment */}
+      <AgentAssignment
+        clientId={clientId}
+        allAgents={(allAgents ?? []).map((a) => ({ id: a.id, name: a.name }))}
+      />
 
       {/* Recent conversations */}
       <div className="space-y-3">

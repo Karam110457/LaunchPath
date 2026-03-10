@@ -35,11 +35,26 @@ export interface AppointmentBookerConfig {
     custom_fields: string[];
   };
   booking_behavior: "book_directly" | "collect_and_follow_up";
+  availability: {
+    timezone: string;
+    working_days: string[];
+    start_time: string;
+    end_time: string;
+    appointment_duration: number;
+    buffer_minutes: number;
+    max_advance_days: number;
+  };
+  service_types: string[];
+  cancellation_policy: string;
 }
 
 export interface CustomerSupportConfig {
   escalation_mode: "always_available" | "escalate_complex";
   response_style: "concise" | "detailed";
+  escalation_contact: string;
+  business_hours: string;
+  after_hours_message: string;
+  forbidden_topics: string[];
 }
 
 export interface LeadQualificationConfig {
@@ -51,6 +66,9 @@ export interface LeadQualificationConfig {
     custom_fields: string[];
   };
   notification_behavior: "email_team" | "sheet_only";
+  notification_email: string;
+  icp_description: string;
+  disqualification_criteria: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -132,14 +150,32 @@ export function createInitialWizardState(): AgentWizardState {
     appointmentBookerConfig: {
       lead_fields: { phone: true, company: false, custom_fields: [] },
       booking_behavior: "book_directly",
+      availability: {
+        timezone: "",
+        working_days: ["mon", "tue", "wed", "thu", "fri"],
+        start_time: "09:00",
+        end_time: "17:00",
+        appointment_duration: 30,
+        buffer_minutes: 15,
+        max_advance_days: 30,
+      },
+      service_types: [],
+      cancellation_policy: "",
     },
     customerSupportConfig: {
       escalation_mode: "escalate_complex",
       response_style: "detailed",
+      escalation_contact: "",
+      business_hours: "",
+      after_hours_message: "",
+      forbidden_topics: [],
     },
     leadQualificationConfig: {
       lead_fields: { phone: true, company: true, budget: false, timeline: false, custom_fields: [] },
       notification_behavior: "email_team",
+      notification_email: "",
+      icp_description: "",
+      disqualification_criteria: [],
     },
     selectedToolkits: [],
     agentName: "",

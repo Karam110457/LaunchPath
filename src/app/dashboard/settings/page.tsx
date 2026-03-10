@@ -1,5 +1,6 @@
 import { requireAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
+import { isBusinessFlowEnabled } from "@/lib/env";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,7 +46,7 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
 
-        {profile && <OnboardingProfileCard profile={profile} />}
+        {isBusinessFlowEnabled() && profile && <OnboardingProfileCard profile={profile} />}
 
         <Card style={{ '--stagger': 2 } as React.CSSProperties} className="rounded-[32px] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 border border-black/5 dark:border-[#2A2A2A] shadow-none">
           <CardHeader className="px-8 pt-8">

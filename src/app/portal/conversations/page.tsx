@@ -1,51 +1,22 @@
 import { requireClientAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
-import { ConversationList } from "@/components/conversations/ConversationList";
+import { PortalConversationsList } from "@/components/portal/PortalConversationsList";
 
 export default async function PortalConversations() {
   const { clientId } = await requireClientAuth();
   const supabase = await createClient();
 
-  // Get campaigns → channels → conversations
+  // Get campaigns for the filter dropdown
   const { data: campaigns } = await supabase
     .from("campaigns")
     .select("id, name")
-    .eq("client_id", clientId);
-
-  const campaignIds = campaigns?.map((c) => c.id) ?? [];
-  const campaignMap = new Map(campaigns?.map((c) => [c.id, c.name]) ?? []);
-
-  const { data: channels } = campaignIds.length > 0
-    ? await supabase
-        .from("agent_channels")
-        .select("id, campaign_id")
-        .in("campaign_id", campaignIds)
-    : { data: [] };
-
-  const channelIds = channels?.map((ch) => ch.id) ?? [];
-  const channelCampaignMap = new Map(
-    channels?.map((ch) => [ch.id, ch.campaign_id]) ?? []
-  );
-
-  const { data: conversations } = channelIds.length > 0
-    ? await supabase
-        .from("channel_conversations")
-        .select("id, channel_id, session_id, messages, metadata, updated_at")
-        .in("channel_id", channelIds)
-        .order("updated_at", { ascending: false })
-        .limit(50)
-    : { data: [] };
+    .eq("client_id", clientId)
+    .order("name");
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">Conversations</h1>
-      <ConversationList
-        conversations={conversations ?? []}
-        basePath="/portal/conversations"
-        campaignMap={campaignMap}
-        channelCampaignMap={channelCampaignMap}
-        emptyMessage="No conversations yet. They will appear here once visitors interact with your agents."
-      />
+      <PortalConversationsList campaigns={campaigns ?? []} />
     </div>
   );
 }

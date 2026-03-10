@@ -39,6 +39,7 @@ interface AgentEditPanelProps {
   formState: AgentFormState;
   setFormState: React.Dispatch<React.SetStateAction<AgentFormState>>;
   tools?: AgentToolResponse[];
+  onToolsChanged?: () => void;
 }
 
 const MODEL_OPTIONS = [
@@ -79,16 +80,63 @@ function matchesPreset(tone: string): string | null {
   return TONE_PRESETS.find((p) => p.value === lower)?.value ?? null;
 }
 
+function getDefaultBehaviorConfig(templateId: string): Record<string, unknown> {
+  if (templateId === "appointment-booker") {
+    return {
+      lead_fields: { phone: true, company: false, custom_fields: [] },
+      booking_behavior: "book_directly",
+      availability: {
+        timezone: "",
+        working_days: ["mon", "tue", "wed", "thu", "fri"],
+        start_time: "09:00",
+        end_time: "17:00",
+        appointment_duration: 30,
+        buffer_minutes: 15,
+        max_advance_days: 30,
+      },
+      service_types: [],
+      cancellation_policy: "",
+    };
+  }
+  if (templateId === "customer-support") {
+    return {
+      escalation_mode: "escalate_complex",
+      response_style: "detailed",
+      escalation_contact: "",
+      business_hours: "",
+      after_hours_message: "",
+      forbidden_topics: [],
+    };
+  }
+  if (templateId === "lead-qualification") {
+    return {
+      lead_fields: { phone: true, company: true, budget: false, timeline: false, custom_fields: [] },
+      notification_behavior: "email_team",
+      notification_email: "",
+      icp_description: "",
+      disqualification_criteria: [],
+    };
+  }
+  return {};
+}
+
 export function AgentEditPanel({
   agentId,
   formState,
   setFormState,
   tools = [],
+  onToolsChanged,
 }: AgentEditPanelProps) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [goalChangedNote, setGoalChangedNote] = useState<string | null>(null);
+  const [switchDialog, setSwitchDialog] = useState<{
+    newTemplateId: string;
+    toolsToRemove: string[];
+    toolsToAdd: string[];
+  } | null>(null);
+  const [switching, setSwitching] = useState(false);
 
   const hasWizard = formState.wizardConfig !== null;
   const currentPreset = matchesPreset(formState.tone);
@@ -118,51 +166,85 @@ export function AgentEditPanel({
       if (!formState.wizardConfig) return;
       if (formState.wizardConfig.templateId === newTemplateId) return;
 
-      const template = getTemplateById(newTemplateId);
-      if (!template) return;
+      const newTemplate = getTemplateById(newTemplateId);
+      if (!newTemplate) return;
 
-      // Build default behaviorConfig for the new template
-      let behaviorConfig: Record<string, unknown> = {};
-      if (newTemplateId === "appointment-booker") {
-        behaviorConfig = {
-          lead_fields: { phone: true, company: false, custom_fields: [] },
-          booking_behavior: "book_directly",
-        };
-      } else if (newTemplateId === "customer-support") {
-        behaviorConfig = {
-          escalation_mode: "escalate_complex",
-          response_style: "detailed",
-        };
-      } else if (newTemplateId === "lead-qualification") {
-        behaviorConfig = {
-          lead_fields: { phone: true, company: true, budget: false, timeline: false },
-          notification_behavior: "email_team",
-        };
+      const oldTemplateId = formState.wizardConfig.templateId;
+      const oldTemplate = oldTemplateId ? getTemplateById(oldTemplateId) : null;
+
+      // Compute tool diff
+      const oldToolkits = new Set(
+        (oldTemplate?.suggestedTools ?? []).map((t) => t.toolkit),
+      );
+      const newToolkits = new Set(
+        (newTemplate.suggestedTools ?? []).map((t) => t.toolkit),
+      );
+      const currentToolkits = new Set(
+        tools.map((t) => (t.config as Record<string, unknown> | null)?.toolkit as string).filter(Boolean),
+      );
+
+      const toolsToRemove = tools
+        .filter((t) => {
+          const toolkit = (t.config as Record<string, unknown> | null)?.toolkit as string;
+          return toolkit && oldToolkits.has(toolkit) && !newToolkits.has(toolkit);
+        })
+        .map((t) => t.display_name);
+
+      const toolsToAdd = (newTemplate.suggestedTools ?? [])
+        .filter((t) => !currentToolkits.has(t.toolkit))
+        .map((t) => t.displayName);
+
+      // If no tool changes, switch immediately without dialog
+      if (toolsToRemove.length === 0 && toolsToAdd.length === 0) {
+        void executeTemplateSwitch(newTemplateId, false, false);
+        return;
       }
 
-      setFormState((prev) => ({
-        ...prev,
-        wizardConfig: {
-          ...prev.wizardConfig!,
-          templateId: newTemplateId as WizardConfig["templateId"],
-          behaviorConfig,
-        },
-      }));
-
-      // Update tool_guidelines in DB (separate from form auto-save)
-      fetch(`/api/agents/${agentId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tool_guidelines: template.toolWorkflow }),
-      }).catch(() => {
-        // Non-critical — tool_guidelines will be stale until next save
-      });
-
-      // Show confirmation
-      setGoalChangedNote(`Switched to ${template.name}. Behavior settings have been reset to defaults.`);
-      setTimeout(() => setGoalChangedNote(null), 4000);
+      setSwitchDialog({ newTemplateId, toolsToRemove, toolsToAdd });
     },
-    [formState.wizardConfig, setFormState, agentId],
+    [formState.wizardConfig, tools],
+  );
+
+  const executeTemplateSwitch = useCallback(
+    async (newTemplateId: string, removeOldTools: boolean, addNewTools: boolean) => {
+      setSwitching(true);
+      try {
+        const res = await fetch(`/api/agents/${agentId}/switch-template`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ newTemplateId, removeOldTools, addNewTools }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          setError(data.error ?? "Failed to switch template");
+          return;
+        }
+
+        const data = await res.json();
+
+        // Update local form state with new wizard config
+        setFormState((prev) => ({
+          ...prev,
+          wizardConfig: data.wizardConfig as WizardConfig,
+        }));
+
+        // Refresh tools in parent
+        onToolsChanged?.();
+
+        const template = getTemplateById(newTemplateId);
+        setGoalChangedNote(
+          `Switched to ${template?.name ?? newTemplateId}. Behavior settings have been reset.`,
+        );
+        setTimeout(() => setGoalChangedNote(null), 4000);
+      } catch {
+        setError("Network error — could not switch template.");
+      } finally {
+        setSwitching(false);
+        setSwitchDialog(null);
+      }
+    },
+    [agentId, setFormState, onToolsChanged],
   );
 
   const handleAdoptGoal = useCallback(
@@ -170,23 +252,7 @@ export function AgentEditPanel({
       const template = getTemplateById(templateId);
       if (!template) return;
 
-      let behaviorConfig: Record<string, unknown> = {};
-      if (templateId === "appointment-booker") {
-        behaviorConfig = {
-          lead_fields: { phone: true, company: false, custom_fields: [] },
-          booking_behavior: "book_directly",
-        };
-      } else if (templateId === "customer-support") {
-        behaviorConfig = {
-          escalation_mode: "escalate_complex",
-          response_style: "detailed",
-        };
-      } else if (templateId === "lead-qualification") {
-        behaviorConfig = {
-          lead_fields: { phone: true, company: true, budget: false, timeline: false, custom_fields: [] },
-          notification_behavior: "email_team",
-        };
-      }
+      const behaviorConfig = getDefaultBehaviorConfig(templateId);
 
       setFormState((prev) => ({
         ...prev,
@@ -572,6 +638,67 @@ export function AgentEditPanel({
         </div>
       </TabsContent>
 
+      {/* Template switch confirmation dialog */}
+      {switchDialog && (
+        <AlertDialog open onOpenChange={(open) => { if (!open) setSwitchDialog(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Switch conversation goal?</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3">
+                  <p>
+                    Switching to{" "}
+                    <span className="font-medium text-foreground">
+                      {getTemplateById(switchDialog.newTemplateId)?.name}
+                    </span>
+                    . Behavior settings will reset to defaults.
+                  </p>
+                  {switchDialog.toolsToRemove.length > 0 && (
+                    <div className="rounded-md border border-destructive/20 bg-destructive/5 p-2.5">
+                      <p className="text-xs font-medium text-destructive mb-1">Tools to remove:</p>
+                      <ul className="text-xs text-destructive/80 list-disc pl-4 space-y-0.5">
+                        {switchDialog.toolsToRemove.map((t) => (
+                          <li key={t}>{t}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {switchDialog.toolsToAdd.length > 0 && (
+                    <div className="rounded-md border border-primary/20 bg-primary/5 p-2.5">
+                      <p className="text-xs font-medium text-primary mb-1">Tools to add:</p>
+                      <ul className="text-xs text-primary/80 list-disc pl-4 space-y-0.5">
+                        {switchDialog.toolsToAdd.map((t) => (
+                          <li key={t}>{t}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={switching}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={switching}
+                onClick={(e) => {
+                  e.preventDefault();
+                  void executeTemplateSwitch(
+                    switchDialog.newTemplateId,
+                    switchDialog.toolsToRemove.length > 0,
+                    switchDialog.toolsToAdd.length > 0,
+                  );
+                }}
+              >
+                {switching ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                ) : null}
+                Switch template
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
     </Tabs>
   );
 }
@@ -597,7 +724,26 @@ function BehaviorSection({
     const leadFields = (bc.lead_fields ?? {}) as {
       phone?: boolean;
       company?: boolean;
+      custom_fields?: string[];
     };
+    const availability = (bc.availability ?? {}) as {
+      timezone?: string;
+      working_days?: string[];
+      start_time?: string;
+      end_time?: string;
+      appointment_duration?: number;
+      buffer_minutes?: number;
+      max_advance_days?: number;
+    };
+    const serviceTypes = (bc.service_types ?? []) as string[];
+    const cancellationPolicy = (bc.cancellation_policy ?? "") as string;
+
+    const updateBc = (patch: Record<string, unknown>) =>
+      onUpdate((prev) => ({
+        ...prev,
+        behaviorConfig: { ...prev.behaviorConfig, ...patch },
+      }));
+
     return (
       <section className="space-y-4">
         <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -616,35 +762,169 @@ function BehaviorSection({
               label="Phone"
               enabled={!!leadFields.phone}
               onToggle={() =>
-                onUpdate((prev) => ({
-                  ...prev,
-                  behaviorConfig: {
-                    ...prev.behaviorConfig,
-                    lead_fields: { ...leadFields, phone: !leadFields.phone },
-                  },
-                }))
+                updateBc({ lead_fields: { ...leadFields, phone: !leadFields.phone } })
               }
             />
             <FieldToggle
               label="Company"
               enabled={!!leadFields.company}
               onToggle={() =>
-                onUpdate((prev) => ({
-                  ...prev,
-                  behaviorConfig: {
-                    ...prev.behaviorConfig,
-                    lead_fields: {
-                      ...leadFields,
-                      company: !leadFields.company,
-                    },
-                  },
-                }))
+                updateBc({ lead_fields: { ...leadFields, company: !leadFields.company } })
               }
             />
           </div>
         </div>
 
-        {/* booking_behavior is always "book_directly" for appointment-booker */}
+        {/* Availability */}
+        <div className="space-y-3 rounded-lg border border-border/60 p-3">
+          <Label className="text-xs font-medium">Availability</Label>
+
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Timezone</Label>
+            <select
+              value={availability.timezone ?? ""}
+              onChange={(e) =>
+                updateBc({ availability: { ...availability, timezone: e.target.value } })
+              }
+              className="w-full h-7 rounded-md border border-input bg-background px-2 text-xs"
+            >
+              <option value="">Select…</option>
+              {COMMON_TIMEZONES.map((tz) => (
+                <option key={tz} value={tz}>{tz.replace(/_/g, " ")}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Working days</Label>
+            <div className="flex flex-wrap gap-1">
+              {ALL_DAYS.map((d) => {
+                const days = availability.working_days ?? ["mon", "tue", "wed", "thu", "fri"];
+                return (
+                  <button
+                    key={d.value}
+                    type="button"
+                    onClick={() => {
+                      const next = days.includes(d.value)
+                        ? days.filter((x) => x !== d.value)
+                        : [...days, d.value];
+                      updateBc({ availability: { ...availability, working_days: next } });
+                    }}
+                    className={cn(
+                      "px-2 py-1 rounded-full text-[11px] font-medium border transition-all cursor-pointer",
+                      days.includes(d.value)
+                        ? "bg-primary/10 border-primary/30 text-primary"
+                        : "bg-muted/50 border-border text-muted-foreground hover:border-primary/30"
+                    )}
+                  >
+                    {d.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label className="text-[11px] text-muted-foreground">Start</Label>
+              <select
+                value={availability.start_time ?? "09:00"}
+                onChange={(e) =>
+                  updateBc({ availability: { ...availability, start_time: e.target.value } })
+                }
+                className="w-full h-7 rounded-md border border-input bg-background px-2 text-xs"
+              >
+                {TIME_OPTIONS.map((t) => (
+                  <option key={t} value={t}>{formatTime(t)}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px] text-muted-foreground">End</Label>
+              <select
+                value={availability.end_time ?? "17:00"}
+                onChange={(e) =>
+                  updateBc({ availability: { ...availability, end_time: e.target.value } })
+                }
+                className="w-full h-7 rounded-md border border-input bg-background px-2 text-xs"
+              >
+                {TIME_OPTIONS.map((t) => (
+                  <option key={t} value={t}>{formatTime(t)}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label className="text-[11px] text-muted-foreground">Duration</Label>
+              <select
+                value={availability.appointment_duration ?? 30}
+                onChange={(e) =>
+                  updateBc({ availability: { ...availability, appointment_duration: Number(e.target.value) } })
+                }
+                className="w-full h-7 rounded-md border border-input bg-background px-2 text-xs"
+              >
+                {[15, 30, 45, 60, 90, 120].map((m) => (
+                  <option key={m} value={m}>{m} min</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px] text-muted-foreground">Buffer</Label>
+              <select
+                value={availability.buffer_minutes ?? 15}
+                onChange={(e) =>
+                  updateBc({ availability: { ...availability, buffer_minutes: Number(e.target.value) } })
+                }
+                className="w-full h-7 rounded-md border border-input bg-background px-2 text-xs"
+              >
+                {[0, 5, 10, 15, 30].map((m) => (
+                  <option key={m} value={m}>{m === 0 ? "None" : `${m} min`}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Max advance</Label>
+            <div className="flex items-center gap-1.5">
+              <Input
+                type="number"
+                min={1}
+                max={365}
+                value={availability.max_advance_days ?? 30}
+                onChange={(e) =>
+                  updateBc({ availability: { ...availability, max_advance_days: Number(e.target.value) || 30 } })
+                }
+                className="h-7 text-xs w-16"
+              />
+              <span className="text-[11px] text-muted-foreground">days</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Service types */}
+        <div className="space-y-1.5">
+          <Label className="text-xs">Service types <span className="text-muted-foreground font-normal">(optional)</span></Label>
+          <TagList
+            tags={serviceTypes}
+            onChange={(v) => updateBc({ service_types: v })}
+            placeholder="e.g., Consultation"
+          />
+        </div>
+
+        {/* Cancellation policy */}
+        <div className="space-y-1">
+          <Label className="text-xs">Cancellation policy <span className="text-muted-foreground font-normal">(optional)</span></Label>
+          <Textarea
+            value={cancellationPolicy}
+            onChange={(e) => updateBc({ cancellation_policy: e.target.value })}
+            placeholder="e.g., Free cancellation up to 24h before."
+            rows={2}
+            className="text-xs resize-none"
+          />
+        </div>
       </section>
     );
   }
@@ -659,6 +939,15 @@ function BehaviorSection({
     };
     const notificationBehavior =
       (bc.notification_behavior as string) ?? "email_team";
+    const notificationEmail = (bc.notification_email as string) ?? "";
+    const icpDescription = (bc.icp_description as string) ?? "";
+    const disqualificationCriteria = (bc.disqualification_criteria ?? []) as string[];
+
+    const updateBc = (patch: Record<string, unknown>) =>
+      onUpdate((prev) => ({
+        ...prev,
+        behaviorConfig: { ...prev.behaviorConfig, ...patch },
+      }));
 
     return (
       <section className="space-y-4">
@@ -678,52 +967,28 @@ function BehaviorSection({
               label="Phone"
               enabled={!!leadFields.phone}
               onToggle={() =>
-                onUpdate((prev) => ({
-                  ...prev,
-                  behaviorConfig: {
-                    ...prev.behaviorConfig,
-                    lead_fields: { ...leadFields, phone: !leadFields.phone },
-                  },
-                }))
+                updateBc({ lead_fields: { ...leadFields, phone: !leadFields.phone } })
               }
             />
             <FieldToggle
               label="Company"
               enabled={!!leadFields.company}
               onToggle={() =>
-                onUpdate((prev) => ({
-                  ...prev,
-                  behaviorConfig: {
-                    ...prev.behaviorConfig,
-                    lead_fields: { ...leadFields, company: !leadFields.company },
-                  },
-                }))
+                updateBc({ lead_fields: { ...leadFields, company: !leadFields.company } })
               }
             />
             <FieldToggle
               label="Budget"
               enabled={!!leadFields.budget}
               onToggle={() =>
-                onUpdate((prev) => ({
-                  ...prev,
-                  behaviorConfig: {
-                    ...prev.behaviorConfig,
-                    lead_fields: { ...leadFields, budget: !leadFields.budget },
-                  },
-                }))
+                updateBc({ lead_fields: { ...leadFields, budget: !leadFields.budget } })
               }
             />
             <FieldToggle
               label="Timeline"
               enabled={!!leadFields.timeline}
               onToggle={() =>
-                onUpdate((prev) => ({
-                  ...prev,
-                  behaviorConfig: {
-                    ...prev.behaviorConfig,
-                    lead_fields: { ...leadFields, timeline: !leadFields.timeline },
-                  },
-                }))
+                updateBc({ lead_fields: { ...leadFields, timeline: !leadFields.timeline } })
               }
             />
           </div>
@@ -737,32 +1002,52 @@ function BehaviorSection({
               label="Email team with lead summary"
               description="Sends an internal notification with the lead details to your team"
               selected={notificationBehavior === "email_team"}
-              onSelect={() =>
-                onUpdate((prev) => ({
-                  ...prev,
-                  behaviorConfig: {
-                    ...prev.behaviorConfig,
-                    notification_behavior: "email_team",
-                  },
-                }))
-              }
+              onSelect={() => updateBc({ notification_behavior: "email_team" })}
             />
             <OptionCard
               value="sheet_only"
               label="Save to spreadsheet only"
               description="Leads are saved to Google Sheets without email notifications"
               selected={notificationBehavior === "sheet_only"}
-              onSelect={() =>
-                onUpdate((prev) => ({
-                  ...prev,
-                  behaviorConfig: {
-                    ...prev.behaviorConfig,
-                    notification_behavior: "sheet_only",
-                  },
-                }))
-              }
+              onSelect={() => updateBc({ notification_behavior: "sheet_only" })}
             />
           </div>
+        </div>
+
+        {/* Notification email */}
+        {notificationBehavior === "email_team" && (
+          <div className="space-y-1">
+            <Label className="text-xs">Notification email</Label>
+            <Input
+              type="email"
+              value={notificationEmail}
+              onChange={(e) => updateBc({ notification_email: e.target.value })}
+              placeholder="e.g., sales@company.com"
+              className="h-7 text-xs"
+            />
+          </div>
+        )}
+
+        {/* ICP */}
+        <div className="space-y-1">
+          <Label className="text-xs">Ideal customer profile</Label>
+          <Textarea
+            value={icpDescription}
+            onChange={(e) => updateBc({ icp_description: e.target.value })}
+            placeholder="e.g., B2B SaaS companies with 10–200 employees"
+            rows={2}
+            className="text-xs resize-none"
+          />
+        </div>
+
+        {/* Disqualification criteria */}
+        <div className="space-y-1.5">
+          <Label className="text-xs">Disqualification criteria <span className="text-muted-foreground font-normal">(optional)</span></Label>
+          <TagList
+            tags={disqualificationCriteria}
+            onChange={(v) => updateBc({ disqualification_criteria: v })}
+            placeholder="e.g., Budget under $500"
+          />
         </div>
       </section>
     );
@@ -772,6 +1057,16 @@ function BehaviorSection({
   const escalationMode =
     (bc.escalation_mode as string) ?? "escalate_complex";
   const responseStyle = (bc.response_style as string) ?? "detailed";
+  const escalationContact = (bc.escalation_contact as string) ?? "";
+  const businessHours = (bc.business_hours as string) ?? "";
+  const afterHoursMessage = (bc.after_hours_message as string) ?? "";
+  const forbiddenTopics = (bc.forbidden_topics ?? []) as string[];
+
+  const updateBc = (patch: Record<string, unknown>) =>
+    onUpdate((prev) => ({
+      ...prev,
+      behaviorConfig: { ...prev.behaviorConfig, ...patch },
+    }));
 
   return (
     <section className="space-y-4">
@@ -787,33 +1082,30 @@ function BehaviorSection({
             label="Handle everything"
             description="The agent tries to resolve all issues without escalating"
             selected={escalationMode === "always_available"}
-            onSelect={() =>
-              onUpdate((prev) => ({
-                ...prev,
-                behaviorConfig: {
-                  ...prev.behaviorConfig,
-                  escalation_mode: "always_available",
-                },
-              }))
-            }
+            onSelect={() => updateBc({ escalation_mode: "always_available" })}
           />
           <OptionCard
             value="escalate_complex"
             label="Escalate complex issues"
             description="The agent hands off to a human when it can't resolve an issue"
             selected={escalationMode === "escalate_complex"}
-            onSelect={() =>
-              onUpdate((prev) => ({
-                ...prev,
-                behaviorConfig: {
-                  ...prev.behaviorConfig,
-                  escalation_mode: "escalate_complex",
-                },
-              }))
-            }
+            onSelect={() => updateBc({ escalation_mode: "escalate_complex" })}
           />
         </div>
       </div>
+
+      {/* Escalation contact */}
+      {escalationMode === "escalate_complex" && (
+        <div className="space-y-1">
+          <Label className="text-xs">Escalation contact</Label>
+          <Input
+            value={escalationContact}
+            onChange={(e) => updateBc({ escalation_contact: e.target.value })}
+            placeholder="e.g., support@company.com"
+            className="h-7 text-xs"
+          />
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label className="text-xs">Response style</Label>
@@ -823,32 +1115,51 @@ function BehaviorSection({
             label="Concise answers"
             description="Short, direct responses that get to the point quickly"
             selected={responseStyle === "concise"}
-            onSelect={() =>
-              onUpdate((prev) => ({
-                ...prev,
-                behaviorConfig: {
-                  ...prev.behaviorConfig,
-                  response_style: "concise",
-                },
-              }))
-            }
+            onSelect={() => updateBc({ response_style: "concise" })}
           />
           <OptionCard
             value="detailed"
             label="Detailed explanations"
             description="Thorough, step-by-step responses with context"
             selected={responseStyle === "detailed"}
-            onSelect={() =>
-              onUpdate((prev) => ({
-                ...prev,
-                behaviorConfig: {
-                  ...prev.behaviorConfig,
-                  response_style: "detailed",
-                },
-              }))
-            }
+            onSelect={() => updateBc({ response_style: "detailed" })}
           />
         </div>
+      </div>
+
+      {/* Business hours */}
+      <div className="space-y-1">
+        <Label className="text-xs">Business hours <span className="text-muted-foreground font-normal">(optional)</span></Label>
+        <Input
+          value={businessHours}
+          onChange={(e) => updateBc({ business_hours: e.target.value })}
+          placeholder="e.g., Mon–Fri 9am–5pm EST"
+          className="h-7 text-xs"
+        />
+      </div>
+
+      {/* After-hours message */}
+      {businessHours && (
+        <div className="space-y-1">
+          <Label className="text-xs">After-hours message</Label>
+          <Textarea
+            value={afterHoursMessage}
+            onChange={(e) => updateBc({ after_hours_message: e.target.value })}
+            placeholder="e.g., We'll get back to you next business day."
+            rows={2}
+            className="text-xs resize-none"
+          />
+        </div>
+      )}
+
+      {/* Forbidden topics */}
+      <div className="space-y-1.5">
+        <Label className="text-xs">Forbidden topics <span className="text-muted-foreground font-normal">(optional)</span></Label>
+        <TagList
+          tags={forbiddenTopics}
+          onChange={(v) => updateBc({ forbidden_topics: v })}
+          placeholder="e.g., Competitor pricing"
+        />
       </div>
     </section>
   );
@@ -1022,4 +1333,135 @@ function FieldToggle({
       {label}
     </button>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Tag List (add/remove inline — compact canvas version)
+// ---------------------------------------------------------------------------
+
+function TagList({
+  tags,
+  onChange,
+  placeholder = "Add item…",
+}: {
+  tags: string[];
+  onChange: (tags: string[]) => void;
+  placeholder?: string;
+}) {
+  const [value, setValue] = useState("");
+
+  function add() {
+    const name = value.trim();
+    if (!name) return;
+    if (tags.some((t) => t.toLowerCase() === name.toLowerCase())) return;
+    onChange([...tags, name]);
+    setValue("");
+  }
+
+  return (
+    <div className="space-y-1.5">
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {tags.map((t, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border bg-muted/50 text-foreground"
+            >
+              {t}
+              <button
+                type="button"
+                onClick={() => onChange(tags.filter((_, idx) => idx !== i))}
+                className="p-0.5 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
+              >
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-1.5">
+        <Input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={placeholder}
+          className="h-7 text-xs flex-1"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              add();
+            }
+          }}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={add}
+          disabled={!value.trim()}
+          className="h-7 text-[11px] px-2"
+        >
+          <Plus className="w-3 h-3" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Constants for Availability section
+// ---------------------------------------------------------------------------
+
+const ALL_DAYS = [
+  { value: "mon", label: "Mon" },
+  { value: "tue", label: "Tue" },
+  { value: "wed", label: "Wed" },
+  { value: "thu", label: "Thu" },
+  { value: "fri", label: "Fri" },
+  { value: "sat", label: "Sat" },
+  { value: "sun", label: "Sun" },
+] as const;
+
+const COMMON_TIMEZONES = [
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Anchorage",
+  "Pacific/Honolulu",
+  "America/Toronto",
+  "America/Vancouver",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Europe/Amsterdam",
+  "Europe/Madrid",
+  "Europe/Rome",
+  "Europe/Zurich",
+  "Europe/Stockholm",
+  "Europe/Warsaw",
+  "Europe/Istanbul",
+  "Asia/Dubai",
+  "Asia/Kolkata",
+  "Asia/Singapore",
+  "Asia/Hong_Kong",
+  "Asia/Tokyo",
+  "Asia/Seoul",
+  "Asia/Shanghai",
+  "Australia/Sydney",
+  "Australia/Melbourne",
+  "Pacific/Auckland",
+];
+
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const h = String(Math.floor(i / 2)).padStart(2, "0");
+  const m = i % 2 === 0 ? "00" : "30";
+  return `${h}:${m}`;
+});
+
+function formatTime(t: string): string {
+  const [hStr, mStr] = t.split(":");
+  const h = Number(hStr);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${mStr} ${suffix}`;
 }

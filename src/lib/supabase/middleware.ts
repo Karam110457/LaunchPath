@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { getClientEnv } from "@/lib/env";
+import { getClientEnv, isBusinessFlowEnabled } from "@/lib/env";
 import { applySecurityHeaders } from "@/lib/security/headers";
 
 export async function updateSession(request: NextRequest) {
@@ -43,9 +43,11 @@ export async function updateSession(request: NextRequest) {
 
   if (user) {
     const pathname = request.nextUrl.pathname;
+    const businessFlowEnabled = isBusinessFlowEnabled();
 
     const isOnboardingRoute = pathname.startsWith("/onboarding");
     const isStartRoute = pathname.startsWith("/start");
+    const isSystemsRoute = pathname.startsWith("/dashboard/systems");
     const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/signup");
     const isApiRoute = pathname.startsWith("/api");
     const isDemoRoute = pathname.startsWith("/demo");
@@ -59,6 +61,15 @@ export async function updateSession(request: NextRequest) {
     const onboardingCompleted =
       user.user_metadata?.onboarding_completed === true;
     const isClientRole = user.user_metadata?.role === "client";
+
+    // When business flow is disabled, block business-only routes
+    if (!businessFlowEnabled) {
+      if (isOnboardingRoute || isStartRoute || isSystemsRoute) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/dashboard";
+        return NextResponse.redirect(url);
+      }
+    }
 
     // Client-role routing: redirect to/from portal
     if (isClientRole && isDashboardRoute) {
@@ -86,7 +97,9 @@ export async function updateSession(request: NextRequest) {
     }
 
     // Force onboarding before any protected route (agency users)
+    // Skip when business flow is disabled — onboarding only serves that flow
     if (
+      businessFlowEnabled &&
       !onboardingCompleted &&
       !isOnboardingRoute &&
       !isAuthRoute &&

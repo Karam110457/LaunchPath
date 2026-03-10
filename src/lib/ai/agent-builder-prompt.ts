@@ -80,12 +80,15 @@ export function buildAgentGenerationContext(input: {
 
     if (wc.templateId === "appointment-booker") {
       const bc = wc.behaviorConfig as {
-        lead_fields?: {
-          phone?: boolean;
-          company?: boolean;
-          custom_fields?: string[];
-        };
+        lead_fields?: { phone?: boolean; company?: boolean; custom_fields?: string[] };
         booking_behavior?: string;
+        availability?: {
+          timezone?: string; working_days?: string[]; start_time?: string;
+          end_time?: string; appointment_duration?: number; buffer_minutes?: number;
+          max_advance_days?: number;
+        };
+        service_types?: string[];
+        cancellation_policy?: string;
       };
 
       const lines = ["AGENT TYPE: Appointment Booker"];
@@ -108,11 +111,32 @@ export function buildAgentGenerationContext(input: {
         `Booking behavior: ${bc.booking_behavior === "book_directly" ? "Book appointments directly on calendar" : "Collect lead information for manual follow-up"}`,
       );
 
+      if (bc.availability?.working_days?.length) {
+        const a = bc.availability;
+        const days = a.working_days ?? [];
+        lines.push(
+          `Availability: ${days.join(", ")} ${a.start_time}–${a.end_time}${a.timezone ? ` (${a.timezone})` : ""}`,
+        );
+        lines.push(
+          `Appointment duration: ${a.appointment_duration ?? 30} min, buffer: ${a.buffer_minutes ?? 0} min, max advance: ${a.max_advance_days ?? 30} days`,
+        );
+      }
+      if (bc.service_types?.length) {
+        lines.push(`Service types: ${bc.service_types.join(", ")}`);
+      }
+      if (bc.cancellation_policy) {
+        lines.push(`Cancellation policy: ${bc.cancellation_policy}`);
+      }
+
       parts.push(lines.join("\n"));
     } else if (wc.templateId === "customer-support") {
       const sc = wc.behaviorConfig as {
         escalation_mode?: string;
         response_style?: string;
+        escalation_contact?: string;
+        business_hours?: string;
+        after_hours_message?: string;
+        forbidden_topics?: string[];
       };
 
       const lines = ["AGENT TYPE: Customer Support"];
@@ -126,21 +150,33 @@ export function buildAgentGenerationContext(input: {
       lines.push(
         `Escalation: ${sc.escalation_mode === "always_available" ? "Handle everything, never escalate" : "Escalate complex issues to a human agent"}`,
       );
+      if (sc.escalation_contact) {
+        lines.push(`Escalation contact: ${sc.escalation_contact}`);
+      }
       lines.push(
         `Response style: ${sc.response_style === "concise" ? "Keep answers short and direct" : "Provide detailed, thorough explanations"}`,
       );
+      if (sc.business_hours) {
+        lines.push(`Business hours: ${sc.business_hours}`);
+        if (sc.after_hours_message) {
+          lines.push(`After-hours message: ${sc.after_hours_message}`);
+        }
+      }
+      if (sc.forbidden_topics?.length) {
+        lines.push(`Forbidden topics (agent must never discuss): ${sc.forbidden_topics.join(", ")}`);
+      }
 
       parts.push(lines.join("\n"));
     } else if (wc.templateId === "lead-qualification") {
       const lc = wc.behaviorConfig as {
         lead_fields?: {
-          phone?: boolean;
-          company?: boolean;
-          budget?: boolean;
-          timeline?: boolean;
-          custom_fields?: string[];
+          phone?: boolean; company?: boolean; budget?: boolean;
+          timeline?: boolean; custom_fields?: string[];
         };
         notification_behavior?: string;
+        notification_email?: string;
+        icp_description?: string;
+        disqualification_criteria?: string[];
       };
 
       const lines = ["AGENT TYPE: Lead Qualification"];
@@ -165,6 +201,15 @@ export function buildAgentGenerationContext(input: {
       lines.push(
         `Notification: ${lc.notification_behavior === "email_team" ? "Email team with lead summary when qualification is complete" : "Save leads to spreadsheet only"}`,
       );
+      if (lc.notification_email && lc.notification_behavior === "email_team") {
+        lines.push(`Notification email: ${lc.notification_email}`);
+      }
+      if (lc.icp_description) {
+        lines.push(`Ideal customer profile: ${lc.icp_description}`);
+      }
+      if (lc.disqualification_criteria?.length) {
+        lines.push(`Disqualification criteria: ${lc.disqualification_criteria.join("; ")}`);
+      }
 
       parts.push(lines.join("\n"));
     }

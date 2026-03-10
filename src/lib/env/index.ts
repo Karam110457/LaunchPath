@@ -26,7 +26,13 @@ function getRawClientEnv(): Record<string, string | undefined> {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     NEXT_PUBLIC_APP_ORIGIN: process.env.NEXT_PUBLIC_APP_ORIGIN,
+    NEXT_PUBLIC_ENABLE_BUSINESS_FLOW: process.env.NEXT_PUBLIC_ENABLE_BUSINESS_FLOW,
   };
+}
+
+/** Whether the business/systems flow is enabled (dev-only for v1). */
+export function isBusinessFlowEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_ENABLE_BUSINESS_FLOW === "true";
 }
 
 /** Use on server only. Validates and returns server env. */

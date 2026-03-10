@@ -1,6 +1,7 @@
 import { requireAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { isBusinessFlowEnabled } from "@/lib/env";
 import { Card, CardContent } from "@/components/ui/card";
 import { Rocket } from "lucide-react";
 import { CreateSystemButton } from "@/components/dashboard/CreateSystemButton";
@@ -8,6 +9,12 @@ import { PageShell } from "@/components/layout/PageShell";
 
 export default async function DashboardPage() {
   const user = await requireAuth();
+
+  // When business flow is disabled, go straight to agents
+  if (!isBusinessFlowEnabled()) {
+    redirect("/dashboard/agents");
+  }
+
   const supabase = await createClient();
 
   const { data: systems } = await supabase

@@ -1,9 +1,9 @@
 import { requireClientAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { ConversationTranscript } from "@/components/conversations/ConversationTranscript";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { PortalConversationView } from "@/components/portal/PortalConversationView";
 
 export default async function PortalConversationDetail({
   params,
@@ -40,14 +40,10 @@ export default async function PortalConversationDetail({
     notFound();
   }
 
-  const messages = conversation.messages as Array<{
-    role: string;
-    content: string;
-  }>;
   const metadata = conversation.metadata as Record<string, unknown> | null;
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
+    <div className="p-6 max-w-3xl mx-auto space-y-4">
       <div className="flex items-center gap-3">
         <Link
           href="/portal/conversations"
@@ -63,11 +59,13 @@ export default async function PortalConversationDetail({
         </div>
       </div>
 
-      <ConversationTranscript
-        messages={messages}
-        metadata={metadata}
-        createdAt={conversation.created_at}
-      />
+      {metadata?.page_url ? (
+        <p className="text-xs text-muted-foreground">
+          Page: {String(metadata.page_url)}
+        </p>
+      ) : null}
+
+      <PortalConversationView conversationId={conversationId} />
     </div>
   );
 }

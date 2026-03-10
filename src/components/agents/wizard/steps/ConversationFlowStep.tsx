@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { OptionCard } from "@/components/flows/OptionCard";
 import type {
   AppointmentBookerConfig,
@@ -300,9 +301,11 @@ function QuestionList({
 function CustomFieldsList({
   fields,
   onChange,
+  placeholder = "e.g., Address, Project Size",
 }: {
   fields: string[];
   onChange: (fields: string[]) => void;
+  placeholder?: string;
 }) {
   const [newField, setNewField] = useState("");
 
@@ -339,7 +342,7 @@ function CustomFieldsList({
         <Input
           value={newField}
           onChange={(e) => setNewField(e.target.value)}
-          placeholder="e.g., Address, Project Size"
+          placeholder={placeholder}
           className="h-8 text-sm flex-1"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -432,6 +435,225 @@ function AppointmentBookerOptions({
       </div>
 
       {/* booking_behavior is always "book_directly" for appointment-booker */}
+
+      {/* Availability */}
+      <div className="space-y-4 rounded-lg border p-4">
+        <div>
+          <Label className="text-sm font-medium">Availability</Label>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            When can visitors book appointments? Your agent will only offer
+            times within these windows.
+          </p>
+        </div>
+
+        {/* Timezone */}
+        <div className="space-y-1.5">
+          <Label className="text-xs">Timezone</Label>
+          <select
+            value={config.availability.timezone}
+            onChange={(e) =>
+              onUpdate((prev) => ({
+                ...prev,
+                availability: { ...prev.availability, timezone: e.target.value },
+              }))
+            }
+            className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value="">Select timezone…</option>
+            {COMMON_TIMEZONES.map((tz) => (
+              <option key={tz} value={tz}>
+                {tz.replace(/_/g, " ")}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Working days */}
+        <div className="space-y-1.5">
+          <Label className="text-xs">Working days</Label>
+          <div className="flex flex-wrap gap-1.5">
+            {ALL_DAYS.map((d) => (
+              <button
+                key={d.value}
+                type="button"
+                onClick={() =>
+                  onUpdate((prev) => {
+                    const days = prev.availability.working_days;
+                    const next = days.includes(d.value)
+                      ? days.filter((x) => x !== d.value)
+                      : [...days, d.value];
+                    return {
+                      ...prev,
+                      availability: { ...prev.availability, working_days: next },
+                    };
+                  })
+                }
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer ${
+                  config.availability.working_days.includes(d.value)
+                    ? "bg-primary/10 border-primary/30 text-primary"
+                    : "bg-muted/50 border-border text-muted-foreground hover:border-primary/30"
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Start / End time */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Start time</Label>
+            <select
+              value={config.availability.start_time}
+              onChange={(e) =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  availability: { ...prev.availability, start_time: e.target.value },
+                }))
+              }
+              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {TIME_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {formatTime(t)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">End time</Label>
+            <select
+              value={config.availability.end_time}
+              onChange={(e) =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  availability: { ...prev.availability, end_time: e.target.value },
+                }))
+              }
+              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {TIME_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {formatTime(t)}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Duration + Buffer */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Appointment duration</Label>
+            <select
+              value={config.availability.appointment_duration}
+              onChange={(e) =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  availability: {
+                    ...prev.availability,
+                    appointment_duration: Number(e.target.value),
+                  },
+                }))
+              }
+              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {[15, 30, 45, 60, 90, 120].map((m) => (
+                <option key={m} value={m}>
+                  {m} min
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Buffer between appointments</Label>
+            <select
+              value={config.availability.buffer_minutes}
+              onChange={(e) =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  availability: {
+                    ...prev.availability,
+                    buffer_minutes: Number(e.target.value),
+                  },
+                }))
+              }
+              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {[0, 5, 10, 15, 30].map((m) => (
+                <option key={m} value={m}>
+                  {m === 0 ? "No buffer" : `${m} min`}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Max advance days */}
+        <div className="space-y-1.5">
+          <Label className="text-xs">Max advance booking</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min={1}
+              max={365}
+              value={config.availability.max_advance_days}
+              onChange={(e) =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  availability: {
+                    ...prev.availability,
+                    max_advance_days: Number(e.target.value) || 30,
+                  },
+                }))
+              }
+              className="h-8 text-sm w-24"
+            />
+            <span className="text-xs text-muted-foreground">days in advance</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Service types */}
+      <div className="space-y-3 rounded-lg border p-4">
+        <div>
+          <Label className="text-sm font-medium">
+            Service types
+            <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+          </Label>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            If you offer multiple services, list them here. Your agent will ask which service the visitor needs.
+          </p>
+        </div>
+        <CustomFieldsList
+          fields={config.service_types}
+          onChange={(service_types) =>
+            onUpdate((prev) => ({ ...prev, service_types }))
+          }
+          placeholder="e.g., Consultation, Follow-up, Demo"
+        />
+      </div>
+
+      {/* Cancellation policy */}
+      <div className="space-y-1.5">
+        <Label className="text-sm">
+          Cancellation policy
+          <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+        </Label>
+        <Textarea
+          value={config.cancellation_policy}
+          onChange={(e) =>
+            onUpdate((prev) => ({ ...prev, cancellation_policy: e.target.value }))
+          }
+          placeholder="e.g., Free cancellation up to 24 hours before the appointment."
+          rows={2}
+          className="text-sm resize-none"
+        />
+        <p className="text-xs text-muted-foreground">
+          Your agent will communicate this to visitors after booking.
+        </p>
+      </div>
     </div>
   );
 }
@@ -509,6 +731,79 @@ function CustomerSupportOptions({
             }
           />
         </div>
+      </div>
+
+      {/* Escalation contact — only when escalation is enabled */}
+      {config.escalation_mode === "escalate_complex" && (
+        <div className="space-y-1.5">
+          <Label className="text-sm">Escalation contact</Label>
+          <Input
+            value={config.escalation_contact}
+            onChange={(e) =>
+              onUpdate((prev) => ({ ...prev, escalation_contact: e.target.value }))
+            }
+            placeholder="e.g., support@company.com or 'live chat transfer'"
+            className="text-sm"
+          />
+          <p className="text-xs text-muted-foreground">
+            Where should your agent direct visitors when escalating?
+          </p>
+        </div>
+      )}
+
+      {/* Business hours */}
+      <div className="space-y-1.5">
+        <Label className="text-sm">
+          Business hours
+          <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+        </Label>
+        <Input
+          value={config.business_hours}
+          onChange={(e) =>
+            onUpdate((prev) => ({ ...prev, business_hours: e.target.value }))
+          }
+          placeholder="e.g., Mon–Fri 9am–5pm EST"
+          className="text-sm"
+        />
+      </div>
+
+      {/* After-hours message */}
+      {config.business_hours && (
+        <div className="space-y-1.5">
+          <Label className="text-sm">
+            After-hours message
+            <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+          </Label>
+          <Textarea
+            value={config.after_hours_message}
+            onChange={(e) =>
+              onUpdate((prev) => ({ ...prev, after_hours_message: e.target.value }))
+            }
+            placeholder="e.g., Thanks for reaching out! We'll get back to you next business day."
+            rows={2}
+            className="text-sm resize-none"
+          />
+        </div>
+      )}
+
+      {/* Forbidden topics */}
+      <div className="space-y-3 rounded-lg border p-4">
+        <div>
+          <Label className="text-sm font-medium">
+            Forbidden topics
+            <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+          </Label>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Topics your agent must never discuss. It will politely redirect if asked.
+          </p>
+        </div>
+        <CustomFieldsList
+          fields={config.forbidden_topics}
+          onChange={(forbidden_topics) =>
+            onUpdate((prev) => ({ ...prev, forbidden_topics }))
+          }
+          placeholder="e.g., Competitor pricing, Internal processes"
+        />
       </div>
     </div>
   );
@@ -640,6 +935,62 @@ function LeadQualificationOptions({
           />
         </div>
       </div>
+
+      {/* Notification email — only when email_team is selected */}
+      {config.notification_behavior === "email_team" && (
+        <div className="space-y-1.5">
+          <Label className="text-sm">Notification email</Label>
+          <Input
+            type="email"
+            value={config.notification_email}
+            onChange={(e) =>
+              onUpdate((prev) => ({ ...prev, notification_email: e.target.value }))
+            }
+            placeholder="e.g., sales@company.com"
+            className="text-sm"
+          />
+          <p className="text-xs text-muted-foreground">
+            Your team will receive lead summaries at this address.
+          </p>
+        </div>
+      )}
+
+      {/* Ideal Customer Profile */}
+      <div className="space-y-1.5">
+        <Label className="text-sm">Ideal customer profile</Label>
+        <Textarea
+          value={config.icp_description}
+          onChange={(e) =>
+            onUpdate((prev) => ({ ...prev, icp_description: e.target.value }))
+          }
+          placeholder="e.g., B2B SaaS companies with 10–200 employees looking for project management tools"
+          rows={3}
+          className="text-sm resize-none"
+        />
+        <p className="text-xs text-muted-foreground">
+          Describe your ideal customer so the agent can prioritize the right leads.
+        </p>
+      </div>
+
+      {/* Disqualification criteria */}
+      <div className="space-y-3 rounded-lg border p-4">
+        <div>
+          <Label className="text-sm font-medium">
+            Disqualification criteria
+            <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+          </Label>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Leads matching these criteria will be politely disqualified.
+          </p>
+        </div>
+        <CustomFieldsList
+          fields={config.disqualification_criteria}
+          onChange={(disqualification_criteria) =>
+            onUpdate((prev) => ({ ...prev, disqualification_criteria }))
+          }
+          placeholder="e.g., Budget under $500, No decision-making authority"
+        />
+      </div>
     </div>
   );
 }
@@ -677,4 +1028,65 @@ function FieldToggle({
       {label}
     </button>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Constants for Availability section
+// ---------------------------------------------------------------------------
+
+const ALL_DAYS = [
+  { value: "mon", label: "Mon" },
+  { value: "tue", label: "Tue" },
+  { value: "wed", label: "Wed" },
+  { value: "thu", label: "Thu" },
+  { value: "fri", label: "Fri" },
+  { value: "sat", label: "Sat" },
+  { value: "sun", label: "Sun" },
+] as const;
+
+const COMMON_TIMEZONES = [
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Anchorage",
+  "Pacific/Honolulu",
+  "America/Toronto",
+  "America/Vancouver",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Europe/Amsterdam",
+  "Europe/Madrid",
+  "Europe/Rome",
+  "Europe/Zurich",
+  "Europe/Stockholm",
+  "Europe/Warsaw",
+  "Europe/Istanbul",
+  "Asia/Dubai",
+  "Asia/Kolkata",
+  "Asia/Singapore",
+  "Asia/Hong_Kong",
+  "Asia/Tokyo",
+  "Asia/Seoul",
+  "Asia/Shanghai",
+  "Australia/Sydney",
+  "Australia/Melbourne",
+  "Pacific/Auckland",
+];
+
+/** Generate 30-min increment time options from 00:00 to 23:30 */
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const h = String(Math.floor(i / 2)).padStart(2, "0");
+  const m = i % 2 === 0 ? "00" : "30";
+  return `${h}:${m}`;
+});
+
+/** Format "HH:mm" to "h:mm AM/PM" */
+function formatTime(t: string): string {
+  const [hStr, mStr] = t.split(":");
+  const h = Number(hStr);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${mStr} ${suffix}`;
 }

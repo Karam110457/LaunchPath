@@ -10,15 +10,17 @@ import {
   Megaphone,
   Settings,
   LogOut,
+  Plus,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface PortalSidebarProps {
   clientName: string;
   clientLogo?: string | null;
+  role: "admin" | "viewer";
 }
 
-export function PortalSidebar({ clientName, clientLogo }: PortalSidebarProps) {
+export function PortalSidebar({ clientName, clientLogo, role }: PortalSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -104,6 +106,19 @@ export function PortalSidebar({ clientName, clientLogo }: PortalSidebarProps) {
             <span className="truncate flex-1 text-left text-foreground">{clientName}</span>
           </div>
         </div>
+
+        {/* Quick action for admins */}
+        {role === "admin" && (
+          <div className="px-4 pb-2">
+            <Link
+              href="/portal/campaigns/new"
+              className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium rounded-[14px] bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="size-4" />
+              New Campaign
+            </Link>
+          </div>
+        )}
 
         {/* Navigation */}
         <nav className="px-4 pt-2 space-y-1 flex-1">

@@ -20,6 +20,9 @@ import { createClient } from "@/lib/supabase/client";
 import { createSystem } from "@/app/(flows)/start/actions";
 import type { SidebarSystem } from "@/lib/dashboard/sidebar-data";
 
+const businessFlowEnabled =
+  process.env.NEXT_PUBLIC_ENABLE_BUSINESS_FLOW === "true";
+
 interface SidebarProps {
   systems?: SidebarSystem[];
   agentCount?: number;
@@ -130,7 +133,8 @@ export function Sidebar({ systems, agentCount, clientCount }: SidebarProps) {
         </Link>
       </div>
 
-      {/* Business switcher */}
+      {/* Business switcher — hidden when business flow is disabled */}
+      {businessFlowEnabled && (
       <div className="px-3 pb-2 shrink-0" ref={switcherRef}>
         <button
           onClick={() => setSwitcherOpen(!switcherOpen)}
@@ -216,6 +220,7 @@ export function Sidebar({ systems, agentCount, clientCount }: SidebarProps) {
           </div>
         )}
       </div>
+      )}
 
       {/* Navigation sections */}
       <nav className="flex-1 overflow-y-auto px-3 pt-2 space-y-6">
@@ -252,8 +257,8 @@ export function Sidebar({ systems, agentCount, clientCount }: SidebarProps) {
           </div>
         </div>
 
-        {/* Business section — only visible when a business is selected */}
-        {selectedBusiness && (
+        {/* Business section — only visible when business flow enabled and a business is selected */}
+        {businessFlowEnabled && selectedBusiness && (
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-3">
               Business

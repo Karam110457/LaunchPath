@@ -155,15 +155,57 @@ export async function POST(
     conversationHistory = body.messages.slice(-MAX_HISTORY_MESSAGES);
   } else {
     // Stateful mode: load from channel_conversations
-    const { data: existing } = await supabase
+    // Select includes 'status' added by 20260315_portal_upgrade migration
+    const { data: existingRow } = await supabase
       .from("channel_conversations")
       .select("id, messages")
       .eq("channel_id", channel.id)
       .eq("session_id", body.sessionId)
       .single();
 
+    // Cast to include status column (added via migration, not yet in generated types)
+    const existing = existingRow as typeof existingRow & { status?: string } | null;
+
     if (existing) {
       existingConversationId = existing.id;
+
+      // -----------------------------------------------------------------------
+      // 6b. Human-in-the-loop status gate
+      // -----------------------------------------------------------------------
+      const convStatus = existing.status ?? "active";
+
+      if (convStatus === "paused") {
+        return NextResponse.json(
+          { error: "conversation_paused", message: "This conversation is currently paused." },
+          { status: 423, headers: corsHeaders }
+        );
+      }
+
+      if (convStatus === "human_takeover") {
+        // Save the user message but don't run AI — a human will respond
+        const existingMessages = (existing.messages as unknown as AgentConversationMessage[]) ?? [];
+        const updatedMessages = [
+          ...existingMessages,
+          { role: "user" as const, content: body.userMessage, timestamp: new Date().toISOString() },
+        ] as unknown as Json;
+        await supabase
+          .from("channel_conversations")
+          .update({ messages: updatedMessages })
+          .eq("id", existing.id);
+
+        return NextResponse.json(
+          { status: "human_takeover", message: "A team member will respond shortly." },
+          { headers: corsHeaders }
+        );
+      }
+
+      if (convStatus === "closed") {
+        return NextResponse.json(
+          { error: "conversation_closed", message: "This conversation has been closed." },
+          { status: 410, headers: corsHeaders }
+        );
+      }
+
       conversationHistory = (
         (existing.messages as unknown as AgentConversationMessage[]) ?? []
       ).slice(-MAX_HISTORY_MESSAGES);

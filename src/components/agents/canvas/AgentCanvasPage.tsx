@@ -1994,6 +1994,7 @@ function AgentCanvasInner({
                 formState={formState}
                 setFormState={setFormState}
                 tools={agentTools}
+                onToolsChanged={() => void fetchTools()}
               />
             )}
             {modal.type === "knowledge" && (
