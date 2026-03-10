@@ -6,7 +6,7 @@ export interface DiscoveredPage {
   url: string;
   title: string;
   selected: boolean;
-  status: "pending" | "scraping" | "done" | "error";
+  status: "pending" | "scraping" | "done" | "error" | "empty";
   content?: string;
 }
 

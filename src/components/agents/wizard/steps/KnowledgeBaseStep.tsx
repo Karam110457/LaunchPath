@@ -192,12 +192,16 @@ function WebsiteTab({
 
         if (res.ok) {
           const data = await res.json();
-          updated[i] = {
-            ...updated[i],
-            status: "done",
-            content: data.content || "",
-            title: data.title || updated[i].title,
-          };
+          if (data.content?.trim()) {
+            updated[i] = {
+              ...updated[i],
+              status: "done",
+              content: data.content,
+              title: data.title || updated[i].title,
+            };
+          } else {
+            updated[i] = { ...updated[i], status: "empty" };
+          }
         } else {
           updated[i] = { ...updated[i], status: "error" };
         }
@@ -297,6 +301,13 @@ function PageStatus({ status }: { status: DiscoveredPage["status"] }) {
         <span className="flex items-center gap-1 text-xs text-emerald-600">
           <CheckCircle2 className="w-3 h-3" />
           Done
+        </span>
+      );
+    case "empty":
+      return (
+        <span className="flex items-center gap-1 text-xs text-amber-600">
+          <AlertCircle className="w-3 h-3" />
+          No content found
         </span>
       );
     case "error":

@@ -349,7 +349,7 @@ function AgentCanvasInner({
 
   // ─── Knowledge enabled state ──────────────────────────────────────────────
   const [hasKnowledge, setHasKnowledge] = useState(
-    () => agent.knowledge_enabled ?? initialDocuments.length > 0
+    () => agent.knowledge_enabled || initialDocuments.length > 0
   );
 
   const [docCounts, setDocCounts] = useState({

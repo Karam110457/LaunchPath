@@ -198,13 +198,20 @@ export async function POST(request: NextRequest) {
 
             if (totalKnowledge > 0) {
               enqueue({ type: "progress", label: `Processing knowledge base (${totalKnowledge} items)...` });
-              await processWizardKnowledge(
+              const kbResult = await processWizardKnowledge(
                 supabase,
                 newAgent.id,
                 user.id,
                 wizardConfig,
                 enqueue,
               );
+
+              if (kbResult.processed > 0) {
+                await supabase
+                  .from("ai_agents")
+                  .update({ knowledge_enabled: true })
+                  .eq("id", newAgent.id);
+              }
             }
           }
 
@@ -362,7 +369,7 @@ async function processWizardKnowledge(
     files?: Array<{ name: string; extractedText: string }>;
   },
   enqueue: (event: Record<string, unknown>) => void,
-) {
+): Promise<{ processed: number; failed: number }> {
   let processed = 0;
   let failed = 0;
 
@@ -487,11 +494,18 @@ async function processWizardKnowledge(
     }
   } catch (err) {
     // Unexpected error — log but don't fail the agent creation
+    const msg = err instanceof Error ? err.message : String(err);
     logger.error("Knowledge processing failed", {
       agentId,
       processed,
       failed,
-      error: err instanceof Error ? err.message : String(err),
+      error: msg,
+    });
+    enqueue({
+      type: "progress",
+      label: `Knowledge base processing failed: ${msg}`,
     });
   }
+
+  return { processed, failed };
 }
