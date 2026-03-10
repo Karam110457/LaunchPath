@@ -1,13 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { usePortal } from "@/contexts/PortalContext";
-import { useConversationRealtime } from "@/hooks/useConversationRealtime";
-import { ConversationControls } from "./ConversationControls";
-import { LiveTranscript } from "./LiveTranscript";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { Search, MessageSquare, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ConversationTranscript } from "./ConversationTranscript";
 
 /* -------------------------------------------------------------------------- */
 /*  Types                                                                      */
@@ -19,13 +16,22 @@ interface Conversation {
   status: string;
   message_count: number;
   last_message: string | null;
-  campaign_id: string | null;
+  campaign_name: string | null;
   created_at: string;
   updated_at: string;
 }
 
-interface PortalInboxProps {
+interface ConversationDetail {
+  id: string;
+  session_id: string;
+  messages: Array<{ role: string; content: string }>;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
+interface ConversationInboxProps {
   campaigns: Array<{ id: string; name: string }>;
+  clientId: string;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -50,64 +56,62 @@ const STATUS_LABEL: Record<string, string> = {
 /*  Inbox component                                                            */
 /* -------------------------------------------------------------------------- */
 
-export function PortalInbox({ campaigns }: PortalInboxProps) {
+export function ConversationInbox({ campaigns, clientId }: ConversationInboxProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { basePath } = usePortal();
+  const basePath = `/dashboard/clients/${clientId}/conversations`;
 
   const selectedId = searchParams.get("id") ?? null;
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [campaignId, setCampaignId] = useState(searchParams.get("campaignId") ?? "");
-  const [status, setStatus] = useState("");
+  const [campaignId, setCampaignId] = useState("");
   const [search, setSearch] = useState("");
-  const [offset, setOffset] = useState(0);
-  const limit = 50;
 
   const campaignNameMap = new Map(campaigns.map((c) => [c.id, c.name]));
 
   const fetchConversations = useCallback(async () => {
     setIsLoading(true);
-    const params = new URLSearchParams();
-    if (campaignId) params.set("campaignId", campaignId);
-    if (status) params.set("status", status);
-    if (search) params.set("search", search);
-    params.set("limit", String(limit));
-    params.set("offset", String(offset));
-
     try {
-      const res = await fetch(`/api/portal/conversations?${params}`);
+      const res = await fetch(`/api/clients/${clientId}/conversations`);
       if (res.ok) {
         const data = await res.json();
-        setConversations(data.conversations);
-        setTotal(data.total);
+        setConversations(data.conversations ?? []);
       }
     } finally {
       setIsLoading(false);
     }
-  }, [campaignId, status, search, offset]);
+  }, [clientId]);
 
   useEffect(() => {
     fetchConversations();
   }, [fetchConversations]);
 
-  useEffect(() => {
-    setOffset(0);
-  }, [campaignId, status, search]);
+  // Client-side filtering
+  let filtered = conversations;
+  if (campaignId) {
+    filtered = filtered.filter((c) => c.campaign_name === campaignNameMap.get(campaignId));
+  }
+  if (search) {
+    const term = search.toLowerCase();
+    filtered = filtered.filter(
+      (c) =>
+        c.last_message?.toLowerCase().includes(term) ||
+        c.session_id.toLowerCase().includes(term)
+    );
+  }
 
   function selectConversation(id: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("id", id);
-    router.replace(`${basePath}/conversations?${params}`, { scroll: false });
+    router.replace(`${basePath}?${params}`, { scroll: false });
   }
 
   function deselectConversation() {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("id");
-    router.replace(`${basePath}/conversations?${params}`, { scroll: false });
+    router.replace(`${basePath}?${params}`, { scroll: false });
   }
 
   return (
@@ -131,29 +135,18 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
               className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors"
             />
           </div>
-          <div className="flex gap-2">
+          {campaigns.length > 1 && (
             <select
               value={campaignId}
               onChange={(e) => setCampaignId(e.target.value)}
-              className="flex-1 min-w-0 px-3 py-1.5 text-xs rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors"
+              className="w-full px-3 py-1.5 text-xs rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors"
             >
               <option value="">All Campaigns</option>
               {campaigns.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="px-3 py-1.5 text-xs rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors"
-            >
-              <option value="">All</option>
-              <option value="active">Active</option>
-              <option value="paused">Paused</option>
-              <option value="human_takeover">Takeover</option>
-              <option value="closed">Closed</option>
-            </select>
-          </div>
+          )}
         </div>
 
         {/* Conversation list */}
@@ -162,14 +155,14 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
             <div className="p-8 text-center text-sm text-muted-foreground">
               Loading...
             </div>
-          ) : conversations.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <MessageSquare className="size-8 mx-auto mb-2 opacity-20" />
               <p className="text-sm">No conversations found.</p>
             </div>
           ) : (
             <div className="divide-y divide-border">
-              {conversations.map((conv) => (
+              {filtered.map((conv) => (
                 <button
                   key={conv.id}
                   onClick={() => selectConversation(conv.id)}
@@ -189,9 +182,11 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
                       <span className="text-sm font-medium truncate">
                         {conv.session_id.slice(0, 12)}
                       </span>
-                      <span className="text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground shrink-0">
-                        {STATUS_LABEL[conv.status] ?? conv.status}
-                      </span>
+                      {conv.status !== "active" && (
+                        <span className="text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground shrink-0">
+                          {STATUS_LABEL[conv.status] ?? conv.status}
+                        </span>
+                      )}
                     </div>
                     <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
                       {formatRelativeTime(conv.updated_at)}
@@ -200,46 +195,19 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
                   <p className="text-xs text-muted-foreground truncate pl-4">
                     {conv.last_message ?? "No messages yet"}
                   </p>
-                  <div className="flex items-center gap-2 mt-0.5 pl-4">
-                    <span className="text-[10px] text-muted-foreground/60">
-                      {conv.message_count} msg{conv.message_count !== 1 ? "s" : ""}
-                    </span>
-                    {conv.campaign_id && (
-                      <>
-                        <span className="text-muted-foreground/30">&middot;</span>
-                        <span className="text-[10px] text-muted-foreground/60 truncate">
-                          {campaignNameMap.get(conv.campaign_id) ?? ""}
-                        </span>
-                      </>
-                    )}
-                  </div>
+                  {conv.campaign_name && (
+                    <div className="flex items-center gap-2 mt-0.5 pl-4">
+                      <span className="text-[10px] text-muted-foreground/60">
+                        {conv.message_count} msg{conv.message_count !== 1 ? "s" : ""}
+                      </span>
+                      <span className="text-muted-foreground/30">&middot;</span>
+                      <span className="text-[10px] text-muted-foreground/60 truncate">
+                        {conv.campaign_name}
+                      </span>
+                    </div>
+                  )}
                 </button>
               ))}
-            </div>
-          )}
-
-          {/* Pagination */}
-          {total > limit && (
-            <div className="flex items-center justify-between px-4 py-2.5 border-t border-border">
-              <span className="text-xs text-muted-foreground">
-                {offset + 1}-{Math.min(offset + limit, total)} of {total}
-              </span>
-              <div className="flex gap-1.5">
-                <button
-                  onClick={() => setOffset(Math.max(0, offset - limit))}
-                  disabled={offset === 0}
-                  className="px-3 py-1 text-xs font-medium rounded-md border border-border hover:bg-muted/50 transition-colors disabled:opacity-40"
-                >
-                  Prev
-                </button>
-                <button
-                  onClick={() => setOffset(offset + limit)}
-                  disabled={offset + limit >= total}
-                  className="px-3 py-1 text-xs font-medium rounded-md border border-border hover:bg-muted/50 transition-colors disabled:opacity-40"
-                >
-                  Next
-                </button>
-              </div>
             </div>
           )}
         </div>
@@ -255,6 +223,7 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
         {selectedId ? (
           <InboxDetail
             conversationId={selectedId}
+            clientId={clientId}
             onBack={deselectConversation}
           />
         ) : (
@@ -271,18 +240,30 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Inbox detail (right panel)                                                 */
+/*  Detail panel                                                               */
 /* -------------------------------------------------------------------------- */
 
 function InboxDetail({
   conversationId,
+  clientId,
   onBack,
 }: {
   conversationId: string;
+  clientId: string;
   onBack: () => void;
 }) {
-  const { messages, status, isLoading, refresh } =
-    useConversationRealtime(conversationId);
+  const [detail, setDetail] = useState<ConversationDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setIsLoading(true);
+    fetch(`/api/clients/${clientId}/conversations/${conversationId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.conversation) setDetail(data.conversation);
+      })
+      .finally(() => setIsLoading(false));
+  }, [conversationId, clientId]);
 
   if (isLoading) {
     return (
@@ -292,9 +273,16 @@ function InboxDetail({
     );
   }
 
+  if (!detail) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
+        Conversation not found
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0 bg-background/80 backdrop-blur-sm">
         <button
           onClick={onBack}
@@ -303,23 +291,18 @@ function InboxDetail({
           <ChevronLeft className="size-4" />
         </button>
         <div className="flex-1 min-w-0">
-          <ConversationControls
-            conversationId={conversationId}
-            status={status}
-            onStatusChange={() => refresh()}
-          />
+          <p className="text-sm font-medium">Session {detail.session_id.slice(0, 12)}</p>
+          <p className="text-xs text-muted-foreground">
+            {detail.messages.length} message{detail.messages.length !== 1 ? "s" : ""} &middot; Started {new Date(detail.created_at).toLocaleDateString()}
+          </p>
         </div>
-        <span className="text-xs text-muted-foreground">
-          {messages.length} msg{messages.length !== 1 ? "s" : ""}
-        </span>
       </div>
 
-      {/* Transcript + input */}
-      <div className="flex-1 min-h-0">
-        <LiveTranscript
-          conversationId={conversationId}
-          messages={messages}
-          status={status}
+      <div className="flex-1 overflow-y-auto p-4">
+        <ConversationTranscript
+          messages={detail.messages}
+          metadata={detail.metadata}
+          createdAt={detail.created_at}
         />
       </div>
     </div>

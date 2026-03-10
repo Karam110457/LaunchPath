@@ -128,127 +128,304 @@ export function ConversationFlowStep({
         />
       )}
 
-      {/* Qualifying questions — for all template types */}
-      <div className="border-t pt-6 space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <Label>
-              {templateId === "customer-support"
-                ? "Triage questions"
-                : "Qualifying questions"}
-            </Label>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {templateId === "customer-support"
-                ? "Questions to understand the visitor's issue before helping."
-                : "Questions your agent asks to qualify leads before proceeding."}
-            </p>
+      {/* Customer support: triage questions */}
+      {templateId === "customer-support" && (
+        <div className="border-t pt-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Triage questions</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Questions to understand the visitor&apos;s issue before helping.
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleGenerateQuestions}
+              disabled={generating}
+              className="gap-1.5 shrink-0"
+            >
+              {generating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              Generate
+            </Button>
           </div>
+
+          {genError && (
+            <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+              <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+              <p className="text-xs text-destructive">{genError}</p>
+            </div>
+          )}
+
+          {qualifyingQuestions.length === 0 ? (
+            <div className="py-4 text-center rounded-lg border border-dashed">
+              <p className="text-sm text-muted-foreground">
+                No questions yet. Generate them with AI or add your own.
+              </p>
+            </div>
+          ) : (
+            <QuestionList
+              questions={qualifyingQuestions}
+              onChange={onQuestionsChange}
+            />
+          )}
+
           <Button
             type="button"
+            variant="ghost"
             size="sm"
-            onClick={handleGenerateQuestions}
-            disabled={generating}
-            className="gap-1.5 shrink-0"
+            onClick={() => onQuestionsChange([...qualifyingQuestions, ""])}
+            className="gap-1.5"
           >
-            {generating ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Sparkles className="w-4 h-4" />
-            )}
-            Generate
+            <Plus className="w-3.5 h-3.5" />
+            Add question
           </Button>
         </div>
+      )}
 
-        {genError && (
-          <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-            <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-            <p className="text-xs text-destructive">{genError}</p>
-          </div>
-        )}
+      {/* Appointment-booker & lead-capture: unified lead filtering */}
+      {(templateId === "appointment-booker" || isLeadCapture) && (
+        <WizardLeadFilteringSection
+          qualificationMode={
+            templateId === "appointment-booker"
+              ? appointmentBookerConfig.qualification_mode
+              : leadCaptureConfig.qualification_mode
+          }
+          icpDescription={
+            templateId === "appointment-booker"
+              ? appointmentBookerConfig.icp_description
+              : leadCaptureConfig.icp_description
+          }
+          disqualificationCriteria={
+            templateId === "appointment-booker"
+              ? appointmentBookerConfig.disqualification_criteria
+              : leadCaptureConfig.disqualification_criteria
+          }
+          qualifyingQuestions={qualifyingQuestions}
+          onModeChange={(mode) => {
+            if (templateId === "appointment-booker") {
+              onUpdateAppointmentBooker((prev) => ({ ...prev, qualification_mode: mode }));
+            } else {
+              onUpdateLeadCapture((prev) => ({ ...prev, qualification_mode: mode }));
+            }
+          }}
+          onIcpChange={(value) => {
+            if (templateId === "appointment-booker") {
+              onUpdateAppointmentBooker((prev) => ({ ...prev, icp_description: value }));
+            } else {
+              onUpdateLeadCapture((prev) => ({ ...prev, icp_description: value }));
+            }
+          }}
+          onDisqualChange={(value) => {
+            if (templateId === "appointment-booker") {
+              onUpdateAppointmentBooker((prev) => ({ ...prev, disqualification_criteria: value }));
+            } else {
+              onUpdateLeadCapture((prev) => ({ ...prev, disqualification_criteria: value }));
+            }
+          }}
+          onQuestionsChange={onQuestionsChange}
+          businessDescription={businessDescription}
+          scrapedContent={scrapedContent}
+          faqs={faqs}
+          templateId={templateId}
+        />
+      )}
+    </div>
+  );
+}
 
-        {qualifyingQuestions.length === 0 ? (
-          <div className="py-4 text-center rounded-lg border border-dashed">
-            <p className="text-sm text-muted-foreground">
-              No questions yet. Generate them with AI or add your own.
-            </p>
-          </div>
-        ) : (
-          <QuestionList
-            questions={qualifyingQuestions}
-            onChange={onQuestionsChange}
-          />
-        )}
+// ---------------------------------------------------------------------------
+// Wizard Lead Filtering — unified ICP / questions toggle + dealbreakers
+// ---------------------------------------------------------------------------
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => onQuestionsChange([...qualifyingQuestions, ""])}
-          className="gap-1.5"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Add question
-        </Button>
+function WizardLeadFilteringSection({
+  qualificationMode,
+  icpDescription,
+  disqualificationCriteria,
+  qualifyingQuestions,
+  onModeChange,
+  onIcpChange,
+  onDisqualChange,
+  onQuestionsChange,
+  businessDescription,
+  scrapedContent,
+  faqs,
+  templateId,
+}: {
+  qualificationMode: "describe" | "questions";
+  icpDescription: string;
+  disqualificationCriteria: string[];
+  qualifyingQuestions: string[];
+  onModeChange: (mode: "describe" | "questions") => void;
+  onIcpChange: (value: string) => void;
+  onDisqualChange: (value: string[]) => void;
+  onQuestionsChange: (questions: string[]) => void;
+  businessDescription: string;
+  scrapedContent: string;
+  faqs: Array<{ question: string; answer: string }>;
+  templateId: string;
+}) {
+  const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
+
+  async function handleGenerateQuestions() {
+    setGenerating(true);
+    setGenError(null);
+    try {
+      const res = await fetch("/api/agents/wizard/generate-questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          templateId,
+          businessDescription: businessDescription || undefined,
+          scrapedContent: scrapedContent || undefined,
+          faqs: faqs.length > 0 ? faqs : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setGenError(data.error || "Failed to generate questions");
+        return;
+      }
+      onQuestionsChange(data.questions);
+    } catch {
+      setGenError("Network error. Please try again.");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  return (
+    <div className="border-t pt-6 space-y-5">
+      <div>
+        <Label className="text-base font-semibold">Lead filtering</Label>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          How should your agent decide if a visitor is a good fit?
+        </p>
       </div>
 
-      {/* Qualification settings — shared for appointment-booker + lead-capture */}
-      {(templateId === "appointment-booker" || isLeadCapture) && (
-        <div className="space-y-4 rounded-lg border p-4">
-          <div>
-            <Label className="text-sm font-medium">
-              Ideal customer profile
-              <span className="text-muted-foreground font-normal ml-1">(optional)</span>
-            </Label>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Describe your ideal customer so the agent can prioritize the right leads.
-            </p>
-            <Textarea
-              value={
-                templateId === "appointment-booker"
-                  ? appointmentBookerConfig.icp_description
-                  : leadCaptureConfig.icp_description
-              }
-              onChange={(e) => {
-                if (templateId === "appointment-booker") {
-                  onUpdateAppointmentBooker((prev) => ({ ...prev, icp_description: e.target.value }));
-                } else {
-                  onUpdateLeadCapture((prev) => ({ ...prev, icp_description: e.target.value }));
-                }
-              }}
-              placeholder="e.g., B2B SaaS companies with 10–200 employees looking for project management tools"
-              rows={2}
-              className="mt-2 text-sm"
-            />
-          </div>
+      {/* Mode selector */}
+      <div className="space-y-2">
+        <button
+          type="button"
+          onClick={() => onModeChange("describe")}
+          className={`w-full text-left rounded-lg border px-4 py-3 transition-all ${
+            qualificationMode === "describe"
+              ? "border-primary/40 bg-primary/5 ring-1 ring-primary/20"
+              : "hover:border-border/80"
+          }`}
+        >
+          <p className="text-sm font-medium">Describe your ideal customer</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Tell the agent who you&apos;re looking for and it will figure out the right questions to ask.
+          </p>
+        </button>
+        <button
+          type="button"
+          onClick={() => onModeChange("questions")}
+          className={`w-full text-left rounded-lg border px-4 py-3 transition-all ${
+            qualificationMode === "questions"
+              ? "border-primary/40 bg-primary/5 ring-1 ring-primary/20"
+              : "hover:border-border/80"
+          }`}
+        >
+          <p className="text-sm font-medium">Set specific questions</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Write the exact questions your agent should ask every visitor.
+          </p>
+        </button>
+      </div>
 
-          <div>
-            <Label className="text-sm font-medium">
-              Disqualification criteria
-              <span className="text-muted-foreground font-normal ml-1">(optional)</span>
-            </Label>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              When should the agent politely decline? These help the agent know when someone isn&apos;t a fit.
-            </p>
-            <div className="mt-2">
-              <CustomFieldsList
-                fields={
-                  templateId === "appointment-booker"
-                    ? appointmentBookerConfig.disqualification_criteria
-                    : leadCaptureConfig.disqualification_criteria
-                }
-                onChange={(v) => {
-                  if (templateId === "appointment-booker") {
-                    onUpdateAppointmentBooker((prev) => ({ ...prev, disqualification_criteria: v }));
-                  } else {
-                    onUpdateLeadCapture((prev) => ({ ...prev, disqualification_criteria: v }));
-                  }
-                }}
-                placeholder="e.g., No budget, just browsing"
-              />
-            </div>
-          </div>
+      {/* ICP mode */}
+      {qualificationMode === "describe" && (
+        <div className="space-y-2 rounded-lg border p-4">
+          <Label className="text-sm font-medium">Who is your ideal customer?</Label>
+          <Textarea
+            value={icpDescription}
+            onChange={(e) => onIcpChange(e.target.value)}
+            placeholder="e.g., Small business owners with 5–50 employees who need help with scheduling and are ready to start within the next month"
+            rows={3}
+            className="text-sm"
+          />
+          <p className="text-xs text-muted-foreground">
+            The more detail you give, the better your agent will be at spotting good leads.
+          </p>
         </div>
       )}
+
+      {/* Questions mode */}
+      {qualificationMode === "questions" && (
+        <div className="space-y-3 rounded-lg border p-4">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium">Your questions</Label>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleGenerateQuestions}
+              disabled={generating}
+              className="gap-1.5 shrink-0"
+            >
+              {generating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              Generate with AI
+            </Button>
+          </div>
+
+          {genError && (
+            <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+              <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+              <p className="text-xs text-destructive">{genError}</p>
+            </div>
+          )}
+
+          {qualifyingQuestions.length === 0 ? (
+            <div className="py-4 text-center rounded-lg border border-dashed">
+              <p className="text-sm text-muted-foreground">
+                No questions yet. Generate them with AI or add your own.
+              </p>
+            </div>
+          ) : (
+            <QuestionList
+              questions={qualifyingQuestions}
+              onChange={onQuestionsChange}
+            />
+          )}
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onQuestionsChange([...qualifyingQuestions, ""])}
+            className="gap-1.5"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add question
+          </Button>
+        </div>
+      )}
+
+      {/* Dealbreakers — always shown */}
+      <div className="space-y-2 rounded-lg border p-4">
+        <Label className="text-sm font-medium">
+          Dealbreakers
+          <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+        </Label>
+        <p className="text-xs text-muted-foreground">
+          If a visitor matches any of these, the agent will politely let them know it&apos;s not the right fit.
+        </p>
+        <CustomFieldsList
+          fields={disqualificationCriteria}
+          onChange={onDisqualChange}
+          placeholder="e.g., No budget, just browsing"
+        />
+      </div>
     </div>
   );
 }

@@ -97,6 +97,7 @@ function getDefaultBehaviorConfig(templateId: string): Record<string, unknown> {
       },
       service_types: [],
       cancellation_policy: "",
+      qualification_mode: "describe",
       disqualification_criteria: [],
       icp_description: "",
     };
@@ -116,6 +117,7 @@ function getDefaultBehaviorConfig(templateId: string): Record<string, unknown> {
       lead_fields: { phone: true, company: true, custom_fields: [] },
       notification_behavior: "email_team",
       notification_email: "",
+      qualification_mode: "describe",
       icp_description: "",
       disqualification_criteria: [],
     };
@@ -549,19 +551,17 @@ export function AgentEditPanel({
                 onUpdate={updateWizardConfig}
               />
               <hr className="border-border" />
-              <QuestionsSection
-                questions={formState.wizardConfig!.qualifyingQuestions ?? []}
-                onUpdate={updateWizardConfig}
-                isSupport={formState.wizardConfig!.templateId === "customer-support"}
-              />
-              {formState.wizardConfig!.templateId !== "customer-support" && (
-                <>
-                  <hr className="border-border" />
-                  <QualificationSection
-                    wizardConfig={formState.wizardConfig!}
-                    onUpdate={updateWizardConfig}
-                  />
-                </>
+              {formState.wizardConfig!.templateId === "customer-support" ? (
+                <QuestionsSection
+                  questions={formState.wizardConfig!.qualifyingQuestions ?? []}
+                  onUpdate={updateWizardConfig}
+                  isSupport
+                />
+              ) : (
+                <LeadFilteringSection
+                  wizardConfig={formState.wizardConfig!}
+                  onUpdate={updateWizardConfig}
+                />
               )}
             </>
           )}
@@ -604,19 +604,17 @@ export function AgentEditPanel({
                 onUpdate={updateWizardConfig}
               />
               <hr className="border-border" />
-              <QuestionsSection
-                questions={formState.wizardConfig!.qualifyingQuestions ?? []}
-                onUpdate={updateWizardConfig}
-                isSupport={formState.wizardConfig!.templateId === "customer-support"}
-              />
-              {formState.wizardConfig!.templateId !== "customer-support" && (
-                <>
-                  <hr className="border-border" />
-                  <QualificationSection
-                    wizardConfig={formState.wizardConfig!}
-                    onUpdate={updateWizardConfig}
-                  />
-                </>
+              {formState.wizardConfig!.templateId === "customer-support" ? (
+                <QuestionsSection
+                  questions={formState.wizardConfig!.qualifyingQuestions ?? []}
+                  onUpdate={updateWizardConfig}
+                  isSupport
+                />
+              ) : (
+                <LeadFilteringSection
+                  wizardConfig={formState.wizardConfig!}
+                  onUpdate={updateWizardConfig}
+                />
               )}
             </div>
           )}
@@ -1317,10 +1315,11 @@ function QuestionsSection({
 }
 
 // ---------------------------------------------------------------------------
-// Shared Qualification (ICP + disqualification) — appointment-booker & lead-capture
+// Lead Filtering — unified qualification section (appointment-booker & lead-capture)
+// Combines ICP / explicit questions (either/or) + dealbreakers
 // ---------------------------------------------------------------------------
 
-function QualificationSection({
+function LeadFilteringSection({
   wizardConfig,
   onUpdate,
 }: {
@@ -1328,8 +1327,10 @@ function QualificationSection({
   onUpdate: (fn: (prev: WizardConfig) => WizardConfig) => void;
 }) {
   const bc = wizardConfig.behaviorConfig;
+  const mode = (bc.qualification_mode as string) ?? "describe";
   const icpDescription = (bc.icp_description as string) ?? "";
   const disqualificationCriteria = (bc.disqualification_criteria ?? []) as string[];
+  const questions = wizardConfig.qualifyingQuestions ?? [];
 
   const updateBc = (patch: Record<string, unknown>) =>
     onUpdate((prev) => ({
@@ -1337,30 +1338,179 @@ function QualificationSection({
       behaviorConfig: { ...prev.behaviorConfig, ...patch },
     }));
 
-  return (
-    <section className="space-y-3">
-      <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Qualification
-      </h3>
+  const setQuestions = (qs: string[]) =>
+    onUpdate((prev) => ({ ...prev, qualifyingQuestions: qs }));
 
-      <div className="space-y-1.5">
-        <Label className="text-xs">Ideal customer profile</Label>
-        <p className="text-[11px] text-muted-foreground">
-          Describe who your ideal customer is so the agent knows what &ldquo;qualified&rdquo; means.
+  // Inline editing state for questions mode
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState("");
+
+  function startEdit(index: number) {
+    setEditingIndex(index);
+    setEditValue(questions[index]);
+  }
+
+  function saveEdit() {
+    if (editingIndex === null) return;
+    const updated = [...questions];
+    updated[editingIndex] = editValue;
+    setQuestions(updated);
+    setEditingIndex(null);
+  }
+
+  return (
+    <section className="space-y-4">
+      <div>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Lead filtering
+        </h3>
+        <p className="text-[11px] text-muted-foreground mt-1">
+          How should your agent decide if a visitor is a good fit?
         </p>
-        <Textarea
-          value={icpDescription}
-          onChange={(e) => updateBc({ icp_description: e.target.value })}
-          placeholder="e.g., B2B SaaS companies with 10–200 employees looking for project management tools"
-          rows={2}
-          className="text-xs resize-none"
-        />
       </div>
 
-      <div className="space-y-1.5">
-        <Label className="text-xs">Disqualification criteria <span className="text-muted-foreground font-normal">(optional)</span></Label>
+      {/* Mode selector */}
+      <div className="space-y-2">
+        <button
+          type="button"
+          onClick={() => updateBc({ qualification_mode: "describe" })}
+          className={cn(
+            "w-full text-left rounded-lg border px-3 py-2.5 transition-all",
+            mode === "describe"
+              ? "border-primary/40 bg-primary/5 ring-1 ring-primary/20"
+              : "hover:border-border/80"
+          )}
+        >
+          <p className="text-xs font-medium">Describe your ideal customer</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Tell the agent who you&apos;re looking for and it will figure out the right questions to ask.
+          </p>
+        </button>
+        <button
+          type="button"
+          onClick={() => updateBc({ qualification_mode: "questions" })}
+          className={cn(
+            "w-full text-left rounded-lg border px-3 py-2.5 transition-all",
+            mode === "questions"
+              ? "border-primary/40 bg-primary/5 ring-1 ring-primary/20"
+              : "hover:border-border/80"
+          )}
+        >
+          <p className="text-xs font-medium">Set specific questions</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Write the exact questions your agent should ask every visitor.
+          </p>
+        </button>
+      </div>
+
+      {/* ICP mode: description textarea */}
+      {mode === "describe" && (
+        <div className="space-y-1.5">
+          <Label className="text-xs">Who is your ideal customer?</Label>
+          <Textarea
+            value={icpDescription}
+            onChange={(e) => updateBc({ icp_description: e.target.value })}
+            placeholder="e.g., Small business owners with 5–50 employees who need help with scheduling and are ready to start within the next month"
+            rows={3}
+            className="text-xs resize-none"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            The more detail you give, the better your agent will be at spotting good leads.
+          </p>
+        </div>
+      )}
+
+      {/* Questions mode: editable question list */}
+      {mode === "questions" && (
+        <div className="space-y-2">
+          {questions.length === 0 ? (
+            <div className="py-3 text-center rounded-lg border border-dashed">
+              <p className="text-xs text-muted-foreground">
+                No questions yet. Add your first one below.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {questions.map((q, i) => (
+                <div
+                  key={i}
+                  className="flex items-start gap-2 rounded-lg border px-3 py-2 group"
+                >
+                  <div className="shrink-0 mt-0.5 text-muted-foreground">
+                    <GripVertical className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="shrink-0 text-[11px] font-mono text-muted-foreground mt-0.5 w-4">
+                    {i + 1}.
+                  </span>
+                  {editingIndex === i ? (
+                    <div className="flex-1 flex gap-1.5">
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="flex-1 h-7 text-xs"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveEdit();
+                          if (e.key === "Escape") setEditingIndex(null);
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={saveEdit}
+                        className="shrink-0 p-1 rounded-md text-primary hover:bg-primary/10 transition-colors"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="flex-1 text-xs mt-0.5">
+                        {q || (
+                          <span className="text-muted-foreground italic">
+                            Empty — click edit to add text
+                          </span>
+                        )}
+                      </p>
+                      <div className="shrink-0 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={() => startEdit(i)}
+                          className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setQuestions(questions.filter((_, idx) => idx !== i))}
+                          className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setQuestions([...questions, ""])}
+            className="gap-1.5 text-xs"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add question
+          </Button>
+        </div>
+      )}
+
+      {/* Dealbreakers — always shown */}
+      <div className="space-y-1.5 pt-1">
+        <Label className="text-xs">Dealbreakers <span className="text-muted-foreground font-normal">(optional)</span></Label>
         <p className="text-[11px] text-muted-foreground">
-          When should the agent politely decline or deprioritize a lead?
+          If a visitor matches any of these, the agent will politely let them know it&apos;s not the right fit.
         </p>
         <TagList
           tags={disqualificationCriteria}

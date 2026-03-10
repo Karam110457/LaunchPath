@@ -46,7 +46,8 @@ export interface AppointmentBookerConfig {
   };
   service_types: string[];
   cancellation_policy: string;
-  /** Shared qualification fields — stored in behaviorConfig for DB simplicity */
+  /** "describe" = AI qualifies from ICP description; "questions" = user sets explicit questions */
+  qualification_mode: "describe" | "questions";
   disqualification_criteria: string[];
   icp_description: string;
 }
@@ -68,7 +69,8 @@ export interface LeadCaptureConfig {
   };
   notification_behavior: "email_team" | "sheet_only";
   notification_email: string;
-  /** Shared qualification fields — stored in behaviorConfig for DB simplicity */
+  /** "describe" = AI qualifies from ICP description; "questions" = user sets explicit questions */
+  qualification_mode: "describe" | "questions";
   disqualification_criteria: string[];
   icp_description: string;
 }
@@ -166,6 +168,7 @@ export function createInitialWizardState(): AgentWizardState {
       },
       service_types: [],
       cancellation_policy: "",
+      qualification_mode: "describe",
       disqualification_criteria: [],
       icp_description: "",
     },
@@ -181,6 +184,7 @@ export function createInitialWizardState(): AgentWizardState {
       lead_fields: { phone: true, company: true, custom_fields: [] },
       notification_behavior: "email_team",
       notification_email: "",
+      qualification_mode: "describe",
       icp_description: "",
       disqualification_criteria: [],
     },

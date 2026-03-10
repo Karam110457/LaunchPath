@@ -218,6 +218,7 @@ function buildDefaultBehaviorConfig(templateId: string): Record<string, unknown>
       },
       service_types: [],
       cancellation_policy: "",
+      qualification_mode: "describe",
       disqualification_criteria: [],
       icp_description: "",
     };
@@ -237,6 +238,7 @@ function buildDefaultBehaviorConfig(templateId: string): Record<string, unknown>
       lead_fields: { phone: true, company: true, custom_fields: [] },
       notification_behavior: "email_team",
       notification_email: "",
+      qualification_mode: "describe",
       icp_description: "",
       disqualification_criteria: [],
     };

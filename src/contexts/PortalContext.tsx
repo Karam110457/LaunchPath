@@ -9,6 +9,10 @@ export interface PortalContextValue {
   role: "admin" | "viewer";
   clientName: string;
   clientLogo?: string | null;
+  /** Branding primary color (start of gradient or solid accent). */
+  primaryColor?: string | null;
+  /** Branding accent color (end of gradient). Null = solid mode. */
+  accentColor?: string | null;
   /** Base path for portal links. Always "/portal". */
   basePath: string;
   /** True when an agency owner is viewing the portal via impersonation. */

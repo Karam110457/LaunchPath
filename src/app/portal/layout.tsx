@@ -31,14 +31,29 @@ export default async function PortalLayout({
   const clientName = client?.name ?? "Client";
   const clientLogo = branding?.logo_url ?? client?.logo_url ?? null;
 
+  const primaryColor = branding?.primary_color ?? null;
+  const accentColor = branding?.accent_color ?? null;
+
   // Build CSS custom properties for white-label theming
+  // Override --gradient-accent so all gradient-accent-bg / gradient-text usage picks up branding
   const brandingStyles: Record<string, string> = {};
-  if (branding?.primary_color) brandingStyles["--portal-primary"] = branding.primary_color;
-  if (branding?.accent_color) brandingStyles["--portal-accent"] = branding.accent_color;
+  if (primaryColor) {
+    brandingStyles["--portal-primary"] = primaryColor;
+    if (accentColor) {
+      // Gradient mode: two colors
+      brandingStyles["--portal-accent"] = accentColor;
+      brandingStyles["--gradient-accent"] = `linear-gradient(135deg, ${primaryColor}, ${accentColor})`;
+      brandingStyles["--gradient-accent-reverse"] = `linear-gradient(135deg, ${accentColor}, ${primaryColor})`;
+    } else {
+      // Solid mode: single color, no gradient
+      brandingStyles["--gradient-accent"] = primaryColor;
+      brandingStyles["--gradient-accent-reverse"] = primaryColor;
+    }
+  }
 
   return (
     <PortalProvider
-      value={{ clientId, role, clientName, clientLogo, basePath: "/portal", impersonating }}
+      value={{ clientId, role, clientName, clientLogo, primaryColor, accentColor, basePath: "/portal", impersonating }}
     >
       <div style={brandingStyles as React.CSSProperties}>
         {impersonating && (

@@ -91,14 +91,20 @@ export function buildAgentGenerationContext(input: {
         };
         service_types?: string[];
         cancellation_policy?: string;
+        qualification_mode?: string;
+        icp_description?: string;
         disqualification_criteria?: string[];
       };
 
       const lines = ["AGENT TYPE: Appointment Booker"];
 
-      if (questions.length > 0) {
+      if (bc.qualification_mode === "questions" && questions.length > 0) {
         lines.push(
-          `Qualifying questions to ask leads:\n${questions.map((q, i) => `  ${i + 1}. ${q}`).join("\n")}`,
+          `Qualifying questions to ask leads (ask these exact questions):\n${questions.map((q, i) => `  ${i + 1}. ${q}`).join("\n")}`,
+        );
+      } else if (bc.icp_description) {
+        lines.push(
+          `Ideal customer profile: ${bc.icp_description}\nThe agent should ask natural, conversational questions to determine if the visitor matches this profile.`,
         );
       }
 
@@ -180,15 +186,20 @@ export function buildAgentGenerationContext(input: {
         };
         notification_behavior?: string;
         notification_email?: string;
+        qualification_mode?: string;
         icp_description?: string;
         disqualification_criteria?: string[];
       };
 
       const lines = ["AGENT TYPE: Lead Capture"];
 
-      if (questions.length > 0) {
+      if (lc.qualification_mode === "questions" && questions.length > 0) {
         lines.push(
-          `Qualifying questions to ask leads:\n${questions.map((q, i) => `  ${i + 1}. ${q}`).join("\n")}`,
+          `Qualifying questions to ask leads (ask these exact questions):\n${questions.map((q, i) => `  ${i + 1}. ${q}`).join("\n")}`,
+        );
+      } else if (lc.icp_description) {
+        lines.push(
+          `Ideal customer profile: ${lc.icp_description}\nThe agent should ask natural, conversational questions to determine if the visitor matches this profile.`,
         );
       }
 
@@ -206,9 +217,6 @@ export function buildAgentGenerationContext(input: {
       );
       if (lc.notification_email && lc.notification_behavior === "email_team") {
         lines.push(`Notification email: ${lc.notification_email}`);
-      }
-      if (lc.icp_description) {
-        lines.push(`Ideal customer profile: ${lc.icp_description}`);
       }
       if (lc.disqualification_criteria?.length) {
         lines.push(`Disqualification criteria: ${lc.disqualification_criteria.join("; ")}`);

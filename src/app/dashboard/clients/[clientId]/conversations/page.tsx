@@ -1,6 +1,6 @@
 import { requireAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
-import { ConversationList } from "@/components/conversations/ConversationList";
+import { ConversationInbox } from "@/components/conversations/ConversationInbox";
 
 export default async function ClientConversationsPage({
   params,
@@ -11,47 +11,24 @@ export default async function ClientConversationsPage({
   const user = await requireAuth();
   const supabase = await createClient();
 
-  // Get campaigns → channels → conversations
   const { data: campaigns } = await supabase
     .from("campaigns")
     .select("id, name")
     .eq("client_id", clientId)
-    .eq("user_id", user.id);
-
-  const campaignIds = campaigns?.map((c) => c.id) ?? [];
-  const campaignMap = new Map(campaigns?.map((c) => [c.id, c.name]) ?? []);
-
-  const { data: channels } = campaignIds.length > 0
-    ? await supabase
-        .from("agent_channels")
-        .select("id, campaign_id")
-        .in("campaign_id", campaignIds)
-    : { data: [] };
-
-  const channelIds = channels?.map((ch) => ch.id) ?? [];
-  const channelCampaignMap = new Map(
-    channels?.map((ch) => [ch.id, ch.campaign_id]) ?? []
-  );
-
-  const { data: conversations } = channelIds.length > 0
-    ? await supabase
-        .from("channel_conversations")
-        .select("id, channel_id, session_id, messages, metadata, updated_at")
-        .in("channel_id", channelIds)
-        .order("updated_at", { ascending: false })
-        .limit(50)
-    : { data: [] };
+    .eq("user_id", user.id)
+    .order("name");
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
-      <h2 className="text-lg font-semibold">Conversations</h2>
-      <ConversationList
-        conversations={conversations ?? []}
-        basePath={`/dashboard/clients/${clientId}/conversations`}
-        campaignMap={campaignMap}
-        channelCampaignMap={channelCampaignMap}
-        emptyMessage="No conversations yet. They will appear here once visitors interact with your agents."
-      />
+    <div className="p-4 lg:p-6 h-[calc(100dvh-64px)] flex flex-col">
+      <div className="mb-4 shrink-0">
+        <h2 className="text-lg font-semibold">Conversations</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          View conversations across this client&apos;s campaigns
+        </p>
+      </div>
+      <div className="flex-1 min-h-0">
+        <ConversationInbox campaigns={campaigns ?? []} clientId={clientId} />
+      </div>
     </div>
   );
 }

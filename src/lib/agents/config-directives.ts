@@ -60,15 +60,21 @@ export function generateConfigDirectives(input: DirectivesInput): string {
     );
   }
 
-  // ── Qualifying Questions ─────────────────────────────────────────────
-  if (input.wizardConfig?.qualifyingQuestions?.length) {
+  // ── Qualifying / Triage Questions ────────────────────────────────────
+  // In "describe" mode, the AI generates its own questions from ICP — skip explicit questions.
+  // In "questions" mode (or for customer-support triage), use the explicit list.
+  const qualMode = (input.wizardConfig?.behaviorConfig?.qualification_mode as string) ?? "describe";
+  const isCustomerSupport = input.wizardConfig?.templateId === "customer-support";
+  if (input.wizardConfig?.qualifyingQuestions?.length && (isCustomerSupport || qualMode === "questions")) {
     const numbered = input.wizardConfig.qualifyingQuestions
       .filter((q) => q.trim())
       .map((q, i) => `${i + 1}. ${q}`)
       .join("\n");
     if (numbered) {
       directives.push(
-        `Ask these qualifying questions during the conversation:\n${numbered}`
+        isCustomerSupport
+          ? `Ask these triage questions to understand the visitor's issue:\n${numbered}`
+          : `Ask these qualifying questions during the conversation:\n${numbered}`
       );
     }
   }
@@ -203,15 +209,18 @@ export function generateConfigDirectives(input: DirectivesInput): string {
     // ── Shared Qualification: ICP & disqualification (appointment-booker + lead-capture) ──
     const icpDesc = bc.icp_description as string | undefined;
     if (icpDesc) {
+      const isDescribeMode = qualMode === "describe";
       directives.push(
-        `Ideal customer profile: ${icpDesc}. Prioritize leads matching this profile.`
+        isDescribeMode
+          ? `Ideal customer profile: ${icpDesc}. Ask natural, conversational questions to determine if the visitor matches this profile. Prioritize leads that fit.`
+          : `Ideal customer profile: ${icpDesc}. Prioritize leads matching this profile.`
       );
     }
 
     const disqualCriteria = bc.disqualification_criteria as string[] | undefined;
     if (disqualCriteria?.length) {
       directives.push(
-        `Disqualify leads matching: ${disqualCriteria.join("; ")}. Be polite but transparent about fit.`
+        `Dealbreakers: ${disqualCriteria.join("; ")}. If a visitor matches any of these, politely let them know it's not the right fit.`
       );
     }
 

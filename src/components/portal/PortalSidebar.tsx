@@ -58,7 +58,7 @@ export function PortalSidebar({ clientName, clientLogo, role }: PortalSidebarPro
             <img src={clientLogo} alt={clientName} className="size-10 rounded-xl object-cover border border-black/5 dark:border-[#333333] shadow-sm" />
           ) : (
             <div className="size-10 rounded-xl bg-white dark:bg-[#252525] border border-black/5 dark:border-[#333333] flex items-center justify-center shadow-sm">
-              <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#FF8C00] to-[#9D50BB]">
+              <span className="text-lg font-bold gradient-text">
                 {clientName.charAt(0).toUpperCase()}
               </span>
             </div>

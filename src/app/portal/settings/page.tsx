@@ -249,8 +249,8 @@ export default function PortalSettings() {
                 style={{ animationDelay: `${i * 50}ms` }}
               >
                 <div className="flex items-center gap-3">
-                  <div className="size-8 rounded-full bg-gradient-to-br from-[#FF8C00]/15 to-[#9D50BB]/10 flex items-center justify-center">
-                    <Mail className="size-3.5 text-[#FF8C00]" />
+                  <div className="size-8 rounded-full bg-muted/50 flex items-center justify-center">
+                    <Mail className="size-3.5 text-muted-foreground" />
                   </div>
                   <div>
                     <p className="text-sm font-medium">
