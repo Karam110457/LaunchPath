@@ -21,7 +21,7 @@ export default async function PreviewCampaigns({
     .single();
   if (!client) notFound();
 
-  const basePath = `/portal/preview/${clientId}`;
+  const basePath = `/portal-preview/${clientId}`;
 
   const { data: campaigns } = await supabase
     .from("campaigns")

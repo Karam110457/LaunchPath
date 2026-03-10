@@ -42,7 +42,7 @@ export default async function PortalPreviewLayout({
 
   return (
     <PortalProvider
-      value={{ clientId, role: "admin", clientName, clientLogo, basePath: `/portal/preview/${clientId}` }}
+      value={{ clientId, role: "admin", clientName, clientLogo, basePath: `/portal-preview/${clientId}` }}
     >
       <div style={brandingStyles as React.CSSProperties}>
         <PreviewBanner clientName={clientName} clientId={clientId} />

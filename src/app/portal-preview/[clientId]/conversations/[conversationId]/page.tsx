@@ -22,7 +22,7 @@ export default async function PreviewConversationDetail({
     .single();
   if (!client) notFound();
 
-  const basePath = `/portal/preview/${clientId}`;
+  const basePath = `/portal-preview/${clientId}`;
 
   const { data: conversation } = await supabase
     .from("channel_conversations")

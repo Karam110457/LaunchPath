@@ -81,7 +81,7 @@ export function ClientWorkspaceShell({
                     {clientStatus.charAt(0).toUpperCase() + clientStatus.slice(1)}
                   </span>
                   <Link
-                    href={`/portal/preview/${clientId}`}
+                    href={`/portal-preview/${clientId}`}
                     className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full border border-border/40 bg-card/60 backdrop-blur-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                   >
                     <Eye className="size-3.5" />

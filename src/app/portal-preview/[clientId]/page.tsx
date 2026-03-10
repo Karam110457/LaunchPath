@@ -27,7 +27,7 @@ export default async function PortalPreviewDashboard({
     .single();
   if (!client) notFound();
 
-  const basePath = `/portal/preview/${clientId}`;
+  const basePath = `/portal-preview/${clientId}`;
 
   // Get campaigns for this client
   const { data: campaigns } = await supabase
