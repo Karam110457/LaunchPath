@@ -1,36 +1,24 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Coins, MessageSquare, Zap, TrendingUp, Bot } from "lucide-react";
+import {
+  Coins,
+  MessageSquare,
+  Zap,
+  TrendingUp,
+  Bot,
+  Gift,
+  Cpu,
+  ChevronDown,
+  ChevronUp,
+  Layers,
+} from "lucide-react";
 import { getModelInfo } from "@/lib/ai/model-tiers";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface UsageData {
-  credits: {
-    monthly_included: number;
-    monthly_used: number;
-    topup_balance: number;
-    remaining: number;
-  };
-  period_stats: {
-    total_credits: number;
-    total_messages: number;
-    total_input_tokens: number;
-    total_output_tokens: number;
-  };
-  by_day: Array<{ date: string; credits: number; messages: number }>;
-  by_agent: Array<{
-    agent_id: string;
-    agent_name: string;
-    model: string;
-    credits: number;
-    messages: number;
-  }>;
-  by_model: Array<{ model: string; credits: number; messages: number }>;
-}
+import type { UsageData } from "@/lib/dashboard/usage-data";
+import { UsageChart } from "./UsageChart";
+import { ProviderBreakdown } from "./ProviderBreakdown";
+import { RequestHistory } from "./RequestHistory";
+import { PromoRedeemModal } from "./PromoRedeemModal";
 
 type Period = "7d" | "30d" | "90d";
 
@@ -55,22 +43,6 @@ function StatCardSkeleton({ stagger }: { stagger: number }) {
       <SkeletonPulse className="h-4 w-28 mb-3" />
       <SkeletonPulse className="h-7 w-20 mb-2" />
       <SkeletonPulse className="h-2 w-full rounded-full" />
-    </div>
-  );
-}
-
-function DayRowSkeleton({ stagger }: { stagger: number }) {
-  return (
-    <div
-      className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-[#2A2A2A]"
-      style={{ "--stagger": String(stagger) } as React.CSSProperties}
-    >
-      <SkeletonPulse className="h-4 w-16 shrink-0" />
-      <div className="flex-1 h-5 rounded-full bg-muted/50 overflow-hidden">
-        <div className="animate-pulse h-full rounded-full bg-neutral-200/60 dark:bg-neutral-800/60 w-3/5" />
-      </div>
-      <SkeletonPulse className="h-4 w-14 shrink-0" />
-      <SkeletonPulse className="h-3 w-12 shrink-0" />
     </div>
   );
 }
@@ -115,6 +87,8 @@ export function UsageDashboard({ userName, initialData }: UsageDashboardProps) {
   const [period, setPeriod] = useState<Period>("30d");
   const [data, setData] = useState<UsageData | null>(initialData ?? null);
   const [loading, setLoading] = useState(!initialData);
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [showDailyBreakdown, setShowDailyBreakdown] = useState(false);
 
   const fetchData = useCallback(async (p: Period) => {
     setLoading(true);
@@ -127,7 +101,6 @@ export function UsageDashboard({ userName, initialData }: UsageDashboardProps) {
   }, []);
 
   useEffect(() => {
-    // Skip fetch on mount if we already have server-side data for the default period
     if (period === "30d" && initialData) return;
     fetchData(period);
   }, [period, fetchData, initialData]);
@@ -145,9 +118,13 @@ export function UsageDashboard({ userName, initialData }: UsageDashboardProps) {
       )
     : 0;
 
+  const totalTokens = data
+    ? data.period_stats.total_input_tokens + data.period_stats.total_output_tokens
+    : 0;
+
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
-      {/* SVG gradient definition (same as AgentsList) */}
+      {/* SVG gradient definition */}
       <svg width="0" height="0" className="absolute">
         <defs>
           <linearGradient
@@ -164,7 +141,7 @@ export function UsageDashboard({ userName, initialData }: UsageDashboardProps) {
       </svg>
 
       {/* ----------------------------------------------------------------- */}
-      {/* Header Row (matches AgentsList header)                            */}
+      {/* Header Row                                                        */}
       {/* ----------------------------------------------------------------- */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
         <div className="space-y-2">
@@ -176,64 +153,86 @@ export function UsageDashboard({ userName, initialData }: UsageDashboardProps) {
           </p>
         </div>
 
-        {/* Credit balance stat card (matches agent count card) */}
-        <div className="flex items-center gap-4 shrink-0 px-4 py-3 rounded-3xl bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-[#2A2A2A] shadow-sm">
-          <div className="w-[52px] h-[52px] rounded-[18px] bg-[#f8f9fa] dark:bg-[#252525] border border-black/5 dark:border-[#333333] flex items-center justify-center">
-            <Coins
-              className="w-6 h-6"
-              style={{ stroke: "url(#primary-icon-gradient)" }}
-            />
-          </div>
-          <div>
-            {loading && !data ? (
-              <SkeletonPulse className="h-8 w-16 mb-1" />
-            ) : (
-              <p className="text-3xl font-semibold tracking-tight leading-none text-neutral-900 dark:text-neutral-100">
-                {data
-                  ? Math.round(data.credits.remaining).toLocaleString()
-                  : "0"}
+        <div className="flex items-center gap-3 shrink-0">
+          {/* Redeem promo button */}
+          <button
+            onClick={() => setPromoOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
+          >
+            <Gift className="w-4 h-4" />
+            Redeem promo
+          </button>
+
+          {/* Credit balance stat card */}
+          <div className="flex items-center gap-4 px-4 py-3 rounded-3xl bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-[#2A2A2A] shadow-sm">
+            <div className="w-[52px] h-[52px] rounded-[18px] bg-[#f8f9fa] dark:bg-[#252525] border border-black/5 dark:border-[#333333] flex items-center justify-center">
+              <Coins
+                className="w-6 h-6"
+                style={{ stroke: "url(#primary-icon-gradient)" }}
+              />
+            </div>
+            <div>
+              {loading && !data ? (
+                <SkeletonPulse className="h-8 w-16 mb-1" />
+              ) : (
+                <p className="text-3xl font-semibold tracking-tight leading-none text-neutral-900 dark:text-neutral-100">
+                  {data
+                    ? data.credits.remaining.toLocaleString(undefined, {
+                        maximumFractionDigits: 1,
+                      })
+                    : "0"}
+                </p>
+              )}
+              <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mt-1">
+                Credits Remaining
               </p>
-            )}
-            <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mt-1">
-              Credits Remaining
-            </p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* ----------------------------------------------------------------- */}
-      {/* Divider (same as AgentsList)                                      */}
+      {/* Divider                                                           */}
       {/* ----------------------------------------------------------------- */}
       <div className="w-full h-px bg-border/40" />
 
       {/* ----------------------------------------------------------------- */}
-      {/* Stats Row                                                         */}
+      {/* Stats Row (4 cards)                                               */}
       {/* ----------------------------------------------------------------- */}
       {loading && !data ? (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 stagger-enter">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 stagger-enter">
           <StatCardSkeleton stagger={0} />
           <StatCardSkeleton stagger={1} />
           <StatCardSkeleton stagger={2} />
+          <StatCardSkeleton stagger={3} />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 stagger-enter">
-          {/* Monthly usage with progress bar */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 stagger-enter">
+          {/* Monthly usage with progress bar + plan badge */}
           <div
             className="px-5 py-4 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-[#2A2A2A] shadow-sm"
             style={{ "--stagger": "0" } as React.CSSProperties}
           >
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
-              <Zap className="w-4 h-4" />
-              Monthly Credits
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Zap className="w-4 h-4" />
+                Monthly Credits
+              </div>
+              {data?.plan && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-200/60 dark:bg-neutral-700/50 text-neutral-600 dark:text-neutral-300 font-semibold uppercase tracking-wider">
+                  {data.plan.name}
+                </span>
+              )}
             </div>
             <p className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
               {data
-                ? Math.round(data.credits.monthly_used).toLocaleString()
+                ? data.credits.monthly_used.toLocaleString(undefined, {
+                    maximumFractionDigits: 1,
+                  })
                 : "0"}
               <span className="text-base font-normal text-muted-foreground">
                 {" "}
-                /{" "}
-                {data?.credits.monthly_included?.toLocaleString() ?? "500"}
+                / {data?.credits.monthly_included?.toLocaleString() ?? "500"}
               </span>
             </p>
             <div className="mt-2 h-2 rounded-full bg-neutral-200/60 dark:bg-neutral-800/60 overflow-hidden">
@@ -255,7 +254,9 @@ export function UsageDashboard({ userName, initialData }: UsageDashboardProps) {
             </div>
             <p className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
               {data
-                ? Math.round(data.credits.topup_balance).toLocaleString()
+                ? data.credits.topup_balance.toLocaleString(undefined, {
+                    maximumFractionDigits: 1,
+                  })
                 : "0"}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
@@ -270,7 +271,7 @@ export function UsageDashboard({ userName, initialData }: UsageDashboardProps) {
           >
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
               <MessageSquare className="w-4 h-4" />
-              Messages ({period})
+              Requests ({period})
             </div>
             <p className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
               {data
@@ -283,11 +284,30 @@ export function UsageDashboard({ userName, initialData }: UsageDashboardProps) {
                 : ""}
             </p>
           </div>
+
+          {/* Tokens + avg credits/request */}
+          <div
+            className="px-5 py-4 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-[#2A2A2A] shadow-sm"
+            style={{ "--stagger": "3" } as React.CSSProperties}
+          >
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
+              <Cpu className="w-4 h-4" />
+              Tokens ({period})
+            </div>
+            <p className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+              {totalTokens.toLocaleString()}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {data && data.period_stats.avg_credits_per_request > 0
+                ? `Avg ${data.period_stats.avg_credits_per_request.toFixed(4)} cr/request`
+                : "Processed"}
+            </p>
+          </div>
         </div>
       )}
 
       {/* ----------------------------------------------------------------- */}
-      {/* Period Selector + Usage by Day                                    */}
+      {/* Period Selector + Usage Over Time Chart                           */}
       {/* ----------------------------------------------------------------- */}
       <div className="w-full h-px bg-border/40" />
 
@@ -295,9 +315,8 @@ export function UsageDashboard({ userName, initialData }: UsageDashboardProps) {
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-muted-foreground" />
-            Daily Usage
+            Usage Over Time
           </h2>
-          {/* Period pill selector (matches TopNav pill style) */}
           <div className="flex items-center p-1 rounded-full border border-border/40 bg-card/60 backdrop-blur-md shadow-sm">
             {(["7d", "30d", "90d"] as Period[]).map((p) => (
               <button
@@ -316,47 +335,62 @@ export function UsageDashboard({ userName, initialData }: UsageDashboardProps) {
         </div>
 
         {loading && !data ? (
-          <div className="space-y-1.5 stagger-enter">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <DayRowSkeleton key={i} stagger={i} />
-            ))}
-          </div>
+          <div className="h-[280px] rounded-2xl bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-[#2A2A2A] shadow-sm animate-pulse" />
         ) : data && data.by_day.length > 0 ? (
-          <div className="space-y-1.5 stagger-enter">
-            {data.by_day.map((day, i) => (
-              <div
-                key={day.date}
-                className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-[#2A2A2A] hover:bg-[#f8f9fa] dark:hover:bg-[#1E1E1E] transition-colors duration-150"
-                style={
-                  { "--stagger": String(i) } as React.CSSProperties
-                }
-              >
-                <span className="text-sm text-muted-foreground w-24 shrink-0 font-mono">
-                  {new Date(day.date + "T00:00:00").toLocaleDateString(
-                    "en-US",
-                    { month: "short", day: "numeric" }
-                  )}
-                </span>
-                <div className="flex-1 h-5 rounded-full bg-neutral-200/40 dark:bg-neutral-800/40 overflow-hidden">
+          <>
+            <UsageChart data={data.by_day} />
+
+            {/* Collapsible daily breakdown */}
+            <button
+              onClick={() => setShowDailyBreakdown(!showDailyBreakdown)}
+              className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {showDailyBreakdown ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
+              {showDailyBreakdown ? "Hide" : "Show"} daily breakdown
+            </button>
+
+            {showDailyBreakdown && (
+              <div className="space-y-1.5 stagger-enter animate-in fade-in slide-in-from-top-2 duration-200">
+                {data.by_day.map((day, i) => (
                   <div
-                    className="h-full rounded-full gradient-accent-bg transition-all duration-700 ease-out"
-                    style={{
-                      width: `${Math.max(
-                        2,
-                        (day.credits / maxDayCredits) * 100
-                      )}%`,
-                    }}
-                  />
-                </div>
-                <span className="text-sm font-medium w-20 text-right tabular-nums text-neutral-800 dark:text-neutral-200">
-                  {day.credits.toLocaleString()} cr
-                </span>
-                <span className="text-xs text-muted-foreground w-16 text-right tabular-nums">
-                  {day.messages} msgs
-                </span>
+                    key={day.date}
+                    className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-[#2A2A2A] hover:bg-[#f8f9fa] dark:hover:bg-[#1E1E1E] transition-colors duration-150"
+                    style={
+                      { "--stagger": String(i) } as React.CSSProperties
+                    }
+                  >
+                    <span className="text-sm text-muted-foreground w-24 shrink-0 font-mono">
+                      {new Date(day.date + "T00:00:00").toLocaleDateString(
+                        "en-US",
+                        { month: "short", day: "numeric" }
+                      )}
+                    </span>
+                    <div className="flex-1 h-5 rounded-full bg-neutral-200/40 dark:bg-neutral-800/40 overflow-hidden">
+                      <div
+                        className="h-full rounded-full gradient-accent-bg transition-all duration-700 ease-out"
+                        style={{
+                          width: `${Math.max(
+                            2,
+                            (day.credits / maxDayCredits) * 100
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                    <span className="text-sm font-medium w-20 text-right tabular-nums text-neutral-800 dark:text-neutral-200">
+                      {day.credits.toLocaleString()} cr
+                    </span>
+                    <span className="text-xs text-muted-foreground w-16 text-right tabular-nums">
+                      {day.messages} msgs
+                    </span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+          </>
         ) : (
           <div className="text-center py-20 px-6 rounded-3xl border border-dashed border-border/60 bg-card/30">
             <TrendingUp className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
@@ -368,6 +402,22 @@ export function UsageDashboard({ userName, initialData }: UsageDashboardProps) {
           </div>
         )}
       </div>
+
+      {/* ----------------------------------------------------------------- */}
+      {/* By Provider                                                       */}
+      {/* ----------------------------------------------------------------- */}
+      {data && data.by_provider && data.by_provider.length > 0 && (
+        <>
+          <div className="w-full h-px bg-border/40" />
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
+              <Layers className="w-5 h-5 text-muted-foreground" />
+              By Provider
+            </h2>
+            <ProviderBreakdown data={data.by_provider} />
+          </div>
+        </>
+      )}
 
       {/* ----------------------------------------------------------------- */}
       {/* Usage by Agent                                                    */}
@@ -512,6 +562,19 @@ export function UsageDashboard({ userName, initialData }: UsageDashboardProps) {
           </div>
         </>
       )}
+
+      {/* ----------------------------------------------------------------- */}
+      {/* Request History                                                   */}
+      {/* ----------------------------------------------------------------- */}
+      <div className="w-full h-px bg-border/40" />
+      <RequestHistory />
+
+      {/* Promo Modal */}
+      <PromoRedeemModal
+        open={promoOpen}
+        onClose={() => setPromoOpen(false)}
+        onSuccess={() => fetchData(period)}
+      />
     </div>
   );
 }

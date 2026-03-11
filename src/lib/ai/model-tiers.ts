@@ -2,7 +2,7 @@
  * Model definitions with multiplier-based credit pricing.
  *
  * Each model has a multiplier that determines credit cost based on actual
- * token usage: credits = ceil(totalTokens / 1000 × multiplier), min 1 credit.
+ * token usage: credits = round(totalTokens / 1000 × multiplier, 2), min 0.01.
  *
  * The multiplier reflects relative model cost. 1.0x baseline = GPT-4o.
  * Cheaper models (0.05x–0.10x) burn fractional credits; expensive models
@@ -122,7 +122,8 @@ export function getModelMultiplier(modelId: string): number {
 
 /**
  * Calculate actual credits consumed from real token usage.
- * Formula: ceil(totalTokens / 1000 × multiplier), minimum 1 credit.
+ * Formula: round(totalTokens / 1000 × multiplier, 2), minimum 0.01 credit.
+ * Returns 1 if token counts are unavailable (fallback).
  */
 export function calculateCredits(
   modelId: string,
@@ -130,19 +131,19 @@ export function calculateCredits(
   outputTokens: number | undefined
 ): number {
   const total = (inputTokens ?? 0) + (outputTokens ?? 0);
-  if (total === 0) return 1; // Minimum 1 credit even if token count unavailable
+  if (total === 0) return 1; // Fallback when token count unavailable
   const multiplier = getModelMultiplier(modelId);
-  return Math.max(1, Math.ceil((total / 1000) * multiplier));
+  return Math.max(0.01, Math.round((total / 1000) * multiplier * 100) / 100);
 }
 
 /**
  * Estimate credits for pre-flight check (before response).
  * Uses multiplier × 2 (assumes ~2K tokens for a typical exchange).
- * Minimum estimate of 1 credit.
+ * Minimum estimate of 0.01 credit.
  */
 export function estimateCredits(modelId: string): number {
   const multiplier = getModelMultiplier(modelId);
-  return Math.max(1, Math.ceil(multiplier * 2));
+  return Math.max(0.01, Math.round(multiplier * 2 * 100) / 100);
 }
 
 /**

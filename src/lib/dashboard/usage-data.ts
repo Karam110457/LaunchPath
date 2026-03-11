@@ -13,11 +13,16 @@ export interface UsageData {
     topup_balance: number;
     remaining: number;
   };
+  plan: {
+    name: string;
+    monthly_limit: number;
+  };
   period_stats: {
     total_credits: number;
     total_messages: number;
     total_input_tokens: number;
     total_output_tokens: number;
+    avg_credits_per_request: number;
   };
   by_day: Array<{ date: string; credits: number; messages: number }>;
   by_agent: Array<{
@@ -28,6 +33,29 @@ export interface UsageData {
     messages: number;
   }>;
   by_model: Array<{ model: string; credits: number; messages: number }>;
+  by_provider: Array<{ provider: string; credits: number; messages: number }>;
+}
+
+/** Derive a display provider name from a model ID. */
+function getProviderFromModelId(modelId: string): string {
+  if (modelId.startsWith("openai/")) return "OpenAI";
+  if (modelId.startsWith("google/")) return "Google";
+  if (modelId.startsWith("anthropic/")) return "Anthropic";
+  if (modelId.startsWith("claude")) return "Anthropic";
+  if (modelId.startsWith("meta-llama/")) return "Meta";
+  if (modelId.startsWith("mistralai/")) return "Mistral";
+  // Fallback: capitalize first segment before "/"
+  const slash = modelId.indexOf("/");
+  if (slash > 0) return modelId.slice(0, slash);
+  return "Other";
+}
+
+/** Derive plan name from monthly credit limit. */
+function getPlanName(monthlyIncluded: number): string {
+  if (monthlyIncluded <= 500) return "Free";
+  if (monthlyIncluded <= 2000) return "Starter";
+  if (monthlyIncluded <= 10000) return "Pro";
+  return "Enterprise";
 }
 
 export async function getUsageData(
@@ -81,6 +109,11 @@ export async function getUsageData(
     totalInputTokens += log.input_tokens ?? 0;
     totalOutputTokens += log.output_tokens ?? 0;
   }
+
+  const avgCreditsPerRequest =
+    logs.length > 0
+      ? Math.round((totalCredits / logs.length) * 10000) / 10000
+      : 0;
 
   // Group by day
   const dayMap = new Map<string, { credits: number; messages: number }>();
@@ -141,6 +174,26 @@ export async function getUsageData(
     }))
     .sort((a, b) => b.credits - a.credits);
 
+  // Group by provider (derived from model ID)
+  const providerAgg = new Map<
+    string,
+    { credits: number; messages: number }
+  >();
+  for (const log of logs) {
+    const provider = getProviderFromModelId(log.model);
+    const entry = providerAgg.get(provider) ?? { credits: 0, messages: 0 };
+    entry.credits += Number(log.credits_consumed) || 0;
+    entry.messages += 1;
+    providerAgg.set(provider, entry);
+  }
+  const byProvider = Array.from(providerAgg.entries())
+    .map(([provider, stats]) => ({
+      provider,
+      credits: Math.round(stats.credits * 100) / 100,
+      messages: stats.messages,
+    }))
+    .sort((a, b) => b.credits - a.credits);
+
   return {
     credits: {
       monthly_included: credits.monthly_included,
@@ -148,14 +201,20 @@ export async function getUsageData(
       topup_balance: Math.round(Number(credits.topup_balance) * 100) / 100,
       remaining: Math.round(remaining * 100) / 100,
     },
+    plan: {
+      name: getPlanName(credits.monthly_included),
+      monthly_limit: credits.monthly_included,
+    },
     period_stats: {
       total_credits: Math.round(totalCredits * 100) / 100,
       total_messages: logs.length,
       total_input_tokens: totalInputTokens,
       total_output_tokens: totalOutputTokens,
+      avg_credits_per_request: avgCreditsPerRequest,
     },
     by_day: byDay,
     by_agent: byAgent,
     by_model: byModel,
+    by_provider: byProvider,
   };
 }
