@@ -11,8 +11,8 @@ import { useTheme } from "next-themes";
 import { createClient } from "@/lib/supabase/client";
 
 const NAV_LINKS = [
-    { label: "Agents", href: "/dashboard/agents", icon: Bot },
     { label: "Create", href: "/dashboard/agents/new", icon: Plus },
+    { label: "Agents", href: "/dashboard/agents", icon: Bot },
     { label: "Deploy", href: "/dashboard/clients", icon: Rocket },
     { label: "Usage",  href: "/dashboard/usage",   icon: BarChart3 },
 ];
