@@ -106,10 +106,15 @@ function AgentCardSkeleton({ stagger }: { stagger: number }) {
 // Main component
 // ---------------------------------------------------------------------------
 
-export function UsageDashboard({ userName }: { userName: string }) {
+interface UsageDashboardProps {
+  userName: string;
+  initialData?: UsageData | null;
+}
+
+export function UsageDashboard({ userName, initialData }: UsageDashboardProps) {
   const [period, setPeriod] = useState<Period>("30d");
-  const [data, setData] = useState<UsageData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<UsageData | null>(initialData ?? null);
+  const [loading, setLoading] = useState(!initialData);
 
   const fetchData = useCallback(async (p: Period) => {
     setLoading(true);
@@ -122,8 +127,10 @@ export function UsageDashboard({ userName }: { userName: string }) {
   }, []);
 
   useEffect(() => {
+    // Skip fetch on mount if we already have server-side data for the default period
+    if (period === "30d" && initialData) return;
     fetchData(period);
-  }, [period, fetchData]);
+  }, [period, fetchData, initialData]);
 
   const maxDayCredits = data
     ? Math.max(...data.by_day.map((d) => d.credits), 1)
