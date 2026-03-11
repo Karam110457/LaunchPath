@@ -12,7 +12,7 @@ export default async function DashboardPage() {
 
   // When business flow is disabled, go straight to agents
   if (!isBusinessFlowEnabled()) {
-    redirect("/dashboard/agents");
+    redirect("/dashboard/agents/new");
   }
 
   const supabase = await createClient();
