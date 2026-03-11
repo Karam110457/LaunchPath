@@ -89,13 +89,13 @@ export function LeadCollectionStep({ config, onUpdate }: LeadCollectionStepProps
         <button
           type="button"
           onClick={() => onUpdate((prev) => ({ ...prev, notification_behavior: "email_team" }))}
-          className={`w-full text-left rounded-[20px] border p-4 transition-all duration-200 ${
+          className={`w-full text-left rounded-[20px] border p-5 transition-all duration-200 ${
             config.notification_behavior === "email_team"
-              ? "border-[#FF8C00]/40 bg-gradient-to-r from-[#FF8C00]/5 to-[#9D50BB]/5 shadow-sm"
-              : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:border-[#FF8C00]/20"
+              ? "border-neutral-700 dark:border-neutral-400 bg-white dark:bg-[#252525] shadow-sm"
+              : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:border-neutral-300 dark:hover:border-neutral-500"
           }`}
         >
-          <p className={`text-sm font-medium ${config.notification_behavior === "email_team" ? "text-[#FF8C00]" : "text-neutral-800 dark:text-neutral-200"}`}>
+          <p className={`text-sm font-medium ${config.notification_behavior === "email_team" ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-800 dark:text-neutral-200"}`}>
             Email notification + spreadsheet
           </p>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
@@ -105,13 +105,13 @@ export function LeadCollectionStep({ config, onUpdate }: LeadCollectionStepProps
         <button
           type="button"
           onClick={() => onUpdate((prev) => ({ ...prev, notification_behavior: "sheet_only" }))}
-          className={`w-full text-left rounded-[20px] border p-4 transition-all duration-200 ${
+          className={`w-full text-left rounded-[20px] border p-5 transition-all duration-200 ${
             config.notification_behavior === "sheet_only"
-              ? "border-[#FF8C00]/40 bg-gradient-to-r from-[#FF8C00]/5 to-[#9D50BB]/5 shadow-sm"
-              : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:border-[#FF8C00]/20"
+              ? "border-neutral-700 dark:border-neutral-400 bg-white dark:bg-[#252525] shadow-sm"
+              : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:border-neutral-300 dark:hover:border-neutral-500"
           }`}
         >
-          <p className={`text-sm font-medium ${config.notification_behavior === "sheet_only" ? "text-[#FF8C00]" : "text-neutral-800 dark:text-neutral-200"}`}>
+          <p className={`text-sm font-medium ${config.notification_behavior === "sheet_only" ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-800 dark:text-neutral-200"}`}>
             Spreadsheet only
           </p>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">

@@ -51,11 +51,11 @@ export function ChooseTypeStep({ templateId, onSelect }: ChooseTypeStepProps) {
                 )
               }
               className={`
-                w-full text-left px-5 py-4 rounded-[20px] border transition-all duration-200
+                w-full text-left px-6 py-5 rounded-[20px] border transition-all duration-200
                 focus:outline-none
                 ${
                   isSelected
-                    ? "border-[#FF8C00]/40 bg-gradient-to-r from-[#FF8C00]/5 to-[#9D50BB]/5 shadow-sm"
+                    ? "border-neutral-700 dark:border-neutral-400 bg-white dark:bg-[#252525] shadow-sm"
                     : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:bg-white dark:hover:bg-[#252525] hover:shadow-sm hover:-translate-y-0.5"
                 }
               `}
@@ -66,7 +66,7 @@ export function ChooseTypeStep({ templateId, onSelect }: ChooseTypeStepProps) {
                     h-[48px] w-[48px] rounded-[16px] flex items-center justify-center shrink-0 border transition-transform
                     ${
                       isSelected
-                        ? "bg-white dark:bg-[#252525] border-[#FF8C00]/20 scale-105"
+                        ? "bg-white dark:bg-[#252525] border-neutral-300 dark:border-neutral-500"
                         : "bg-white dark:bg-[#252525] border-black/5 dark:border-[#333333]"
                     }
                   `}
@@ -78,7 +78,7 @@ export function ChooseTypeStep({ templateId, onSelect }: ChooseTypeStepProps) {
                 </div>
                 <div>
                   <div
-                    className={`font-medium ${isSelected ? "text-[#FF8C00]" : "text-neutral-800 dark:text-neutral-200"}`}
+                    className={`font-medium ${isSelected ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-800 dark:text-neutral-200"}`}
                   >
                     {template.name}
                   </div>

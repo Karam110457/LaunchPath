@@ -27,13 +27,13 @@ export function EscalationStep({ config, onUpdate }: EscalationStepProps) {
         <button
           type="button"
           onClick={() => onUpdate((prev) => ({ ...prev, escalation_mode: "always_available" }))}
-          className={`w-full text-left rounded-[20px] border p-4 transition-all duration-200 ${
+          className={`w-full text-left rounded-[20px] border p-5 transition-all duration-200 ${
             config.escalation_mode === "always_available"
-              ? "border-[#FF8C00]/40 bg-gradient-to-r from-[#FF8C00]/5 to-[#9D50BB]/5 shadow-sm"
-              : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:border-[#FF8C00]/20"
+              ? "border-neutral-700 dark:border-neutral-400 bg-white dark:bg-[#252525] shadow-sm"
+              : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:border-neutral-300 dark:hover:border-neutral-500"
           }`}
         >
-          <p className={`text-sm font-medium ${config.escalation_mode === "always_available" ? "text-[#FF8C00]" : "text-neutral-800 dark:text-neutral-200"}`}>
+          <p className={`text-sm font-medium ${config.escalation_mode === "always_available" ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-800 dark:text-neutral-200"}`}>
             Handle everything
           </p>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
@@ -43,13 +43,13 @@ export function EscalationStep({ config, onUpdate }: EscalationStepProps) {
         <button
           type="button"
           onClick={() => onUpdate((prev) => ({ ...prev, escalation_mode: "escalate_complex" }))}
-          className={`w-full text-left rounded-[20px] border p-4 transition-all duration-200 ${
+          className={`w-full text-left rounded-[20px] border p-5 transition-all duration-200 ${
             config.escalation_mode === "escalate_complex"
-              ? "border-[#FF8C00]/40 bg-gradient-to-r from-[#FF8C00]/5 to-[#9D50BB]/5 shadow-sm"
-              : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:border-[#FF8C00]/20"
+              ? "border-neutral-700 dark:border-neutral-400 bg-white dark:bg-[#252525] shadow-sm"
+              : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:border-neutral-300 dark:hover:border-neutral-500"
           }`}
         >
-          <p className={`text-sm font-medium ${config.escalation_mode === "escalate_complex" ? "text-[#FF8C00]" : "text-neutral-800 dark:text-neutral-200"}`}>
+          <p className={`text-sm font-medium ${config.escalation_mode === "escalate_complex" ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-800 dark:text-neutral-200"}`}>
             Escalate complex issues
           </p>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">

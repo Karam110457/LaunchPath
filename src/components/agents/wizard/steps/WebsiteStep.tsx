@@ -233,7 +233,7 @@ export function WebsiteStep({
                     type="checkbox"
                     checked={page.selected}
                     onChange={() => togglePage(i)}
-                    className="rounded border-neutral-300 dark:border-[#333333] text-[#FF8C00] focus:ring-[#FF8C00]/30"
+                    className="rounded border-neutral-300 dark:border-[#333333] text-neutral-900 dark:text-white focus:ring-neutral-400/30"
                   />
                   <div className="min-w-0 flex-1">
                     <p className="font-medium truncate text-xs text-neutral-800 dark:text-neutral-200">
@@ -265,8 +265,8 @@ export function WebsiteStep({
           flex flex-col items-center justify-center rounded-[24px] border-2 border-dashed p-6 cursor-pointer transition-colors
           ${
             dragActive
-              ? "border-[#FF8C00] bg-[#FF8C00]/5"
-              : "border-black/10 dark:border-[#2A2A2A] hover:border-[#FF8C00]/40 hover:bg-[#FF8C00]/5"
+              ? "border-neutral-500 dark:border-neutral-400 bg-neutral-100 dark:bg-neutral-800/30"
+              : "border-black/10 dark:border-[#2A2A2A] hover:border-neutral-400 dark:hover:border-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-800/20"
           }
         `}
         onDragOver={(e) => {

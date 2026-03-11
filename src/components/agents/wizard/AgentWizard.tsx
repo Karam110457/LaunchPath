@@ -584,18 +584,18 @@ export function AgentWizard({ onBack }: AgentWizardProps) {
   const progress = ((clampedIndex + 1) / totalSteps) * 100;
 
   return (
-    <div className="max-w-lg mx-auto space-y-6">
+    <div className="max-w-xl mx-auto space-y-8">
       {/* Progress indicator */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <p className="text-xs text-neutral-400 dark:text-neutral-500 tabular-nums">
+          <p className="text-sm text-neutral-400 dark:text-neutral-500 tabular-nums">
             Step {clampedIndex + 1} of {totalSteps}
           </p>
-          <p className="text-xs text-neutral-400 dark:text-neutral-500">
+          <p className="text-sm text-neutral-400 dark:text-neutral-500">
             {currentStep.label}
           </p>
         </div>
-        <div className="h-1.5 bg-neutral-100 dark:bg-[#1E1E1E] rounded-full overflow-hidden">
+        <div className="h-2 bg-neutral-100 dark:bg-[#1E1E1E] rounded-full overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-500 ease-out"
             style={{

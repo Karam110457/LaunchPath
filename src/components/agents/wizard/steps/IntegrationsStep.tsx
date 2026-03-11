@@ -91,10 +91,10 @@ export function IntegrationsStep({
                     type="button"
                     onClick={() => toggleToolkit(tool.toolkit)}
                     className={`
-                      w-full flex items-start gap-3 rounded-[20px] border p-4 text-left transition-all duration-200
+                      w-full flex items-start gap-3 rounded-[20px] border p-5 text-left transition-all duration-200
                       ${
                         isSelected
-                          ? "border-[#FF8C00]/40 bg-gradient-to-r from-[#FF8C00]/5 to-[#9D50BB]/5 shadow-sm"
+                          ? "border-neutral-700 dark:border-neutral-400 bg-white dark:bg-[#252525] shadow-sm"
                           : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:bg-white dark:hover:bg-[#252525] hover:shadow-sm"
                       }
                     `}
@@ -105,7 +105,7 @@ export function IntegrationsStep({
                         mt-0.5 w-4.5 h-4.5 shrink-0 rounded border-2 flex items-center justify-center transition-all
                         ${
                           isSelected
-                            ? "bg-gradient-to-r from-[#FF8C00] to-[#9D50BB] border-transparent"
+                            ? "bg-neutral-900 dark:bg-white border-transparent"
                             : "border-neutral-300 dark:border-neutral-600"
                         }
                       `}
@@ -131,7 +131,7 @@ export function IntegrationsStep({
                         shrink-0 w-10 h-10 rounded-[14px] flex items-center justify-center overflow-hidden border
                         ${
                           isSelected
-                            ? "bg-white dark:bg-[#252525] border-[#FF8C00]/20"
+                            ? "bg-white dark:bg-[#252525] border-neutral-300 dark:border-neutral-500"
                             : "bg-white dark:bg-[#252525] border-black/5 dark:border-[#333333]"
                         }
                       `}
@@ -152,7 +152,7 @@ export function IntegrationsStep({
                         />
                       ) : (
                         <Plug
-                          className={`w-5 h-5 ${isSelected ? "text-[#FF8C00]" : "text-neutral-400"}`}
+                          className={`w-5 h-5 ${isSelected ? "text-neutral-700 dark:text-neutral-200" : "text-neutral-400"}`}
                         />
                       )}
                     </div>

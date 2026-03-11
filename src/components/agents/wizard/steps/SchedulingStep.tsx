@@ -70,8 +70,8 @@ export function SchedulingStep({ config, onUpdate }: SchedulingStepProps) {
                   }
                   className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer ${
                     config.availability.working_days.includes(d.value)
-                      ? "bg-gradient-to-r from-[#FF8C00]/10 to-[#9D50BB]/10 border-[#FF8C00]/30 text-[#FF8C00] dark:text-[#FFa333]"
-                      : "bg-[#f8f9fa] dark:bg-[#252525] border-black/5 dark:border-[#333333] text-neutral-500 dark:text-neutral-400 hover:border-[#FF8C00]/30"
+                      ? "bg-neutral-900 dark:bg-white border-transparent text-white dark:text-neutral-900"
+                      : "bg-[#f8f9fa] dark:bg-[#252525] border-black/5 dark:border-[#333333] text-neutral-500 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-500"
                   }`}
                 >
                   {d.label}
