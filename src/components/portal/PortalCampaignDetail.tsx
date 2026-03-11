@@ -163,15 +163,15 @@ export function PortalCampaignDetail({
       {activeTab === "overview" && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div className="rounded-3xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4">
+            <div className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4">
               <p className="text-xs text-muted-foreground font-medium">Status</p>
               <p className="text-lg font-bold capitalize">{status}</p>
             </div>
-            <div className="rounded-3xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4">
+            <div className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4">
               <p className="text-xs text-muted-foreground font-medium">Conversations</p>
               <p className="text-lg font-bold">{conversationCount}</p>
             </div>
-            <div className="rounded-3xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4">
+            <div className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4">
               <p className="text-xs text-muted-foreground font-medium">Widget</p>
               <p className="text-lg font-bold">
                 {widgetChannel?.is_enabled ? "Live" : "Offline"}

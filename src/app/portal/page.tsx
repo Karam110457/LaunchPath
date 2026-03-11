@@ -134,7 +134,7 @@ export default async function PortalDashboard() {
           <div
             key={stat.label}
             style={{ '--stagger': i } as React.CSSProperties}
-            className="rounded-3xl border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4 space-y-1"
+            className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4 space-y-1"
           >
             <div className="flex items-center gap-2 mb-1">
               <stat.icon className="size-3.5 text-muted-foreground" />

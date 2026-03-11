@@ -355,30 +355,33 @@ function InboxDetail({
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        <div className="space-y-3">
+        <div className="space-y-4">
           {messages
             .filter((m) => ["user", "assistant", "human_agent"].includes(m.role))
             .map((msg, i) => (
               <div
                 key={i}
-                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                className={cn(
+                  "flex",
+                  msg.role === "user" ? "justify-end" : "justify-start"
+                )}
               >
-                <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${
-                    msg.role === "user"
-                      ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-sm"
-                      : msg.role === "human_agent"
-                      ? "bg-blue-500/10 text-foreground border border-blue-500/20"
-                      : "bg-muted text-foreground"
-                  }`}
-                >
-                  {msg.role === "human_agent" && (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-blue-500/20 text-blue-600 mb-1">
+                {msg.role === "user" ? (
+                  <div className="max-w-[75%] rounded-2xl rounded-tr-sm px-4 py-2.5 bg-primary text-primary-foreground text-sm">
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  </div>
+                ) : msg.role === "human_agent" ? (
+                  <div className="max-w-[75%] rounded-2xl px-4 py-2.5 text-sm bg-blue-500/10 text-foreground border border-blue-500/20">
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-blue-500/20 text-blue-600 dark:text-blue-400 mb-1">
                       Team
                     </span>
-                  )}
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
-                </div>
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  </div>
+                ) : (
+                  <div className="max-w-[75%] text-sm text-foreground leading-relaxed py-1">
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  </div>
+                )}
               </div>
             ))}
         </div>
