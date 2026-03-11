@@ -54,9 +54,10 @@ export async function POST(
   const oldTemplateId = oldWizardConfig.templateId as string | undefined;
   const oldTemplate = oldTemplateId ? getTemplateById(oldTemplateId) : null;
 
-  // 1. Remove old template tools if requested
+  // 1. Remove old template tools if requested (but keep tools shared with new template)
   if (removeOldTools && oldTemplate?.suggestedTools?.length) {
-    const oldToolkits = oldTemplate.suggestedTools.map((t) => t.toolkit);
+    const oldToolkits = new Set(oldTemplate.suggestedTools.map((t) => t.toolkit));
+    const newToolkits = new Set(newTemplate.suggestedTools.map((t) => t.toolkit));
 
     // Get agent's current tools and filter by old template's toolkits
     const { data: existingTools } = await supabase
@@ -69,7 +70,9 @@ export async function POST(
       const toolIdsToRemove = existingTools
         .filter((t) => {
           const config = t.config as Record<string, unknown> | null;
-          return config?.toolkit && oldToolkits.includes(config.toolkit as string);
+          const toolkit = config?.toolkit as string;
+          // Only remove if it belongs to the old template AND is NOT needed by the new template
+          return toolkit && oldToolkits.has(toolkit) && !newToolkits.has(toolkit);
         })
         .map((t) => t.id);
 
