@@ -41,13 +41,11 @@ const TEMPLATE_META: Record<
 
 interface ReviewStepProps {
   state: AgentWizardState;
-  businessName?: string;
   onGoToStep: (stepId: WizardStepId) => void;
 }
 
 export function ReviewStep({
   state,
-  businessName,
   onGoToStep,
 }: ReviewStepProps) {
   const scannedPages = state.discoveredPages.filter(
@@ -121,12 +119,7 @@ export function ReviewStep({
 
         {/* Business Context */}
         <ReviewCard title="Business" stepId="business-context" onEdit={onGoToStep}>
-          {state.businessContextMode === "link_system" && businessName ? (
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="rounded-full text-xs">Linked</Badge>
-              <span className="text-sm text-neutral-800 dark:text-neutral-200">{businessName}</span>
-            </div>
-          ) : state.businessDescription ? (
+          {state.businessDescription ? (
             <p className="text-sm text-neutral-500 dark:text-neutral-400 line-clamp-3">
               {state.businessDescription}
             </p>

@@ -31,7 +31,7 @@ import { IntegrationsStep } from "./steps/IntegrationsStep";
 import { ReviewStep } from "./steps/ReviewStep";
 
 interface AgentWizardProps {
-  businesses: Array<{ id: string; name: string }>;
+  businesses?: Array<{ id: string; name: string }>; // V2: link existing business
   onBack: () => void;
 }
 
@@ -74,7 +74,7 @@ function clearDraft() {
   }
 }
 
-export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
+export function AgentWizard({ onBack }: AgentWizardProps) {
   const router = useRouter();
 
   const draft = useRef(loadDraft());
@@ -150,21 +150,13 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
           ? "Give your agent a name to continue"
           : null;
 
-      case "business-context":
-        if (!state.businessContextMode)
-          return "Choose how to describe your business";
-        if (
-          state.businessContextMode === "link_system" &&
-          !state.linkedSystemId
-        )
-          return "Select a business to continue";
-        if (state.businessContextMode === "describe") {
-          const len = state.businessDescription.trim().length;
-          if (len === 0) return "Describe your business to continue";
-          if (len <= 10)
-            return `Add a bit more detail (${len}/10 characters minimum)`;
-        }
+      case "business-context": {
+        const len = state.businessDescription.trim().length;
+        if (len === 0) return "Describe your business to continue";
+        if (len <= 10)
+          return `Add a bit more detail (${len}/10 characters minimum)`;
         return null;
+      }
 
       case "website":
         // Optional — can always proceed
@@ -302,14 +294,7 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
 
     const payload: WizardGenerationPayload = {
       templateId: state.templateId,
-      systemId:
-        state.businessContextMode === "link_system"
-          ? (state.linkedSystemId ?? undefined)
-          : undefined,
-      businessDescription:
-        state.businessContextMode === "describe"
-          ? state.businessDescription
-          : undefined,
+      businessDescription: state.businessDescription || undefined,
       agentName: state.agentName,
       agentDescription: state.agentDescription,
       behaviorConfig,
@@ -368,12 +353,7 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
       case "business-context":
         return (
           <BusinessContextStep
-            mode={state.businessContextMode}
-            linkedSystemId={state.linkedSystemId}
             businessDescription={state.businessDescription}
-            businesses={businesses}
-            onModeChange={(mode) => updateState("businessContextMode", mode)}
-            onSystemSelect={(id) => updateState("linkedSystemId", id)}
             onDescriptionChange={(desc) =>
               updateState("businessDescription", desc)
             }
@@ -552,18 +532,13 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
         );
       }
 
-      case "review": {
-        const linkedBusiness = businesses.find(
-          (b) => b.id === state.linkedSystemId,
-        );
+      case "review":
         return (
           <ReviewStep
             state={state}
-            businessName={linkedBusiness?.name}
             onGoToStep={goToStepById}
           />
         );
-      }
 
       default:
         return null;

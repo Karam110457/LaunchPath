@@ -53,7 +53,6 @@ export function AgentCreationLanding({
   if (mode === "wizard") {
     return (
       <AgentWizard
-        businesses={businesses}
         onBack={() => setMode("landing")}
       />
     );
