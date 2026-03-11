@@ -41,19 +41,7 @@ interface ToolRecordConfig {
   max_turns?: number;
 }
 
-import {
-  MODEL_OPTIONS,
-  TIER_LABELS,
-  type ModelTier,
-} from "@/lib/ai/model-tiers";
-
-const MODEL_TIERS = (["fast", "standard", "advanced"] as ModelTier[]).map(
-  (tier) => ({
-    tier,
-    label: TIER_LABELS[tier],
-    models: MODEL_OPTIONS.filter((m) => m.tier === tier),
-  })
-);
+import { ModelSelector } from "../ModelSelector";
 
 const TONE_PRESETS = [
   { value: "friendly and approachable", label: "Friendly", desc: "Warm, gets to the point" },
@@ -417,21 +405,10 @@ export function SubagentEditPanel({
             <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               AI Model
             </h3>
-            <select
+            <ModelSelector
               value={model}
-              onChange={(e) => { setModel(e.target.value); markDirty(); }}
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              {MODEL_TIERS.map((group) => (
-                <optgroup key={group.tier} label={group.label}>
-                  {group.models.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label} — {opt.multiplier}x
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+              onChange={(v) => { setModel(v); markDirty(); }}
+            />
           </section>
 
           {/* Save button */}
