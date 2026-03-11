@@ -43,7 +43,7 @@ interface AgentEditPanelProps {
   onToolsChanged?: () => void;
 }
 
-import { ModelSelector } from "../ModelSelector";
+import { ModelSelector } from "@/components/agents/ModelSelector";
 
 const LANGUAGE_OPTIONS = [
   { value: "en", label: "English" },

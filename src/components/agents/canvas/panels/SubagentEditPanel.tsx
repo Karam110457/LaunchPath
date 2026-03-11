@@ -41,7 +41,7 @@ interface ToolRecordConfig {
   max_turns?: number;
 }
 
-import { ModelSelector } from "../ModelSelector";
+import { ModelSelector } from "@/components/agents/ModelSelector";
 
 const TONE_PRESETS = [
   { value: "friendly and approachable", label: "Friendly", desc: "Warm, gets to the point" },
