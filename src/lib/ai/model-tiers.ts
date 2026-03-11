@@ -1,8 +1,12 @@
 /**
- * Model tier definitions and utilities.
+ * Model definitions with multiplier-based credit pricing.
  *
- * Maps model IDs to tiers (fast / standard / advanced) with credit costs.
- * Used by both the UI (showing credit cost per model) and backend (deducting credits).
+ * Each model has a multiplier that determines credit cost based on actual
+ * token usage: credits = ceil(totalTokens / 1000 × multiplier), min 1 credit.
+ *
+ * The multiplier reflects relative model cost. 1.0x baseline = GPT-4o.
+ * Cheaper models (0.05x–0.10x) burn fractional credits; expensive models
+ * (3.33x) burn several credits per message.
  */
 
 export type ModelTier = "fast" | "standard" | "advanced";
@@ -14,16 +18,11 @@ export interface ModelOption {
   label: string;
   /** Provider for display grouping */
   provider: string;
-  /** Tier determines credit cost */
+  /** Display tier (fast / standard / advanced) — for UI grouping only */
   tier: ModelTier;
+  /** Credit multiplier — credits = ceil(totalTokens / 1000 × multiplier) */
+  multiplier: number;
 }
-
-/** Credits consumed per message by tier */
-export const CREDITS_PER_TIER: Record<ModelTier, number> = {
-  fast: 1,
-  standard: 5,
-  advanced: 20,
-};
 
 /** Tier display labels */
 export const TIER_LABELS: Record<ModelTier, string> = {
@@ -39,58 +38,66 @@ export const TIER_LABELS: Record<ModelTier, string> = {
  * OpenRouter. Bare Anthropic IDs (e.g. "claude-*") go direct to Anthropic.
  */
 export const MODEL_OPTIONS: ModelOption[] = [
-  // Fast tier (1 credit/msg)
+  // Fast tier — cheap, high-speed models
   {
     value: "openai/gpt-4o-mini",
     label: "GPT-4o Mini",
     provider: "OpenAI",
     tier: "fast",
+    multiplier: 0.07,
   },
   {
     value: "claude-haiku-3-5-20241022",
     label: "Claude Haiku 3.5",
     provider: "Anthropic",
     tier: "fast",
+    multiplier: 0.1,
   },
   {
     value: "google/gemini-2.0-flash-001",
     label: "Gemini 2.0 Flash",
     provider: "Google",
     tier: "fast",
+    multiplier: 0.05,
   },
 
-  // Standard tier (5 credits/msg)
+  // Standard tier — balanced quality and cost
   {
     value: "openai/gpt-4o",
     label: "GPT-4o",
     provider: "OpenAI",
     tier: "standard",
+    multiplier: 1.0,
   },
   {
     value: "claude-sonnet-4-5-20250929",
     label: "Claude Sonnet 4.5",
     provider: "Anthropic",
     tier: "standard",
+    multiplier: 1.5,
   },
   {
     value: "google/gemini-2.5-pro-preview",
     label: "Gemini 2.5 Pro",
     provider: "Google",
     tier: "standard",
+    multiplier: 1.6,
   },
 
-  // Advanced tier (20 credits/msg)
+  // Advanced tier — most capable, highest cost
   {
     value: "anthropic/claude-opus-4",
     label: "Claude Opus 4",
     provider: "Anthropic",
     tier: "advanced",
+    multiplier: 3.33,
   },
   {
     value: "openai/o3",
     label: "GPT o3",
     provider: "OpenAI",
     tier: "advanced",
+    multiplier: 3.33,
   },
 ];
 
@@ -98,8 +105,7 @@ export const MODEL_OPTIONS: ModelOption[] = [
 export const DEFAULT_MODEL = "openai/gpt-4o-mini";
 
 /**
- * Look up a model's tier. Falls back to "standard" for unknown models
- * (e.g. if a model ID in the DB predates this mapping).
+ * Look up a model's tier. Falls back to "standard" for unknown models.
  */
 export function getModelTier(modelId: string): ModelTier {
   const match = MODEL_OPTIONS.find((m) => m.value === modelId);
@@ -107,10 +113,36 @@ export function getModelTier(modelId: string): ModelTier {
 }
 
 /**
- * Get credit cost for a model.
+ * Get a model's credit multiplier. Falls back to 1.0 for unknown models.
  */
-export function getModelCredits(modelId: string): number {
-  return CREDITS_PER_TIER[getModelTier(modelId)];
+export function getModelMultiplier(modelId: string): number {
+  const match = MODEL_OPTIONS.find((m) => m.value === modelId);
+  return match?.multiplier ?? 1.0;
+}
+
+/**
+ * Calculate actual credits consumed from real token usage.
+ * Formula: ceil(totalTokens / 1000 × multiplier), minimum 1 credit.
+ */
+export function calculateCredits(
+  modelId: string,
+  inputTokens: number | undefined,
+  outputTokens: number | undefined
+): number {
+  const total = (inputTokens ?? 0) + (outputTokens ?? 0);
+  if (total === 0) return 1; // Minimum 1 credit even if token count unavailable
+  const multiplier = getModelMultiplier(modelId);
+  return Math.max(1, Math.ceil((total / 1000) * multiplier));
+}
+
+/**
+ * Estimate credits for pre-flight check (before response).
+ * Uses multiplier × 2 (assumes ~2K tokens for a typical exchange).
+ * Minimum estimate of 1 credit.
+ */
+export function estimateCredits(modelId: string): number {
+  const multiplier = getModelMultiplier(modelId);
+  return Math.max(1, Math.ceil(multiplier * 2));
 }
 
 /**

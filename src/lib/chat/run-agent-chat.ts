@@ -13,7 +13,7 @@
 import { streamText, stepCountIs } from "ai";
 import { logger } from "@/lib/security/logger";
 import { getModel } from "@/lib/ai/model-provider";
-import { getModelTier, getModelCredits } from "@/lib/ai/model-tiers";
+import { getModelTier, estimateCredits, calculateCredits } from "@/lib/ai/model-tiers";
 import {
   retrieveContextWithMetadata,
   loadAllChunks,
@@ -119,7 +119,7 @@ export async function runAgentChat(
   // Credit pre-flight check
   // -------------------------------------------------------------------------
 
-  const creditsNeeded = getModelCredits(agent.model);
+  const estimatedCredits = estimateCredits(agent.model);
 
   // Ensure user_credits row exists (upsert on first use)
   await supabase
@@ -139,12 +139,12 @@ export async function runAgentChat(
     const monthlyRemaining = credits.monthly_included - credits.monthly_used;
     const totalAvailable = Math.max(0, monthlyRemaining) + credits.topup_balance;
 
-    if (totalAvailable < creditsNeeded) {
+    if (totalAvailable < estimatedCredits) {
       return new Response(
         JSON.stringify({
           error: "Insufficient credits",
           credits_available: totalAvailable,
-          credits_needed: creditsNeeded,
+          credits_needed: estimatedCredits,
         }),
         {
           status: 402,
@@ -411,9 +411,14 @@ export async function runAgentChat(
           });
 
           // -----------------------------------------------------------------
-          // Usage logging & credit deduction
+          // Usage logging & credit deduction (actual token-based)
           // -----------------------------------------------------------------
           const tier = getModelTier(agent.model);
+          const actualCredits = calculateCredits(
+            agent.model,
+            usage?.inputTokens,
+            usage?.outputTokens
+          );
 
           try {
             // Log usage
@@ -424,7 +429,7 @@ export async function runAgentChat(
               conversation_id: finalConversationId ?? null,
               model: agent.model,
               model_tier: tier,
-              credits_consumed: creditsNeeded,
+              credits_consumed: actualCredits,
               input_tokens: usage?.inputTokens ?? null,
               output_tokens: usage?.outputTokens ?? null,
             });
@@ -439,19 +444,19 @@ export async function runAgentChat(
             if (currentCredits) {
               const monthlyRemaining =
                 currentCredits.monthly_included - currentCredits.monthly_used;
-              if (monthlyRemaining >= creditsNeeded) {
+              if (monthlyRemaining >= actualCredits) {
                 // Deduct from monthly
                 await supabase
                   .from("user_credits")
                   .update({
-                    monthly_used: currentCredits.monthly_used + creditsNeeded,
+                    monthly_used: currentCredits.monthly_used + actualCredits,
                     updated_at: new Date().toISOString(),
                   })
                   .eq("user_id", agent.user_id);
               } else {
                 // Use remaining monthly + topup for the rest
                 const fromMonthly = Math.max(0, monthlyRemaining);
-                const fromTopup = creditsNeeded - fromMonthly;
+                const fromTopup = actualCredits - fromMonthly;
                 await supabase
                   .from("user_credits")
                   .update({

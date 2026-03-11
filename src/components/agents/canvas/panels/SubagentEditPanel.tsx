@@ -43,7 +43,6 @@ interface ToolRecordConfig {
 
 import {
   MODEL_OPTIONS,
-  CREDITS_PER_TIER,
   TIER_LABELS,
   type ModelTier,
 } from "@/lib/ai/model-tiers";
@@ -51,7 +50,7 @@ import {
 const MODEL_TIERS = (["fast", "standard", "advanced"] as ModelTier[]).map(
   (tier) => ({
     tier,
-    label: `${TIER_LABELS[tier]} (${CREDITS_PER_TIER[tier]} credit${CREDITS_PER_TIER[tier] > 1 ? "s" : ""}/msg)`,
+    label: TIER_LABELS[tier],
     models: MODEL_OPTIONS.filter((m) => m.tier === tier),
   })
 );
@@ -427,7 +426,7 @@ export function SubagentEditPanel({
                 <optgroup key={group.tier} label={group.label}>
                   {group.models.map((opt) => (
                     <option key={opt.value} value={opt.value}>
-                      {opt.label} ({opt.provider})
+                      {opt.label} — {opt.multiplier}x
                     </option>
                   ))}
                 </optgroup>
