@@ -310,14 +310,12 @@ export function AgentWizard({ onBack }: AgentWizardProps) {
     if (!state.templateId) return;
 
     const behaviorConfig =
-      state.templateId === "custom"
-        ? {}
-        : state.templateId === "appointment-booker"
-          ? state.appointmentBookerConfig
-          : state.templateId === "lead-capture" ||
-              state.templateId === "lead-qualification"
-            ? state.leadCaptureConfig
-            : state.customerSupportConfig;
+      state.templateId === "appointment-booker"
+        ? state.appointmentBookerConfig
+        : state.templateId === "lead-capture" ||
+            state.templateId === "lead-qualification"
+          ? state.leadCaptureConfig
+          : state.customerSupportConfig;
 
     const scannedPages = state.discoveredPages
       .filter((p) => p.selected && p.status === "done" && p.content)

@@ -58,7 +58,6 @@ export function ReviewStep({
     toolkits.includes(t.toolkit),
   );
   const meta = state.templateId ? TEMPLATE_META[state.templateId] : null;
-  const isCustom = state.templateId === "custom";
 
   return (
     <div className="space-y-6">
@@ -165,7 +164,7 @@ export function ReviewStep({
         </ReviewCard>
 
         {/* Conversation Flow — varies by template */}
-        {!isCustom && (
+        {state.templateId && (
           <ReviewCard
             title="Behavior"
             stepId={
@@ -202,7 +201,7 @@ export function ReviewStep({
         )}
 
         {/* Integrations */}
-        {!isCustom && (
+        {state.templateId && (
           <ReviewCard title="Integrations" stepId="integrations" onEdit={onGoToStep}>
             {selectedTools.length > 0 ? (
               <div className="flex flex-wrap gap-2">

@@ -84,7 +84,7 @@ export type LeadQualificationConfig = LeadCaptureConfig;
 
 export interface AgentWizardState {
   // Step: Choose Type
-  templateId: "appointment-booker" | "customer-support" | "lead-capture" | "lead-qualification" | "custom" | null;
+  templateId: "appointment-booker" | "customer-support" | "lead-capture" | "lead-qualification" | null;
 
   // Step: Agent Name
   agentName: string;
@@ -183,9 +183,6 @@ export function getWizardSteps(templateId: string | null): WizardStepDef[] {
         { id: "integrations", label: "Integrations" },
         review,
       ];
-
-    case "custom":
-      return [...core, review];
 
     default:
       // No template selected yet — show only step 1
