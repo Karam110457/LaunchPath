@@ -1,6 +1,5 @@
 import { requireAuth } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
-import { PageShell } from "@/components/layout/PageShell";
 import { AgentCreationLanding } from "@/components/agents/AgentCreationLanding";
 
 export default async function NewAgentPage() {
@@ -25,11 +24,8 @@ export default async function NewAgentPage() {
   });
 
   return (
-    <PageShell
-      title="New Agent"
-      description="Create an AI agent for your business."
-    >
+    <div className="container py-6 max-w-5xl mx-auto animate-in fade-in duration-200">
       <AgentCreationLanding businesses={businesses} />
-    </PageShell>
+    </div>
   );
 }

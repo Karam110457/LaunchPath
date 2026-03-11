@@ -94,7 +94,7 @@ export function IntegrationsStep({
                       w-full flex items-start gap-3 rounded-[20px] border p-5 text-left transition-all duration-200
                       ${
                         isSelected
-                          ? "border-neutral-700 dark:border-neutral-400 bg-white dark:bg-[#252525] shadow-sm"
+                          ? "relative overflow-hidden border-neutral-300 dark:border-neutral-600 bg-white dark:bg-[#252525] shadow-sm before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-gradient-to-b before:from-[#FF8C00] before:to-[#9D50BB]"
                           : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:bg-white dark:hover:bg-[#252525] hover:shadow-sm"
                       }
                     `}
@@ -105,7 +105,7 @@ export function IntegrationsStep({
                         mt-0.5 w-4.5 h-4.5 shrink-0 rounded border-2 flex items-center justify-center transition-all
                         ${
                           isSelected
-                            ? "bg-neutral-900 dark:bg-white border-transparent"
+                            ? "bg-gradient-to-br from-[#FF8C00] to-[#9D50BB] border-transparent"
                             : "border-neutral-300 dark:border-neutral-600"
                         }
                       `}

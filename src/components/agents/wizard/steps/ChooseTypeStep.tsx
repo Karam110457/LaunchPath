@@ -55,7 +55,7 @@ export function ChooseTypeStep({ templateId, onSelect }: ChooseTypeStepProps) {
                 focus:outline-none
                 ${
                   isSelected
-                    ? "border-neutral-700 dark:border-neutral-400 bg-white dark:bg-[#252525] shadow-sm"
+                    ? "relative overflow-hidden border-neutral-300 dark:border-neutral-600 bg-white dark:bg-[#252525] shadow-sm before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-gradient-to-b before:from-[#FF8C00] before:to-[#9D50BB]"
                     : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:bg-white dark:hover:bg-[#252525] hover:shadow-sm hover:-translate-y-0.5"
                 }
               `}
