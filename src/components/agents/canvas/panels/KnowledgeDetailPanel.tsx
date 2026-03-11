@@ -15,6 +15,7 @@ import {
   Pencil,
   RotateCcw,
   Search,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,7 +76,7 @@ export function KnowledgeDetailPanel({
     [onDocumentsChange],
   );
   const [activeForm, setActiveForm] = useState<
-    "upload" | "website" | "faq" | null
+    "upload" | "website" | "faq" | "generate-faq" | null
   >(null);
   const [editingDocId, setEditingDocId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -254,6 +255,15 @@ export function KnowledgeDetailPanel({
             <span className="font-medium">FAQ</span>
           </button>
         </div>
+        {/* Generate FAQs with AI */}
+        <button
+          onClick={() => !atLimit && setActiveForm(activeForm === "generate-faq" ? null : "generate-faq")}
+          disabled={atLimit}
+          className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs transition-all ${atLimit ? "opacity-50 cursor-not-allowed border-border" : activeForm === "generate-faq" ? "border-primary bg-primary/5" : "border-border border-dashed hover:border-primary/30 hover:bg-muted/50"}`}
+        >
+          <Sparkles className="w-3.5 h-3.5 shrink-0 text-primary/70" />
+          <span className="font-medium text-muted-foreground">Generate FAQs with AI</span>
+        </button>
       </div>
 
       {/* Expandable form */}
@@ -276,6 +286,15 @@ export function KnowledgeDetailPanel({
           agentId={agentId}
           onSuccess={handleDocumentAdded}
           onCancel={() => setActiveForm(null)}
+        />
+      )}
+      {activeForm === "generate-faq" && (
+        <GenerateFaqsForm
+          agentId={agentId}
+          onSuccess={handleDocumentAdded}
+          onCancel={() => setActiveForm(null)}
+          currentDocCount={documents.length}
+          maxDocs={MAX_DOCUMENTS}
         />
       )}
 
@@ -836,6 +855,248 @@ function FaqEditForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Generate FAQs Form (AI-powered)
+// ---------------------------------------------------------------------------
+
+function GenerateFaqsForm({
+  agentId,
+  onSuccess,
+  onCancel,
+  currentDocCount,
+  maxDocs,
+}: {
+  agentId: string;
+  onSuccess: (docs: KnowledgeDocument | KnowledgeDocument[]) => void;
+  onCancel: () => void;
+  currentDocCount: number;
+  maxDocs: number;
+}) {
+  const [extraContext, setExtraContext] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [generated, setGenerated] = useState<
+    Array<{ question: string; answer: string; selected: boolean }>
+  >([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleGenerate = async () => {
+    setIsGenerating(true);
+    setError(null);
+    setGenerated([]);
+    try {
+      const res = await fetch(
+        `/api/agents/${agentId}/knowledge/generate-faqs`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            extraContext: extraContext.trim() || undefined,
+          }),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Generation failed");
+      const faqs = (data.faqs ?? []) as Array<{
+        question: string;
+        answer: string;
+      }>;
+      if (faqs.length === 0) {
+        setError("No FAQs were generated. Try adding more knowledge content first.");
+        return;
+      }
+      setGenerated(faqs.map((f) => ({ ...f, selected: true })));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Generation failed");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const selectedCount = generated.filter((f) => f.selected).length;
+  const slotsAvailable = maxDocs - currentDocCount;
+
+  const handleSaveSelected = async () => {
+    const toSave = generated.filter((f) => f.selected).slice(0, slotsAvailable);
+    if (toSave.length === 0) return;
+
+    setIsSaving(true);
+    setError(null);
+    const saved: KnowledgeDocument[] = [];
+    try {
+      for (const faq of toSave) {
+        const res = await fetch(`/api/agents/${agentId}/knowledge/faq`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            question: faq.question,
+            answer: faq.answer,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to save FAQ");
+        saved.push(data as KnowledgeDocument);
+      }
+      onSuccess(saved);
+    } catch (err) {
+      // Still report any successfully saved
+      if (saved.length > 0) onSuccess(saved);
+      setError(err instanceof Error ? err.message : "Failed to save FAQs");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const toggleFaq = (index: number) => {
+    setGenerated((prev) =>
+      prev.map((f, i) =>
+        i === index ? { ...f, selected: !f.selected } : f,
+      ),
+    );
+  };
+
+  return (
+    <div className="space-y-3 rounded-lg border border-border p-4">
+      {generated.length === 0 ? (
+        <>
+          <div className="space-y-1">
+            <p className="text-xs font-medium">Generate FAQs with AI</p>
+            <p className="text-[11px] text-muted-foreground">
+              AI will analyze your existing knowledge base documents and
+              generate relevant Q&amp;A pairs.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="gen-faq-ctx" className="text-xs">
+              Additional context{" "}
+              <span className="text-muted-foreground font-normal">
+                (optional)
+              </span>
+            </Label>
+            <Textarea
+              id="gen-faq-ctx"
+              placeholder="e.g., Focus on pricing and return policies"
+              value={extraContext}
+              onChange={(e) => setExtraContext(e.target.value)}
+              disabled={isGenerating}
+              rows={2}
+              className="text-sm"
+            />
+          </div>
+          {error && (
+            <p className="text-xs text-destructive flex items-center gap-1">
+              <AlertCircle className="w-3 h-3 shrink-0" />
+              {error}
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onCancel}
+            >
+              Cancel
+            </Button>
+            <Button size="sm" onClick={handleGenerate} disabled={isGenerating}>
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5 mr-1" />
+                  Generate
+                </>
+              )}
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium">
+              {generated.length} FAQs generated
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {selectedCount} selected
+              {selectedCount > slotsAvailable && (
+                <span className="text-amber-500 ml-1">
+                  (only {slotsAvailable} slots left)
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="max-h-[300px] overflow-y-auto space-y-1.5 pr-1">
+            {generated.map((faq, i) => (
+              <label
+                key={i}
+                className={`flex items-start gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-colors ${faq.selected ? "border-primary/30 bg-primary/5" : "border-border hover:bg-muted/30"}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={faq.selected}
+                  onChange={() => toggleFaq(i)}
+                  className="mt-0.5 rounded border-border"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium">{faq.question}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">
+                    {faq.answer}
+                  </p>
+                </div>
+              </label>
+            ))}
+          </div>
+          {error && (
+            <p className="text-xs text-destructive flex items-center gap-1">
+              <AlertCircle className="w-3 h-3 shrink-0" />
+              {error}
+            </p>
+          )}
+          <div className="flex justify-between gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setGenerated([])}
+              disabled={isSaving}
+            >
+              Regenerate
+            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onCancel}
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveSelected}
+                disabled={selectedCount === 0 || isSaving}
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  `Add ${Math.min(selectedCount, slotsAvailable)} FAQ${Math.min(selectedCount, slotsAvailable) === 1 ? "" : "s"}`
+                )}
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

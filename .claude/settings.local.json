@@ -28,7 +28,8 @@
       "mcp__claude_ai_Supabase__execute_sql",
       "Bash(npm install defuddle jsdom)",
       "Bash(grep -E \"\\\\.\\(sql|ts\\)$\")",
-      "Bash(ls -la \"/c/Dev/LaunchPath/src/app/\\(auth\\)/\")"
+      "Bash(ls -la \"/c/Dev/LaunchPath/src/app/\\(auth\\)/\")",
+      "Bash(xargs grep:*)"
     ]
   }
 }

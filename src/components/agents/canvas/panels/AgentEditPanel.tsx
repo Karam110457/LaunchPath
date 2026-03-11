@@ -145,8 +145,12 @@ export function AgentEditPanel({
     keepQuestions: boolean;
   } | null>(null);
   const [switching, setSwitching] = useState(false);
+  const [removeTemplateOpen, setRemoveTemplateOpen] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   const hasWizard = formState.wizardConfig !== null;
+  const isCustomTemplate = formState.wizardConfig?.templateId === "custom";
+  const hasRealTemplate = hasWizard && !isCustomTemplate;
   const currentPreset = matchesPreset(formState.tone);
   const [showCustomTone, setShowCustomTone] = useState(
     !currentPreset && formState.tone.length > 0
@@ -264,6 +268,44 @@ export function AgentEditPanel({
       } finally {
         setSwitching(false);
         setSwitchDialog(null);
+      }
+    },
+    [agentId, setFormState, onToolsChanged],
+  );
+
+  const handleRemoveTemplate = useCallback(
+    async (removeTools: boolean) => {
+      setRemoving(true);
+      try {
+        const res = await fetch(`/api/agents/${agentId}/remove-template`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ removeTemplateTools: removeTools }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          setError(data.error ?? "Failed to remove template");
+          return;
+        }
+
+        const data = await res.json();
+
+        // Clear wizard config in local form state
+        setFormState((prev) => ({
+          ...prev,
+          wizardConfig: null,
+          ...(data.systemPrompt ? { systemPrompt: data.systemPrompt as string } : {}),
+        }));
+
+        onToolsChanged?.();
+        setGoalChangedNote("Template removed. Agent is now fully custom.");
+        setTimeout(() => setGoalChangedNote(null), 4000);
+      } catch {
+        setError("Network error — could not remove template.");
+      } finally {
+        setRemoving(false);
+        setRemoveTemplateOpen(false);
       }
     },
     [agentId, setFormState, onToolsChanged],
@@ -390,9 +432,20 @@ export function AgentEditPanel({
             {hasWizard && (
               <>
                 <section className="space-y-3">
-                  <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    What should this agent do?
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      What should this agent do?
+                    </h3>
+                    {hasRealTemplate && (
+                      <button
+                        type="button"
+                        onClick={() => setRemoveTemplateOpen(true)}
+                        className="text-[11px] text-destructive/70 hover:text-destructive transition-colors"
+                      >
+                        Remove Template
+                      </button>
+                    )}
+                  </div>
                   <div className="space-y-2">
                     {AGENT_TEMPLATES.map((tmpl) => (
                       <OptionCard
@@ -538,7 +591,7 @@ export function AgentEditPanel({
           </section>
 
           {/* In panel mode, behavior/questions continue in the same column */}
-          {!isExpanded && hasWizard && (
+          {!isExpanded && hasRealTemplate && (
             <>
               <hr className="border-border" />
               <BehaviorSection
@@ -592,7 +645,7 @@ export function AgentEditPanel({
           </div>{/* end left column / single column */}
 
           {/* ── RIGHT COLUMN (expanded only): Behavior + Questions ── */}
-          {isExpanded && hasWizard && (
+          {isExpanded && hasRealTemplate && (
             <div className="space-y-5">
               <BehaviorSection
                 wizardConfig={formState.wizardConfig!}
@@ -748,6 +801,36 @@ export function AgentEditPanel({
               switchDialog.keepQuestions,
             );
           }}
+        />
+      )}
+
+      {/* Remove template confirmation dialog */}
+      {removeTemplateOpen && (
+        <RemoveTemplateDialog
+          templateName={
+            (() => {
+              const tid = formState.wizardConfig?.templateId;
+              if (!tid || tid === "custom") return "Custom";
+              const t = getTemplateById(tid);
+              return t?.name ?? tid;
+            })()
+          }
+          hasTemplateTools={
+            (() => {
+              const tid = formState.wizardConfig?.templateId;
+              if (!tid || tid === "custom") return false;
+              const t = getTemplateById(tid);
+              if (!t?.suggestedTools?.length) return false;
+              const tToolkits = new Set(t.suggestedTools.map((st) => st.toolkit));
+              return tools.some((tool) => {
+                const tk = (tool.config as Record<string, unknown> | null)?.toolkit as string;
+                return tk && tToolkits.has(tk);
+              });
+            })()
+          }
+          removing={removing}
+          onCancel={() => setRemoveTemplateOpen(false)}
+          onConfirm={(removeTools) => void handleRemoveTemplate(removeTools)}
         />
       )}
 
@@ -2055,5 +2138,111 @@ function SwitchConfigFields({
     <p className="text-xs text-muted-foreground">
       No additional configuration needed.
     </p>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Remove Template Dialog — destructive confirmation
+// ---------------------------------------------------------------------------
+
+function RemoveTemplateDialog({
+  templateName,
+  hasTemplateTools,
+  removing,
+  onCancel,
+  onConfirm,
+}: {
+  templateName: string;
+  hasTemplateTools: boolean;
+  removing: boolean;
+  onCancel: () => void;
+  onConfirm: (removeTools: boolean) => void;
+}) {
+  const [removeTools, setRemoveTools] = useState(true);
+
+  return (
+    <AlertDialog open onOpenChange={(open) => { if (!open) onCancel(); }}>
+      <AlertDialogContent className="max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Remove {templateName} template?</AlertDialogTitle>
+          <AlertDialogDescription className="space-y-2">
+            <span className="block">
+              This will convert your agent to a fully custom agent. The following
+              changes are <strong className="text-destructive font-semibold">permanent</strong> and
+              cannot be undone:
+            </span>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <div className="space-y-3 py-2">
+          <ul className="space-y-1.5 text-xs text-muted-foreground">
+            <li className="flex items-start gap-2">
+              <span className="text-destructive mt-0.5 shrink-0">&#x2022;</span>
+              <span>
+                <strong>Behavior settings</strong> (booking rules, escalation,
+                lead fields, qualification) will be cleared
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-destructive mt-0.5 shrink-0">&#x2022;</span>
+              <span>
+                <strong>Configuration Directives</strong> section in the system
+                prompt will be removed
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-destructive mt-0.5 shrink-0">&#x2022;</span>
+              <span>
+                <strong>Tool workflow guidelines</strong> will be cleared
+              </span>
+            </li>
+          </ul>
+
+          <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+            <p className="text-xs text-amber-600 dark:text-amber-400 leading-relaxed">
+              Your system prompt, knowledge base, name, and personality will be
+              kept. Only template-specific configuration is removed.
+            </p>
+          </div>
+
+          {hasTemplateTools && (
+            <label className="flex items-center gap-2.5 rounded-lg border px-3 py-2.5 cursor-pointer hover:bg-muted/30 transition-colors">
+              <input
+                type="checkbox"
+                checked={removeTools}
+                onChange={(e) => setRemoveTools(e.target.checked)}
+                className="rounded border-border"
+              />
+              <div>
+                <p className="text-xs font-medium">
+                  Also remove template tools
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Remove the tools that were added by this template (e.g. Google
+                  Calendar, Gmail, Sheets).
+                </p>
+              </div>
+            </label>
+          )}
+        </div>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={removing}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={removing}
+            onClick={(e) => {
+              e.preventDefault();
+              onConfirm(removeTools);
+            }}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {removing ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+            ) : null}
+            Remove Template
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

@@ -56,6 +56,17 @@ The MCP server forces creation of a clean tool API. The in-platform AI agent bui
 
 ## Prerequisites (Build Before MCP Server)
 
+### 0. Channel Infrastructure (WhatsApp, SMS, Voice)
+**Build these BEFORE the MCP server.** They're platform features, not MCP features.
+
+- **WhatsApp:** Twilio WhatsApp Business API. Webhook receives inbound messages → hits LaunchPath chat API → sends response via Twilio. Simple webhook + send message pattern.
+- **SMS:** Twilio SMS. Same pattern as WhatsApp — webhook + send message. Nearly identical code.
+- **Voice:** Vapi or LiveKit integration. Voice platform handles STT/TTS/WebRTC. LaunchPath chat API is the brain — receives transcribed text, returns response text. LaunchPath does NOT build a voice stack.
+- **New channel types in DB:** `widget` | `api` | `whatsapp` | `sms` | `voice`
+- **New API endpoint:** `POST /api/channels/[agentId]/trigger` — initiates outbound conversations from form submissions or external events (e.g., form fill → WhatsApp message to the lead)
+
+This ensures the MCP server launches with ALL channel types available on day one. `deploy --channel whatsapp` just works.
+
 ### 1. API Key Authentication
 **Current state:** All API routes use Supabase session cookies.
 **Needed:** Personal API keys for programmatic access.
@@ -122,7 +133,7 @@ Returns comprehensive documentation on how to use every LaunchPath MCP tool, com
 
 Content includes:
 - What LaunchPath is and what it can do
-- Typical workflow: create agent → add knowledge → configure tools → deploy → manage clients
+- Typical workflow: create agent → add knowledge → configure tools → deploy (widget/WhatsApp/SMS/voice) → manage clients
 - All available tools with usage examples
 - Common patterns by use case (dental clinic, real estate, coaching, etc.)
 - Template recommendations
@@ -150,8 +161,9 @@ Content includes:
 | Tool | Maps To | Description |
 |------|---------|-------------|
 | `list_channels` | GET `/api/agents/[id]/channels` | List deployment channels |
-| `deploy_widget` | POST `/api/agents/[id]/channels` | Create a website widget deployment, return embed code |
+| `deploy_channel` | POST `/api/agents/[id]/channels` | Deploy to any channel type (widget, api, whatsapp, sms, voice). Returns embed code, phone number, or connection details. |
 | `update_channel` | PATCH `/api/agents/[id]/channels/[cid]` | Toggle enable/disable, change origins, rate limit |
+| `trigger_conversation` | POST `/api/channels/[agentId]/trigger` | Initiate outbound conversation (e.g., form fill → WhatsApp message to lead) |
 
 #### Clients & Campaigns
 | Tool | Maps To | Description |
@@ -179,7 +191,7 @@ Content includes:
 
 ---
 
-## Skills 2.0 — v1 Skills (3-4 skills)
+## Skills 2.0 — v1 Skills (26 skills — see docs/mcp-server-skills.md for full library)
 
 ### Plugin Structure
 ```
@@ -318,7 +330,7 @@ LaunchPath is an AI agent deployment platform. You have access to it via MCP too
 ## What You Can Do
 - Create AI agents from natural language descriptions
 - Train agents with website content and FAQs
-- Deploy agents as website chat widgets
+- Deploy agents to any channel (widget, API, WhatsApp, SMS, voice)
 - Manage clients and campaigns
 - Test agents via chat
 - Monitor conversations
@@ -464,12 +476,20 @@ Script outline:
 
 ## Build Order & Timeline
 
+### Phase 0: Channel Infrastructure (Before MCP — ~1 week)
+- [ ] WhatsApp channel: Twilio webhook receiver + send message handler
+- [ ] SMS channel: Twilio webhook receiver + send message handler (near-identical to WhatsApp)
+- [ ] Voice channel: Vapi/LiveKit integration — voice platform does STT/TTS, LaunchPath chat API is the brain
+- [ ] Add channel types to DB: `whatsapp` | `sms` | `voice` (alongside existing `widget` | `api`)
+- [ ] Add `POST /api/channels/[agentId]/trigger` — outbound conversation initiation from form fills / external events
+- [ ] Test end-to-end: create agent → deploy to WhatsApp → send message → get response
+
 ### Phase 1: Foundation (Days 1-3)
 - [ ] Add `user_api_keys` table (migration)
 - [ ] Add API key generation UI in Settings page
 - [ ] Add API key auth middleware (accept session OR Bearer token)
 - [ ] Add `GET /api/agents` list endpoint
-- [ ] Add embed code to channel creation/get responses
+- [ ] Add embed code / phone number / connection details to channel creation/get responses
 
 ### Phase 2: MCP Server (Days 4-8)
 - [ ] Set up `@launchpath/mcp-server` package (TypeScript, MCP SDK)
@@ -531,8 +551,9 @@ The LaunchPath API already has **60+ endpoints** covering all operations. The MC
 | `add_faq` | POST | `/api/agents/[id]/knowledge/faq` | Exists |
 | `delete_knowledge` | DELETE | `/api/agents/[id]/knowledge` | Exists |
 | `list_channels` | GET | `/api/agents/[id]/channels` | Exists |
-| `deploy_widget` | POST | `/api/agents/[id]/channels` | Exists (needs embed_code in response) |
+| `deploy_channel` | POST | `/api/agents/[id]/channels` | Exists (needs embed_code + phone number in response, all channel types) |
 | `update_channel` | PATCH | `/api/agents/[id]/channels/[cid]` | Exists |
+| `trigger_conversation` | POST | `/api/channels/[agentId]/trigger` | **NEW — needs route** |
 | `list_clients` | GET | `/api/clients` | Exists |
 | `create_client` | POST | `/api/clients` | Exists |
 | `list_campaigns` | GET | `/api/campaigns` | Exists |
@@ -540,7 +561,7 @@ The LaunchPath API already has **60+ endpoints** covering all operations. The MC
 | `chat_with_agent` | POST | `/api/agents/[id]/chat` | Exists (SSE — needs sync variant or polling) |
 | `list_conversations` | GET | `/api/agents/[id]/chat/conversations` | Exists |
 
-**Summary: 18 of 20 tools map to existing endpoints. Only 2 need new routes (list agents + guide content).**
+**Summary: 19 of 22 tools map to existing endpoints. 3 need new routes (list agents, guide content, trigger conversation).**
 
 ### SSE Endpoints Note
 `create_agent_from_prompt` and `chat_with_agent` use SSE streaming. For MCP:
@@ -553,7 +574,7 @@ The LaunchPath API already has **60+ endpoints** covering all operations. The MC
 ## Competitive Positioning
 
 ### What Claude Code Users Get from LaunchPath (That They Can't Build Themselves)
-1. **Multi-channel deployment** — widget embed, API channel, CORS management, rate limiting
+1. **Multi-channel deployment** — widget, API, WhatsApp, SMS, Voice — all from one command, CORS management, rate limiting
 2. **Client portal** — branded portal with conversation history, HITL takeover, analytics
 3. **Knowledge base infrastructure** — chunking, embedding, RAG retrieval, 25MB file processing
 4. **900+ tool integrations** — Composio marketplace (Google Calendar, Gmail, Slack, etc.)

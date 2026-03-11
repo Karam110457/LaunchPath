@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
             template_id: templateId ?? null,
             model: "claude-sonnet-4-5-20250929",
             status: "draft",
-            tool_guidelines: null,
+            tool_guidelines: template?.toolWorkflow ?? null,
             wizard_config: wizardConfig
               ? {
                   templateId: wizardConfig.templateId,

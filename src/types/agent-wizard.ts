@@ -84,7 +84,7 @@ export type LeadQualificationConfig = LeadCaptureConfig;
 
 export interface AgentWizardState {
   // Step 1: Agent Type
-  templateId: "appointment-booker" | "customer-support" | "lead-capture" | "lead-qualification" | null;
+  templateId: "appointment-booker" | "customer-support" | "lead-capture" | "lead-qualification" | "custom" | null;
 
   // Step 2: Your Business
   businessContextMode: "link_system" | "describe" | null;
@@ -206,7 +206,7 @@ export interface WizardGenerationPayload {
   businessDescription?: string;
   agentName: string;
   agentDescription: string;
-  behaviorConfig: AppointmentBookerConfig | CustomerSupportConfig | LeadCaptureConfig;
+  behaviorConfig: AppointmentBookerConfig | CustomerSupportConfig | LeadCaptureConfig | Record<string, unknown>;
   personality: {
     tone: string;
     greeting_message: string;

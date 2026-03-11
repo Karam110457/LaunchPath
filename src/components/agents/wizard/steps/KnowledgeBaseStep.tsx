@@ -48,6 +48,11 @@ const KB_GUIDANCE: Record<string, { heading: string; description: string }> = {
     description:
       "Give your agent product and service details so it can have informed conversations with potential leads.",
   },
+  custom: {
+    heading: "Build your knowledge base",
+    description:
+      "Add any content your agent should know — product info, policies, FAQs, or anything else it needs to do its job.",
+  },
 };
 
 interface KnowledgeBaseStepProps {

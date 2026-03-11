@@ -81,8 +81,17 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
   const { isLoading, currentLabel, agent, error, startGeneration } =
     useAgentGeneration();
 
-  const currentStep = WIZARD_STEPS[stepIndex];
-  const totalSteps = WIZARD_STEPS.length;
+  // Custom agents skip conversation-flow and integrations steps
+  const isCustom = state.templateId === "custom";
+  const activeSteps = isCustom
+    ? WIZARD_STEPS.filter(
+        (s) => s.id !== "conversation-flow" && s.id !== "integrations",
+      )
+    : WIZARD_STEPS;
+  // Clamp stepIndex when switching to custom after being on a later step
+  const clampedIndex = Math.min(stepIndex, activeSteps.length - 1);
+  const currentStep = activeSteps[clampedIndex];
+  const totalSteps = activeSteps.length;
 
   // Persist draft to localStorage on every change
   useEffect(() => {
@@ -204,7 +213,7 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
   // ---------------------------------------------------------------------------
 
   function handleNext() {
-    if (stepIndex < totalSteps - 1) {
+    if (clampedIndex < totalSteps - 1) {
       // Pre-fill personality + tools from template when leaving step 1
       if (currentStep.id === "choose-type" && state.templateId) {
         const template = getTemplateById(state.templateId);
@@ -218,16 +227,16 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
           }));
         }
       }
-      setStepIndex((s) => s + 1);
+      setStepIndex(clampedIndex + 1);
     }
   }
 
   function handleBack() {
-    if (stepIndex === 0) {
+    if (clampedIndex === 0) {
       clearDraft();
       onBack();
     } else {
-      setStepIndex((s) => s - 1);
+      setStepIndex(clampedIndex - 1);
     }
   }
 
@@ -245,11 +254,13 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
     if (!state.templateId) return;
 
     const behaviorConfig =
-      state.templateId === "appointment-booker"
-        ? state.appointmentBookerConfig
-        : state.templateId === "lead-capture" || state.templateId === "lead-qualification"
-          ? state.leadCaptureConfig
-          : state.customerSupportConfig;
+      state.templateId === "custom"
+        ? {}
+        : state.templateId === "appointment-booker"
+          ? state.appointmentBookerConfig
+          : state.templateId === "lead-capture" || state.templateId === "lead-qualification"
+            ? state.leadCaptureConfig
+            : state.customerSupportConfig;
 
     const scannedPages = state.discoveredPages
       .filter((p) => p.selected && p.status === "done" && p.content)
@@ -442,7 +453,7 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
-            Step {stepIndex + 1} of {totalSteps}
+            Step {clampedIndex + 1} of {totalSteps}
           </p>
           <p className="text-xs text-muted-foreground">{currentStep.label}</p>
         </div>
@@ -450,7 +461,7 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
           <div
             className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
             style={{
-              width: `${((stepIndex + 1) / totalSteps) * 100}%`,
+              width: `${((clampedIndex + 1) / totalSteps) * 100}%`,
             }}
           />
         </div>
@@ -459,7 +470,7 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
       {/* Step content with animation */}
       <div
         className="animate-in fade-in slide-in-from-right-4 duration-300"
-        key={stepIndex}
+        key={currentStep.id}
       >
         {renderStep()}
       </div>

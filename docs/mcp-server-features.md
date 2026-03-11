@@ -89,16 +89,17 @@ Reference document breaking down every proposed CLI/MCP feature: what it actuall
 **What works in one command (v1):**
 - `--channel widget` — creates widget channel, returns embed `<script>` tag. Done.
 - `--channel api` — creates API channel, returns token + curl example. Done.
+- `--channel whatsapp` — creates WhatsApp channel, registers webhook with Twilio, returns the WhatsApp number. Done. (Platform handles webhook + send message — it's simple infra.)
+- `--channel sms` — creates SMS channel, registers Twilio webhook, returns the SMS number. Done.
+- `--channel voice` — creates voice channel via Vapi/LiveKit integration, returns the phone number or web call link. Done.
 
 **What does NOT work in one command:**
-- `--channel whatsapp` — Meta requires business verification, phone number provisioning, and webhook registration. Cannot be automated with one CLI command.
 - `--channel slack` — Requires OAuth app creation and workspace installation. Could be semi-automated (open browser for OAuth, wait for callback) but not "one command."
-- `--channel sms` — Requires Twilio account, phone number purchase, webhook config.
 
-**Honest scope for v1:** Widget and API channels only. These genuinely work in one command. For future channels (WhatsApp, Slack), the CLI can guide multi-step setup but shouldn't pretend it's instant.
+**Honest scope for v1:** Widget, API, WhatsApp, SMS, and Voice channels all work in one command. WhatsApp/SMS/Voice infrastructure will be built into LaunchPath BEFORE the MCP server ships — they're just a webhook + send message. Voice uses Vapi/LiveKit as the STT/TTS layer, LaunchPath is the brain. Slack requires OAuth which can't be fully automated.
 
-**Effort:** 2-3 days (mostly formatting output nicely)
-**How real:** 100% for widget/API. Misleading for WhatsApp/Slack — don't promise what you can't deliver.
+**Effort:** 2-3 days (mostly formatting output nicely — all channel infra already exists)
+**How real:** 100% for widget/API/WhatsApp/SMS/Voice. Misleading for Slack — don't promise what you can't deliver.
 
 ---
 
@@ -316,7 +317,7 @@ Do not pass scenarios where a real customer would be confused or misled.
 
 ---
 
-## v1.5 Features (Ship 2-4 Weeks After Launch)
+## v1.5 Features (Ship 2-4 Weeks After v1)
 
 ### 11. `launchpath metrics` — Real-Time Agent Analytics
 
@@ -389,40 +390,27 @@ Do not pass scenarios where a real customer would be confused or misled.
 
 ---
 
-### 13. `launchpath voice` — Voice Agent Testing in Terminal
+### 13. `launchpath voice` — Voice Agent Testing
 
-**What it is:** Talk to your agent using your microphone. It responds with synthesized speech. A full voice conversation loop in the terminal.
+**What it is:** Test your agent via a real voice call. LaunchPath uses Vapi/LiveKit for STT/TTS, and the LaunchPath chat API as the brain. The MCP tool triggers a test voice call or returns a web call link.
 
 **How it works:**
-1. **Capture audio:** Record from mic using system command (`sox` on Linux/macOS, platform-specific on Windows)
-2. **Speech-to-text:** Send audio to OpenAI Whisper API (~$0.006/minute) or Deepgram
-3. **Agent response:** POST transcribed text to `/api/agents/[agentId]/chat`, get text response
-4. **Text-to-speech:** Send response to OpenAI TTS API or ElevenLabs, receive audio file
-5. **Play audio:** Play via system command (`afplay` on macOS, `aplay` on Linux, `powershell` on Windows)
+1. **Option A (phone call):** MCP tool calls `POST /api/agents/[agentId]/channels` with `channel_type: "voice"`. Platform provisions a Vapi/LiveKit voice agent linked to the LaunchPath chat API. Returns a phone number to call.
+2. **Option B (web call):** Returns a browser-based call link (Vapi web widget or LiveKit room URL). User clicks, talks to their agent immediately.
+3. **No local audio stack needed.** Vapi/LiveKit handle all STT/TTS/WebRTC. LaunchPath is just the brain receiving text, responding with text.
 
-**The OS compatibility problem:**
+**Why this is now simple:**
+- Voice infrastructure (Vapi/LiveKit integration) is built into LaunchPath BEFORE the MCP server ships
+- The MCP tool just creates/returns a voice channel — same pattern as widget/WhatsApp/SMS
+- No sox, no OS-specific audio commands, no mic permissions
+- Works on every OS because the voice call happens on the phone or in a browser, not in the terminal
 
-| Step | macOS | Linux | Windows |
-|------|-------|-------|---------|
-| Mic capture | `sox`/`rec` | `arecord`/`sox` | `powershell` or `sox` |
-| Audio playback | `afplay` | `aplay`/`paplay` | `powershell [Media.SoundPlayer]` |
-| Dependency install | `brew install sox` | `apt install sox alsa-utils` | Manual or `choco install sox` |
+**What the MCP tool actually does:**
+- `deploy --channel voice` creates a voice channel, returns phone number + web call link
+- `preview --voice` opens the web call link (or prints the phone number to call)
 
-**Why this is hard:**
-- Three different audio stacks across OSes
-- Missing dependencies on fresh machines (sox not installed by default anywhere)
-- Microphone permissions (macOS requires Terminal mic access approval)
-- Audio format differences (WAV sample rates, channels)
-- Latency: record → upload → STT → chat API → TTS → download → play = 3-8 seconds per turn minimum
-
-**Why it's still worth building:**
-- The demo video of talking to your AI agent from a terminal is worth more than the feature itself
-- macOS-first approach covers the majority of developer audience
-- Mark as "experimental" and document the dependency requirements
-- Ship with `--text-only` fallback that shows what would have been spoken
-
-**Effort:** 1-2 weeks
-**How real:** Works reliably on macOS with `sox` installed. Flaky on Linux (audio driver variations). Painful on Windows. Ship as experimental, macOS-first.
+**Effort:** 1-2 days (MCP tool is just a channel creation call — voice infra is a platform prereq)
+**How real:** 100%. Voice infra is a platform feature, not an MCP feature. The MCP tool just triggers it.
 
 ---
 
@@ -1166,7 +1154,7 @@ LaunchPath is an AI agent deployment platform. You have access to it via MCP too
 | 10 | `/test-agent` — autonomous QA | Skill | 0 days | 100% | **v1** | Claude IS the QA team |
 | 11 | `metrics` — analytics | MCP Tool | 1 week | Partial | **v1.5** | Needs backend |
 | 12 | `bench` — scoring framework | MCP Tool | 1-2 weeks | Partial | **v1.5** | Sells Pro tier |
-| 13 | `voice` — terminal voice | MCP Tool | 1-2 weeks | macOS only | **v1.5** | Demo video gold |
+| 13 | `voice` — voice testing | MCP Tool | 1-2 days | 100% | **v1** | Voice infra is platform prereq |
 | 14 | `heal` — self-improvement | MCP Tool | 3-4 days | 90% | **v1.5** | Agents get smarter |
 | 15 | `/deploy-agent` — full deploy flow | Skill | 0 days | 100% | **v1** | Flagship demo |
 | 16 | `/setup-client` — client onboarding | Skill | 0 days | 100% | **v1** | Agency workflow |
@@ -1221,6 +1209,14 @@ That's a complete agency operating system, run from a terminal.
 
 - Metrics dashboard with real analytics: 1 week
 - Bench scoring framework: 1-2 weeks
-- Voice testing (experimental): 1-2 weeks
 - Heal with auto-apply: 3-4 days
-- **Total: ~4-5 weeks additional**
+- **Total: ~2-3 weeks additional**
+
+### Build order note
+
+WhatsApp, SMS, and Voice channel infrastructure is built into LaunchPath BEFORE the MCP server. This means:
+- All 5 channel types (widget, API, WhatsApp, SMS, voice) are available from MCP v1 day one
+- `deploy --channel whatsapp/sms/voice` just works — same pattern as widget
+- WhatsApp/SMS = webhook + send message (Twilio). Simple infra, not complex.
+- Voice = Vapi/LiveKit handles STT/TTS, LaunchPath chat API is the brain
+- The MCP server doesn't need to build any channel infrastructure — it wraps what already exists
