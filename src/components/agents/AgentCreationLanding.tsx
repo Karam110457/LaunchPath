@@ -105,7 +105,7 @@ export function AgentCreationLanding() {
       {/* Hero text */}
       <div className="relative text-center mb-10 mt-8">
         <h1 className="text-4xl md:text-5xl font-serif tracking-tight text-foreground/80">
-          <span className="italic font-light text-foreground/50">Describe</span>{" "}
+          <span className="italic font-light bg-gradient-to-r from-[#FF8C00] to-[#9D50BB] bg-clip-text text-transparent">Describe</span>{" "}
           your agent
         </h1>
         <p className="mt-3 text-sm text-muted-foreground max-w-md mx-auto">
@@ -139,7 +139,7 @@ export function AgentCreationLanding() {
               className={cn(
                 "h-9 w-9 rounded-full flex items-center justify-center transition-all",
                 canGenerate
-                  ? "bg-foreground text-background hover:scale-105 shadow-md"
+                  ? "bg-gradient-to-r from-[#FF8C00] to-[#9D50BB] text-white hover:scale-105 shadow-md"
                   : "bg-muted text-muted-foreground cursor-not-allowed"
               )}
             >
