@@ -47,6 +47,9 @@ function loadDraft(): { stepIndex: number; state: AgentWizardState } | null {
       if (!Array.isArray(draft.state.selectedToolkits)) {
         draft.state.selectedToolkits = [];
       }
+      // Clean up removed fields from old drafts
+      delete (draft.state as Record<string, unknown>).businessContextMode;
+      delete (draft.state as Record<string, unknown>).linkedSystemId;
     }
     return draft;
   } catch {
@@ -175,13 +178,31 @@ export function AgentWizard({ onBack }: AgentWizardProps) {
           : null;
       }
 
-      case "lead-qualification":
+      case "lead-qualification": {
+        const cfgKey =
+          state.templateId === "appointment-booker"
+            ? "appointmentBookerConfig"
+            : "leadCaptureConfig";
+        const cfg = state[cfgKey];
+        if (
+          cfg.qualification_mode === "describe" &&
+          !cfg.icp_description.trim()
+        )
+          return "Describe your ideal customer to continue";
+        if (
+          cfg.qualification_mode === "questions" &&
+          state.qualifyingQuestions.filter((q) => q.trim()).length === 0
+        )
+          return "Add at least one qualifying question";
         return null;
+      }
 
       case "lead-fields":
         return null;
 
       case "scheduling":
+        if (!state.appointmentBookerConfig.availability.timezone)
+          return "Select a timezone to continue";
         if (state.appointmentBookerConfig.service_types.length === 0)
           return "Add at least one appointment type";
         return null;
@@ -190,9 +211,20 @@ export function AgentWizard({ onBack }: AgentWizardProps) {
         return null;
 
       case "escalation":
+        if (
+          state.customerSupportConfig.escalation_mode ===
+            "escalate_complex" &&
+          !state.customerSupportConfig.escalation_contact.trim()
+        )
+          return "Add an escalation email so your agent knows where to send issues";
         return null;
 
       case "lead-collection":
+        if (
+          state.leadCaptureConfig.notification_behavior === "email_team" &&
+          !state.leadCaptureConfig.notification_email.trim()
+        )
+          return "Add a notification email so your team gets lead alerts";
         return null;
 
       case "integrations":
@@ -212,6 +244,12 @@ export function AgentWizard({ onBack }: AgentWizardProps) {
 
   /** Non-blocking hint shown below navigation */
   function getStepHint(): string | null {
+    if (currentStep.id === "website") {
+      const hasWebsite = state.websiteUrl.trim().length > 0;
+      const hasFiles = state.files.length > 0;
+      if (!hasWebsite && !hasFiles)
+        return "No website or files? No worries — you can skip this step and add content later.";
+    }
     if (currentStep.id === "knowledge") {
       const hasKB =
         state.discoveredPages.some(
@@ -219,11 +257,8 @@ export function AgentWizard({ onBack }: AgentWizardProps) {
         ) ||
         state.faqs.length > 0 ||
         state.files.length > 0;
-      if (hasKB) return null;
-
-      if (state.templateId === "customer-support")
-        return "Your support agent needs a knowledge base to answer questions accurately. Consider adding content before continuing.";
-      return null;
+      if (!hasKB)
+        return "Adding knowledge helps your agent answer questions accurately. You can always add more later.";
     }
     return null;
   }
@@ -384,7 +419,6 @@ export function AgentWizard({ onBack }: AgentWizardProps) {
             businessDescription={state.businessDescription}
             onPagesChange={(pages) => updateState("discoveredPages", pages)}
             onFaqsChange={(faqs) => updateState("faqs", faqs)}
-            onFilesChange={(files) => updateState("files", files)}
           />
         );
 

@@ -83,27 +83,29 @@ export type LeadQualificationConfig = LeadCaptureConfig;
 // ---------------------------------------------------------------------------
 
 export interface AgentWizardState {
-  // Step 1: Agent Type
+  // Step: Choose Type
   templateId: "appointment-booker" | "customer-support" | "lead-capture" | "lead-qualification" | "custom" | null;
 
-  // Step 2: Agent Identity
+  // Step: Agent Name
   agentName: string;
   agentDescription: string;
+
+  // Step: Business Context
+  businessDescription: string;
+
+  // Step: Website & Files
+  websiteUrl: string;
+  discoveredPages: DiscoveredPage[];
+  files: WizardFile[];
+
+  // Step: Knowledge (FAQs)
+  faqs: WizardFaq[];
+
+  // Step: Agent Personality
   tone: string;
   greetingMessage: string;
 
-  // Step 3: Business Context
-  businessContextMode: "link_system" | "describe" | null;
-  linkedSystemId: string | null;
-  businessDescription: string;
-  websiteUrl: string;
-  discoveredPages: DiscoveredPage[];
-
-  // Step 4: Knowledge
-  faqs: WizardFaq[];
-  files: WizardFile[];
-
-  // Template-specific behavior (steps 5+)
+  // Template-specific behavior
   qualifyingQuestions: string[];
   appointmentBookerConfig: AppointmentBookerConfig;
   customerSupportConfig: CustomerSupportConfig;
@@ -131,9 +133,7 @@ export type WizardStepId =
   | "escalation"
   | "lead-collection"
   | "integrations"
-  | "review"
-  // Legacy — kept so old drafts don't crash
-  | "agent-identity";
+  | "review";
 
 export interface WizardStepDef {
   id: WizardStepId;
@@ -193,15 +193,6 @@ export function getWizardSteps(templateId: string | null): WizardStepDef[] {
   }
 }
 
-/** @deprecated Kept for backward compat — use getWizardSteps() instead. */
-export const WIZARD_STEPS: WizardStepDef[] = [
-  { id: "choose-type", label: "Agent Type" },
-  { id: "agent-identity", label: "Agent Identity" },
-  { id: "business-context", label: "Your Business" },
-  { id: "knowledge", label: "Knowledge" },
-  { id: "review", label: "Review" },
-];
-
 // ---------------------------------------------------------------------------
 // Initial state factory
 // ---------------------------------------------------------------------------
@@ -211,15 +202,13 @@ export function createInitialWizardState(): AgentWizardState {
     templateId: null,
     agentName: "",
     agentDescription: "",
-    tone: "",
-    greetingMessage: "",
-    businessContextMode: null,
-    linkedSystemId: null,
     businessDescription: "",
     websiteUrl: "",
     discoveredPages: [],
-    faqs: [],
     files: [],
+    faqs: [],
+    tone: "",
+    greetingMessage: "",
     qualifyingQuestions: [],
     appointmentBookerConfig: {
       lead_fields: { phone: true, company: false, custom_fields: [] },

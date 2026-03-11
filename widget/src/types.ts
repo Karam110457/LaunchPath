@@ -29,7 +29,11 @@ export interface Message {
   content: string;
   isStreaming?: boolean;
   timestamp: number;
+  /** True for messages injected by a human agent during takeover */
+  isHumanAgent?: boolean;
 }
+
+export type ConversationStatus = "active" | "paused" | "human_takeover" | "closed";
 
 export interface ConfigResponse {
   channelId: string;

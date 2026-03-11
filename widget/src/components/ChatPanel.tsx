@@ -2,7 +2,7 @@ import { h } from "preact";
 import { useState, useEffect, useRef, useCallback } from "preact/hooks";
 import { MessageBubble } from "./MessageBubble";
 import { TypingDots } from "./TypingDots";
-import type { WidgetConfig, Message } from "../types";
+import type { WidgetConfig, Message, ConversationStatus } from "../types";
 import { getContrastColor } from "../contrast";
 
 interface ChatPanelProps {
@@ -53,6 +53,59 @@ function saveHistory(channelId: string, messages: Message[]) {
   }
 }
 
+/* -------------------------------------------------------------------------- */
+/*  Status banner shown during HITL states                                     */
+/* -------------------------------------------------------------------------- */
+
+function StatusBanner({ status }: { status: ConversationStatus }) {
+  if (status === "human_takeover") {
+    return (
+      <div style={{
+        padding: "8px 16px",
+        backgroundColor: "rgba(59,130,246,0.08)",
+        borderBottom: "1px solid rgba(59,130,246,0.12)",
+        textAlign: "center",
+        fontSize: "12px",
+        color: "#3b82f6",
+        fontWeight: 500,
+      }}>
+        A team member is responding to this conversation
+      </div>
+    );
+  }
+  if (status === "paused") {
+    return (
+      <div style={{
+        padding: "8px 16px",
+        backgroundColor: "rgba(245,158,11,0.08)",
+        borderBottom: "1px solid rgba(245,158,11,0.12)",
+        textAlign: "center",
+        fontSize: "12px",
+        color: "#d97706",
+        fontWeight: 500,
+      }}>
+        This conversation is paused
+      </div>
+    );
+  }
+  if (status === "closed") {
+    return (
+      <div style={{
+        padding: "8px 16px",
+        backgroundColor: "rgba(113,113,122,0.08)",
+        borderBottom: "1px solid rgba(113,113,122,0.12)",
+        textAlign: "center",
+        fontSize: "12px",
+        color: "#71717a",
+        fontWeight: 500,
+      }}>
+        This conversation has been closed
+      </div>
+    );
+  }
+  return null;
+}
+
 export function ChatPanel({
   config,
   token,
@@ -71,9 +124,13 @@ export function ChatPanel({
   const [inputValue, setInputValue] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [convStatus, setConvStatus] = useState<ConversationStatus>("active");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const sessionId = useRef(getSessionId(channelId));
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const knownMessageCount = useRef(0);
+  const hasInteracted = useRef(false);
 
   const primaryColor = config.primaryColor || "#6366f1";
   const contrastColor = getContrastColor(primaryColor);
@@ -95,22 +152,99 @@ export function ChatPanel({
     inputRef.current?.focus();
   }, []);
 
+  // ---------------------------------------------------------------------------
+  // Background status polling
+  // Polls every 10s during active (to detect takeover/pause),
+  // every 3s during human_takeover (to get human messages quickly).
+  // Only starts after the user has sent at least one message.
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (!hasInteracted.current) return;
+    if (convStatus === "closed") return;
+
+    const interval = convStatus === "human_takeover" ? 3000 : 10000;
+
+    // Initialize known count on first poll start
+    const initPoll = async () => {
+      try {
+        const r = await fetch(
+          `${apiOrigin}/api/widget/${channelId}/status?sessionId=${sessionId.current}&since=0`
+        );
+        if (r.ok) {
+          const d = await r.json();
+          knownMessageCount.current = d.totalMessages ?? 0;
+          if (d.status && d.status !== convStatus) {
+            setConvStatus(d.status as ConversationStatus);
+          }
+        }
+      } catch {
+        // Ignore
+      }
+    };
+
+    if (knownMessageCount.current === 0) {
+      initPoll();
+    }
+
+    pollRef.current = setInterval(async () => {
+      try {
+        const r = await fetch(
+          `${apiOrigin}/api/widget/${channelId}/status?sessionId=${sessionId.current}&since=${knownMessageCount.current}`
+        );
+        if (!r.ok) return;
+        const d = await r.json();
+
+        // Status change detection
+        if (d.status && d.status !== convStatus) {
+          setConvStatus(d.status as ConversationStatus);
+        }
+
+        // New human_agent messages
+        if (d.newMessages && d.newMessages.length > 0) {
+          const humanMsgs = d.newMessages.filter(
+            (m: { role: string }) => m.role === "human_agent"
+          );
+          if (humanMsgs.length > 0) {
+            setMessages((prev) => [
+              ...prev,
+              ...humanMsgs.map((m: { content: string }) => ({
+                id: generateId(),
+                role: "assistant" as const,
+                content: m.content,
+                timestamp: Date.now(),
+                isHumanAgent: true,
+              })),
+            ]);
+          }
+          knownMessageCount.current = d.totalMessages;
+        }
+      } catch {
+        // Ignore polling errors
+      }
+    }, interval);
+
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [convStatus, apiOrigin, channelId]);
+
+  // ---------------------------------------------------------------------------
+  // Send message
+  // ---------------------------------------------------------------------------
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim() || isStreaming) return;
+      if (convStatus === "closed") return;
+
+      hasInteracted.current = true;
 
       const userMsg: Message = {
         id: generateId(),
         role: "user",
         content: text.trim(),
-        timestamp: Date.now(),
-      };
-
-      const assistantMsg: Message = {
-        id: generateId(),
-        role: "assistant",
-        content: "",
-        isStreaming: true,
         timestamp: Date.now(),
       };
 
@@ -135,6 +269,48 @@ export function ChatPanel({
           }
         );
 
+        // Handle HITL status responses (non-streaming JSON)
+        const contentType = response.headers.get("content-type") ?? "";
+        if (contentType.includes("application/json")) {
+          const data = await response.json();
+
+          if (data.status === "human_takeover") {
+            setConvStatus("human_takeover");
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: generateId(),
+                role: "assistant",
+                content: data.message || "A team member will respond shortly.",
+                timestamp: Date.now(),
+              },
+            ]);
+            setIsStreaming(false);
+            setIsTyping(false);
+            return;
+          }
+
+          if (data.error === "conversation_paused") {
+            setConvStatus("paused");
+            setIsStreaming(false);
+            setIsTyping(false);
+            return;
+          }
+
+          if (data.error === "conversation_closed") {
+            setConvStatus("closed");
+            setIsStreaming(false);
+            setIsTyping(false);
+            return;
+          }
+
+          // Other JSON error
+          if (!response.ok) {
+            throw new Error(data.message || "Chat request failed");
+          }
+        }
+
+        // Normal SSE streaming response
         if (!response.ok || !response.body) {
           throw new Error("Chat request failed");
         }
@@ -144,6 +320,14 @@ export function ChatPanel({
         let buffer = "";
         let accumulatedText = "";
         let addedAssistant = false;
+
+        const assistantMsg: Message = {
+          id: generateId(),
+          role: "assistant",
+          content: "",
+          isStreaming: true,
+          timestamp: Date.now(),
+        };
 
         while (true) {
           const { value, done } = await reader.read();
@@ -227,7 +411,7 @@ export function ChatPanel({
         setIsTyping(false);
       }
     },
-    [agentId, apiOrigin, token, isStreaming]
+    [agentId, apiOrigin, token, isStreaming, convStatus]
   );
 
   // Save history whenever messages change
@@ -266,6 +450,8 @@ export function ChatPanel({
     isSharp ? "lp-sharp" : "",
   ].filter(Boolean).join(" ");
 
+  const inputDisabled = isStreaming || convStatus === "closed" || convStatus === "paused";
+
   return (
     <div class={panelClass} style={{ width: `${panelW}px`, height: `${panelH}px`, fontSize: `${fontSize}px` }}>
       {/* Header — primary color banner */}
@@ -283,8 +469,16 @@ export function ChatPanel({
         <div class="lp-header-info">
           <div class="lp-header-name" style={{ color: contrastColor }}>{agentName}</div>
           <div class="lp-header-status" style={{ color: contrastMuted }}>
-            <span style={{ display: "inline-block", width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#22c55e", marginRight: "4px", verticalAlign: "middle" }} />
-            Online
+            <span style={{
+              display: "inline-block",
+              width: "6px",
+              height: "6px",
+              borderRadius: "50%",
+              backgroundColor: convStatus === "closed" ? "#71717a" : convStatus === "human_takeover" ? "#3b82f6" : "#22c55e",
+              marginRight: "4px",
+              verticalAlign: "middle",
+            }} />
+            {convStatus === "human_takeover" ? "Team member connected" : convStatus === "closed" ? "Closed" : "Online"}
           </div>
         </div>
         <button
@@ -299,6 +493,9 @@ export function ChatPanel({
           </svg>
         </button>
       </div>
+
+      {/* Status banner */}
+      <StatusBanner status={convStatus} />
 
       {/* Messages */}
       <div class="lp-messages">
@@ -343,15 +540,21 @@ export function ChatPanel({
           value={inputValue}
           onInput={handleInput}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
+          placeholder={
+            convStatus === "closed"
+              ? "This conversation has ended"
+              : convStatus === "paused"
+              ? "Conversation paused..."
+              : "Type a message..."
+          }
           rows={1}
-          disabled={isStreaming}
+          disabled={inputDisabled}
         />
         <button
           class="lp-send-btn"
           style={{ backgroundColor: primaryColor, color: contrastColor }}
           onClick={() => sendMessage(inputValue)}
-          disabled={!inputValue.trim() || isStreaming}
+          disabled={!inputValue.trim() || inputDisabled}
           aria-label="Send message"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

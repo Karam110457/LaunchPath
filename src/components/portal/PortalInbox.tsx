@@ -4,9 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { usePortal } from "@/contexts/PortalContext";
 import { useConversationRealtime } from "@/hooks/useConversationRealtime";
+import { useConversationListRealtime } from "@/hooks/useConversationListRealtime";
 import { ConversationControls } from "./ConversationControls";
 import { LiveTranscript } from "./LiveTranscript";
 import { Search, MessageSquare, ChevronLeft } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 /* -------------------------------------------------------------------------- */
@@ -47,13 +49,66 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 /* -------------------------------------------------------------------------- */
+/*  Skeleton components                                                        */
+/* -------------------------------------------------------------------------- */
+
+function ConversationItemSkeleton({ index }: { index: number }) {
+  return (
+    <div
+      className="px-4 py-3 space-y-2"
+      style={{ "--stagger": index } as React.CSSProperties}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Skeleton className="size-2 rounded-full" />
+          <Skeleton className="h-4 w-24 rounded-md" />
+          <Skeleton className="h-4 w-14 rounded" />
+        </div>
+        <Skeleton className="h-3 w-8 rounded" />
+      </div>
+      <Skeleton className="h-3 w-3/4 rounded ml-4" />
+      <div className="flex items-center gap-2 ml-4">
+        <Skeleton className="h-3 w-10 rounded" />
+        <Skeleton className="h-3 w-20 rounded" />
+      </div>
+    </div>
+  );
+}
+
+function DetailSkeleton() {
+  return (
+    <div className="flex flex-col h-full animate-in fade-in duration-200">
+      {/* Header skeleton */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0 bg-background/80 backdrop-blur-sm">
+        <Skeleton className="h-6 w-32 rounded-full" />
+        <div className="flex-1" />
+        <Skeleton className="h-4 w-16 rounded" />
+      </div>
+      {/* Messages skeleton */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div key={i} className={`flex ${i % 2 === 0 ? "justify-end" : "justify-start"}`}>
+            <Skeleton
+              className={cn(
+                "rounded-2xl",
+                i % 2 === 0 ? "h-10 w-48" : "h-14 w-64"
+              )}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
 /*  Inbox component                                                            */
 /* -------------------------------------------------------------------------- */
 
 export function PortalInbox({ campaigns }: PortalInboxProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { basePath } = usePortal();
+  const { basePath, clientId } = usePortal();
 
   const selectedId = searchParams.get("id") ?? null;
 
@@ -93,6 +148,12 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
   useEffect(() => {
     fetchConversations();
   }, [fetchConversations]);
+
+  // Realtime: re-fetch list when any conversation changes
+  useConversationListRealtime(
+    clientId ? `portal:${clientId}` : "",
+    fetchConversations
+  );
 
   useEffect(() => {
     setOffset(0);
@@ -159,22 +220,25 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
         {/* Conversation list */}
         <div className="flex-1 overflow-y-auto min-h-0">
           {isLoading ? (
-            <div className="p-8 text-center text-sm text-muted-foreground">
-              Loading...
+            <div className="divide-y divide-border">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <ConversationItemSkeleton key={i} index={i} />
+              ))}
             </div>
           ) : conversations.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">
+            <div className="p-8 text-center text-muted-foreground animate-in fade-in duration-300">
               <MessageSquare className="size-8 mx-auto mb-2 opacity-20" />
               <p className="text-sm">No conversations found.</p>
             </div>
           ) : (
-            <div className="divide-y divide-border">
-              {conversations.map((conv) => (
+            <div className="divide-y divide-border stagger-enter">
+              {conversations.map((conv, i) => (
                 <button
                   key={conv.id}
                   onClick={() => selectConversation(conv.id)}
+                  style={{ "--stagger": i } as React.CSSProperties}
                   className={cn(
-                    "w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors",
+                    "w-full text-left px-4 py-3 hover:bg-muted/50 transition-all duration-150",
                     selectedId === conv.id && "bg-muted/30"
                   )}
                 >
@@ -254,11 +318,12 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
       >
         {selectedId ? (
           <InboxDetail
+            key={selectedId}
             conversationId={selectedId}
             onBack={deselectConversation}
           />
         ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground">
+          <div className="flex-1 flex items-center justify-center text-muted-foreground animate-in fade-in duration-200">
             <div className="text-center">
               <MessageSquare className="size-10 mx-auto mb-3 opacity-15" />
               <p className="text-sm">Select a conversation to view</p>
@@ -285,15 +350,11 @@ function InboxDetail({
     useConversationRealtime(conversationId);
 
   if (isLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-        Loading...
-      </div>
-    );
+    return <DetailSkeleton />;
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full animate-in fade-in duration-200">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0 bg-background/80 backdrop-blur-sm">
         <button

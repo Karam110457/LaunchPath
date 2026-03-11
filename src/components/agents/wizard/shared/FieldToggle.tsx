@@ -20,7 +20,7 @@ export function FieldToggle({
       disabled={disabled}
       className={`
         px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all
-        ${disabled ? "cursor-default" : "cursor-pointer"}
+        ${disabled ? "cursor-default opacity-50" : "cursor-pointer"}
         ${
           enabled
             ? "bg-gradient-to-r from-[#FF8C00]/10 to-[#9D50BB]/10 border-[#FF8C00]/30 text-[#FF8C00] dark:text-[#FFa333]"

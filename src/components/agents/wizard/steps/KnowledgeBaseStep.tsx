@@ -11,7 +11,6 @@ import {
   Sparkles,
   CheckCircle2,
   AlertCircle,
-  Upload,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -31,7 +30,6 @@ interface KnowledgeBaseStepProps {
   businessDescription: string;
   onPagesChange: (pages: DiscoveredPage[]) => void;
   onFaqsChange: (faqs: WizardFaq[]) => void;
-  onFilesChange: (files: WizardFile[]) => void;
 }
 
 export function KnowledgeBaseStep({
@@ -41,7 +39,6 @@ export function KnowledgeBaseStep({
   businessDescription,
   onPagesChange,
   onFaqsChange,
-  onFilesChange,
 }: KnowledgeBaseStepProps) {
   const selectedPages = discoveredPages.filter((p) => p.selected);
   const scannedPages = selectedPages.filter((p) => p.status === "done");
@@ -72,8 +69,27 @@ export function KnowledgeBaseStep({
         hasContent={hasContent}
       />
 
-      {/* Files section */}
-      <FilesSection files={files} onFilesChange={onFilesChange} />
+      {/* Files summary (uploaded in previous step) */}
+      {files.length > 0 && (
+        <WizardCard>
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+              Files
+            </span>
+            <span className="text-xs text-neutral-400 dark:text-neutral-500 tabular-nums">
+              {files.length} uploaded
+            </span>
+          </div>
+          <div className="mt-2 space-y-1">
+            {files.map((f, i) => (
+              <p key={i} className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                {f.name}
+              </p>
+            ))}
+          </div>
+        </WizardCard>
+      )}
     </div>
   );
 }
@@ -478,155 +494,6 @@ function FaqsSection({
                     {faq.source === "generated" ? "AI generated" : "Manual"}
                   </span>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </WizardCard>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Files Section
-// ---------------------------------------------------------------------------
-
-function FilesSection({
-  files,
-  onFilesChange,
-}: {
-  files: WizardFile[];
-  onFilesChange: (files: WizardFile[]) => void;
-}) {
-  const [dragActive, setDragActive] = useState(false);
-
-  const handleFiles = useCallback(
-    async (fileList: FileList) => {
-      const newFiles: WizardFile[] = [];
-
-      for (let i = 0; i < fileList.length; i++) {
-        const file = fileList[i];
-        const ext = file.name.split(".").pop()?.toLowerCase();
-
-        if (!["pdf", "txt", "md"].includes(ext || "")) continue;
-
-        let extractedText: string | undefined;
-        if (ext === "txt" || ext === "md") {
-          extractedText = await file.text();
-        }
-
-        newFiles.push({
-          file,
-          name: file.name,
-          size: file.size,
-          extractedText,
-        });
-      }
-
-      if (newFiles.length > 0) {
-        onFilesChange([...files, ...newFiles]);
-      }
-    },
-    [files, onFilesChange],
-  );
-
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault();
-    setDragActive(false);
-    if (e.dataTransfer.files.length > 0) {
-      handleFiles(e.dataTransfer.files);
-    }
-  }
-
-  function handleRemoveFile(index: number) {
-    onFilesChange(files.filter((_, i) => i !== index));
-  }
-
-  function formatFileSize(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  }
-
-  return (
-    <WizardCard>
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
-          <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-            Files
-          </span>
-          {files.length > 0 && (
-            <span className="text-xs text-neutral-400 dark:text-neutral-500 tabular-nums">
-              {files.length} uploaded
-            </span>
-          )}
-        </div>
-
-        {/* Drop zone */}
-        <label
-          className={`
-            flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-5 cursor-pointer transition-colors
-            ${
-              dragActive
-                ? "border-[#FF8C00] bg-[#FF8C00]/5"
-                : "border-black/10 dark:border-[#2A2A2A] hover:border-[#FF8C00]/40 hover:bg-[#FF8C00]/5"
-            }
-          `}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragActive(true);
-          }}
-          onDragLeave={() => setDragActive(false)}
-          onDrop={handleDrop}
-        >
-          <Upload className="w-5 h-5 text-neutral-400 mb-1.5" />
-          <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
-            Drop files here or click to browse
-          </p>
-          <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">
-            PDF, TXT, and MD files
-          </p>
-          <input
-            type="file"
-            className="hidden"
-            accept=".pdf,.txt,.md"
-            multiple
-            onChange={(e) => {
-              if (e.target.files) handleFiles(e.target.files);
-            }}
-          />
-        </label>
-
-        {/* File list */}
-        {files.length > 0 && (
-          <div className="space-y-2">
-            {files.map((f, i) => (
-              <div
-                key={`${f.name}-${i}`}
-                className="flex items-center justify-between rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-3 py-2"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <FileText className="w-4 h-4 text-neutral-400 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate text-neutral-800 dark:text-neutral-200">
-                      {f.name}
-                    </p>
-                    <p className="text-xs text-neutral-400 dark:text-neutral-500">
-                      {formatFileSize(f.size)}
-                      {f.extractedText
-                        ? " — text extracted"
-                        : " — will be processed after creation"}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveFile(i)}
-                  className="shrink-0 p-1.5 rounded-full text-neutral-400 hover:text-destructive hover:bg-destructive/10 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
               </div>
             ))}
           </div>

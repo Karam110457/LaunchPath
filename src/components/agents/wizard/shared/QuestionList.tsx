@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { GripVertical, Pencil, Check, X, Plus } from "lucide-react";
+import { Pencil, Check, X, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -41,9 +41,6 @@ export function QuestionList({ questions, onChange }: QuestionListProps) {
           key={i}
           className="flex items-start gap-2 rounded-2xl bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 border border-black/5 dark:border-[#2A2A2A] px-3 py-2.5 group"
         >
-          <div className="shrink-0 mt-0.5 text-neutral-400 dark:text-neutral-500">
-            <GripVertical className="w-4 h-4" />
-          </div>
           <span className="shrink-0 text-xs font-mono text-neutral-400 dark:text-neutral-500 mt-0.5 w-5">
             {i + 1}.
           </span>

@@ -44,7 +44,7 @@ export function BusinessContextStep({
             <span
               className={`text-xs tabular-nums ${businessDescription.trim().length > 10 ? "text-neutral-400" : "text-amber-500"}`}
             >
-              {businessDescription.trim().length}/10 min
+              {businessDescription.trim().length} chars{businessDescription.trim().length <= 10 ? " (10 min)" : ""}
             </span>
           </div>
         </div>

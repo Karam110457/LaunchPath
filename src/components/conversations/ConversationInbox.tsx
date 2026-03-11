@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useSearchParams, useRouter, useParams } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useConversationRealtime } from "@/hooks/useConversationRealtime";
+import { useConversationListRealtime } from "@/hooks/useConversationListRealtime";
 import { Search, MessageSquare, ChevronLeft } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { ConversationTranscript } from "./ConversationTranscript";
 
 /* -------------------------------------------------------------------------- */
 /*  Types                                                                      */
@@ -19,14 +21,6 @@ interface Conversation {
   campaign_name: string | null;
   created_at: string;
   updated_at: string;
-}
-
-interface ConversationDetail {
-  id: string;
-  session_id: string;
-  messages: Array<{ role: string; content: string }>;
-  metadata: Record<string, unknown> | null;
-  created_at: string;
 }
 
 interface ConversationInboxProps {
@@ -51,6 +45,57 @@ const STATUS_LABEL: Record<string, string> = {
   human_takeover: "Takeover",
   closed: "Closed",
 };
+
+/* -------------------------------------------------------------------------- */
+/*  Skeleton components                                                        */
+/* -------------------------------------------------------------------------- */
+
+function ConversationItemSkeleton({ index }: { index: number }) {
+  return (
+    <div
+      className="px-4 py-3 space-y-2"
+      style={{ "--stagger": index } as React.CSSProperties}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Skeleton className="size-2 rounded-full" />
+          <Skeleton className="h-4 w-24 rounded-md" />
+          <Skeleton className="h-4 w-14 rounded" />
+        </div>
+        <Skeleton className="h-3 w-8 rounded" />
+      </div>
+      <Skeleton className="h-3 w-3/4 rounded ml-4" />
+      <div className="flex items-center gap-2 ml-4">
+        <Skeleton className="h-3 w-10 rounded" />
+        <Skeleton className="h-3 w-20 rounded" />
+      </div>
+    </div>
+  );
+}
+
+function DetailSkeleton() {
+  return (
+    <div className="flex flex-col h-full animate-in fade-in duration-200">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0 bg-background/80 backdrop-blur-sm">
+        <Skeleton className="h-5 w-28 rounded-md" />
+        <div className="flex-1" />
+        <Skeleton className="h-4 w-16 rounded" />
+      </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div key={i} className={`flex ${i % 2 === 0 ? "justify-end" : "justify-start"}`}>
+            <Skeleton
+              className={cn(
+                "rounded-2xl",
+                i % 2 === 0 ? "h-10 w-48" : "h-14 w-64"
+              )}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /* -------------------------------------------------------------------------- */
 /*  Inbox component                                                            */
@@ -87,6 +132,12 @@ export function ConversationInbox({ campaigns, clientId }: ConversationInboxProp
   useEffect(() => {
     fetchConversations();
   }, [fetchConversations]);
+
+  // Realtime: re-fetch list when any conversation changes
+  useConversationListRealtime(
+    clientId ? `agency:${clientId}` : "",
+    fetchConversations
+  );
 
   // Client-side filtering
   let filtered = conversations;
@@ -152,22 +203,25 @@ export function ConversationInbox({ campaigns, clientId }: ConversationInboxProp
         {/* Conversation list */}
         <div className="flex-1 overflow-y-auto min-h-0">
           {isLoading ? (
-            <div className="p-8 text-center text-sm text-muted-foreground">
-              Loading...
+            <div className="divide-y divide-border">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <ConversationItemSkeleton key={i} index={i} />
+              ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">
+            <div className="p-8 text-center text-muted-foreground animate-in fade-in duration-300">
               <MessageSquare className="size-8 mx-auto mb-2 opacity-20" />
               <p className="text-sm">No conversations found.</p>
             </div>
           ) : (
-            <div className="divide-y divide-border">
-              {filtered.map((conv) => (
+            <div className="divide-y divide-border stagger-enter">
+              {filtered.map((conv, i) => (
                 <button
                   key={conv.id}
                   onClick={() => selectConversation(conv.id)}
+                  style={{ "--stagger": i } as React.CSSProperties}
                   className={cn(
-                    "w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors",
+                    "w-full text-left px-4 py-3 hover:bg-muted/50 transition-all duration-150",
                     selectedId === conv.id && "bg-muted/30"
                   )}
                 >
@@ -222,12 +276,13 @@ export function ConversationInbox({ campaigns, clientId }: ConversationInboxProp
       >
         {selectedId ? (
           <InboxDetail
+            key={selectedId}
             conversationId={selectedId}
             clientId={clientId}
             onBack={deselectConversation}
           />
         ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground">
+          <div className="flex-1 flex items-center justify-center text-muted-foreground animate-in fade-in duration-200">
             <div className="text-center">
               <MessageSquare className="size-10 mx-auto mb-3 opacity-15" />
               <p className="text-sm">Select a conversation to view</p>
@@ -240,7 +295,7 @@ export function ConversationInbox({ campaigns, clientId }: ConversationInboxProp
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Detail panel                                                               */
+/*  Detail panel — now uses useConversationRealtime for live updates           */
 /* -------------------------------------------------------------------------- */
 
 function InboxDetail({
@@ -252,37 +307,15 @@ function InboxDetail({
   clientId: string;
   onBack: () => void;
 }) {
-  const [detail, setDetail] = useState<ConversationDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    setIsLoading(true);
-    fetch(`/api/clients/${clientId}/conversations/${conversationId}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.conversation) setDetail(data.conversation);
-      })
-      .finally(() => setIsLoading(false));
-  }, [conversationId, clientId]);
+  const { messages, status, isLoading, refresh } =
+    useConversationRealtime(conversationId);
 
   if (isLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-        Loading...
-      </div>
-    );
-  }
-
-  if (!detail) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-        Conversation not found
-      </div>
-    );
+    return <DetailSkeleton />;
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full animate-in fade-in duration-200">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0 bg-background/80 backdrop-blur-sm">
         <button
           onClick={onBack}
@@ -291,19 +324,52 @@ function InboxDetail({
           <ChevronLeft className="size-4" />
         </button>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium">Session {detail.session_id.slice(0, 12)}</p>
+          <p className="text-sm font-medium">
+            Session {conversationId.slice(0, 12)}
+          </p>
           <p className="text-xs text-muted-foreground">
-            {detail.messages.length} message{detail.messages.length !== 1 ? "s" : ""} &middot; Started {new Date(detail.created_at).toLocaleDateString()}
+            {messages.length} message{messages.length !== 1 ? "s" : ""} &middot;{" "}
+            <span className="inline-flex items-center gap-1">
+              <span
+                className={cn(
+                  "size-1.5 rounded-full inline-block",
+                  STATUS_DOT[status] ?? STATUS_DOT.active
+                )}
+              />
+              {STATUS_LABEL[status] ?? status}
+            </span>
           </p>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        <ConversationTranscript
-          messages={detail.messages}
-          metadata={detail.metadata}
-          createdAt={detail.created_at}
-        />
+        <div className="space-y-3">
+          {messages
+            .filter((m) => ["user", "assistant", "human_agent"].includes(m.role))
+            .map((msg, i) => (
+              <div
+                key={i}
+                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${
+                    msg.role === "user"
+                      ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-sm"
+                      : msg.role === "human_agent"
+                      ? "bg-blue-500/10 text-foreground border border-blue-500/20"
+                      : "bg-muted text-foreground"
+                  }`}
+                >
+                  {msg.role === "human_agent" && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-blue-500/20 text-blue-600 mb-1">
+                      Team
+                    </span>
+                  )}
+                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                </div>
+              </div>
+            ))}
+        </div>
       </div>
     </div>
   );
