@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Plug, Info, Loader2 } from "lucide-react";
-import { Label } from "@/components/ui/label";
+import { WizardStepHeader } from "../shared/WizardStepHeader";
+import { WizardCard } from "../shared/WizardCard";
 import type { SuggestedTool } from "@/lib/agents/templates";
 
 interface ToolkitLogo {
@@ -25,7 +26,6 @@ export function IntegrationsStep({
   const [logos, setLogos] = useState<Record<string, string | null>>({});
   const [loadingLogos, setLoadingLogos] = useState(false);
 
-  // Fetch logos from Composio API on mount
   useEffect(() => {
     if (suggestedTools.length === 0) return;
 
@@ -42,9 +42,7 @@ export function IntegrationsStep({
         }
         setLogos(map);
       })
-      .catch(() => {
-        // Non-critical — will show fallback icons
-      })
+      .catch(() => {})
       .finally(() => {
         if (!cancelled) setLoadingLogos(false);
       });
@@ -66,26 +64,23 @@ export function IntegrationsStep({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold tracking-tight">
-          Integrations
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          {hasTools
+      <WizardStepHeader
+        title="Connect integrations"
+        description={
+          hasTools
             ? "Your agent works best with these integrations. Select the ones you want to use — you can connect them after creation."
-            : "This agent type doesn't require any external integrations. It uses your knowledge base to answer questions."}
-        </p>
-      </div>
+            : "This agent type doesn't require any external integrations."
+        }
+      />
 
       {hasTools ? (
         <div className="space-y-3">
-          <Label>Suggested integrations</Label>
           {loadingLogos ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {suggestedTools.map((tool) => {
                 const isSelected = selectedToolkits.includes(tool.toolkit);
                 const logoUrl = logos[tool.toolkit];
@@ -96,11 +91,11 @@ export function IntegrationsStep({
                     type="button"
                     onClick={() => toggleToolkit(tool.toolkit)}
                     className={`
-                      w-full flex items-start gap-3 rounded-lg border p-4 text-left transition-all
+                      w-full flex items-start gap-3 rounded-[20px] border p-4 text-left transition-all duration-200
                       ${
                         isSelected
-                          ? "border-primary bg-primary/5 shadow-sm shadow-primary/10"
-                          : "border-border hover:border-primary/30 hover:bg-primary/5"
+                          ? "border-[#FF8C00]/40 bg-gradient-to-r from-[#FF8C00]/5 to-[#9D50BB]/5 shadow-sm"
+                          : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:bg-white dark:hover:bg-[#252525] hover:shadow-sm"
                       }
                     `}
                   >
@@ -110,14 +105,14 @@ export function IntegrationsStep({
                         mt-0.5 w-4.5 h-4.5 shrink-0 rounded border-2 flex items-center justify-center transition-all
                         ${
                           isSelected
-                            ? "bg-primary border-primary"
-                            : "border-muted-foreground/40"
+                            ? "bg-gradient-to-r from-[#FF8C00] to-[#9D50BB] border-transparent"
+                            : "border-neutral-300 dark:border-neutral-600"
                         }
                       `}
                     >
                       {isSelected && (
                         <svg
-                          className="w-3 h-3 text-primary-foreground"
+                          className="w-3 h-3 text-white"
                           viewBox="0 0 12 12"
                           fill="none"
                           stroke="currentColor"
@@ -133,11 +128,11 @@ export function IntegrationsStep({
                     {/* Icon / Logo */}
                     <div
                       className={`
-                        shrink-0 w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden
+                        shrink-0 w-10 h-10 rounded-[14px] flex items-center justify-center overflow-hidden border
                         ${
                           isSelected
-                            ? "bg-primary/10"
-                            : "bg-muted"
+                            ? "bg-white dark:bg-[#252525] border-[#FF8C00]/20"
+                            : "bg-white dark:bg-[#252525] border-black/5 dark:border-[#333333]"
                         }
                       `}
                     >
@@ -151,32 +146,30 @@ export function IntegrationsStep({
                             const parent = (e.target as HTMLImageElement).parentElement;
                             if (parent) {
                               parent.textContent = tool.toolkitName.charAt(0);
-                              parent.classList.add("text-lg", "font-semibold", "text-muted-foreground");
+                              parent.classList.add("text-lg", "font-semibold", "text-neutral-400");
                             }
                           }}
                         />
                       ) : (
                         <Plug
-                          className={`w-5 h-5 ${isSelected ? "text-primary" : "text-muted-foreground"}`}
+                          className={`w-5 h-5 ${isSelected ? "text-[#FF8C00]" : "text-neutral-400"}`}
                         />
                       )}
                     </div>
 
                     {/* Content */}
                     <div className="min-w-0 flex-1">
-                      <p
-                        className={`text-sm font-medium ${isSelected ? "text-foreground" : ""}`}
-                      >
+                      <p className={`text-sm font-medium ${isSelected ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-700 dark:text-neutral-300"}`}>
                         {tool.toolkitName}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
                         {tool.description}
                       </p>
                       <div className="flex flex-wrap gap-1.5 mt-2">
                         {tool.actions.map((action) => (
                           <span
                             key={action}
-                            className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground"
+                            className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f8f9fa] dark:bg-[#252525] border border-black/5 dark:border-[#333333] text-neutral-500 dark:text-neutral-400"
                           >
                             {formatActionName(action)}
                           </span>
@@ -190,25 +183,25 @@ export function IntegrationsStep({
           )}
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed p-6 text-center space-y-2">
-          <div className="w-10 h-10 mx-auto rounded-full bg-muted flex items-center justify-center">
-            <Plug className="w-5 h-5 text-muted-foreground" />
+        <WizardCard className="text-center py-6 space-y-2">
+          <div className="w-10 h-10 mx-auto rounded-full bg-white dark:bg-[#252525] border border-black/5 dark:border-[#333333] flex items-center justify-center">
+            <Plug className="w-5 h-5 text-neutral-400" />
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
             No integrations needed for this agent type.
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-neutral-400 dark:text-neutral-500">
             You can always add tools later from the agent canvas.
           </p>
-        </div>
+        </WizardCard>
       )}
 
       {/* Info note */}
-      <div className="bg-muted/30 border rounded-lg p-3 flex items-start gap-2">
-        <Info className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
-        <p className="text-[11px] text-muted-foreground leading-relaxed">
+      <div className="bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 border border-black/5 dark:border-[#2A2A2A] rounded-2xl p-3 flex items-start gap-2">
+        <Info className="w-3.5 h-3.5 text-neutral-400 mt-0.5 shrink-0" />
+        <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
           {hasTools
-            ? "You'll connect these integrations after your agent is created. Each integration requires a one-time authorization with your Google account."
+            ? "You'll connect these integrations after your agent is created. Each integration requires a one-time authorization."
             : "You can add integrations like Google Calendar, Gmail, or Google Sheets later from the agent's Tools tab."}
         </p>
       </div>
@@ -216,10 +209,8 @@ export function IntegrationsStep({
   );
 }
 
-/** Turn "GOOGLECALENDAR_FIND_FREE_SLOTS" into "Find Free Slots" */
 function formatActionName(action: string): string {
   const parts = action.split("_");
-  // Skip the toolkit prefix (first part, e.g. "GOOGLECALENDAR")
   const rest = parts.slice(1);
   return rest
     .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())

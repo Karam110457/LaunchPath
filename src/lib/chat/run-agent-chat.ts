@@ -11,8 +11,9 @@
  */
 
 import { streamText, stepCountIs } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
 import { logger } from "@/lib/security/logger";
+import { getModel } from "@/lib/ai/model-provider";
+import { getModelTier, getModelCredits } from "@/lib/ai/model-tiers";
 import {
   retrieveContextWithMetadata,
   loadAllChunks,
@@ -59,6 +60,9 @@ export interface RunAgentChatParams {
    */
   composioUserId?: string;
 
+  /** Client ID for per-client usage tracking (portal / channel conversations). */
+  clientId?: string;
+
   /** Extra headers to add to the SSE response (e.g. CORS headers). */
   extraHeaders?: Record<string, string>;
 
@@ -89,6 +93,7 @@ export async function runAgentChat(
     conversationHistory,
     supabase,
     composioUserId,
+    clientId,
     extraHeaders,
     onConversationSave,
   } = params;
@@ -108,6 +113,45 @@ export async function runAgentChat(
       status: 404,
       headers: { "Content-Type": "application/json", ...extraHeaders },
     });
+  }
+
+  // -------------------------------------------------------------------------
+  // Credit pre-flight check
+  // -------------------------------------------------------------------------
+
+  const creditsNeeded = getModelCredits(agent.model);
+
+  // Ensure user_credits row exists (upsert on first use)
+  await supabase
+    .from("user_credits")
+    .upsert(
+      { user_id: agent.user_id, monthly_included: 500, monthly_used: 0, topup_balance: 0 },
+      { onConflict: "user_id", ignoreDuplicates: true }
+    );
+
+  const { data: credits } = await supabase
+    .from("user_credits")
+    .select("monthly_included, monthly_used, topup_balance")
+    .eq("user_id", agent.user_id)
+    .single();
+
+  if (credits) {
+    const monthlyRemaining = credits.monthly_included - credits.monthly_used;
+    const totalAvailable = Math.max(0, monthlyRemaining) + credits.topup_balance;
+
+    if (totalAvailable < creditsNeeded) {
+      return new Response(
+        JSON.stringify({
+          error: "Insufficient credits",
+          credits_available: totalAvailable,
+          credits_needed: creditsNeeded,
+        }),
+        {
+          status: 402,
+          headers: { "Content-Type": "application/json", ...extraHeaders },
+        }
+      );
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -321,16 +365,19 @@ export async function runAgentChat(
 
     try {
       const streamOptions: Parameters<typeof streamText>[0] = {
-        model: anthropic(agent.model),
+        model: getModel(agent.model),
         system: systemPrompt,
         messages: aiMessages,
         maxOutputTokens: 2048,
-        providerOptions: {
-          anthropic: {
-            thinking: { type: "disabled" },
+        // Only send Anthropic-specific options for direct Anthropic models
+        ...(!agent.model.includes("/") && {
+          providerOptions: {
+            anthropic: {
+              thinking: { type: "disabled" },
+            },
           },
-        },
-        async onFinish({ response }) {
+        }),
+        async onFinish({ response, usage }) {
           const assistantText = response.messages
             .filter((m) => m.role === "assistant")
             .map((m) => {
@@ -362,6 +409,73 @@ export async function runAgentChat(
             assistantContent: fullContent,
             userMessage,
           });
+
+          // -----------------------------------------------------------------
+          // Usage logging & credit deduction
+          // -----------------------------------------------------------------
+          const tier = getModelTier(agent.model);
+
+          try {
+            // Log usage
+            await supabase.from("usage_logs").insert({
+              user_id: agent.user_id,
+              agent_id: agentId,
+              client_id: clientId ?? null,
+              conversation_id: finalConversationId ?? null,
+              model: agent.model,
+              model_tier: tier,
+              credits_consumed: creditsNeeded,
+              input_tokens: usage?.inputTokens ?? null,
+              output_tokens: usage?.outputTokens ?? null,
+            });
+
+            // Deduct credits: monthly first, then topup
+            const { data: currentCredits } = await supabase
+              .from("user_credits")
+              .select("monthly_included, monthly_used, topup_balance")
+              .eq("user_id", agent.user_id)
+              .single();
+
+            if (currentCredits) {
+              const monthlyRemaining =
+                currentCredits.monthly_included - currentCredits.monthly_used;
+              if (monthlyRemaining >= creditsNeeded) {
+                // Deduct from monthly
+                await supabase
+                  .from("user_credits")
+                  .update({
+                    monthly_used: currentCredits.monthly_used + creditsNeeded,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("user_id", agent.user_id);
+              } else {
+                // Use remaining monthly + topup for the rest
+                const fromMonthly = Math.max(0, monthlyRemaining);
+                const fromTopup = creditsNeeded - fromMonthly;
+                await supabase
+                  .from("user_credits")
+                  .update({
+                    monthly_used:
+                      currentCredits.monthly_used + fromMonthly,
+                    topup_balance: Math.max(
+                      0,
+                      currentCredits.topup_balance - fromTopup
+                    ),
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("user_id", agent.user_id);
+              }
+            }
+          } catch (usageErr) {
+            // Usage logging is non-blocking — don't fail the chat
+            logger.error("Failed to log usage or deduct credits", {
+              agentId,
+              error:
+                usageErr instanceof Error
+                  ? usageErr.message
+                  : "Unknown error",
+            });
+          }
 
           emit({
             type: "done",

@@ -26,7 +26,7 @@ export async function POST() {
       personality: {},
       enabled_tools: [],
       template_id: null,
-      model: "claude-sonnet-4-5-20250929",
+      model: "openai/gpt-4o-mini",
       status: "draft",
       wizard_config: null,
     })
@@ -54,7 +54,7 @@ export async function POST() {
       description: null,
       system_prompt: DEFAULT_SYSTEM_PROMPT,
       personality: {},
-      model: "claude-sonnet-4-5-20250929",
+      model: "openai/gpt-4o-mini",
       status: "draft",
       change_title: "Initial version",
       change_description: null,

@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 import {
-  WIZARD_STEPS,
+  getWizardSteps,
   createInitialWizardState,
   type AgentWizardState,
+  type WizardStepId,
   type WizardGenerationPayload,
 } from "@/types/agent-wizard";
 import { useAgentGeneration } from "@/hooks/useAgentGeneration";
@@ -15,11 +16,18 @@ import { AgentGenerating } from "../AgentGenerating";
 import { getTemplateById } from "@/lib/agents/templates";
 
 import { ChooseTypeStep } from "./steps/ChooseTypeStep";
+import { AgentNameStep } from "./steps/AgentNameStep";
 import { BusinessContextStep } from "./steps/BusinessContextStep";
+import { WebsiteStep } from "./steps/WebsiteStep";
 import { KnowledgeBaseStep } from "./steps/KnowledgeBaseStep";
-import { ConversationFlowStep } from "./steps/ConversationFlowStep";
+import { AgentPersonalityStep } from "./steps/AgentPersonalityStep";
+import { LeadQualificationStep } from "./steps/LeadQualificationStep";
+import { LeadFieldsStep } from "./steps/LeadFieldsStep";
+import { SchedulingStep } from "./steps/SchedulingStep";
+import { ResponseBehaviorStep } from "./steps/ResponseBehaviorStep";
+import { EscalationStep } from "./steps/EscalationStep";
+import { LeadCollectionStep } from "./steps/LeadCollectionStep";
 import { IntegrationsStep } from "./steps/IntegrationsStep";
-import { AgentIdentityStep } from "./steps/AgentIdentityStep";
 import { ReviewStep } from "./steps/ReviewStep";
 
 interface AgentWizardProps {
@@ -34,10 +42,8 @@ function loadDraft(): { stepIndex: number; state: AgentWizardState } | null {
     const raw = localStorage.getItem(WIZARD_DRAFT_KEY);
     if (!raw) return null;
     const draft = JSON.parse(raw);
-    // Restore files as empty (File objects can't be serialized)
     if (draft.state) {
       draft.state.files = [];
-      // Backfill fields added after draft was saved
       if (!Array.isArray(draft.state.selectedToolkits)) {
         draft.state.selectedToolkits = [];
       }
@@ -50,11 +56,10 @@ function loadDraft(): { stepIndex: number; state: AgentWizardState } | null {
 
 function saveDraft(stepIndex: number, state: AgentWizardState) {
   try {
-    // Exclude File objects from serialization
     const serializable = { ...state, files: [] };
     localStorage.setItem(
       WIZARD_DRAFT_KEY,
-      JSON.stringify({ stepIndex, state: serializable })
+      JSON.stringify({ stepIndex, state: serializable }),
     );
   } catch {
     // Storage full or unavailable — ignore
@@ -72,7 +77,6 @@ function clearDraft() {
 export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
   const router = useRouter();
 
-  // Restore draft from localStorage on mount
   const draft = useRef(loadDraft());
   const [stepIndex, setStepIndex] = useState(draft.current?.stepIndex ?? 0);
   const [state, setState] = useState<AgentWizardState>(
@@ -81,24 +85,18 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
   const { isLoading, currentLabel, agent, error, startGeneration } =
     useAgentGeneration();
 
-  // Custom agents skip conversation-flow and integrations steps
-  const isCustom = state.templateId === "custom";
-  const activeSteps = isCustom
-    ? WIZARD_STEPS.filter(
-        (s) => s.id !== "conversation-flow" && s.id !== "integrations",
-      )
-    : WIZARD_STEPS;
-  // Clamp stepIndex when switching to custom after being on a later step
+  // Dynamic steps based on selected template
+  const activeSteps = getWizardSteps(state.templateId);
   const clampedIndex = Math.min(stepIndex, activeSteps.length - 1);
   const currentStep = activeSteps[clampedIndex];
   const totalSteps = activeSteps.length;
 
-  // Persist draft to localStorage on every change
+  // Persist draft
   useEffect(() => {
     saveDraft(stepIndex, state);
   }, [stepIndex, state]);
 
-  // Warn before closing tab if wizard has meaningful progress
+  // Warn before closing
   useEffect(() => {
     const hasProgress =
       state.templateId !== null ||
@@ -113,7 +111,7 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
     return () => window.removeEventListener("beforeunload", handler);
   }, [state]);
 
-  // Redirect on generation complete — clear draft
+  // Redirect on generation complete
   useEffect(() => {
     if (agent?.id) {
       clearDraft();
@@ -121,7 +119,6 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
     }
   }, [agent, router]);
 
-  // Show generating state
   if (isLoading || error) {
     return <AgentGenerating currentLabel={currentLabel} error={error} />;
   }
@@ -138,74 +135,105 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
   }
 
   // ---------------------------------------------------------------------------
-  // Validation
+  // Validation — per step
   // ---------------------------------------------------------------------------
-
-  function canProceed(): boolean {
-    return !getValidationError();
-  }
 
   function getValidationError(): string | null {
     switch (currentStep.id) {
       case "choose-type":
-        return state.templateId === null ? "Select an agent type to continue" : null;
+        return state.templateId === null
+          ? "Select an agent type to continue"
+          : null;
+
+      case "agent-name":
+        return !state.agentName.trim()
+          ? "Give your agent a name to continue"
+          : null;
 
       case "business-context":
-        if (!state.businessContextMode) return "Choose how to describe your business";
-        if (state.businessContextMode === "link_system" && !state.linkedSystemId) {
+        if (!state.businessContextMode)
+          return "Choose how to describe your business";
+        if (
+          state.businessContextMode === "link_system" &&
+          !state.linkedSystemId
+        )
           return "Select a business to continue";
-        }
         if (state.businessContextMode === "describe") {
           const len = state.businessDescription.trim().length;
           if (len === 0) return "Describe your business to continue";
-          if (len <= 10) return `Add a bit more detail (${len}/10 characters minimum)`;
+          if (len <= 10)
+            return `Add a bit more detail (${len}/10 characters minimum)`;
         }
         return null;
 
-      case "knowledge-base":
+      case "website":
+        // Optional — can always proceed
         return null;
 
-      case "conversation-flow":
-        if (
-          state.templateId === "appointment-booker" &&
-          state.appointmentBookerConfig.service_types.length === 0
-        ) {
-          return "Add at least one appointment type (e.g., Consultation, Follow-up)";
-        }
+      case "knowledge":
+        // Optional but we show a hint
+        return null;
+
+      case "agent-personality": {
+        const missing: string[] = [];
+        if (!state.tone.trim()) missing.push("tone");
+        if (!state.greetingMessage.trim()) missing.push("greeting message");
+        return missing.length > 0
+          ? `Fill in the ${missing.join(" and ")} to continue`
+          : null;
+      }
+
+      case "lead-qualification":
+        return null;
+
+      case "lead-fields":
+        return null;
+
+      case "scheduling":
+        if (state.appointmentBookerConfig.service_types.length === 0)
+          return "Add at least one appointment type";
+        return null;
+
+      case "response-behavior":
+        return null;
+
+      case "escalation":
+        return null;
+
+      case "lead-collection":
         return null;
 
       case "integrations":
         return null;
 
-      case "agent-identity": {
-        const missing: string[] = [];
-        if (!state.agentName.trim()) missing.push("name");
-        if (!state.tone.trim()) missing.push("tone");
-        if (!state.greetingMessage.trim()) missing.push("greeting message");
-        return missing.length > 0 ? `Fill in the ${missing.join(", ")} to continue` : null;
-      }
-
       case "review":
         return null;
 
       default:
-        return "Unknown step";
+        return null;
     }
   }
 
-  /** Non-blocking hint shown below navigation (doesn't prevent proceeding) */
-  function getStepHint(): string | null {
-    if (currentStep.id !== "knowledge-base") return null;
-    const hasKB =
-      state.discoveredPages.some((p) => p.selected && p.status === "done") ||
-      state.faqs.length > 0 ||
-      state.files.length > 0;
-    if (hasKB) return null;
+  function canProceed(): boolean {
+    return !getValidationError();
+  }
 
-    if (state.templateId === "customer-support") {
-      return "Your support agent needs a knowledge base to answer questions accurately. Consider adding content before continuing.";
+  /** Non-blocking hint shown below navigation */
+  function getStepHint(): string | null {
+    if (currentStep.id === "knowledge") {
+      const hasKB =
+        state.discoveredPages.some(
+          (p) => p.selected && p.status === "done",
+        ) ||
+        state.faqs.length > 0 ||
+        state.files.length > 0;
+      if (hasKB) return null;
+
+      if (state.templateId === "customer-support")
+        return "Your support agent needs a knowledge base to answer questions accurately. Consider adding content before continuing.";
+      return null;
     }
-    return "Adding knowledge base content helps your agent give more accurate, business-specific answers.";
+    return null;
   }
 
   // ---------------------------------------------------------------------------
@@ -214,15 +242,16 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
 
   function handleNext() {
     if (clampedIndex < totalSteps - 1) {
-      // Pre-fill personality + tools from template when leaving step 1
+      // Pre-fill personality + tools from template when leaving choose-type
       if (currentStep.id === "choose-type" && state.templateId) {
         const template = getTemplateById(state.templateId);
         if (template) {
           setState((prev) => ({
             ...prev,
             tone: prev.tone || template.suggested_personality.tone,
-            greetingMessage: prev.greetingMessage || template.suggested_personality.greeting_message,
-            // Auto-select all suggested tools
+            greetingMessage:
+              prev.greetingMessage ||
+              template.suggested_personality.greeting_message,
             selectedToolkits: template.suggestedTools.map((t) => t.toolkit),
           }));
         }
@@ -240,10 +269,10 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
     }
   }
 
-  function goToStep(index: number) {
-    if (index >= 0 && index < totalSteps) {
-      setStepIndex(index);
-    }
+  /** Navigate to a step by its ID (used by ReviewStep edit buttons) */
+  function goToStepById(stepId: WizardStepId) {
+    const idx = activeSteps.findIndex((s) => s.id === stepId);
+    if (idx >= 0) setStepIndex(idx);
   }
 
   // ---------------------------------------------------------------------------
@@ -258,7 +287,8 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
         ? {}
         : state.templateId === "appointment-booker"
           ? state.appointmentBookerConfig
-          : state.templateId === "lead-capture" || state.templateId === "lead-qualification"
+          : state.templateId === "lead-capture" ||
+              state.templateId === "lead-qualification"
             ? state.leadCaptureConfig
             : state.customerSupportConfig;
 
@@ -301,7 +331,7 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
   }
 
   // ---------------------------------------------------------------------------
-  // Derived values for steps
+  // Derived values
   // ---------------------------------------------------------------------------
 
   const scrapedContent = state.discoveredPages
@@ -323,28 +353,48 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
           />
         );
 
+      case "agent-name":
+        return (
+          <AgentNameStep
+            agentName={state.agentName}
+            agentDescription={state.agentDescription}
+            onNameChange={(name) => updateState("agentName", name)}
+            onDescriptionChange={(desc) =>
+              updateState("agentDescription", desc)
+            }
+          />
+        );
+
       case "business-context":
         return (
           <BusinessContextStep
             mode={state.businessContextMode}
             linkedSystemId={state.linkedSystemId}
             businessDescription={state.businessDescription}
-            websiteUrl={state.websiteUrl}
-            discoveredPages={state.discoveredPages}
             businesses={businesses}
             onModeChange={(mode) => updateState("businessContextMode", mode)}
             onSystemSelect={(id) => updateState("linkedSystemId", id)}
             onDescriptionChange={(desc) =>
               updateState("businessDescription", desc)
             }
+          />
+        );
+
+      case "website":
+        return (
+          <WebsiteStep
+            websiteUrl={state.websiteUrl}
+            discoveredPages={state.discoveredPages}
+            files={state.files}
             onWebsiteUrlChange={(url) => updateState("websiteUrl", url)}
             onDiscoveredPagesChange={(pages) =>
               updateState("discoveredPages", pages)
             }
+            onFilesChange={(files) => updateState("files", files)}
           />
         );
 
-      case "knowledge-base":
+      case "knowledge":
         return (
           <KnowledgeBaseStep
             templateId={state.templateId}
@@ -358,44 +408,139 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
           />
         );
 
-      case "conversation-flow":
-        return state.templateId ? (
-          <ConversationFlowStep
-            templateId={state.templateId}
+      case "agent-personality":
+        return (
+          <AgentPersonalityStep
+            agentName={state.agentName}
+            tone={state.tone}
+            greetingMessage={state.greetingMessage}
+            onToneChange={(tone) => updateState("tone", tone)}
+            onGreetingChange={(greeting) =>
+              updateState("greetingMessage", greeting)
+            }
+          />
+        );
+
+      case "lead-qualification": {
+        const configKey =
+          state.templateId === "appointment-booker"
+            ? "appointmentBookerConfig"
+            : "leadCaptureConfig";
+        const config = state[configKey];
+        return (
+          <LeadQualificationStep
+            templateId={state.templateId!}
+            qualificationMode={config.qualification_mode}
+            icpDescription={config.icp_description}
+            disqualificationCriteria={config.disqualification_criteria}
             qualifyingQuestions={state.qualifyingQuestions}
-            appointmentBookerConfig={state.appointmentBookerConfig}
-            customerSupportConfig={state.customerSupportConfig}
-            leadCaptureConfig={state.leadCaptureConfig}
             businessDescription={state.businessDescription}
             scrapedContent={scrapedContent}
             faqs={state.faqs.map((f) => ({
               question: f.question,
               answer: f.answer,
             }))}
+            onModeChange={(mode) =>
+              setState((prev) => ({
+                ...prev,
+                [configKey]: {
+                  ...prev[configKey],
+                  qualification_mode: mode,
+                },
+              }))
+            }
+            onIcpChange={(value) =>
+              setState((prev) => ({
+                ...prev,
+                [configKey]: {
+                  ...prev[configKey],
+                  icp_description: value,
+                },
+              }))
+            }
+            onDisqualChange={(value) =>
+              setState((prev) => ({
+                ...prev,
+                [configKey]: {
+                  ...prev[configKey],
+                  disqualification_criteria: value,
+                },
+              }))
+            }
             onQuestionsChange={(q) => updateState("qualifyingQuestions", q)}
-            onUpdateAppointmentBooker={(updater) =>
+          />
+        );
+      }
+
+      case "lead-fields":
+        return (
+          <LeadFieldsStep
+            config={state.appointmentBookerConfig}
+            onUpdate={(updater) =>
               setState((prev) => ({
                 ...prev,
                 appointmentBookerConfig: updater(prev.appointmentBookerConfig),
               }))
             }
-            onUpdateCustomerSupport={(updater) =>
+          />
+        );
+
+      case "scheduling":
+        return (
+          <SchedulingStep
+            config={state.appointmentBookerConfig}
+            onUpdate={(updater) =>
+              setState((prev) => ({
+                ...prev,
+                appointmentBookerConfig: updater(prev.appointmentBookerConfig),
+              }))
+            }
+          />
+        );
+
+      case "response-behavior":
+        return (
+          <ResponseBehaviorStep
+            config={state.customerSupportConfig}
+            onUpdate={(updater) =>
               setState((prev) => ({
                 ...prev,
                 customerSupportConfig: updater(prev.customerSupportConfig),
               }))
             }
-            onUpdateLeadCapture={(updater) =>
+          />
+        );
+
+      case "escalation":
+        return (
+          <EscalationStep
+            config={state.customerSupportConfig}
+            onUpdate={(updater) =>
+              setState((prev) => ({
+                ...prev,
+                customerSupportConfig: updater(prev.customerSupportConfig),
+              }))
+            }
+          />
+        );
+
+      case "lead-collection":
+        return (
+          <LeadCollectionStep
+            config={state.leadCaptureConfig}
+            onUpdate={(updater) =>
               setState((prev) => ({
                 ...prev,
                 leadCaptureConfig: updater(prev.leadCaptureConfig),
               }))
             }
           />
-        ) : null;
+        );
 
       case "integrations": {
-        const template = state.templateId ? getTemplateById(state.templateId) : null;
+        const template = state.templateId
+          ? getTemplateById(state.templateId)
+          : null;
         return (
           <IntegrationsStep
             suggestedTools={template?.suggestedTools ?? []}
@@ -407,24 +552,6 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
         );
       }
 
-      case "agent-identity":
-        return (
-          <AgentIdentityStep
-            agentName={state.agentName}
-            agentDescription={state.agentDescription}
-            tone={state.tone}
-            greetingMessage={state.greetingMessage}
-            onNameChange={(name) => updateState("agentName", name)}
-            onDescriptionChange={(desc) =>
-              updateState("agentDescription", desc)
-            }
-            onToneChange={(tone) => updateState("tone", tone)}
-            onGreetingChange={(greeting) =>
-              updateState("greetingMessage", greeting)
-            }
-          />
-        );
-
       case "review": {
         const linkedBusiness = businesses.find(
           (b) => b.id === state.linkedSystemId,
@@ -433,7 +560,7 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
           <ReviewStep
             state={state}
             businessName={linkedBusiness?.name}
-            onGoToStep={goToStep}
+            onGoToStep={goToStepById}
           />
         );
       }
@@ -447,21 +574,26 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
   // Render
   // ---------------------------------------------------------------------------
 
+  const progress = ((clampedIndex + 1) / totalSteps) * 100;
+
   return (
     <div className="max-w-lg mx-auto space-y-6">
       {/* Progress indicator */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-neutral-400 dark:text-neutral-500 tabular-nums">
             Step {clampedIndex + 1} of {totalSteps}
           </p>
-          <p className="text-xs text-muted-foreground">{currentStep.label}</p>
+          <p className="text-xs text-neutral-400 dark:text-neutral-500">
+            {currentStep.label}
+          </p>
         </div>
-        <div className="h-1 bg-muted rounded-full overflow-hidden">
+        <div className="h-1.5 bg-neutral-100 dark:bg-[#1E1E1E] rounded-full overflow-hidden">
           <div
-            className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+            className="h-full rounded-full transition-all duration-500 ease-out"
             style={{
-              width: `${((clampedIndex + 1) / totalSteps) * 100}%`,
+              width: `${progress}%`,
+              background: "linear-gradient(90deg, #FF8C00, #9D50BB)",
             }}
           />
         </div>
@@ -478,7 +610,7 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
       {/* Navigation */}
       <div className="space-y-2 pt-4">
         {getValidationError() && (
-          <p className="text-xs text-muted-foreground text-center">
+          <p className="text-xs text-neutral-400 dark:text-neutral-500 text-center">
             {getValidationError()}
           </p>
         )}
@@ -488,18 +620,29 @@ export function AgentWizard({ businesses, onBack }: AgentWizardProps) {
           </p>
         )}
         <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={handleBack}>
+          <Button
+            variant="ghost"
+            onClick={handleBack}
+            className="text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
 
           {currentStep.id === "review" ? (
-            <Button onClick={handleGenerate}>
+            <Button
+              onClick={handleGenerate}
+              className="gradient-accent-bg text-white border-0 shadow-sm rounded-full px-6 h-10"
+            >
               <Sparkles className="h-4 w-4 mr-2" />
               Generate Agent
             </Button>
           ) : (
-            <Button onClick={handleNext} disabled={!canProceed()}>
+            <Button
+              onClick={handleNext}
+              disabled={!canProceed()}
+              className="gradient-accent-bg text-white border-0 shadow-sm rounded-full px-6 h-10 disabled:opacity-40"
+            >
               Continue
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>

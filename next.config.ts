@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Mastra needs to be bundled server-side only
   serverExternalPackages: ["@mastra/*"],
+  async redirects() {
+    return [
+      { source: "/test-widget", destination: "/test-widget.html", permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;

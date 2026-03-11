@@ -1,301 +1,141 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Globe, Loader2, AlertCircle } from "lucide-react";
-import { OptionCard } from "@/components/flows/OptionCard";
+import { Building2, FileText } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import type { DiscoveredPage } from "@/types/agent-wizard";
+import { WizardStepHeader } from "../shared/WizardStepHeader";
+import { WizardCard } from "../shared/WizardCard";
 
 interface BusinessContextStepProps {
   mode: "link_system" | "describe" | null;
   linkedSystemId: string | null;
   businessDescription: string;
-  websiteUrl: string;
-  discoveredPages: DiscoveredPage[];
   businesses: Array<{ id: string; name: string }>;
   onModeChange: (mode: "link_system" | "describe") => void;
   onSystemSelect: (id: string | null) => void;
   onDescriptionChange: (desc: string) => void;
-  onWebsiteUrlChange: (url: string) => void;
-  onDiscoveredPagesChange: (pages: DiscoveredPage[]) => void;
 }
 
 export function BusinessContextStep({
   mode,
   linkedSystemId,
   businessDescription,
-  websiteUrl,
-  discoveredPages,
   businesses,
   onModeChange,
   onSystemSelect,
   onDescriptionChange,
-  onWebsiteUrlChange,
-  onDiscoveredPagesChange,
 }: BusinessContextStepProps) {
   const hasBusinesses = businesses.length > 0;
-  const [discovering, setDiscovering] = useState(false);
-  const [discoverError, setDiscoverError] = useState<string | null>(null);
-  const autoScanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastScannedUrlRef = useRef<string>("");
-
-  // Auto-scan: debounce 800ms after user stops typing a valid URL
-  useEffect(() => {
-    if (autoScanTimerRef.current) clearTimeout(autoScanTimerRef.current);
-
-    const trimmed = websiteUrl.trim();
-    if (!trimmed || discovering) return;
-    // Don't re-scan the same URL
-    if (trimmed === lastScannedUrlRef.current) return;
-    // Basic URL validation — must look like a real URL
-    try {
-      const parsed = new URL(trimmed.startsWith("http") ? trimmed : `https://${trimmed}`);
-      if (!parsed.hostname.includes(".")) return;
-    } catch {
-      return;
-    }
-
-    autoScanTimerRef.current = setTimeout(() => {
-      lastScannedUrlRef.current = trimmed;
-      handleDiscoverPages();
-    }, 800);
-
-    return () => {
-      if (autoScanTimerRef.current) clearTimeout(autoScanTimerRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [websiteUrl]);
-
-  async function handleDiscoverPages() {
-    if (!websiteUrl.trim()) return;
-
-    lastScannedUrlRef.current = websiteUrl.trim();
-    setDiscovering(true);
-    setDiscoverError(null);
-
-    try {
-      const res = await fetch("/api/agents/wizard/discover-pages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: websiteUrl.trim() }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        setDiscoverError(data.error || "Failed to discover pages");
-        return;
-      }
-
-      const pages: DiscoveredPage[] = data.pages.map(
-        (p: { url: string; title: string }) => ({
-          url: p.url,
-          title: p.title,
-          selected: true,
-          status: "pending" as const,
-        }),
-      );
-      onDiscoveredPagesChange(pages);
-    } catch {
-      setDiscoverError("Network error. Please check the URL and try again.");
-    } finally {
-      setDiscovering(false);
-    }
-  }
-
-  function togglePage(index: number) {
-    const updated = [...discoveredPages];
-    updated[index] = { ...updated[index], selected: !updated[index].selected };
-    onDiscoveredPagesChange(updated);
-  }
-
-  function toggleAll(selected: boolean) {
-    onDiscoveredPagesChange(
-      discoveredPages.map((p) => ({ ...p, selected })),
-    );
-  }
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold tracking-tight">
-          Who is this agent for?
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Help your agent understand the business it represents.
-        </p>
-      </div>
+      <WizardStepHeader
+        title="Tell your agent about the business"
+        description="Give your agent enough context to represent the business accurately."
+      />
 
       {/* Mode selection */}
       <div className="space-y-3">
         {hasBusinesses && (
-          <OptionCard
-            value="link_system"
-            label="Link an existing business"
-            description="Use context from a business you've already set up"
-            selected={mode === "link_system"}
-            onSelect={() => onModeChange("link_system")}
-          />
+          <button
+            type="button"
+            onClick={() => onModeChange("link_system")}
+            className={`w-full text-left rounded-[20px] border p-4 transition-all duration-200 ${
+              mode === "link_system"
+                ? "border-[#FF8C00]/40 bg-gradient-to-r from-[#FF8C00]/5 to-[#9D50BB]/5 shadow-sm"
+                : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:border-[#FF8C00]/20"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-[14px] bg-white dark:bg-[#252525] border border-black/5 dark:border-[#333333] flex items-center justify-center shrink-0">
+                <Building2 className="w-4.5 h-4.5 text-neutral-500 dark:text-neutral-400" />
+              </div>
+              <div>
+                <p className={`text-sm font-medium ${mode === "link_system" ? "text-[#FF8C00]" : "text-neutral-800 dark:text-neutral-200"}`}>
+                  Link an existing business
+                </p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                  Use context from a business you&apos;ve already set up.
+                </p>
+              </div>
+            </div>
+          </button>
         )}
-        <OptionCard
-          value="describe"
-          label="Describe the business"
-          description="Tell us about the business in your own words"
-          selected={mode === "describe"}
-          onSelect={() => onModeChange("describe")}
-        />
+        <button
+          type="button"
+          onClick={() => onModeChange("describe")}
+          className={`w-full text-left rounded-[20px] border p-4 transition-all duration-200 ${
+            mode === "describe"
+              ? "border-[#FF8C00]/40 bg-gradient-to-r from-[#FF8C00]/5 to-[#9D50BB]/5 shadow-sm"
+              : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:border-[#FF8C00]/20"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-[14px] bg-white dark:bg-[#252525] border border-black/5 dark:border-[#333333] flex items-center justify-center shrink-0">
+              <FileText className="w-4.5 h-4.5 text-neutral-500 dark:text-neutral-400" />
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${mode === "describe" ? "text-[#FF8C00]" : "text-neutral-800 dark:text-neutral-200"}`}>
+                Describe the business
+              </p>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                Tell us about the business in your own words.
+              </p>
+            </div>
+          </div>
+        </button>
       </div>
 
       {/* Linked system selector */}
       {mode === "link_system" && hasBusinesses && (
-        <div className="space-y-2 pt-2">
-          <Label htmlFor="system-select">Select a business</Label>
-          <select
-            id="system-select"
-            value={linkedSystemId ?? ""}
-            onChange={(e) => onSystemSelect(e.target.value || null)}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="">Choose a business...</option>
-            {businesses.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <WizardCard>
+          <div className="space-y-2">
+            <Label htmlFor="system-select" className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+              Select a business
+            </Label>
+            <select
+              id="system-select"
+              value={linkedSystemId ?? ""}
+              onChange={(e) => onSystemSelect(e.target.value || null)}
+              className="w-full h-9 rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-3 text-sm text-neutral-900 dark:text-neutral-200"
+            >
+              <option value="">Choose a business...</option>
+              {businesses.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </WizardCard>
       )}
 
       {/* Business description */}
       {mode === "describe" && (
-        <div className="space-y-2 pt-2">
-          <Label htmlFor="business-desc">Business description</Label>
-          <Textarea
-            id="business-desc"
-            placeholder="e.g., We're a roofing company in Dallas that does residential roof replacement, repair, and inspections. Our main customers are homeowners dealing with storm damage."
-            value={businessDescription}
-            onChange={(e) => onDescriptionChange(e.target.value)}
-            className="min-h-[120px]"
-          />
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
-              The more detail you provide, the better your agent will be.
-            </p>
-            <span className={`text-xs tabular-nums ${businessDescription.trim().length > 10 ? "text-muted-foreground" : "text-amber-500"}`}>
-              {businessDescription.trim().length}/10 min
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Website URL (always shown when a mode is selected) */}
-      {mode && (
-        <div className="space-y-3 pt-2 border-t">
-          <div className="space-y-2 pt-3">
-            <Label htmlFor="website-url" className="flex items-center gap-2">
-              <Globe className="w-4 h-4 text-muted-foreground" />
-              Website URL
-              <span className="text-xs text-muted-foreground font-normal">
-                (optional)
-              </span>
+        <WizardCard>
+          <div className="space-y-2">
+            <Label htmlFor="business-desc" className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+              Business description
             </Label>
-            <div className="flex gap-2">
-              <Input
-                id="website-url"
-                type="url"
-                placeholder="https://yourbusiness.com"
-                value={websiteUrl}
-                onChange={(e) => {
-                  onWebsiteUrlChange(e.target.value);
-                  if (discoveredPages.length > 0) {
-                    onDiscoveredPagesChange([]);
-                  }
-                }}
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={handleDiscoverPages}
-                disabled={discovering || !websiteUrl.trim()}
-                className="shrink-0"
-              >
-                {discovering ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
-                ) : (
-                  <Globe className="w-4 h-4 mr-1.5" />
-                )}
-                Scan
-              </Button>
+            <Textarea
+              id="business-desc"
+              placeholder="e.g., We're a roofing company in Dallas that does residential roof replacement, repair, and inspections. Our main customers are homeowners dealing with storm damage."
+              value={businessDescription}
+              onChange={(e) => onDescriptionChange(e.target.value)}
+              className="min-h-[120px] rounded-xl bg-white dark:bg-[#151515] border-neutral-200/60 dark:border-[#2A2A2A] resize-none"
+            />
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                The more detail you provide, the better your agent will be.
+              </p>
+              <span className={`text-xs tabular-nums ${businessDescription.trim().length > 10 ? "text-neutral-400" : "text-amber-500"}`}>
+                {businessDescription.trim().length}/10 min
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              We&apos;ll discover pages on your site to build your agent&apos;s
-              knowledge base in the next step.
-            </p>
           </div>
-
-          {/* Error */}
-          {discoverError && (
-            <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-              <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-              <p className="text-xs text-destructive">{discoverError}</p>
-            </div>
-          )}
-
-          {/* Discovered pages */}
-          {discoveredPages.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">
-                  Found {discoveredPages.length} pages
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className="text-xs text-primary hover:underline"
-                    onClick={() => toggleAll(true)}
-                  >
-                    Select all
-                  </button>
-                  <button
-                    type="button"
-                    className="text-xs text-muted-foreground hover:underline"
-                    onClick={() => toggleAll(false)}
-                  >
-                    Deselect all
-                  </button>
-                </div>
-              </div>
-              <div className="max-h-48 overflow-y-auto rounded-lg border divide-y">
-                {discoveredPages.map((page, i) => (
-                  <label
-                    key={page.url}
-                    className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 cursor-pointer text-sm"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={page.selected}
-                      onChange={() => togglePage(i)}
-                      className="rounded border-input"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium truncate text-xs">
-                        {page.title}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {page.url}
-                      </p>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        </WizardCard>
       )}
+
     </div>
   );
 }

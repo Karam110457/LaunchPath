@@ -1,11 +1,12 @@
 "use client";
 
 import { AGENT_TEMPLATES } from "@/lib/agents/templates";
-import { Calendar, LifeBuoy, Target, Sparkles, Bot } from "lucide-react";
+import { Calendar, LifeBuoy, Target, Bot } from "lucide-react";
+import { WizardStepHeader } from "../shared/WizardStepHeader";
 
 const ICON_MAP: Record<
   string,
-  React.ComponentType<{ className?: string }>
+  React.ComponentType<{ className?: string; style?: React.CSSProperties }>
 > = {
   Calendar,
   LifeBuoy,
@@ -20,19 +21,24 @@ interface ChooseTypeStepProps {
 export function ChooseTypeStep({ templateId, onSelect }: ChooseTypeStepProps) {
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold tracking-tight">
-          What type of agent do you want to build?
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Choose a template to get started, or build a custom agent from
-          scratch with the guided setup.
-        </p>
-      </div>
+      {/* SVG gradient for icons */}
+      <svg width="0" height="0" className="absolute">
+        <defs>
+          <linearGradient id="wizard-icon-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FF8C00" />
+            <stop offset="100%" stopColor="#9D50BB" />
+          </linearGradient>
+        </defs>
+      </svg>
+
+      <WizardStepHeader
+        title="What type of agent do you want to build?"
+        description="Choose a template to get started, or build a custom agent from scratch."
+      />
 
       <div className="space-y-3">
         {AGENT_TEMPLATES.map((template) => {
-          const Icon = ICON_MAP[template.icon] ?? Sparkles;
+          const Icon = ICON_MAP[template.icon] ?? Bot;
           const isSelected = templateId === template.id;
 
           return (
@@ -45,34 +51,38 @@ export function ChooseTypeStep({ templateId, onSelect }: ChooseTypeStepProps) {
                 )
               }
               className={`
-                w-full text-left px-5 py-4 rounded-xl border transition-all duration-200
-                hover:border-primary/40 hover:bg-primary/5
-                focus:outline-none focus:ring-2 focus:ring-primary/50
+                w-full text-left px-5 py-4 rounded-[20px] border transition-all duration-200
+                focus:outline-none
                 ${
                   isSelected
-                    ? "border-primary bg-primary/10 shadow-sm shadow-primary/10"
-                    : "border-border bg-card"
+                    ? "border-[#FF8C00]/40 bg-gradient-to-r from-[#FF8C00]/5 to-[#9D50BB]/5 shadow-sm"
+                    : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:bg-white dark:hover:bg-[#252525] hover:shadow-sm hover:-translate-y-0.5"
                 }
               `}
             >
               <div className="flex items-center gap-4">
                 <div
                   className={`
-                    h-10 w-10 rounded-lg flex items-center justify-center shrink-0
-                    ${isSelected ? "bg-primary/20" : "bg-muted"}
+                    h-[48px] w-[48px] rounded-[16px] flex items-center justify-center shrink-0 border transition-transform
+                    ${
+                      isSelected
+                        ? "bg-white dark:bg-[#252525] border-[#FF8C00]/20 scale-105"
+                        : "bg-white dark:bg-[#252525] border-black/5 dark:border-[#333333]"
+                    }
                   `}
                 >
                   <Icon
-                    className={`h-5 w-5 ${isSelected ? "text-primary" : "text-muted-foreground"}`}
+                    className="h-5 w-5"
+                    style={{ stroke: "url(#wizard-icon-gradient)" }}
                   />
                 </div>
                 <div>
                   <div
-                    className={`font-medium ${isSelected ? "text-primary" : ""}`}
+                    className={`font-medium ${isSelected ? "text-[#FF8C00]" : "text-neutral-800 dark:text-neutral-200"}`}
                   >
                     {template.name}
                   </div>
-                  <div className="text-sm text-muted-foreground mt-0.5">
+                  <div className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
                     {template.description}
                   </div>
                 </div>
@@ -81,39 +91,43 @@ export function ChooseTypeStep({ templateId, onSelect }: ChooseTypeStepProps) {
           );
         })}
 
-        {/* Custom agent — no template */}
+        {/* Custom agent */}
         <button
           type="button"
           onClick={() => onSelect("custom")}
           className={`
-            w-full text-left px-5 py-4 rounded-xl border transition-all duration-200
-            hover:border-primary/40 hover:bg-primary/5
-            focus:outline-none focus:ring-2 focus:ring-primary/50
+            w-full text-left px-5 py-4 rounded-[20px] border transition-all duration-200
+            focus:outline-none
             ${
               templateId === "custom"
-                ? "border-primary bg-primary/10 shadow-sm shadow-primary/10"
-                : "border-border bg-card"
+                ? "border-[#FF8C00]/40 bg-gradient-to-r from-[#FF8C00]/5 to-[#9D50BB]/5 shadow-sm"
+                : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:bg-white dark:hover:bg-[#252525] hover:shadow-sm hover:-translate-y-0.5"
             }
           `}
         >
           <div className="flex items-center gap-4">
             <div
               className={`
-                h-10 w-10 rounded-lg flex items-center justify-center shrink-0
-                ${templateId === "custom" ? "bg-primary/20" : "bg-muted"}
+                h-[48px] w-[48px] rounded-[16px] flex items-center justify-center shrink-0 border transition-transform
+                ${
+                  templateId === "custom"
+                    ? "bg-white dark:bg-[#252525] border-[#FF8C00]/20 scale-105"
+                    : "bg-white dark:bg-[#252525] border-black/5 dark:border-[#333333]"
+                }
               `}
             >
               <Bot
-                className={`h-5 w-5 ${templateId === "custom" ? "text-primary" : "text-muted-foreground"}`}
+                className="h-5 w-5"
+                style={{ stroke: "url(#wizard-icon-gradient)" }}
               />
             </div>
             <div>
               <div
-                className={`font-medium ${templateId === "custom" ? "text-primary" : ""}`}
+                className={`font-medium ${templateId === "custom" ? "text-[#FF8C00]" : "text-neutral-800 dark:text-neutral-200"}`}
               >
                 Custom Agent
               </div>
-              <div className="text-sm text-muted-foreground mt-0.5">
+              <div className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
                 Build any type of agent with the guided setup. No predefined
                 behavior or tools — you configure everything.
               </div>

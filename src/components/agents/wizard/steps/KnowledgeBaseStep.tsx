@@ -12,48 +12,16 @@ import {
   CheckCircle2,
   AlertCircle,
   Upload,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { WizardStepHeader } from "../shared/WizardStepHeader";
+import { WizardCard } from "../shared/WizardCard";
 import type { DiscoveredPage, WizardFaq, WizardFile } from "@/types/agent-wizard";
-
-const KB_GUIDANCE: Record<string, { heading: string; description: string }> = {
-  "appointment-booker": {
-    heading: "Build your knowledge base",
-    description:
-      "Help your agent answer questions about your services, pricing, and availability while booking appointments.",
-  },
-  "customer-support": {
-    heading: "Build your knowledge base",
-    description:
-      "This is critical — your support agent relies on this information to answer customer questions accurately. Add as much content as possible.",
-  },
-  "lead-capture": {
-    heading: "Build your knowledge base",
-    description:
-      "Give your agent product and service details so it can have informed conversations with potential leads.",
-  },
-  // Backward compat
-  "lead-qualification": {
-    heading: "Build your knowledge base",
-    description:
-      "Give your agent product and service details so it can have informed conversations with potential leads.",
-  },
-  custom: {
-    heading: "Build your knowledge base",
-    description:
-      "Add any content your agent should know — product info, policies, FAQs, or anything else it needs to do its job.",
-  },
-};
 
 interface KnowledgeBaseStepProps {
   templateId: string | null;
@@ -67,7 +35,6 @@ interface KnowledgeBaseStepProps {
 }
 
 export function KnowledgeBaseStep({
-  templateId,
   discoveredPages,
   faqs,
   files,
@@ -78,93 +45,44 @@ export function KnowledgeBaseStep({
 }: KnowledgeBaseStepProps) {
   const selectedPages = discoveredPages.filter((p) => p.selected);
   const scannedPages = selectedPages.filter((p) => p.status === "done");
-
-  const guidance = KB_GUIDANCE[templateId ?? ""] ?? {
-    heading: "Build your knowledge base",
-    description: "Give your agent the information it needs to help your customers.",
-  };
+  const hasPages = discoveredPages.length > 0;
+  const hasContent = scannedPages.length > 0 || businessDescription.trim().length > 0;
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold tracking-tight">
-          {guidance.heading}
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          {guidance.description}
-        </p>
-      </div>
+      <WizardStepHeader
+        title={hasPages || faqs.length > 0 ? "Review what we found" : "Add knowledge"}
+        description="Give your agent the information it needs to help your customers accurately."
+      />
 
-      <Tabs defaultValue="website" className="w-full">
-        <TabsList className="w-full">
-          <TabsTrigger value="website" className="flex-1 gap-1.5">
-            <Globe className="w-3.5 h-3.5" />
-            Website
-            {scannedPages.length > 0 && (
-              <Badge
-                variant="secondary"
-                className="ml-1 h-5 min-w-5 px-1.5 text-[10px]"
-              >
-                {scannedPages.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="faqs" className="flex-1 gap-1.5">
-            <MessageSquare className="w-3.5 h-3.5" />
-            FAQs
-            {faqs.length > 0 && (
-              <Badge
-                variant="secondary"
-                className="ml-1 h-5 min-w-5 px-1.5 text-[10px]"
-              >
-                {faqs.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="files" className="flex-1 gap-1.5">
-            <FileText className="w-3.5 h-3.5" />
-            Files
-            {files.length > 0 && (
-              <Badge
-                variant="secondary"
-                className="ml-1 h-5 min-w-5 px-1.5 text-[10px]"
-              >
-                {files.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
+      {/* Website content section */}
+      {hasPages && (
+        <WebsiteSection
+          discoveredPages={discoveredPages}
+          onPagesChange={onPagesChange}
+        />
+      )}
 
-        <TabsContent value="website">
-          <WebsiteTab
-            discoveredPages={discoveredPages}
-            onPagesChange={onPagesChange}
-          />
-        </TabsContent>
+      {/* FAQs section */}
+      <FaqsSection
+        faqs={faqs}
+        onFaqsChange={onFaqsChange}
+        scrapedContent={scannedPages.map((p) => p.content || "").join("\n\n")}
+        businessDescription={businessDescription}
+        hasContent={hasContent}
+      />
 
-        <TabsContent value="faqs">
-          <FaqsTab
-            faqs={faqs}
-            onFaqsChange={onFaqsChange}
-            scrapedContent={scannedPages.map((p) => p.content || "").join("\n\n")}
-            businessDescription={businessDescription}
-            hasUnscannedPages={selectedPages.length > scannedPages.length && selectedPages.length > 0}
-          />
-        </TabsContent>
-
-        <TabsContent value="files">
-          <FilesTab files={files} onFilesChange={onFilesChange} />
-        </TabsContent>
-      </Tabs>
+      {/* Files section */}
+      <FilesSection files={files} onFilesChange={onFilesChange} />
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Website Tab
+// Website Section
 // ---------------------------------------------------------------------------
 
-function WebsiteTab({
+function WebsiteSection({
   discoveredPages,
   onPagesChange,
 }: {
@@ -172,10 +90,12 @@ function WebsiteTab({
   onPagesChange: (pages: DiscoveredPage[]) => void;
 }) {
   const [scanning, setScanning] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const autoScanFired = useRef(false);
-  const selectedPages = discoveredPages.filter((p) => p.selected);
 
-  // Ref to hold latest pages for the scan function without re-creating it
+  const selectedPages = discoveredPages.filter((p) => p.selected);
+  const doneCount = discoveredPages.filter((p) => p.status === "done").length;
+
   const pagesRef = useRef(discoveredPages);
   pagesRef.current = discoveredPages;
 
@@ -226,7 +146,7 @@ function WebsiteTab({
     setScanning(false);
   }, [onPagesChange]);
 
-  // Auto-scan unscanned pages when the tab first mounts
+  // Auto-scan unscanned pages when first mounted
   useEffect(() => {
     if (autoScanFired.current) return;
     const hasUnscanned = discoveredPages.some(
@@ -238,63 +158,65 @@ function WebsiteTab({
     }
   }, [discoveredPages, scanPages]);
 
-  if (discoveredPages.length === 0) {
-    return (
-      <div className="py-8 text-center space-y-2">
-        <Globe className="w-8 h-8 text-muted-foreground/40 mx-auto" />
-        <p className="text-sm text-muted-foreground">
-          No pages discovered yet. Add a website URL in the previous step to
-          scan pages.
-        </p>
-      </div>
-    );
-  }
-
-  const doneCount = discoveredPages.filter((p) => p.status === "done").length;
-  const selectedCount = selectedPages.length;
-
   return (
-    <div className="space-y-4 pt-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {scanning
-            ? "Scanning your pages..."
-            : `${doneCount} of ${selectedCount} selected pages scanned`}
-        </p>
-        <Button
-          type="button"
-          size="sm"
-          onClick={scanPages}
-          disabled={scanning || selectedCount === 0 || doneCount === selectedCount}
-        >
-          {scanning ? (
-            <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
-          ) : (
-            <Globe className="w-4 h-4 mr-1.5" />
-          )}
-          {doneCount > 0 && doneCount < selectedCount ? "Retry failed" : "Scan selected pages"}
-        </Button>
-      </div>
-
-      <div className="rounded-lg border divide-y max-h-64 overflow-y-auto">
-        {discoveredPages
-          .filter((p) => p.selected)
-          .map((page) => (
-            <div
-              key={page.url}
-              className="flex items-center justify-between px-3 py-2 text-sm"
+    <WizardCard>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Globe className="w-4 h-4 text-[#FF8C00]" />
+            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+              Website pages
+            </span>
+            <span className="text-xs text-neutral-400 dark:text-neutral-500 tabular-nums">
+              {scanning ? "Scanning..." : `${doneCount} of ${selectedPages.length} scanned`}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {!scanning && doneCount < selectedPages.length && selectedPages.length > 0 && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={scanPages}
+                className="gap-1.5 rounded-full gradient-accent-bg text-white border-0 shadow-sm text-xs h-7"
+              >
+                <Globe className="w-3 h-3" />
+                {doneCount > 0 ? "Retry failed" : "Scan"}
+              </Button>
+            )}
+            <button
+              type="button"
+              onClick={() => setExpanded(!expanded)}
+              className="p-1 rounded-full text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
             >
-              <div className="min-w-0 flex-1 mr-3">
-                <p className="font-medium truncate text-xs">{page.title}</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {page.url}
-                </p>
-              </div>
-              <PageStatus status={page.status} />
-            </div>
-          ))}
+              {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+
+        {expanded && (
+          <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] divide-y divide-black/5 dark:divide-[#2A2A2A] max-h-48 overflow-y-auto">
+            {discoveredPages
+              .filter((p) => p.selected)
+              .map((page) => (
+                <div
+                  key={page.url}
+                  className="flex items-center justify-between px-3 py-2 text-sm"
+                >
+                  <div className="min-w-0 flex-1 mr-3">
+                    <p className="font-medium truncate text-xs text-neutral-800 dark:text-neutral-200">
+                      {page.title}
+                    </p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                      {page.url}
+                    </p>
+                  </div>
+                  <PageStatus status={page.status} />
+                </div>
+              ))}
+          </div>
+        )}
       </div>
-    </div>
+    </WizardCard>
   );
 }
 
@@ -318,7 +240,7 @@ function PageStatus({ status }: { status: DiscoveredPage["status"] }) {
       return (
         <span className="flex items-center gap-1 text-xs text-amber-600">
           <AlertCircle className="w-3 h-3" />
-          No content found
+          No content
         </span>
       );
     case "error":
@@ -329,34 +251,46 @@ function PageStatus({ status }: { status: DiscoveredPage["status"] }) {
         </span>
       );
     default:
-      return (
-        <span className="text-xs text-muted-foreground">Pending</span>
-      );
+      return <span className="text-xs text-neutral-400">Pending</span>;
   }
 }
 
 // ---------------------------------------------------------------------------
-// FAQs Tab
+// FAQs Section
 // ---------------------------------------------------------------------------
 
-function FaqsTab({
+function FaqsSection({
   faqs,
   onFaqsChange,
   scrapedContent,
   businessDescription,
-  hasUnscannedPages,
+  hasContent,
 }: {
   faqs: WizardFaq[];
   onFaqsChange: (faqs: WizardFaq[]) => void;
   scrapedContent: string;
   businessDescription: string;
-  hasUnscannedPages: boolean;
+  hasContent: boolean;
 }) {
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newQuestion, setNewQuestion] = useState("");
   const [newAnswer, setNewAnswer] = useState("");
+  const autoGenFired = useRef(false);
+
+  // Auto-generate FAQs on mount if content exists and no FAQs yet
+  useEffect(() => {
+    if (autoGenFired.current) return;
+    if (faqs.length > 0) return;
+    const hasScraped = scrapedContent.trim().length > 0;
+    const hasDesc = businessDescription.trim().length > 0;
+    if (hasScraped || hasDesc) {
+      autoGenFired.current = true;
+      handleGenerateFaqs();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scrapedContent, businessDescription]);
 
   async function handleGenerateFaqs() {
     setGenerating(true);
@@ -387,7 +321,6 @@ function FaqsTab({
         }),
       );
 
-      // Append to existing, don't replace
       onFaqsChange([...faqs, ...generated]);
     } catch {
       setGenError("Network error. Please try again.");
@@ -416,143 +349,149 @@ function FaqsTab({
     onFaqsChange(faqs.filter((f) => f.id !== id));
   }
 
-  const hasScrapedContent = scrapedContent.trim().length > 0;
-  const hasDescription = businessDescription.trim().length > 0;
-  const hasContent = hasScrapedContent || hasDescription;
-
   return (
-    <div className="space-y-4 pt-3">
-      {/* Action buttons */}
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          size="sm"
-          onClick={handleGenerateFaqs}
-          disabled={generating || !hasContent}
-          className="gap-1.5"
-        >
-          {generating ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Sparkles className="w-4 h-4" />
-          )}
-          Generate FAQs
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="gap-1.5"
-        >
-          <Plus className="w-4 h-4" />
-          Add manually
-        </Button>
-      </div>
-
-      {!hasContent && (
-        <p className="text-xs text-muted-foreground">
-          {hasUnscannedPages
-            ? "Scan your website pages in the Website tab first, then come back to generate FAQs."
-            : "Add a business description (step 2) or scan website pages first to enable AI FAQ generation."}
-        </p>
-      )}
-
-      {genError && (
-        <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-          <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-          <p className="text-xs text-destructive">{genError}</p>
-        </div>
-      )}
-
-      {/* Manual add form */}
-      {showAddForm && (
-        <div className="rounded-lg border p-3 space-y-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Question</Label>
-            <Input
-              placeholder="What is your return policy?"
-              value={newQuestion}
-              onChange={(e) => setNewQuestion(e.target.value)}
-            />
+    <WizardCard>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-[#9D50BB]" />
+            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+              FAQs
+            </span>
+            {faqs.length > 0 && (
+              <span className="text-xs text-neutral-400 dark:text-neutral-500 tabular-nums">
+                {faqs.length} items
+              </span>
+            )}
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Answer</Label>
-            <Textarea
-              placeholder="We offer a 30-day money-back guarantee..."
-              value={newAnswer}
-              onChange={(e) => setNewAnswer(e.target.value)}
-              rows={2}
-            />
-          </div>
-          <div className="flex gap-2 justify-end">
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleGenerateFaqs}
+              disabled={generating || !hasContent}
+              className="gap-1.5 rounded-full gradient-accent-bg text-white border-0 shadow-sm text-xs h-7"
+            >
+              {generating ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Sparkles className="w-3 h-3" />
+              )}
+              Generate
+            </Button>
             <Button
               type="button"
               size="sm"
               variant="ghost"
-              onClick={() => setShowAddForm(false)}
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="gap-1 rounded-full text-xs h-7 text-neutral-500 hover:text-[#FF8C00]"
             >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleAddManual}
-              disabled={!newQuestion.trim() || !newAnswer.trim()}
-            >
-              Add FAQ
+              <Plus className="w-3 h-3" />
+              Add
             </Button>
           </div>
         </div>
-      )}
 
-      {/* FAQ list */}
-      {faqs.length === 0 ? (
-        <div className="py-6 text-center">
-          <MessageSquare className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">
-            No FAQs yet. Generate them from your content or add them manually.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2 max-h-72 overflow-y-auto">
-          {faqs.map((faq) => (
-            <div
-              key={faq.id}
-              className="rounded-lg border p-3 group relative"
-            >
-              <button
-                type="button"
-                onClick={() => handleRemoveFaq(faq.id)}
-                className="absolute top-2 right-2 p-1 rounded-md opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-              <div className="pr-6">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="text-sm font-medium">{faq.question}</p>
-                </div>
-                <p className="text-xs text-muted-foreground">{faq.answer}</p>
-                <Badge
-                  variant="outline"
-                  className="mt-2 text-[10px] h-4 px-1.5"
-                >
-                  {faq.source === "generated" ? "AI generated" : "Manual"}
-                </Badge>
-              </div>
+        {genError && (
+          <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
+            <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+            <p className="text-xs text-destructive">{genError}</p>
+          </div>
+        )}
+
+        {/* Manual add form */}
+        {showAddForm && (
+          <div className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] p-3 space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-neutral-600 dark:text-neutral-400">Question</Label>
+              <Input
+                placeholder="What is your return policy?"
+                value={newQuestion}
+                onChange={(e) => setNewQuestion(e.target.value)}
+                className="rounded-xl bg-[#f8f9fa] dark:bg-[#1E1E1E] border-black/5 dark:border-[#2A2A2A]"
+              />
             </div>
-          ))}
-        </div>
-      )}
-    </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-neutral-600 dark:text-neutral-400">Answer</Label>
+              <Textarea
+                placeholder="We offer a 30-day money-back guarantee..."
+                value={newAnswer}
+                onChange={(e) => setNewAnswer(e.target.value)}
+                rows={2}
+                className="rounded-xl bg-[#f8f9fa] dark:bg-[#1E1E1E] border-black/5 dark:border-[#2A2A2A] resize-none"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowAddForm(false)}
+                className="rounded-full"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleAddManual}
+                disabled={!newQuestion.trim() || !newAnswer.trim()}
+                className="rounded-full gradient-accent-bg text-white border-0"
+              >
+                Add FAQ
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* FAQ list */}
+        {faqs.length === 0 && !generating ? (
+          <div className="py-4 text-center">
+            <p className="text-sm text-neutral-400 dark:text-neutral-500">
+              {hasContent
+                ? "Click Generate to create FAQs from your content."
+                : "Add a business description or website first to auto-generate FAQs."}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {faqs.map((faq) => (
+              <div
+                key={faq.id}
+                className="rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] p-3 group relative"
+              >
+                <button
+                  type="button"
+                  onClick={() => handleRemoveFaq(faq.id)}
+                  className="absolute top-2 right-2 p-1 rounded-full opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-destructive hover:bg-destructive/10 transition-all"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+                <div className="pr-6">
+                  <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                    {faq.question}
+                  </p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                    {faq.answer}
+                  </p>
+                  <span className="inline-block mt-2 text-[10px] px-2 py-0.5 rounded-full border border-black/5 dark:border-[#2A2A2A] text-neutral-400 dark:text-neutral-500">
+                    {faq.source === "generated" ? "AI generated" : "Manual"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </WizardCard>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Files Tab
+// Files Section
 // ---------------------------------------------------------------------------
 
-function FilesTab({
+function FilesSection({
   files,
   onFilesChange,
 }: {
@@ -575,7 +514,6 @@ function FilesTab({
         if (ext === "txt" || ext === "md") {
           extractedText = await file.text();
         }
-        // PDFs will be processed server-side after agent creation
 
         newFiles.push({
           file,
@@ -611,73 +549,89 @@ function FilesTab({
   }
 
   return (
-    <div className="space-y-4 pt-3">
-      {/* Drop zone */}
-      <label
-        className={`
-          flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 cursor-pointer transition-colors
-          ${
-            dragActive
-              ? "border-primary bg-primary/5"
-              : "border-muted-foreground/25 hover:border-primary/40 hover:bg-muted/50"
-          }
-        `}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragActive(true);
-        }}
-        onDragLeave={() => setDragActive(false)}
-        onDrop={handleDrop}
-      >
-        <Upload className="w-6 h-6 text-muted-foreground mb-2" />
-        <p className="text-sm font-medium">
-          Drop files here or click to browse
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Supports PDF, TXT, and MD files
-        </p>
-        <input
-          type="file"
-          className="hidden"
-          accept=".pdf,.txt,.md"
-          multiple
-          onChange={(e) => {
-            if (e.target.files) handleFiles(e.target.files);
-          }}
-        />
-      </label>
-
-      {/* File list */}
-      {files.length > 0 && (
-        <div className="space-y-2">
-          {files.map((f, i) => (
-            <div
-              key={`${f.name}-${i}`}
-              className="flex items-center justify-between rounded-lg border px-3 py-2"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{f.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatFileSize(f.size)}
-                    {f.extractedText
-                      ? " — text extracted"
-                      : " — will be processed after your agent is created"}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleRemoveFile(i)}
-                className="shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
+    <WizardCard>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <FileText className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+          <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+            Files
+          </span>
+          {files.length > 0 && (
+            <span className="text-xs text-neutral-400 dark:text-neutral-500 tabular-nums">
+              {files.length} uploaded
+            </span>
+          )}
         </div>
-      )}
-    </div>
+
+        {/* Drop zone */}
+        <label
+          className={`
+            flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-5 cursor-pointer transition-colors
+            ${
+              dragActive
+                ? "border-[#FF8C00] bg-[#FF8C00]/5"
+                : "border-black/10 dark:border-[#2A2A2A] hover:border-[#FF8C00]/40 hover:bg-[#FF8C00]/5"
+            }
+          `}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragActive(true);
+          }}
+          onDragLeave={() => setDragActive(false)}
+          onDrop={handleDrop}
+        >
+          <Upload className="w-5 h-5 text-neutral-400 mb-1.5" />
+          <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
+            Drop files here or click to browse
+          </p>
+          <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">
+            PDF, TXT, and MD files
+          </p>
+          <input
+            type="file"
+            className="hidden"
+            accept=".pdf,.txt,.md"
+            multiple
+            onChange={(e) => {
+              if (e.target.files) handleFiles(e.target.files);
+            }}
+          />
+        </label>
+
+        {/* File list */}
+        {files.length > 0 && (
+          <div className="space-y-2">
+            {files.map((f, i) => (
+              <div
+                key={`${f.name}-${i}`}
+                className="flex items-center justify-between rounded-2xl border border-black/5 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-3 py-2"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText className="w-4 h-4 text-neutral-400 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate text-neutral-800 dark:text-neutral-200">
+                      {f.name}
+                    </p>
+                    <p className="text-xs text-neutral-400 dark:text-neutral-500">
+                      {formatFileSize(f.size)}
+                      {f.extractedText
+                        ? " — text extracted"
+                        : " — will be processed after creation"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveFile(i)}
+                  className="shrink-0 p-1.5 rounded-full text-neutral-400 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </WizardCard>
   );
 }

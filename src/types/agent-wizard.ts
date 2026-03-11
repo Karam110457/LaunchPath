@@ -25,7 +25,7 @@ export interface WizardFile {
 }
 
 // ---------------------------------------------------------------------------
-// Template-specific behavior configs (kept for conversation flow step)
+// Template-specific behavior configs
 // ---------------------------------------------------------------------------
 
 export interface AppointmentBookerConfig {
@@ -79,63 +79,126 @@ export interface LeadCaptureConfig {
 export type LeadQualificationConfig = LeadCaptureConfig;
 
 // ---------------------------------------------------------------------------
-// Wizard state (accumulated across all 6 steps)
+// Wizard state (accumulated across all steps)
 // ---------------------------------------------------------------------------
 
 export interface AgentWizardState {
   // Step 1: Agent Type
   templateId: "appointment-booker" | "customer-support" | "lead-capture" | "lead-qualification" | "custom" | null;
 
-  // Step 2: Your Business
+  // Step 2: Agent Identity
+  agentName: string;
+  agentDescription: string;
+  tone: string;
+  greetingMessage: string;
+
+  // Step 3: Business Context
   businessContextMode: "link_system" | "describe" | null;
   linkedSystemId: string | null;
   businessDescription: string;
   websiteUrl: string;
   discoveredPages: DiscoveredPage[];
 
-  // Step 3: Knowledge Base
+  // Step 4: Knowledge
   faqs: WizardFaq[];
   files: WizardFile[];
 
-  // Step 4: Conversation Flow
+  // Template-specific behavior (steps 5+)
   qualifyingQuestions: string[];
   appointmentBookerConfig: AppointmentBookerConfig;
   customerSupportConfig: CustomerSupportConfig;
   leadCaptureConfig: LeadCaptureConfig;
 
-  // Step 5: Integrations (tool preview)
+  // Integrations
   selectedToolkits: string[];
-
-  // Step 6: Agent Identity
-  agentName: string;
-  agentDescription: string;
-  tone: string;
-  greetingMessage: string;
 }
 
 // ---------------------------------------------------------------------------
-// Step definitions (6 steps)
+// Step definitions — dynamic per template
 // ---------------------------------------------------------------------------
 
+export type WizardStepId =
+  | "choose-type"
+  | "agent-name"
+  | "business-context"
+  | "website"
+  | "knowledge"
+  | "agent-personality"
+  | "lead-qualification"
+  | "lead-fields"
+  | "scheduling"
+  | "response-behavior"
+  | "escalation"
+  | "lead-collection"
+  | "integrations"
+  | "review"
+  // Legacy — kept so old drafts don't crash
+  | "agent-identity";
+
 export interface WizardStepDef {
-  id:
-    | "choose-type"
-    | "business-context"
-    | "knowledge-base"
-    | "conversation-flow"
-    | "integrations"
-    | "agent-identity"
-    | "review";
+  id: WizardStepId;
   label: string;
 }
 
+/** Returns the step sequence for a given template (or null = no template yet). */
+export function getWizardSteps(templateId: string | null): WizardStepDef[] {
+  // Core flow: focused, one-thing-per-screen, website early
+  const core: WizardStepDef[] = [
+    { id: "choose-type", label: "Agent Type" },
+    { id: "agent-name", label: "Name" },
+    { id: "business-context", label: "Your Business" },
+    { id: "website", label: "Website" },
+    { id: "knowledge", label: "Knowledge" },
+    { id: "agent-personality", label: "Personality" },
+  ];
+
+  const review: WizardStepDef = { id: "review", label: "Review" };
+
+  switch (templateId) {
+    case "appointment-booker":
+      return [
+        ...core,
+        { id: "lead-qualification", label: "Qualification" },
+        { id: "lead-fields", label: "Lead Fields" },
+        { id: "scheduling", label: "Scheduling" },
+        { id: "integrations", label: "Integrations" },
+        review,
+      ];
+
+    case "customer-support":
+      return [
+        ...core,
+        { id: "response-behavior", label: "Response Style" },
+        { id: "escalation", label: "Escalation" },
+        { id: "integrations", label: "Integrations" },
+        review,
+      ];
+
+    case "lead-capture":
+    case "lead-qualification":
+      return [
+        ...core,
+        { id: "lead-qualification", label: "Qualification" },
+        { id: "lead-collection", label: "Lead Collection" },
+        { id: "integrations", label: "Integrations" },
+        review,
+      ];
+
+    case "custom":
+      return [...core, review];
+
+    default:
+      // No template selected yet — show only step 1
+      return [{ id: "choose-type", label: "Agent Type" }, review];
+  }
+}
+
+/** @deprecated Kept for backward compat — use getWizardSteps() instead. */
 export const WIZARD_STEPS: WizardStepDef[] = [
   { id: "choose-type", label: "Agent Type" },
-  { id: "business-context", label: "Your Business" },
-  { id: "knowledge-base", label: "Knowledge Base" },
-  { id: "conversation-flow", label: "Conversation Flow" },
-  { id: "integrations", label: "Integrations" },
   { id: "agent-identity", label: "Agent Identity" },
+  { id: "business-context", label: "Your Business" },
+  { id: "knowledge", label: "Knowledge" },
   { id: "review", label: "Review" },
 ];
 
@@ -146,6 +209,10 @@ export const WIZARD_STEPS: WizardStepDef[] = [
 export function createInitialWizardState(): AgentWizardState {
   return {
     templateId: null,
+    agentName: "",
+    agentDescription: "",
+    tone: "",
+    greetingMessage: "",
     businessContextMode: null,
     linkedSystemId: null,
     businessDescription: "",
@@ -189,10 +256,6 @@ export function createInitialWizardState(): AgentWizardState {
       disqualification_criteria: [],
     },
     selectedToolkits: [],
-    agentName: "",
-    agentDescription: "",
-    tone: "",
-    greetingMessage: "",
   };
 }
 

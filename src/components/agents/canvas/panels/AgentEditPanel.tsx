@@ -43,10 +43,21 @@ interface AgentEditPanelProps {
   onToolsChanged?: () => void;
 }
 
-const MODEL_OPTIONS = [
-  { value: "claude-sonnet-4-5-20250929", label: "Claude Sonnet 4.5" },
-  { value: "claude-haiku-3-5-20241022", label: "Claude Haiku 3.5" },
-];
+import {
+  MODEL_OPTIONS,
+  CREDITS_PER_TIER,
+  TIER_LABELS,
+  type ModelTier,
+} from "@/lib/ai/model-tiers";
+
+/** Group models by tier for the selector */
+const MODEL_TIERS = (["fast", "standard", "advanced"] as ModelTier[]).map(
+  (tier) => ({
+    tier,
+    label: `${TIER_LABELS[tier]} (${CREDITS_PER_TIER[tier]} credit${CREDITS_PER_TIER[tier] > 1 ? "s" : ""}/msg)`,
+    models: MODEL_OPTIONS.filter((m) => m.tier === tier),
+  })
+);
 
 const LANGUAGE_OPTIONS = [
   { value: "en", label: "English" },
@@ -710,10 +721,14 @@ export function AgentEditPanel({
                 onChange={(e) => update("model", e.target.value)}
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
-                {MODEL_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
+                {MODEL_TIERS.map((group) => (
+                  <optgroup key={group.tier} label={group.label}>
+                    {group.models.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label} ({opt.provider})
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </section>

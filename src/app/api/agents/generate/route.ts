@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
             personality: agentConfig.personality,
             enabled_tools: [],
             template_id: templateId ?? null,
-            model: "claude-sonnet-4-5-20250929",
+            model: "openai/gpt-4o-mini",
             status: "draft",
             tool_guidelines: template?.toolWorkflow ?? null,
             wizard_config: wizardConfig
@@ -317,7 +317,7 @@ export async function POST(request: NextRequest) {
               description: agentConfig.description,
               system_prompt: agentConfig.system_prompt,
               personality: agentConfig.personality ?? {},
-              model: "claude-sonnet-4-5-20250929",
+              model: "openai/gpt-4o-mini",
               status: "draft",
               change_title: "Initial version",
               change_description: null,

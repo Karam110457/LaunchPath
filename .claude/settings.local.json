@@ -29,7 +29,8 @@
       "Bash(npm install defuddle jsdom)",
       "Bash(grep -E \"\\\\.\\(sql|ts\\)$\")",
       "Bash(ls -la \"/c/Dev/LaunchPath/src/app/\\(auth\\)/\")",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(xargs ls:*)"
     ]
   }
 }

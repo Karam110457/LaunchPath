@@ -11,14 +11,10 @@ import {
   Bot,
   Plug,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { AgentWizardState } from "@/types/agent-wizard";
+import { WizardStepHeader } from "../shared/WizardStepHeader";
+import { WizardCard } from "../shared/WizardCard";
+import type { AgentWizardState, WizardStepId } from "@/types/agent-wizard";
 import { getTemplateById } from "@/lib/agents/templates";
 
 const TEMPLATE_META: Record<
@@ -27,26 +23,26 @@ const TEMPLATE_META: Record<
 > = {
   "appointment-booker": {
     label: "Appointment Booker",
-    icon: <Calendar className="w-4 h-4 text-primary" />,
+    icon: <Calendar className="w-4 h-4 text-[#FF8C00]" />,
   },
   "customer-support": {
     label: "Customer Support",
-    icon: <LifeBuoy className="w-4 h-4 text-primary" />,
+    icon: <LifeBuoy className="w-4 h-4 text-[#FF8C00]" />,
   },
   "lead-capture": {
     label: "Lead Capture",
-    icon: <Target className="w-4 h-4 text-primary" />,
+    icon: <Target className="w-4 h-4 text-[#FF8C00]" />,
   },
   "lead-qualification": {
     label: "Lead Capture",
-    icon: <Target className="w-4 h-4 text-primary" />,
+    icon: <Target className="w-4 h-4 text-[#FF8C00]" />,
   },
 };
 
 interface ReviewStepProps {
   state: AgentWizardState;
   businessName?: string;
-  onGoToStep: (index: number) => void;
+  onGoToStep: (stepId: WizardStepId) => void;
 }
 
 export function ReviewStep({
@@ -64,170 +60,176 @@ export function ReviewStep({
     toolkits.includes(t.toolkit),
   );
   const meta = state.templateId ? TEMPLATE_META[state.templateId] : null;
+  const isCustom = state.templateId === "custom";
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold tracking-tight">
-          Review your agent
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Confirm the details below, then generate your agent.
-        </p>
-      </div>
+      <WizardStepHeader
+        title="Review your agent"
+        description="Confirm the details below, then generate your agent."
+      />
 
       <div className="space-y-4">
         {/* Agent Type */}
-        <ReviewCard title="Agent Type" stepIndex={0} onEdit={onGoToStep}>
+        <ReviewCard title="Agent Type" stepId="choose-type" onEdit={onGoToStep}>
           <div className="flex items-center gap-2">
-            {meta?.icon}
-            <span className="text-sm font-medium">
-              {meta?.label ?? "Unknown"}
+            {meta?.icon ?? <Bot className="w-4 h-4 text-[#FF8C00]" />}
+            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+              {meta?.label ?? "Custom Agent"}
             </span>
           </div>
         </ReviewCard>
 
+        {/* Agent Name */}
+        <ReviewCard title="Agent" stepId="agent-name" onEdit={onGoToStep}>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Bot className="w-4 h-4 text-[#FF8C00]" />
+              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                {state.agentName || "Unnamed agent"}
+              </span>
+            </div>
+            {state.agentDescription && (
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                {state.agentDescription}
+              </p>
+            )}
+          </div>
+        </ReviewCard>
+
+        {/* Personality */}
+        <ReviewCard title="Personality" stepId="agent-personality" onEdit={onGoToStep}>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <span className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-wide">
+                Tone
+              </span>
+              <p className="text-sm mt-0.5 text-neutral-700 dark:text-neutral-300">
+                {state.tone || "—"}
+              </p>
+            </div>
+            <div>
+              <span className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-wide">
+                Greeting
+              </span>
+              <p className="text-sm mt-0.5 italic line-clamp-2 text-neutral-700 dark:text-neutral-300">
+                &ldquo;{state.greetingMessage || "—"}&rdquo;
+              </p>
+            </div>
+          </div>
+        </ReviewCard>
+
         {/* Business Context */}
-        <ReviewCard title="Business" stepIndex={1} onEdit={onGoToStep}>
+        <ReviewCard title="Business" stepId="business-context" onEdit={onGoToStep}>
           {state.businessContextMode === "link_system" && businessName ? (
             <div className="flex items-center gap-2">
-              <Badge variant="secondary">Linked</Badge>
-              <span className="text-sm">{businessName}</span>
+              <Badge variant="secondary" className="rounded-full text-xs">Linked</Badge>
+              <span className="text-sm text-neutral-800 dark:text-neutral-200">{businessName}</span>
             </div>
           ) : state.businessDescription ? (
-            <p className="text-sm text-muted-foreground line-clamp-3">
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 line-clamp-3">
               {state.businessDescription}
             </p>
           ) : (
-            <p className="text-sm text-muted-foreground italic">
+            <p className="text-sm text-neutral-400 dark:text-neutral-500 italic">
               No business context provided
             </p>
           )}
-          {state.websiteUrl && (
-            <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
-              <Globe className="w-3 h-3" />
-              {state.websiteUrl}
-            </div>
-          )}
         </ReviewCard>
 
-        {/* Knowledge Base */}
-        <ReviewCard title="Knowledge Base" stepIndex={2} onEdit={onGoToStep}>
+        {/* Website & Knowledge */}
+        <ReviewCard title="Knowledge" stepId="website" onEdit={onGoToStep}>
           <div className="flex flex-wrap gap-3 text-sm">
-            {scannedPages.length > 0 && (
-              <div className="flex items-center gap-1.5 text-muted-foreground">
+            {state.websiteUrl && (
+              <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400">
                 <Globe className="w-3.5 h-3.5" />
-                {scannedPages.length} pages scanned
-              </div>
-            )}
-            {state.faqs.length > 0 && (
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <MessageSquare className="w-3.5 h-3.5" />
-                {state.faqs.length} FAQs
+                {scannedPages.length > 0
+                  ? `${scannedPages.length} pages from ${state.websiteUrl}`
+                  : state.websiteUrl}
               </div>
             )}
             {state.files.length > 0 && (
-              <div className="flex items-center gap-1.5 text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400">
                 <FileText className="w-3.5 h-3.5" />
                 {state.files.length} files
               </div>
             )}
-            {scannedPages.length === 0 &&
+            {state.faqs.length > 0 && (
+              <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400">
+                <MessageSquare className="w-3.5 h-3.5" />
+                {state.faqs.length} FAQs
+              </div>
+            )}
+            {!state.websiteUrl &&
               state.faqs.length === 0 &&
-              state.files.length === 0 && (
-                <p className="text-sm text-muted-foreground italic">
+              state.files.length === 0 &&
+              scannedPages.length === 0 && (
+                <p className="text-sm text-neutral-400 dark:text-neutral-500 italic">
                   No knowledge base content added
                 </p>
               )}
           </div>
         </ReviewCard>
 
-        {/* Conversation Flow */}
-        <ReviewCard
-          title="Conversation Flow"
-          stepIndex={3}
-          onEdit={onGoToStep}
-        >
-          <div className="space-y-3 text-sm">
-            {questions.length > 0 && (
-              <div>
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  {state.templateId === "customer-support"
-                    ? "Triage Questions"
-                    : "Qualifying Questions"}
-                </span>
-                <ul className="mt-1 space-y-0.5">
-                  {questions.map((q, i) => (
-                    <li key={i} className="text-muted-foreground">
-                      {i + 1}. {q}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {state.templateId === "appointment-booker" ? (
-              <AppointmentReview config={state.appointmentBookerConfig} />
-            ) : state.templateId === "lead-capture" || state.templateId === "lead-qualification" ? (
-              <LeadCaptureReview config={state.leadCaptureConfig} />
-            ) : (
-              <SupportReview config={state.customerSupportConfig} />
-            )}
-          </div>
-        </ReviewCard>
+        {/* Conversation Flow — varies by template */}
+        {!isCustom && (
+          <ReviewCard
+            title="Behavior"
+            stepId={
+              state.templateId === "customer-support" ? "response-behavior" : "lead-qualification"
+            }
+            onEdit={onGoToStep}
+          >
+            <div className="space-y-3 text-sm">
+              {questions.length > 0 && (
+                <div>
+                  <span className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-wide">
+                    {state.templateId === "customer-support"
+                      ? "Triage Questions"
+                      : "Qualifying Questions"}
+                  </span>
+                  <ul className="mt-1 space-y-0.5">
+                    {questions.map((q, i) => (
+                      <li key={i} className="text-neutral-500 dark:text-neutral-400">
+                        {i + 1}. {q}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {state.templateId === "appointment-booker" ? (
+                <AppointmentReview config={state.appointmentBookerConfig} />
+              ) : state.templateId === "lead-capture" || state.templateId === "lead-qualification" ? (
+                <LeadCaptureReview config={state.leadCaptureConfig} />
+              ) : (
+                <SupportReview config={state.customerSupportConfig} />
+              )}
+            </div>
+          </ReviewCard>
+        )}
 
         {/* Integrations */}
-        <ReviewCard title="Integrations" stepIndex={4} onEdit={onGoToStep}>
-          {selectedTools.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {selectedTools.map((t) => (
-                <div
-                  key={t.toolkit}
-                  className="flex items-center gap-1.5 text-sm text-muted-foreground"
-                >
-                  <Plug className="w-3.5 h-3.5" />
-                  {t.toolkitName}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground italic">
-              No integrations selected
-            </p>
-          )}
-        </ReviewCard>
-
-        {/* Agent Identity */}
-        <ReviewCard title="Agent Identity" stepIndex={5} onEdit={onGoToStep}>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Bot className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">
-                {state.agentName || "Unnamed agent"}
-              </span>
-            </div>
-            {state.agentDescription && (
-              <p className="text-xs text-muted-foreground">
-                {state.agentDescription}
+        {!isCustom && (
+          <ReviewCard title="Integrations" stepId="integrations" onEdit={onGoToStep}>
+            {selectedTools.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {selectedTools.map((t) => (
+                  <div
+                    key={t.toolkit}
+                    className="flex items-center gap-1.5 text-sm text-neutral-500 dark:text-neutral-400"
+                  >
+                    <Plug className="w-3.5 h-3.5" />
+                    {t.toolkitName}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-neutral-400 dark:text-neutral-500 italic">
+                No integrations selected
               </p>
             )}
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <div>
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Tone
-                </span>
-                <p className="text-sm mt-0.5">{state.tone || "—"}</p>
-              </div>
-              <div>
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Greeting
-                </span>
-                <p className="text-sm mt-0.5 italic line-clamp-2">
-                  &ldquo;{state.greetingMessage || "—"}&rdquo;
-                </p>
-              </div>
-            </div>
-          </div>
-        </ReviewCard>
+          </ReviewCard>
+        )}
       </div>
     </div>
   );
@@ -239,35 +241,39 @@ export function ReviewStep({
 
 function ReviewCard({
   title,
-  stepIndex,
+  stepId,
   onEdit,
   children,
 }: {
   title: string;
-  stepIndex: number;
-  onEdit: (index: number) => void;
+  stepId: WizardStepId;
+  onEdit: (stepId: WizardStepId) => void;
   children: React.ReactNode;
 }) {
   return (
-    <Card>
-      <CardHeader className="py-3 px-4 flex flex-row items-center justify-between">
-        <CardTitle className="text-sm">{title}</CardTitle>
+    <WizardCard>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-wide mb-2">
+            {title}
+          </p>
+          {children}
+        </div>
         <button
           type="button"
-          onClick={() => onEdit(stepIndex)}
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+          onClick={() => onEdit(stepId)}
+          className="flex items-center gap-1 text-xs text-neutral-400 hover:text-[#FF8C00] transition-colors shrink-0 mt-0.5"
         >
           <Pencil className="w-3 h-3" />
           Edit
         </button>
-      </CardHeader>
-      <CardContent className="px-4 pb-4 pt-0">{children}</CardContent>
-    </Card>
+      </div>
+    </WizardCard>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Appointment Booker Review
+// Template-specific review sub-components
 // ---------------------------------------------------------------------------
 
 function AppointmentReview({
@@ -285,22 +291,22 @@ function AppointmentReview({
   return (
     <>
       <div>
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        <span className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-wide">
           Lead Fields
         </span>
         <div className="flex flex-wrap gap-1.5 mt-1">
           {fields.map((f) => (
-            <Badge key={f} variant="secondary" className="text-xs">
+            <Badge key={f} variant="secondary" className="text-xs rounded-full">
               {f}
             </Badge>
           ))}
         </div>
       </div>
       <div>
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        <span className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-wide">
           After Qualification
         </span>
-        <p className="text-muted-foreground mt-0.5">
+        <p className="text-neutral-500 dark:text-neutral-400 mt-0.5">
           {config.booking_behavior === "book_directly"
             ? "Book directly on calendar"
             : "Collect info for manual follow-up"}
@@ -309,10 +315,6 @@ function AppointmentReview({
     </>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Lead Capture Review
-// ---------------------------------------------------------------------------
 
 function LeadCaptureReview({
   config,
@@ -329,22 +331,22 @@ function LeadCaptureReview({
   return (
     <>
       <div>
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        <span className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-wide">
           Lead Fields
         </span>
         <div className="flex flex-wrap gap-1.5 mt-1">
           {fields.map((f) => (
-            <Badge key={f} variant="secondary" className="text-xs">
+            <Badge key={f} variant="secondary" className="text-xs rounded-full">
               {f}
             </Badge>
           ))}
         </div>
       </div>
       <div>
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        <span className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-wide">
           Where Leads Go
         </span>
-        <p className="text-muted-foreground mt-0.5">
+        <p className="text-neutral-500 dark:text-neutral-400 mt-0.5">
           {config.notification_behavior === "email_team"
             ? "Email team + save to spreadsheet"
             : "Save to spreadsheet only"}
@@ -354,10 +356,6 @@ function LeadCaptureReview({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Customer Support Review
-// ---------------------------------------------------------------------------
-
 function SupportReview({
   config,
 }: {
@@ -366,20 +364,20 @@ function SupportReview({
   return (
     <>
       <div>
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        <span className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-wide">
           Escalation
         </span>
-        <p className="text-muted-foreground mt-0.5">
+        <p className="text-neutral-500 dark:text-neutral-400 mt-0.5">
           {config.escalation_mode === "always_available"
             ? "Handle everything, never escalate"
             : "Escalate complex issues to human"}
         </p>
       </div>
       <div>
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        <span className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-wide">
           Response Style
         </span>
-        <p className="text-muted-foreground mt-0.5">
+        <p className="text-neutral-500 dark:text-neutral-400 mt-0.5">
           {config.response_style === "concise"
             ? "Concise answers"
             : "Detailed explanations"}

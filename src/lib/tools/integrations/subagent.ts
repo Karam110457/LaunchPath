@@ -11,8 +11,8 @@
  */
 
 import { generateText, stepCountIs } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
 import { tool } from "ai";
+import { getModel } from "@/lib/ai/model-provider";
 import { z } from "zod";
 import { logger } from "@/lib/security/logger";
 import { buildAgentTools } from "../builder";
@@ -226,7 +226,7 @@ export function buildSubagentTool(
           const hasTools = Object.keys(tools).length > 0;
 
           const result = await generateText({
-            model: anthropic(targetAgent.model),
+            model: getModel(targetAgent.model),
             system: systemPrompt,
             messages,
             maxOutputTokens: 2048,
