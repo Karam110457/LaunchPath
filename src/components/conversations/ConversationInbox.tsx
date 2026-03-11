@@ -53,8 +53,8 @@ const STATUS_LABEL: Record<string, string> = {
 function ConversationItemSkeleton({ index }: { index: number }) {
   return (
     <div
-      className="px-4 py-3 space-y-2"
-      style={{ "--stagger": index } as React.CSSProperties}
+      className="px-4 py-3 space-y-2 animate-in fade-in duration-200"
+      style={{ "--stagger": index, animationDelay: `${index * 50}ms` } as React.CSSProperties}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -75,15 +75,24 @@ function ConversationItemSkeleton({ index }: { index: number }) {
 
 function DetailSkeleton() {
   return (
-    <div className="flex flex-col h-full animate-in fade-in duration-200">
+    <div className="flex flex-col h-full animate-in fade-in duration-300">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0 bg-background/80 backdrop-blur-sm">
-        <Skeleton className="h-5 w-28 rounded-md" />
-        <div className="flex-1" />
-        <Skeleton className="h-4 w-16 rounded" />
+        <Skeleton className="h-8 w-8 rounded-full" />
+        <div className="space-y-1.5 flex-1">
+          <Skeleton className="h-4 w-32 rounded-md" />
+          <Skeleton className="h-3 w-20 rounded" />
+        </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className={`flex ${i % 2 === 0 ? "justify-end" : "justify-start"}`}>
+          <div
+            key={i}
+            className={cn(
+              "flex animate-in fade-in duration-200",
+              i % 2 === 0 ? "justify-end" : "justify-start"
+            )}
+            style={{ animationDelay: `${(i + 1) * 80}ms` } as React.CSSProperties}
+          >
             <Skeleton
               className={cn(
                 "rounded-2xl",
@@ -221,8 +230,11 @@ export function ConversationInbox({ campaigns, clientId }: ConversationInboxProp
                   onClick={() => selectConversation(conv.id)}
                   style={{ "--stagger": i } as React.CSSProperties}
                   className={cn(
-                    "w-full text-left px-4 py-3 hover:bg-muted/50 transition-all duration-150",
-                    selectedId === conv.id && "bg-muted/30"
+                    "w-full text-left px-4 py-3 transition-all duration-150",
+                    "hover:bg-muted/50 active:scale-[0.99]",
+                    selectedId === conv.id
+                      ? "bg-muted/40 border-l-2 border-l-foreground"
+                      : "border-l-2 border-l-transparent"
                   )}
                 >
                   <div className="flex items-center justify-between mb-0.5">
@@ -315,11 +327,11 @@ function InboxDetail({
   }
 
   return (
-    <div className="flex flex-col h-full animate-in fade-in duration-200">
+    <div className="flex flex-col h-full animate-in fade-in slide-in-from-right-2 duration-200">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0 bg-background/80 backdrop-blur-sm">
         <button
           onClick={onBack}
-          className="md:hidden p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          className="md:hidden p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200 active:scale-95"
         >
           <ChevronLeft className="size-4" />
         </button>

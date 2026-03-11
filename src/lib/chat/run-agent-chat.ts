@@ -434,43 +434,11 @@ export async function runAgentChat(
               output_tokens: usage?.outputTokens ?? null,
             });
 
-            // Deduct credits: monthly first, then topup
-            const { data: currentCredits } = await supabase
-              .from("user_credits")
-              .select("monthly_included, monthly_used, topup_balance")
-              .eq("user_id", agent.user_id)
-              .single();
-
-            if (currentCredits) {
-              const monthlyRemaining =
-                currentCredits.monthly_included - currentCredits.monthly_used;
-              if (monthlyRemaining >= actualCredits) {
-                // Deduct from monthly
-                await supabase
-                  .from("user_credits")
-                  .update({
-                    monthly_used: currentCredits.monthly_used + actualCredits,
-                    updated_at: new Date().toISOString(),
-                  })
-                  .eq("user_id", agent.user_id);
-              } else {
-                // Use remaining monthly + topup for the rest
-                const fromMonthly = Math.max(0, monthlyRemaining);
-                const fromTopup = actualCredits - fromMonthly;
-                await supabase
-                  .from("user_credits")
-                  .update({
-                    monthly_used:
-                      currentCredits.monthly_used + fromMonthly,
-                    topup_balance: Math.max(
-                      0,
-                      currentCredits.topup_balance - fromTopup
-                    ),
-                    updated_at: new Date().toISOString(),
-                  })
-                  .eq("user_id", agent.user_id);
-              }
-            }
+            // Atomic credit deduction (race-safe via row lock in Postgres)
+            await supabase.rpc("deduct_credits", {
+              p_user_id: agent.user_id,
+              p_amount: actualCredits,
+            });
           } catch (usageErr) {
             // Usage logging is non-blocking — don't fail the chat
             logger.error("Failed to log usage or deduct credits", {

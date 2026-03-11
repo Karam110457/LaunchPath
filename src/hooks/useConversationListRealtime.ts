@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 /**
- * Subscribe to INSERT / UPDATE events on `channel_conversations` for a set of
- * channel IDs.  When any conversation changes (new message, status change, new
- * conversation) we call `onUpdate` so the parent can re-fetch its list.
+ * Subscribe to INSERT / UPDATE events on `channel_conversations`.
+ * When any conversation changes (new message, status change, new conversation)
+ * we call `onUpdate` so the parent can re-fetch its list.
  *
- * This is intentionally lightweight — the parent still owns the list state and
- * the fetch logic; this hook just tells it "something changed".
+ * Uses Realtime as primary with a polling fallback (every 5s) to handle cases
+ * where complex RLS policies silently drop events.
  */
 export function useConversationListRealtime(
   /** Stable channel name for the Supabase subscription */
@@ -26,7 +26,9 @@ export function useConversationListRealtime(
 
     const supabase = supabaseRef.current;
     const channelName = `conv-list:${subscriptionKey}`;
+    let realtimeFired = false;
 
+    // Primary: Realtime subscription
     const channel = supabase
       .channel(channelName)
       .on(
@@ -36,7 +38,10 @@ export function useConversationListRealtime(
           schema: "public",
           table: "channel_conversations",
         },
-        () => onUpdateRef.current()
+        () => {
+          realtimeFired = true;
+          onUpdateRef.current();
+        }
       )
       .on(
         "postgres_changes",
@@ -45,12 +50,27 @@ export function useConversationListRealtime(
           schema: "public",
           table: "channel_conversations",
         },
-        () => onUpdateRef.current()
+        () => {
+          realtimeFired = true;
+          onUpdateRef.current();
+        }
       )
       .subscribe();
 
+    // Fallback: poll every 5s to catch missed Realtime events
+    const pollInterval = setInterval(() => {
+      if (realtimeFired) {
+        // Realtime is working — skip this poll but reset flag
+        // so we re-check next interval
+        realtimeFired = false;
+        return;
+      }
+      onUpdateRef.current();
+    }, 5000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(pollInterval);
     };
   }, [subscriptionKey]);
 }

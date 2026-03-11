@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { usePortal } from "@/contexts/PortalContext";
 import { useConversationRealtime } from "@/hooks/useConversationRealtime";
@@ -55,8 +55,8 @@ const STATUS_LABEL: Record<string, string> = {
 function ConversationItemSkeleton({ index }: { index: number }) {
   return (
     <div
-      className="px-4 py-3 space-y-2"
-      style={{ "--stagger": index } as React.CSSProperties}
+      className="px-4 py-3 space-y-2 animate-in fade-in duration-200"
+      style={{ "--stagger": index, animationDelay: `${index * 50}ms` } as React.CSSProperties}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -77,17 +77,30 @@ function ConversationItemSkeleton({ index }: { index: number }) {
 
 function DetailSkeleton() {
   return (
-    <div className="flex flex-col h-full animate-in fade-in duration-200">
+    <div className="flex flex-col h-full animate-in fade-in duration-300">
       {/* Header skeleton */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0 bg-background/80 backdrop-blur-sm">
-        <Skeleton className="h-6 w-32 rounded-full" />
-        <div className="flex-1" />
-        <Skeleton className="h-4 w-16 rounded" />
+        <Skeleton className="h-8 w-8 rounded-full" />
+        <div className="space-y-1.5 flex-1">
+          <Skeleton className="h-4 w-32 rounded-md" />
+          <Skeleton className="h-3 w-20 rounded" />
+        </div>
+        <div className="flex gap-1.5">
+          <Skeleton className="h-7 w-16 rounded-full" />
+          <Skeleton className="h-7 w-16 rounded-full" />
+        </div>
       </div>
       {/* Messages skeleton */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className={`flex ${i % 2 === 0 ? "justify-end" : "justify-start"}`}>
+          <div
+            key={i}
+            className={cn(
+              "flex animate-in fade-in duration-200",
+              i % 2 === 0 ? "justify-end" : "justify-start"
+            )}
+            style={{ animationDelay: `${(i + 1) * 80}ms` } as React.CSSProperties}
+          >
             <Skeleton
               className={cn(
                 "rounded-2xl",
@@ -96,6 +109,10 @@ function DetailSkeleton() {
             />
           </div>
         ))}
+      </div>
+      {/* Input skeleton */}
+      <div className="border-t border-border/30 p-4 animate-in fade-in duration-200" style={{ animationDelay: "400ms" } as React.CSSProperties}>
+        <Skeleton className="h-10 w-full rounded-full" />
       </div>
     </div>
   );
@@ -115,17 +132,19 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  // Track whether the filter changed (vs initial load) for transition animations
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   const [campaignId, setCampaignId] = useState(searchParams.get("campaignId") ?? "");
   const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
   const limit = 50;
+  const prevFilterKey = useRef("");
 
   const campaignNameMap = new Map(campaigns.map((c) => [c.id, c.name]));
 
   const fetchConversations = useCallback(async () => {
-    setIsLoading(true);
     const params = new URLSearchParams();
     if (campaignId) params.set("campaignId", campaignId);
     if (status) params.set("status", status);
@@ -142,10 +161,17 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
       }
     } finally {
       setIsLoading(false);
+      setIsTransitioning(false);
     }
   }, [campaignId, status, search, offset]);
 
+  // Detect filter changes and apply transition
   useEffect(() => {
+    const filterKey = `${campaignId}|${status}|${search}|${offset}`;
+    if (prevFilterKey.current && prevFilterKey.current !== filterKey) {
+      setIsTransitioning(true);
+    }
+    prevFilterKey.current = filterKey;
     fetchConversations();
   }, [fetchConversations]);
 
@@ -189,14 +215,14 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search conversations..."
-              className="w-full bg-white dark:bg-[#151515] border border-neutral-200/60 dark:border-[#2A2A2A] rounded-xl h-10 pl-9 pr-4 text-sm text-neutral-900 dark:text-neutral-200 shadow-sm placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-200 dark:focus-visible:ring-[#2A2A2A] focus:outline-none"
+              className="w-full bg-white dark:bg-[#151515] border border-neutral-200/60 dark:border-[#2A2A2A] rounded-xl h-10 pl-9 pr-4 text-sm text-neutral-900 dark:text-neutral-200 shadow-sm placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-200 dark:focus-visible:ring-[#2A2A2A] focus:outline-none transition-all duration-200"
             />
           </div>
           <div className="flex gap-2">
             <select
               value={campaignId}
               onChange={(e) => setCampaignId(e.target.value)}
-              className="flex-1 min-w-0 px-3 py-1.5 text-xs rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] shadow-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-neutral-200 dark:focus-visible:ring-[#2A2A2A] transition-colors"
+              className="flex-1 min-w-0 px-3 py-1.5 text-xs rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] shadow-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-neutral-200 dark:focus-visible:ring-[#2A2A2A] transition-colors duration-200"
             >
               <option value="">All Campaigns</option>
               {campaigns.map((c) => (
@@ -206,7 +232,7 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="px-3 py-1.5 text-xs rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] shadow-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-neutral-200 dark:focus-visible:ring-[#2A2A2A] transition-colors"
+              className="px-3 py-1.5 text-xs rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] shadow-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-neutral-200 dark:focus-visible:ring-[#2A2A2A] transition-colors duration-200"
             >
               <option value="">All</option>
               <option value="active">Active</option>
@@ -225,8 +251,14 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
                 <ConversationItemSkeleton key={i} index={i} />
               ))}
             </div>
+          ) : isTransitioning ? (
+            <div className="divide-y divide-border animate-in fade-in duration-150">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <ConversationItemSkeleton key={i} index={i} />
+              ))}
+            </div>
           ) : conversations.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground animate-in fade-in duration-300">
+            <div className="p-8 text-center text-muted-foreground animate-in fade-in slide-in-from-bottom-2 duration-300">
               <MessageSquare className="size-8 mx-auto mb-2 opacity-20" />
               <p className="text-sm">No conversations found.</p>
             </div>
@@ -238,22 +270,32 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
                   onClick={() => selectConversation(conv.id)}
                   style={{ "--stagger": i } as React.CSSProperties}
                   className={cn(
-                    "w-full text-left px-4 py-3 hover:bg-muted/50 transition-all duration-150",
-                    selectedId === conv.id && "bg-muted/30"
+                    "w-full text-left px-4 py-3 transition-all duration-150",
+                    "hover:bg-muted/50 active:scale-[0.99]",
+                    selectedId === conv.id
+                      ? "bg-muted/40 border-l-2 border-l-foreground"
+                      : "border-l-2 border-l-transparent"
                   )}
                 >
                   <div className="flex items-center justify-between mb-0.5">
                     <div className="flex items-center gap-2 min-w-0">
                       <span
                         className={cn(
-                          "size-2 rounded-full shrink-0",
+                          "size-2 rounded-full shrink-0 transition-colors duration-300",
                           STATUS_DOT[conv.status] ?? STATUS_DOT.active
                         )}
                       />
                       <span className="text-sm font-medium truncate">
                         {conv.session_id.slice(0, 12)}
                       </span>
-                      <span className="text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground shrink-0">
+                      <span className={cn(
+                        "text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 transition-colors duration-300",
+                        conv.status === "active" && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                        conv.status === "paused" && "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+                        conv.status === "human_takeover" && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+                        conv.status === "closed" && "bg-zinc-500/10 text-zinc-500",
+                        !["active", "paused", "human_takeover", "closed"].includes(conv.status) && "bg-muted text-muted-foreground"
+                      )}>
                         {STATUS_LABEL[conv.status] ?? conv.status}
                       </span>
                     </div>
@@ -292,14 +334,14 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
                 <button
                   onClick={() => setOffset(Math.max(0, offset - limit))}
                   disabled={offset === 0}
-                  className="px-3 py-1 text-xs font-medium rounded-md border border-border hover:bg-muted/50 transition-colors disabled:opacity-40"
+                  className="px-3 py-1 text-xs font-medium rounded-full border border-border hover:bg-muted/50 transition-all duration-200 disabled:opacity-40"
                 >
                   Prev
                 </button>
                 <button
                   onClick={() => setOffset(offset + limit)}
                   disabled={offset + limit >= total}
-                  className="px-3 py-1 text-xs font-medium rounded-md border border-border hover:bg-muted/50 transition-colors disabled:opacity-40"
+                  className="px-3 py-1 text-xs font-medium rounded-full border border-border hover:bg-muted/50 transition-all duration-200 disabled:opacity-40"
                 >
                   Next
                 </button>
@@ -323,7 +365,7 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
             onBack={deselectConversation}
           />
         ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground animate-in fade-in duration-200">
+          <div className="flex-1 flex items-center justify-center text-muted-foreground animate-in fade-in duration-300">
             <div className="text-center">
               <MessageSquare className="size-10 mx-auto mb-3 opacity-15" />
               <p className="text-sm">Select a conversation to view</p>
@@ -354,12 +396,12 @@ function InboxDetail({
   }
 
   return (
-    <div className="flex flex-col h-full animate-in fade-in duration-200">
+    <div className="flex flex-col h-full animate-in fade-in slide-in-from-right-2 duration-200">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0 bg-background/80 backdrop-blur-sm">
         <button
           onClick={onBack}
-          className="md:hidden p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          className="md:hidden p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200 active:scale-95"
         >
           <ChevronLeft className="size-4" />
         </button>
@@ -370,7 +412,7 @@ function InboxDetail({
             onStatusChange={() => refresh()}
           />
         </div>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground animate-in fade-in duration-300">
           {messages.length} msg{messages.length !== 1 ? "s" : ""}
         </span>
       </div>

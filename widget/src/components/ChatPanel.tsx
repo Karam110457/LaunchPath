@@ -199,9 +199,9 @@ export function ChatPanel({
           setConvStatus(d.status as ConversationStatus);
         }
 
-        // New human_agent messages
-        if (d.newMessages && d.newMessages.length > 0) {
-          const humanMsgs = d.newMessages.filter(
+        // Always advance the cursor so we don't re-fetch the same slice
+        if (d.totalMessages != null && d.totalMessages > knownMessageCount.current) {
+          const humanMsgs = (d.newMessages ?? []).filter(
             (m: { role: string }) => m.role === "human_agent"
           );
           if (humanMsgs.length > 0) {

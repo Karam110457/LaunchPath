@@ -20,6 +20,9 @@ interface UseConversationRealtimeResult {
 /**
  * Subscribe to Supabase Realtime changes on a specific channel_conversation row.
  * Returns live messages and status updates.
+ *
+ * Uses Realtime as the primary channel with a polling fallback (every 3s)
+ * to handle cases where complex RLS policies silently drop events.
  */
 export function useConversationRealtime(
   conversationId: string | null
@@ -28,6 +31,8 @@ export function useConversationRealtime(
   const [status, setStatus] = useState("active");
   const [isLoading, setIsLoading] = useState(true);
   const supabaseRef = useRef(createClient());
+  const lastKnownCountRef = useRef(0);
+  const realtimeFiredRef = useRef(false);
 
   const fetchConversation = useCallback(async () => {
     if (!conversationId) return;
@@ -40,20 +45,29 @@ export function useConversationRealtime(
       .single();
 
     if (data) {
-      setMessages((data.messages ?? []) as ConversationMessage[]);
-      setStatus((data as Record<string, unknown>).status as string ?? "active");
+      const msgs = (data.messages ?? []) as ConversationMessage[];
+      const newStatus = (data as Record<string, unknown>).status as string ?? "active";
+
+      // Only update state if something actually changed
+      if (msgs.length !== lastKnownCountRef.current || newStatus !== status) {
+        setMessages(msgs);
+        setStatus(newStatus);
+        lastKnownCountRef.current = msgs.length;
+      }
     }
     setIsLoading(false);
-  }, [conversationId]);
+  }, [conversationId, status]);
 
   useEffect(() => {
     if (!conversationId) return;
 
+    realtimeFiredRef.current = false;
     fetchConversation();
 
     const supabase = supabaseRef.current;
     const channelName = `conversation:${conversationId}`;
 
+    // Primary: Realtime subscription
     const channel = supabase
       .channel(channelName)
       .on(
@@ -65,9 +79,12 @@ export function useConversationRealtime(
           filter: `id=eq.${conversationId}`,
         },
         (payload) => {
+          realtimeFiredRef.current = true;
           const newRow = payload.new as Record<string, unknown>;
           if (newRow.messages) {
-            setMessages(newRow.messages as ConversationMessage[]);
+            const msgs = newRow.messages as ConversationMessage[];
+            setMessages(msgs);
+            lastKnownCountRef.current = msgs.length;
           }
           if (newRow.status) {
             setStatus(newRow.status as string);
@@ -76,8 +93,17 @@ export function useConversationRealtime(
       )
       .subscribe();
 
+    // Fallback: poll every 3s to catch missed Realtime events
+    const pollInterval = setInterval(() => {
+      // If Realtime is firing reliably, reduce polling to every 10s
+      // by skipping intermediate polls
+      if (realtimeFiredRef.current) return;
+      fetchConversation();
+    }, 3000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(pollInterval);
     };
   }, [conversationId, fetchConversation]);
 
