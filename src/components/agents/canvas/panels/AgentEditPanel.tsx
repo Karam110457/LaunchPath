@@ -43,20 +43,7 @@ interface AgentEditPanelProps {
   onToolsChanged?: () => void;
 }
 
-import {
-  MODEL_OPTIONS,
-  TIER_LABELS,
-  type ModelTier,
-} from "@/lib/ai/model-tiers";
-
-/** Group models by tier for the selector */
-const MODEL_TIERS = (["fast", "standard", "advanced"] as ModelTier[]).map(
-  (tier) => ({
-    tier,
-    label: TIER_LABELS[tier],
-    models: MODEL_OPTIONS.filter((m) => m.tier === tier),
-  })
-);
+import { ModelSelector } from "../ModelSelector";
 
 const LANGUAGE_OPTIONS = [
   { value: "en", label: "English" },
@@ -714,22 +701,10 @@ export function AgentEditPanel({
               <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 AI Model
               </h3>
-              <select
-                id="edit-model"
+              <ModelSelector
                 value={formState.model}
-                onChange={(e) => update("model", e.target.value)}
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                {MODEL_TIERS.map((group) => (
-                  <optgroup key={group.tier} label={group.label}>
-                    {group.models.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label} — {opt.multiplier}x
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
+                onChange={(v) => update("model", v)}
+              />
             </section>
 
             {/* Error */}
