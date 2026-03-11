@@ -31,7 +31,7 @@ import { IntegrationsStep } from "./steps/IntegrationsStep";
 import { ReviewStep } from "./steps/ReviewStep";
 
 interface AgentWizardProps {
-  businesses?: Array<{ id: string; name: string }>; // V2: link existing business
+  initialTemplateId?: string;
   onBack: () => void;
 }
 
@@ -77,14 +77,32 @@ function clearDraft() {
   }
 }
 
-export function AgentWizard({ onBack }: AgentWizardProps) {
+export function AgentWizard({ initialTemplateId, onBack }: AgentWizardProps) {
   const router = useRouter();
 
   const draft = useRef(loadDraft());
-  const [stepIndex, setStepIndex] = useState(draft.current?.stepIndex ?? 0);
-  const [state, setState] = useState<AgentWizardState>(
-    draft.current?.state ?? createInitialWizardState(),
+
+  // If a template was pre-selected from the landing page, skip step 1 (choose-type)
+  const hasInitialTemplate = !draft.current && !!initialTemplateId;
+
+  const [stepIndex, setStepIndex] = useState(
+    draft.current?.stepIndex ?? (hasInitialTemplate ? 1 : 0),
   );
+  const [state, setState] = useState<AgentWizardState>(() => {
+    if (draft.current?.state) return draft.current.state;
+    const initial = createInitialWizardState();
+    if (initialTemplateId) {
+      initial.templateId = initialTemplateId as AgentWizardState["templateId"];
+      // Pre-fill personality + tools from template
+      const template = getTemplateById(initialTemplateId);
+      if (template) {
+        initial.tone = template.suggested_personality.tone;
+        initial.greetingMessage = template.suggested_personality.greeting_message;
+        initial.selectedToolkits = template.suggestedTools.map((t) => t.toolkit);
+      }
+    }
+    return initial;
+  });
   const { isLoading, currentLabel, agent, error, startGeneration } =
     useAgentGeneration();
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAgentGeneration } from "@/hooks/useAgentGeneration";
 import { AGENT_TEMPLATES } from "@/lib/agents/templates";
 import { AgentGenerating } from "./AgentGenerating";
+import { AgentWizard } from "./wizard/AgentWizard";
 import { cn } from "@/lib/utils";
 import {
   ArrowRight,
@@ -17,7 +18,6 @@ import {
   RefreshCw,
   Sparkles,
   Target,
-  X,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -33,8 +33,8 @@ export function AgentCreationLanding() {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [prompt, setPrompt] = useState("");
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [creatingBlank, setCreatingBlank] = useState(false);
+  const [wizardTemplateId, setWizardTemplateId] = useState<string | null>(null);
 
   const { isLoading, currentLabel, agent, error, startGeneration } =
     useAgentGeneration();
@@ -69,11 +69,7 @@ export function AgentCreationLanding() {
 
   function handleGenerate() {
     if (!canGenerate) return;
-    const template = AGENT_TEMPLATES.find((t) => t.id === selectedTemplate);
-    startGeneration({
-      prompt: prompt || template?.default_system_prompt_hint || "",
-      templateId: selectedTemplate ?? undefined,
-    });
+    startGeneration({ prompt });
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -83,27 +79,24 @@ export function AgentCreationLanding() {
     }
   }
 
-  function handleTemplateSelect(templateId: string) {
-    const isAlreadySelected = selectedTemplate === templateId;
-    setSelectedTemplate(isAlreadySelected ? null : templateId);
-    if (!isAlreadySelected) {
-      const template = AGENT_TEMPLATES.find((t) => t.id === templateId);
-      if (template && !prompt) {
-        setPrompt(template.default_system_prompt_hint);
-      }
-    }
-    textareaRef.current?.focus();
-  }
+  const canGenerate = !isLoading && prompt.trim().length > 0;
 
-  const canGenerate =
-    !isLoading && (prompt.trim().length > 0 || selectedTemplate != null);
-
-  // Show generating state
+  // Show generating state (from chat prompt, not wizard — wizard handles its own)
   if (isLoading || error) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <AgentGenerating currentLabel={currentLabel} error={error} />
       </div>
+    );
+  }
+
+  // Show guided wizard when a template was selected
+  if (wizardTemplateId) {
+    return (
+      <AgentWizard
+        initialTemplateId={wizardTemplateId}
+        onBack={() => setWizardTemplateId(null)}
+      />
     );
   }
 
@@ -120,21 +113,6 @@ export function AgentCreationLanding() {
           and watch your agent come to life.
         </p>
       </div>
-
-      {/* Selected template badge */}
-      {selectedTemplate && (
-        <div className="mb-4 animate-in fade-in duration-150">
-          <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-[#FF8C00]/10 text-[#FF8C00] border border-[#FF8C00]/20">
-            {AGENT_TEMPLATES.find((t) => t.id === selectedTemplate)?.name}
-            <button
-              onClick={() => setSelectedTemplate(null)}
-              className="hover:bg-[#FF8C00]/20 rounded-full p-0.5 transition-colors"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </span>
-        </div>
-      )}
 
       {/* Chat input */}
       <div className="relative w-full max-w-2xl">
@@ -176,24 +154,13 @@ export function AgentCreationLanding() {
         <div className="flex flex-wrap items-center justify-center gap-2">
           {AGENT_TEMPLATES.map((template) => {
             const Icon = ICON_MAP[template.icon] ?? Sparkles;
-            const isSelected = selectedTemplate === template.id;
             return (
               <button
                 key={template.id}
-                onClick={() => handleTemplateSelect(template.id)}
-                className={cn(
-                  "inline-flex items-center gap-2 px-3.5 py-2 rounded-full border text-sm transition-all",
-                  isSelected
-                    ? "border-[#FF8C00]/50 bg-[#FF8C00]/5 text-foreground shadow-sm"
-                    : "border-border/50 bg-background/60 text-muted-foreground hover:border-[#FF8C00]/30 hover:text-foreground hover:bg-muted/30"
-                )}
+                onClick={() => setWizardTemplateId(template.id)}
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-border/50 bg-background/60 text-muted-foreground text-sm transition-all hover:border-[#FF8C00]/30 hover:text-foreground hover:bg-muted/30"
               >
-                <Icon
-                  className={cn(
-                    "h-3.5 w-3.5",
-                    isSelected ? "text-[#FF8C00]" : "text-muted-foreground"
-                  )}
-                />
+                <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                 {template.name}
               </button>
             );
