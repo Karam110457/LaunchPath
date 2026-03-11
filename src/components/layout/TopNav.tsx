@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Moon, Sun, Settings, Bot, Rocket, BarChart3, LogOut } from "lucide-react";
+import { Moon, Sun, Settings, Bot, Rocket, BarChart3, LogOut, Plus } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/client";
 
 const NAV_LINKS = [
     { label: "Agents", href: "/dashboard/agents", icon: Bot },
+    { label: "Create", href: "/dashboard/agents/new", icon: Plus },
     { label: "Deploy", href: "/dashboard/clients", icon: Rocket },
     { label: "Usage",  href: "/dashboard/usage",   icon: BarChart3 },
 ];
@@ -52,7 +53,11 @@ export function TopNav() {
             {/* Center Setup (Navigation Pill) */}
             <nav className="hidden md:flex items-center p-1.5 rounded-full border border-border/40 bg-card/60 backdrop-blur-md shadow-sm">
                 {NAV_LINKS.map((link) => {
-                    const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
+                    // Check if a more specific link matches first (e.g. /agents/new beats /agents)
+                    const moreSpecificMatch = NAV_LINKS.some(
+                        (other) => other.href !== link.href && other.href.startsWith(link.href + "/") && (pathname === other.href || pathname.startsWith(other.href + "/"))
+                    );
+                    const isActive = !moreSpecificMatch && (pathname === link.href || pathname.startsWith(link.href + "/"));
                     return (
                         <Link
                             key={link.href}

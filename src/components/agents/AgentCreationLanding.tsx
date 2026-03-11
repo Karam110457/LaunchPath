@@ -109,12 +109,6 @@ export function AgentCreationLanding() {
 
   return (
     <div className="relative flex flex-col items-center justify-center min-h-[70vh] px-4">
-      {/* Background decoration */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-[#FF8C00]/[0.03] to-[#9D50BB]/[0.03] blur-3xl" />
-        <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] rounded-full bg-gradient-to-tr from-[#9D50BB]/[0.02] to-transparent blur-3xl" />
-      </div>
-
       {/* Hero text */}
       <div className="relative text-center mb-10 mt-8">
         <h1 className="text-4xl md:text-5xl font-serif tracking-tight text-foreground/80">

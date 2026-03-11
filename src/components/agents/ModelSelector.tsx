@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Search, ChevronDown, Check, X } from "lucide-react";
 import {
   MODEL_OPTIONS,
@@ -24,12 +24,21 @@ const TIER_BADGE_COLORS: Record<ModelTier, string> = {
   advanced: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
 };
 
+const DROPDOWN_W = 360;
+const DROPDOWN_MAX_H = 420;
+
 export function ModelSelector({ value, onChange, className }: ModelSelectorProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [providerFilter, setProviderFilter] = useState<string | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number }>({
+    top: 0,
+    left: 0,
+    width: DROPDOWN_W,
+  });
 
   const providers = useMemo(() => getAvailableProviders(), []);
 
@@ -60,7 +69,6 @@ export function ModelSelector({ value, onChange, className }: ModelSelectorProps
       list.push(m);
       map.set(m.provider, list);
     }
-    // Sort within each provider by tier order then multiplier
     for (const [, list] of map) {
       list.sort((a, b) => {
         const tierDiff = TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier);
@@ -71,17 +79,56 @@ export function ModelSelector({ value, onChange, className }: ModelSelectorProps
     return map;
   }, [filtered]);
 
+  // Calculate fixed position for dropdown
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const triggerW = rect.width;
+    const dropW = Math.max(triggerW, DROPDOWN_W);
+
+    // Prefer aligning left edge with trigger; clamp to viewport
+    let left = rect.left;
+    if (left + dropW > window.innerWidth - 8) {
+      left = Math.max(8, window.innerWidth - dropW - 8);
+    }
+
+    // Prefer opening below; if not enough space, open above
+    let top = rect.bottom + 4;
+    if (top + DROPDOWN_MAX_H > window.innerHeight - 8) {
+      const above = rect.top - 4 - DROPDOWN_MAX_H;
+      if (above > 8) top = above;
+    }
+
+    setPos({ top, left, width: dropW });
+  }, []);
+
   // Close on outside click
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const t = e.target as Node;
+      if (
+        triggerRef.current?.contains(t) ||
+        dropdownRef.current?.contains(t)
+      )
+        return;
+      setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
+
+  // Reposition on scroll / resize while open
+  useEffect(() => {
+    if (!open) return;
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [open, updatePosition]);
 
   // Focus search on open
   useEffect(() => {
@@ -94,31 +141,43 @@ export function ModelSelector({ value, onChange, className }: ModelSelectorProps
   }, [open]);
 
   return (
-    <div ref={containerRef} className={`relative ${className ?? ""}`}>
+    <>
       {/* Trigger */}
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className={`flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${className ?? ""}`}
       >
-        <span className="truncate">
+        <span className="truncate text-left">
           {selectedModel ? (
             <>
               {selectedModel.label}
-              <span className="text-muted-foreground ml-1.5">
-                {selectedModel.provider} · {selectedModel.multiplier}x
+              <span className="text-muted-foreground ml-1.5 text-xs">
+                {selectedModel.multiplier}x
               </span>
             </>
           ) : (
-            <span className="text-muted-foreground">Select a model…</span>
+            <span className="text-muted-foreground">Select model…</span>
           )}
         </span>
-        <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground ml-2" />
+        <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground ml-1" />
       </button>
 
-      {/* Dropdown */}
+      {/* Portal-style fixed dropdown */}
       {open && (
-        <div className="absolute z-50 mt-1 w-full min-w-[380px] max-h-[420px] rounded-xl border border-border/60 bg-background shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+        <div
+          ref={dropdownRef}
+          style={{
+            position: "fixed",
+            top: pos.top,
+            left: pos.left,
+            width: pos.width,
+            maxHeight: DROPDOWN_MAX_H,
+            zIndex: 9999,
+          }}
+          className="rounded-xl border border-border/60 bg-background shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150"
+        >
           {/* Search bar */}
           <div className="flex items-center gap-2 px-3 py-2 border-b border-border/40">
             <Search className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -137,11 +196,11 @@ export function ModelSelector({ value, onChange, className }: ModelSelectorProps
             )}
           </div>
 
-          {/* Provider pills */}
-          <div className="flex items-center gap-1 px-3 py-2 border-b border-border/40 overflow-x-auto scrollbar-none">
+          {/* Provider pills — wrapping allowed on narrow widths */}
+          <div className="flex items-center gap-1 px-3 py-2 border-b border-border/40 flex-wrap">
             <button
               onClick={() => setProviderFilter(null)}
-              className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+              className={`shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium transition-colors ${
                 !providerFilter
                   ? "bg-foreground text-background"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -153,7 +212,7 @@ export function ModelSelector({ value, onChange, className }: ModelSelectorProps
               <button
                 key={p}
                 onClick={() => setProviderFilter(providerFilter === p ? null : p)}
-                className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                className={`shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium transition-colors ${
                   providerFilter === p
                     ? "bg-foreground text-background"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -165,7 +224,7 @@ export function ModelSelector({ value, onChange, className }: ModelSelectorProps
           </div>
 
           {/* Model list */}
-          <div className="overflow-y-auto max-h-[310px] py-1">
+          <div className="overflow-y-auto" style={{ maxHeight: DROPDOWN_MAX_H - 90 }}>
             {grouped.size === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
                 No models found
@@ -173,7 +232,6 @@ export function ModelSelector({ value, onChange, className }: ModelSelectorProps
             ) : (
               Array.from(grouped.entries()).map(([provider, models]) => (
                 <div key={provider}>
-                  {/* Provider header (only show if not filtering by single provider) */}
                   {!providerFilter && (
                     <div className="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider sticky top-0 bg-background/95 backdrop-blur-sm">
                       {provider}
@@ -189,32 +247,25 @@ export function ModelSelector({ value, onChange, className }: ModelSelectorProps
                           onChange(m.value);
                           setOpen(false);
                         }}
-                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
-                          isSelected
-                            ? "bg-muted/60"
-                            : "hover:bg-muted/40"
+                        className={`w-full flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${
+                          isSelected ? "bg-muted/60" : "hover:bg-muted/40"
                         }`}
                       >
-                        <div className="flex-1 min-w-0 text-left">
+                        <div className="flex-1 min-w-0 text-left truncate">
                           <span className="font-medium text-foreground">
                             {m.label}
                           </span>
-                          {providerFilter && (
-                            <span className="text-muted-foreground ml-1">
-                              · {m.provider}
-                            </span>
-                          )}
                         </div>
                         <span
                           className={`shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${TIER_BADGE_COLORS[m.tier]}`}
                         >
                           {TIER_LABELS[m.tier]}
                         </span>
-                        <span className="shrink-0 text-xs text-muted-foreground tabular-nums w-10 text-right">
+                        <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums w-8 text-right">
                           {m.multiplier}x
                         </span>
                         {isSelected && (
-                          <Check className="w-4 h-4 shrink-0 text-foreground" />
+                          <Check className="w-3.5 h-3.5 shrink-0 text-foreground" />
                         )}
                       </button>
                     );
@@ -225,6 +276,6 @@ export function ModelSelector({ value, onChange, className }: ModelSelectorProps
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
