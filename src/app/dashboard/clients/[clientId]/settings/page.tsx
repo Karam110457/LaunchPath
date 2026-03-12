@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Send, Trash2, Palette, Upload } from "lucide-react";
+import { Send, Trash2, Palette, Upload, Users } from "lucide-react";
 
 interface Client {
   id: string;
@@ -26,6 +26,9 @@ interface Branding {
   logo_url: string | null;
   favicon_url: string | null;
 }
+
+const INPUT_CLASS =
+  "w-full rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-4 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors duration-150";
 
 export default function ClientSettingsPage() {
   const { clientId } = useParams<{ clientId: string }>();
@@ -152,17 +155,18 @@ export default function ClientSettingsPage() {
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this client? Campaigns will be unlinked but not deleted.")) return;
+    if (!confirm("Delete this client? All campaigns, channels, and conversations will be permanently deleted.")) return;
     await fetch(`/api/clients/${clientId}`, { method: "DELETE" });
     router.push("/dashboard/clients");
   }
 
   if (loading) {
     return (
-      <div className="p-6 max-w-3xl mx-auto">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-48 bg-muted rounded" />
-          <div className="h-40 bg-muted rounded-lg" />
+      <div className="max-w-3xl mx-auto space-y-6">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 w-48 bg-muted rounded-xl" />
+          <div className="h-52 bg-muted rounded-[32px]" />
+          <div className="h-52 bg-muted rounded-[32px]" />
         </div>
       </div>
     );
@@ -170,16 +174,16 @@ export default function ClientSettingsPage() {
 
   if (!client) {
     return (
-      <div className="p-6 max-w-3xl mx-auto text-center text-muted-foreground">
+      <div className="max-w-3xl mx-auto text-center text-muted-foreground py-20">
         Client not found
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
+    <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
       {/* Client Info */}
-      <div className="rounded-lg border bg-card p-5 space-y-4">
+      <div className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-6 space-y-5">
         <h2 className="text-sm font-semibold">Client Information</h2>
         <div className="grid gap-4">
           <div className="space-y-1.5">
@@ -187,7 +191,7 @@ export default function ClientSettingsPage() {
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              className={INPUT_CLASS}
             />
           </div>
           <div className="space-y-1.5">
@@ -196,7 +200,7 @@ export default function ClientSettingsPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              className={INPUT_CLASS}
             />
           </div>
           <div className="space-y-1.5">
@@ -205,7 +209,7 @@ export default function ClientSettingsPage() {
               type="url"
               value={website}
               onChange={(e) => setWebsite(e.target.value)}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              className={INPUT_CLASS}
             />
           </div>
           <div className="space-y-1.5">
@@ -213,7 +217,7 @@ export default function ClientSettingsPage() {
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              className={INPUT_CLASS}
             >
               <option value="active">Active</option>
               <option value="paused">Paused</option>
@@ -225,7 +229,7 @@ export default function ClientSettingsPage() {
           <button
             onClick={handleSave}
             disabled={saving || !name.trim()}
-            className="px-4 py-2 text-sm font-medium rounded-lg shadow-md gradient-accent-bg text-white hover:scale-[1.02] transition-transform border-0 disabled:opacity-50"
+            className="px-5 py-2.5 text-sm font-medium rounded-full shadow-sm gradient-accent-bg text-white hover:scale-[1.02] transition-transform duration-150 disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save Changes"}
           </button>
@@ -236,7 +240,7 @@ export default function ClientSettingsPage() {
       </div>
 
       {/* Portal Branding */}
-      <div className="rounded-lg border bg-card p-5 space-y-4">
+      <div className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-6 space-y-5">
         <div className="flex items-center gap-2">
           <Palette className="size-4 text-muted-foreground" />
           <h2 className="text-sm font-semibold">Portal Branding</h2>
@@ -264,7 +268,7 @@ export default function ClientSettingsPage() {
                 value={brandingLogoUrl}
                 onChange={(e) => setBrandingLogoUrl(e.target.value)}
                 placeholder="https://example.com/logo.png"
-                className="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
+                className={`flex-1 ${INPUT_CLASS.replace("w-full ", "")}`}
               />
             </div>
           </div>
@@ -279,7 +283,7 @@ export default function ClientSettingsPage() {
                 type="color"
                 value={accentColor}
                 onChange={(e) => setAccentColor(e.target.value)}
-                className="size-10 rounded-lg border cursor-pointer"
+                className="size-10 rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] cursor-pointer shadow-sm"
               />
               <span className="text-sm text-muted-foreground font-mono">{accentColor}</span>
             </div>
@@ -313,21 +317,21 @@ export default function ClientSettingsPage() {
                   type="color"
                   value={gradientEndColor}
                   onChange={(e) => setGradientEndColor(e.target.value)}
-                  className="size-10 rounded-lg border cursor-pointer"
+                  className="size-10 rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] cursor-pointer shadow-sm"
                 />
                 <span className="text-sm text-muted-foreground font-mono">{gradientEndColor}</span>
               </div>
             )}
           </div>
 
-          <div className="rounded-xl border border-border/40 bg-muted/30 p-4">
+          <div className="rounded-2xl border border-border/40 bg-white/50 dark:bg-[#151515]/50 p-4">
             <p className="text-xs font-medium mb-3">Preview</p>
             <div className="flex items-center gap-3">
               {brandingLogoUrl ? (
-                <img src={brandingLogoUrl} alt="" className="size-8 rounded-lg object-cover" />
+                <img src={brandingLogoUrl} alt="" className="size-8 rounded-xl object-cover" />
               ) : (
                 <div
-                  className="size-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
+                  className="size-8 rounded-xl flex items-center justify-center text-white text-sm font-bold"
                   style={{ background: accentBg }}
                 >
                   {name.charAt(0).toUpperCase()}
@@ -357,7 +361,7 @@ export default function ClientSettingsPage() {
           <button
             onClick={handleSaveBranding}
             disabled={savingBranding}
-            className="px-4 py-2 text-sm font-medium rounded-lg shadow-md gradient-accent-bg text-white hover:scale-[1.02] transition-transform border-0 disabled:opacity-50"
+            className="px-5 py-2.5 text-sm font-medium rounded-full shadow-sm gradient-accent-bg text-white hover:scale-[1.02] transition-transform duration-150 disabled:opacity-50"
           >
             {savingBranding ? "Saving..." : "Save Branding"}
           </button>
@@ -368,34 +372,37 @@ export default function ClientSettingsPage() {
       </div>
 
       {/* Team */}
-      <div className="rounded-lg border bg-card p-5 space-y-3">
-        <h2 className="text-sm font-semibold">
-          Team Members ({members.length})
-        </h2>
+      <div className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Users className="size-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold">
+            Team Members ({members.length})
+          </h2>
+        </div>
         {members.length > 0 && (
-          <div className="divide-y">
+          <div className="divide-y divide-border/30">
             {members.map((m) => (
-              <div key={m.id} className="flex items-center justify-between py-2">
+              <div key={m.id} className="flex items-center justify-between py-2.5">
                 <span className="text-sm">{m.user_id.slice(0, 8)}...</span>
-                <span className="text-xs bg-muted px-2 py-0.5 rounded capitalize">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-muted font-medium capitalize">
                   {m.role}
                 </span>
               </div>
             ))}
           </div>
         )}
-        <form onSubmit={handleInvite} className="flex gap-2 pt-2">
+        <form onSubmit={handleInvite} className="flex gap-2 pt-1">
           <input
             type="email"
             value={inviteEmail}
             onChange={(e) => setInviteEmail(e.target.value)}
             placeholder="Invite by email..."
-            className="flex-1 rounded-md border bg-background px-3 py-1.5 text-sm"
+            className={`flex-1 ${INPUT_CLASS.replace("w-full ", "")}`}
           />
           <button
             type="submit"
             disabled={inviting || !inviteEmail}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md shadow-md gradient-accent-bg text-white hover:scale-[1.02] transition-transform border-0 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-full shadow-sm gradient-accent-bg text-white hover:scale-[1.02] transition-transform duration-150 disabled:opacity-50"
           >
             <Send className="size-3.5" />
             {inviting ? "..." : "Invite"}
@@ -407,10 +414,14 @@ export default function ClientSettingsPage() {
       </div>
 
       {/* Danger zone */}
-      <div className="rounded-lg border border-destructive/20 bg-card p-5">
+      <div className="rounded-[32px] border border-destructive/20 bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-6">
+        <h2 className="text-sm font-semibold text-destructive mb-2">Danger Zone</h2>
+        <p className="text-xs text-muted-foreground mb-4">
+          Deleting this client will permanently remove all campaigns, channels, and conversations.
+        </p>
         <button
           onClick={handleDelete}
-          className="inline-flex items-center gap-2 text-sm text-destructive hover:text-destructive/80 transition-colors"
+          className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors duration-150"
         >
           <Trash2 className="size-4" />
           Delete Client

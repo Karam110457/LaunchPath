@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MessageSquare } from "lucide-react";
 
 interface ConversationItem {
   id: string;
@@ -26,14 +27,15 @@ export function ConversationList({
 }: ConversationListProps) {
   if (conversations.length === 0) {
     return (
-      <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground">
-        {emptyMessage}
+      <div className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 px-6 py-14 text-center">
+        <MessageSquare className="size-8 text-muted-foreground/20 mx-auto mb-3" />
+        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border bg-card divide-y">
+    <div className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 divide-y divide-border/30 overflow-hidden">
       {conversations.map((conv) => {
         const messages = conv.messages as Array<{ role: string; content: string }>;
         const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
@@ -46,15 +48,15 @@ export function ConversationList({
           <Link
             key={conv.id}
             href={`${basePath}/${conv.id}`}
-            className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+            className="flex items-center justify-between px-6 py-3.5 hover:bg-muted/30 transition-colors duration-150"
           >
-            <div className="min-w-0 flex-1 space-y-1">
+            <div className="min-w-0 flex-1 space-y-0.5">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-medium truncate">
-                  {conv.session_id.slice(0, 8)}...
+                  {conv.session_id.slice(0, 8)}
                 </p>
                 {campaignName && (
-                  <span className="text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                  <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground font-medium">
                     {campaignName}
                   </span>
                 )}

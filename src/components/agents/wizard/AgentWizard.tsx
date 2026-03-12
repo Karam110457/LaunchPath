@@ -35,7 +35,37 @@ interface AgentWizardProps {
   onBack: () => void;
 }
 
-const WIZARD_DRAFT_KEY = "launchpath_wizard_draft";
+export const WIZARD_DRAFT_KEY = "launchpath_wizard_draft";
+
+/** Check if a wizard draft exists in localStorage (safe for SSR) */
+export function hasWizardDraft(): {
+  exists: boolean;
+  templateId?: string;
+  stepIndex?: number;
+  agentName?: string;
+} {
+  try {
+    const raw = localStorage.getItem(WIZARD_DRAFT_KEY);
+    if (!raw) return { exists: false };
+    const draft = JSON.parse(raw);
+    return {
+      exists: true,
+      templateId: draft.state?.templateId ?? undefined,
+      stepIndex: draft.stepIndex ?? 0,
+      agentName: draft.state?.agentName ?? undefined,
+    };
+  } catch {
+    return { exists: false };
+  }
+}
+
+export function clearWizardDraft() {
+  try {
+    localStorage.removeItem(WIZARD_DRAFT_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 function loadDraft(): { stepIndex: number; state: AgentWizardState } | null {
   try {
@@ -69,13 +99,7 @@ function saveDraft(stepIndex: number, state: AgentWizardState) {
   }
 }
 
-function clearDraft() {
-  try {
-    localStorage.removeItem(WIZARD_DRAFT_KEY);
-  } catch {
-    // ignore
-  }
-}
+const clearDraft = clearWizardDraft;
 
 export function AgentWizard({ initialTemplateId, onBack }: AgentWizardProps) {
   const router = useRouter();

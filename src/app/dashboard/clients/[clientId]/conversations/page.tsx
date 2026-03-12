@@ -19,7 +19,7 @@ export default async function ClientConversationsPage({
     .order("name");
 
   return (
-    <div className="p-4 lg:p-6 h-[calc(100dvh-64px)] flex flex-col">
+    <div className="flex flex-col h-[calc(100dvh-220px)] min-h-[400px]">
       <div className="mb-4 shrink-0">
         <h2 className="text-lg font-semibold">Conversations</h2>
         <p className="text-sm text-muted-foreground mt-0.5">

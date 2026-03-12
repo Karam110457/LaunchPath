@@ -31,7 +31,8 @@
       "Bash(ls -la \"/c/Dev/LaunchPath/src/app/\\(auth\\)/\")",
       "Bash(xargs grep:*)",
       "Bash(xargs ls:*)",
-      "Bash(ls -la /c/Dev/LaunchPath/src/app/api/portal/conversations/[conversationId]/)"
+      "Bash(ls -la /c/Dev/LaunchPath/src/app/api/portal/conversations/[conversationId]/)",
+      "Bash(grep -E \"\\\\.\\(ts|sql\\)$\")"
     ]
   }
 }

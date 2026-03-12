@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAgentGeneration } from "@/hooks/useAgentGeneration";
-import { AGENT_TEMPLATES } from "@/lib/agents/templates";
+import { AGENT_TEMPLATES, getTemplateById } from "@/lib/agents/templates";
 import { AgentGenerating } from "./AgentGenerating";
-import { AgentWizard } from "./wizard/AgentWizard";
+import { AgentWizard, hasWizardDraft, clearWizardDraft } from "./wizard/AgentWizard";
+import { getWizardSteps } from "@/types/agent-wizard";
 import { cn } from "@/lib/utils";
 import {
   ArrowRight,
@@ -18,6 +19,8 @@ import {
   RefreshCw,
   Sparkles,
   Target,
+  PlayCircle,
+  X,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -35,9 +38,20 @@ export function AgentCreationLanding() {
   const [prompt, setPrompt] = useState("");
   const [creatingBlank, setCreatingBlank] = useState(false);
   const [wizardTemplateId, setWizardTemplateId] = useState<string | null>(null);
+  const [draftInfo, setDraftInfo] = useState<{
+    exists: boolean;
+    templateId?: string;
+    stepIndex?: number;
+    agentName?: string;
+  }>({ exists: false });
 
   const { isLoading, currentLabel, agent, error, startGeneration } =
     useAgentGeneration();
+
+  // Check for existing wizard draft on mount
+  useEffect(() => {
+    setDraftInfo(hasWizardDraft());
+  }, []);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -79,6 +93,16 @@ export function AgentCreationLanding() {
     }
   }
 
+  function handleResumeDraft() {
+    // Set a sentinel value so the wizard mounts and picks up the draft from localStorage
+    setWizardTemplateId("__resume__");
+  }
+
+  function handleDiscardDraft() {
+    clearWizardDraft();
+    setDraftInfo({ exists: false });
+  }
+
   const canGenerate = !isLoading && prompt.trim().length > 0;
 
   // Show generating state (from chat prompt, not wizard — wizard handles its own)
@@ -90,18 +114,114 @@ export function AgentCreationLanding() {
     );
   }
 
-  // Show guided wizard when a template was selected
+  // Show guided wizard when a template was selected or resuming draft
   if (wizardTemplateId) {
     return (
       <AgentWizard
-        initialTemplateId={wizardTemplateId}
-        onBack={() => setWizardTemplateId(null)}
+        initialTemplateId={wizardTemplateId === "__resume__" ? undefined : wizardTemplateId}
+        onBack={() => {
+          setWizardTemplateId(null);
+          setDraftInfo(hasWizardDraft());
+        }}
       />
     );
   }
 
+  // Build draft resume banner info
+  const draftTemplate = draftInfo.templateId
+    ? getTemplateById(draftInfo.templateId)
+    : null;
+  const draftTotalSteps = draftInfo.templateId
+    ? getWizardSteps(draftInfo.templateId).length
+    : 0;
+  const draftStepLabel =
+    draftInfo.stepIndex != null && draftTotalSteps > 0
+      ? `Step ${draftInfo.stepIndex + 1} of ${draftTotalSteps}`
+      : null;
+
   return (
     <div className="relative flex flex-col items-center justify-center min-h-[70vh] px-4">
+      {/* Draft resume banner */}
+      {draftInfo.exists && (
+        <div className="w-full max-w-2xl mb-8 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="relative rounded-2xl border border-border/60 bg-card/80 backdrop-blur-sm shadow-lg shadow-black/[0.03] p-5">
+            {/* Dismiss button */}
+            <button
+              onClick={handleDiscardDraft}
+              className="absolute top-3 right-3 p-1.5 rounded-full text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/50 transition-colors"
+              title="Discard draft"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+
+            <div className="flex items-center gap-4">
+              {/* Icon */}
+              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#FF8C00]/10 to-[#9D50BB]/10 flex items-center justify-center shrink-0">
+                {draftTemplate ? (
+                  (() => {
+                    const Icon = ICON_MAP[draftTemplate.icon] ?? Sparkles;
+                    return <Icon className="h-5 w-5 text-[#FF8C00]" />;
+                  })()
+                ) : (
+                  <Sparkles className="h-5 w-5 text-[#FF8C00]" />
+                )}
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">
+                  {draftInfo.agentName || draftTemplate?.name || "Agent"} in progress
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {draftStepLabel && (
+                    <span>{draftStepLabel}</span>
+                  )}
+                  {draftStepLabel && draftTemplate && (
+                    <span className="mx-1.5 text-border">·</span>
+                  )}
+                  {draftTemplate && (
+                    <span>{draftTemplate.name} template</span>
+                  )}
+                  {!draftStepLabel && !draftTemplate && (
+                    <span>You have unsaved progress</span>
+                  )}
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={handleDiscardDraft}
+                  className="text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-full hover:bg-muted/50 transition-colors"
+                >
+                  Discard
+                </button>
+                <button
+                  onClick={handleResumeDraft}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-white px-4 py-2 rounded-full bg-gradient-to-r from-[#FF8C00] to-[#9D50BB] shadow-sm hover:scale-[1.02] transition-transform"
+                >
+                  <PlayCircle className="h-3.5 w-3.5" />
+                  Resume
+                </button>
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            {draftInfo.stepIndex != null && draftTotalSteps > 0 && (
+              <div className="mt-4 h-1 bg-muted/50 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500 ease-out"
+                  style={{
+                    width: `${((draftInfo.stepIndex + 1) / draftTotalSteps) * 100}%`,
+                    background: "linear-gradient(90deg, #FF8C00, #9D50BB)",
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Hero text */}
       <div className="relative text-center mb-10 mt-8">
         <h1 className="text-4xl md:text-5xl font-serif tracking-tight text-foreground/80">
