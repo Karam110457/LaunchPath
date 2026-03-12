@@ -1935,9 +1935,9 @@ function TemplateSwitchDialog({
                 </div>
               )}
               {dialog.toolsToAdd.length > 0 && (
-                <div className="rounded-md border border-primary/20 bg-primary/5 p-2.5">
-                  <p className="text-xs font-medium text-primary mb-1">Add:</p>
-                  <ul className="text-xs text-primary/80 list-disc pl-4 space-y-0.5">
+                <div className="rounded-md border border-[#FF8C00]/20 bg-[#FF8C00]/5 p-2.5">
+                  <p className="text-xs font-medium text-[#FF8C00] mb-1">Add:</p>
+                  <ul className="text-xs text-[#FF8C00]/80 list-disc pl-4 space-y-0.5">
                     {dialog.toolsToAdd.map((t) => (
                       <li key={t}>{t}</li>
                     ))}
@@ -2005,6 +2005,7 @@ function TemplateSwitchDialog({
               e.preventDefault();
               onConfirm();
             }}
+            className="gradient-accent-bg text-white border-0 hover:opacity-90"
           >
             {switching ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />

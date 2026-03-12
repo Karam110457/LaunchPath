@@ -175,10 +175,10 @@ export function ToolCatalogModal({
                     "w-full text-left rounded-xl border p-3.5 flex items-start gap-3.5 transition-all",
                     alreadyAdded
                       ? "opacity-40 cursor-not-allowed border-border/50 bg-muted/20"
-                      : "border-border/60 hover:border-primary/40 hover:bg-primary/5 cursor-pointer"
+                      : "border-border/60 hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5 cursor-pointer"
                   )}
                 >
-                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#FF8C00]/10 to-[#9D50BB]/10 flex items-center justify-center shrink-0 mt-0.5">
                     <tool.Icon className={cn("w-4.5 h-4.5", tool.color)} />
                   </div>
                   <div className="min-w-0">

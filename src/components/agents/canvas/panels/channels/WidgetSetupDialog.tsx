@@ -197,7 +197,7 @@ export function WidgetSetupDialog({
               </button>
             </div>
 
-            <Button onClick={() => { onSaved(); onClose(); }} className="w-full">
+            <Button onClick={() => { onSaved(); onClose(); }} className="w-full rounded-full gradient-accent-bg text-white border-0 hover:opacity-90">
               Done
             </Button>
           </div>
@@ -340,9 +340,9 @@ export function WidgetSetupDialog({
                   key={pos}
                   type="button"
                   onClick={() => setPosition(pos)}
-                  className={`flex-1 py-2 text-sm rounded-lg border transition-colors ${
+                  className={`flex-1 py-2 text-sm rounded-xl border transition-colors ${
                     position === pos
-                      ? "border-primary bg-primary/10 text-primary font-medium"
+                      ? "border-[#FF8C00]/40 bg-[#FF8C00]/10 text-[#FF8C00] font-medium"
                       : "border-border text-muted-foreground hover:border-border/80"
                   }`}
                 >
@@ -415,14 +415,14 @@ export function WidgetSetupDialog({
             <Button
               variant="outline"
               onClick={onClose}
-              className="flex-1"
+              className="flex-1 rounded-full"
               disabled={saving}
             >
               Cancel
             </Button>
             <Button
               onClick={handleSave}
-              className="flex-1"
+              className="flex-1 rounded-full gradient-accent-bg text-white border-0 hover:opacity-90"
               disabled={saving || !name.trim()}
             >
               {saving ? "Saving..." : isEdit ? "Save Changes" : "Create Widget"}

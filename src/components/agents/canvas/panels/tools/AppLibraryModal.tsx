@@ -315,7 +315,7 @@ export function AppLibraryModal({
               placeholder="Search apps..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-8 py-2 bg-muted/30 border border-border/50 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40 placeholder:text-muted-foreground/50"
+              className="w-full pl-9 pr-8 py-2 bg-muted/30 border border-border/50 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[#FF8C00]/30 focus:border-[#FF8C00]/30 placeholder:text-muted-foreground/50"
             />
             {search && (
               <button
@@ -337,7 +337,7 @@ export function AppLibraryModal({
               className={cn(
                 "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
                 activeCategory === cat
-                  ? "bg-primary/15 text-primary border border-primary/30"
+                  ? "bg-[#FF8C00]/10 text-[#FF8C00] border border-[#FF8C00]/25"
                   : "bg-muted/30 text-muted-foreground hover:bg-muted/50 border border-transparent"
               )}
             >
@@ -401,7 +401,7 @@ export function AppLibraryModal({
                       "text-left rounded-xl border p-3.5 flex items-start gap-3 transition-all group",
                       connected
                         ? "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10"
-                        : "border-border/50 hover:border-primary/40 hover:bg-primary/5",
+                        : "border-border/50 hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5",
                       isConnecting && "opacity-70 pointer-events-none"
                     )}
                   >
@@ -459,7 +459,7 @@ export function AppLibraryModal({
                               <button
                                 key={scheme}
                                 onClick={(e) => { e.stopPropagation(); wrappedHandleSchemeSelect(app, scheme); }}
-                                className="inline-flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 font-medium transition-colors"
+                                className="inline-flex items-center gap-1 text-[10px] text-[#FF8C00] hover:text-[#FF8C00]/80 font-medium transition-colors"
                               >
                                 <KeyRound className="w-3 h-3" />
                                 Connect with {schemeLabel(scheme)}
@@ -485,7 +485,7 @@ export function AppLibraryModal({
                           const category = getAuthCategory(app);
                           if (category === "noAuth") {
                             return (
-                              <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground group-hover:text-primary transition-colors">
+                              <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground group-hover:text-[#FF8C00] transition-colors">
                                 No auth needed
                               </span>
                             );
@@ -493,7 +493,7 @@ export function AppLibraryModal({
                           if (category === "simple") {
                             const schemes = getSimpleSchemes(app);
                             return (
-                              <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground group-hover:text-primary transition-colors">
+                              <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground group-hover:text-[#FF8C00] transition-colors">
                                 <KeyRound className="w-3 h-3" />
                                 Connect with {schemeLabel(schemes[0])}
                               </span>
@@ -503,7 +503,7 @@ export function AppLibraryModal({
                             const hasSimple = getSimpleSchemes(app).length > 0;
                             if (hasSimple) {
                               return (
-                                <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground group-hover:text-primary transition-colors">
+                                <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground group-hover:text-[#FF8C00] transition-colors">
                                   <KeyRound className="w-3 h-3" />
                                   Multiple auth options
                                 </span>
@@ -518,7 +518,7 @@ export function AppLibraryModal({
                           }
                           // managed
                           return (
-                            <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground group-hover:text-primary transition-colors">
+                            <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground group-hover:text-[#FF8C00] transition-colors">
                               <ExternalLink className="w-3 h-3" />
                               Connect
                             </span>
