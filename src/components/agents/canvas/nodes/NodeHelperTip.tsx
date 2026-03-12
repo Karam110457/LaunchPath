@@ -4,14 +4,13 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { HELPER_TIP } from "../animation-constants";
-import { useTips } from "../tips-context";
 
-export const TIPS_STORAGE_KEY = "launchpath_canvas_helpers_dismissed";
+const STORAGE_KEY = "launchpath_canvas_helpers_dismissed";
 
 /** Read dismissed set from localStorage. */
-export function getDismissed(): Set<string> {
+function getDismissed(): Set<string> {
   try {
-    const raw = localStorage.getItem(TIPS_STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return new Set(JSON.parse(raw) as string[]);
   } catch {
     // ignore
@@ -20,9 +19,9 @@ export function getDismissed(): Set<string> {
 }
 
 /** Persist dismissed set to localStorage. */
-export function saveDismissed(dismissed: Set<string>) {
+function saveDismissed(dismissed: Set<string>) {
   try {
-    localStorage.setItem(TIPS_STORAGE_KEY, JSON.stringify([...dismissed]));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...dismissed]));
   } catch {
     // ignore
   }
@@ -37,32 +36,21 @@ interface NodeHelperTipProps {
 }
 
 export function NodeHelperTip({ tipId, icon, text, position = "left-1/2 -translate-x-1/2 top-full mt-3" }: NodeHelperTipProps) {
-  const { showTips } = useTips();
-  const [dismissed, setDismissedState] = useState(false);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const d = getDismissed();
-    if (d.has(tipId)) setDismissedState(true);
+    const dismissed = getDismissed();
+    if (!dismissed.has(tipId)) setVisible(true);
   }, [tipId]);
-
-  // Re-check dismissed state when showTips toggles on (in case resetDismissed was called)
-  useEffect(() => {
-    if (showTips) {
-      const d = getDismissed();
-      if (!d.has(tipId)) setDismissedState(false);
-    }
-  }, [showTips, tipId]);
 
   const dismiss = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    setDismissedState(true);
-    const d = getDismissed();
-    d.add(tipId);
-    saveDismissed(d);
+    setVisible(false);
+    const dismissed = getDismissed();
+    dismissed.add(tipId);
+    saveDismissed(dismissed);
   };
-
-  const visible = showTips && !dismissed;
 
   return (
     <AnimatePresence>

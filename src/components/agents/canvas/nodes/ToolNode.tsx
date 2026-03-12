@@ -9,12 +9,10 @@ import {
   Globe,
   Users,
   AlertTriangle,
-  Link2,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ToolNodeData } from "../canvas-types";
-import { NodeHelperTip } from "./NodeHelperTip";
 import { NODE_ENTER, NODE_DRAG, NODE_EXIT } from "../animation-constants";
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -127,15 +125,6 @@ export const ToolNode = memo(function ToolNode({ data, dragging }: NodeProps) {
         )}
       </div>
 
-      {/* Helper tip for unconnected tools */}
-      {!d.isEnabled && (
-        <NodeHelperTip
-          tipId="tool-connect"
-          icon={<Link2 className="w-3.5 h-3.5 text-orange-400" />}
-          text="Draw a line from your agent's Tools handle down to this node to activate it"
-          position="left-[calc(100%+16px)] top-[50%] -translate-y-1/2"
-        />
-      )}
     </motion.div>
   );
 });
