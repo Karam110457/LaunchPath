@@ -85,7 +85,7 @@ function Toggle({
 
 function SectionHeader({ title, description }: { title: string; description: string }) {
   return (
-    <div className="pb-2 border-b border-black/5 dark:border-[#2A2A2A]">
+    <div className="pb-2 border-b border-neutral-200/50 dark:border-neutral-700/50">
       <h4 className="text-sm font-semibold text-foreground">{title}</h4>
       <p className="text-[11px] text-muted-foreground mt-0.5">{description}</p>
     </div>
@@ -148,9 +148,9 @@ export function ConfigPanel({
   }
 
   return (
-    <div className="w-[400px] shrink-0 border-r border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa]/50 dark:bg-[#1E1E1E]/40 flex flex-col h-full">
+    <div className="w-[400px] shrink-0 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] flex flex-col h-full overflow-hidden">
       {/* Tab Navigation */}
-      <div className="flex border-b border-black/5 dark:border-[#2A2A2A] shrink-0">
+      <div className="flex border-b border-neutral-200/50 dark:border-neutral-700/50 shrink-0">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           return (
@@ -363,7 +363,7 @@ export function ConfigPanel({
               />
             </FieldGroup>
 
-            <hr className="border-black/5 dark:border-[#2A2A2A]" />
+            <hr className="border-neutral-200/50 dark:border-neutral-700/50" />
 
             <FieldGroup
               label="Greeting Message"
@@ -430,14 +430,14 @@ export function ConfigPanel({
             {/* Embed Code */}
             {embedCode && (
               <>
-                <hr className="border-black/5 dark:border-[#2A2A2A]" />
+                <hr className="border-neutral-200/50 dark:border-neutral-700/50" />
                 <div className="space-y-1.5">
                   <Label className="text-xs">Embed Code</Label>
                   <p className="text-[11px] text-muted-foreground">
                     Copy this code and paste it before the closing <code className="text-[10px] bg-muted px-1 py-0.5 rounded">&lt;/body&gt;</code> tag on your client&apos;s website.
                   </p>
                   <div className="relative">
-                    <pre className="bg-black/[0.03] dark:bg-white/[0.03] rounded-2xl p-3 text-xs font-mono text-foreground/80 overflow-x-auto whitespace-pre-wrap break-all border border-black/5 dark:border-[#2A2A2A]">
+                    <pre className="bg-neutral-100/60 dark:bg-neutral-800/40 rounded-2xl p-3 text-xs font-mono text-foreground/80 overflow-x-auto whitespace-pre-wrap break-all border border-neutral-200/50 dark:border-neutral-700/50">
                       {embedCode}
                     </pre>
                     <button
@@ -453,7 +453,7 @@ export function ConfigPanel({
             )}
 
             {!embedCode && (
-              <div className="rounded-2xl border border-dashed border-black/10 dark:border-[#2A2A2A] bg-black/[0.02] dark:bg-white/[0.02] p-4">
+              <div className="rounded-2xl border border-dashed border-neutral-300/60 dark:border-neutral-700/50 bg-neutral-100/30 dark:bg-neutral-800/20 p-4">
                 <p className="text-xs text-muted-foreground text-center">
                   Deploy your widget to get the embed code. Click &ldquo;Deploy&rdquo; in the top bar when you&apos;re ready.
                 </p>

@@ -60,7 +60,7 @@ export function PreviewPanel({
   }
 
   return (
-    <div className="flex-1 relative overflow-hidden rounded-2xl m-2 border border-black/5 dark:border-[#2A2A2A]">
+    <div className="flex-1 relative overflow-hidden rounded-[2rem] bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)]">
       {/* Background layer — always present */}
       {hasWebsite && iframeStatus !== "blocked" ? (
         <iframe
