@@ -19,6 +19,10 @@ interface AgentGenerationState {
   agent: GeneratedAgent | null;
   error: string | null;
   startGeneration: (input: GenerationInput) => void;
+  /** Abort the in-flight generation and return to pre-generation state */
+  cancel: () => void;
+  /** Clear error/agent/loading state — used to go back to the wizard after an error */
+  reset: () => void;
 }
 
 export function useAgentGeneration(): AgentGenerationState {
@@ -27,6 +31,23 @@ export function useAgentGeneration(): AgentGenerationState {
   const [agent, setAgent] = useState<GeneratedAgent | null>(null);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  const cancel = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setIsLoading(false);
+    setCurrentLabel(null);
+    setError(null);
+  }, []);
+
+  const reset = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setIsLoading(false);
+    setCurrentLabel(null);
+    setAgent(null);
+    setError(null);
+  }, []);
 
   const startGeneration = useCallback(
     (input: GenerationInput) => {
@@ -115,5 +136,5 @@ export function useAgentGeneration(): AgentGenerationState {
     [],
   );
 
-  return { isLoading, currentLabel, agent, error, startGeneration };
+  return { isLoading, currentLabel, agent, error, startGeneration, cancel, reset };
 }

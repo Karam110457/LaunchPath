@@ -32,12 +32,18 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string; style?:
   Target,
 };
 
-export function AgentCreationLanding() {
+interface AgentCreationLandingProps {
+  initialWizardConfig?: import("@/types/agent-wizard").WizardGenerationPayload | null;
+}
+
+export function AgentCreationLanding({ initialWizardConfig }: AgentCreationLandingProps) {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [prompt, setPrompt] = useState("");
   const [creatingBlank, setCreatingBlank] = useState(false);
-  const [wizardTemplateId, setWizardTemplateId] = useState<string | null>(null);
+  const [wizardTemplateId, setWizardTemplateId] = useState<string | null>(
+    initialWizardConfig ? initialWizardConfig.templateId : null,
+  );
   const [draftInfo, setDraftInfo] = useState<{
     exists: boolean;
     templateId?: string;
@@ -46,7 +52,7 @@ export function AgentCreationLanding() {
   }>({ exists: false });
   const [draftDismissed, setDraftDismissed] = useState(false);
 
-  const { isLoading, currentLabel, agent, error, startGeneration } =
+  const { isLoading, currentLabel, agent, error, startGeneration, cancel, reset } =
     useAgentGeneration();
 
   // Check for existing wizard draft on mount
@@ -114,7 +120,13 @@ export function AgentCreationLanding() {
   if (isLoading || error) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <AgentGenerating currentLabel={currentLabel} error={error} />
+        <AgentGenerating
+          currentLabel={currentLabel}
+          error={error}
+          onCancel={cancel}
+          onRetry={() => {/* prompt-based retry not supported yet */}}
+          onBack={reset}
+        />
       </div>
     );
   }
@@ -125,6 +137,7 @@ export function AgentCreationLanding() {
       <div className="animate-in fade-in duration-300">
         <AgentWizard
           initialTemplateId={wizardTemplateId === "__resume__" ? undefined : wizardTemplateId}
+          initialWizardConfig={initialWizardConfig ?? undefined}
           onBack={() => {
             setWizardTemplateId(null);
             setDraftInfo(hasWizardDraft());

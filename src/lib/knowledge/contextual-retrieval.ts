@@ -15,6 +15,9 @@ import { logger } from "@/lib/security/logger";
 
 const CONTEXT_MODEL = "claude-haiku-4-5-20251001";
 
+/** Max concurrent chunk context calls per document */
+const CHUNK_CONCURRENCY = 5;
+
 /**
  * Generate a short contextual prefix for a single chunk.
  * Returns a 1-2 sentence description situating the chunk within the document.
@@ -63,6 +66,9 @@ async function generateChunkContext(
  *
  * If context generation fails for a chunk, the original content is preserved unchanged.
  *
+ * Chunks are processed in parallel batches of CHUNK_CONCURRENCY for speed,
+ * while keeping prompt-cache hits effective (all share the same document prefix).
+ *
  * @param documentTitle - Human-readable source name (URL, filename, etc.)
  * @param fullDocumentText - The complete document text (used for context, cached)
  * @param chunks - Array of chunk content strings to contextualize
@@ -86,29 +92,34 @@ export async function addContextToChunks(
       ? fullDocumentText.slice(0, 25000) + "\n\n[Document truncated...]"
       : fullDocumentText;
 
-  const results: string[] = [];
+  const results: string[] = [...chunks]; // start with originals as fallback
 
-  for (const chunk of chunks) {
+  async function processChunk(index: number) {
     try {
       const context = await generateChunkContext(
         documentTitle,
         truncatedDoc,
-        chunk
+        chunks[index]
       );
-
       if (context) {
-        results.push(`[Context: ${context}]\n\n${chunk}`);
-      } else {
-        results.push(chunk);
+        results[index] = `[Context: ${context}]\n\n${chunks[index]}`;
       }
     } catch (err) {
-      // Non-critical — use original chunk without context
+      // Non-critical — keep original chunk without context
       logger.warn("Contextual retrieval failed for chunk", {
         documentTitle,
         error: err instanceof Error ? err.message : String(err),
       });
-      results.push(chunk);
     }
+  }
+
+  // Process chunks in parallel batches
+  for (let i = 0; i < chunks.length; i += CHUNK_CONCURRENCY) {
+    const batch = Array.from(
+      { length: Math.min(CHUNK_CONCURRENCY, chunks.length - i) },
+      (_, j) => processChunk(i + j)
+    );
+    await Promise.allSettled(batch);
   }
 
   return results;

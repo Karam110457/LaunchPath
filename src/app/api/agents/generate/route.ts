@@ -163,6 +163,12 @@ export async function POST(request: NextRequest) {
         // Build final system prompt: AI-generated base + config directives
         let finalSystemPrompt = agentConfig.system_prompt;
 
+        // Filter tool guidelines based on user's wizard choices
+        const filteredToolGuidelines = filterToolGuidelines(
+          template?.toolWorkflow,
+          wizardConfig,
+        );
+
         // Generate config directives from wizard settings and bake them into the prompt
         const configDirectives = generateConfigDirectives({
           personality: agentConfig.personality,
@@ -171,7 +177,7 @@ export async function POST(request: NextRequest) {
             qualifyingQuestions: wizardConfig.qualifyingQuestions,
             behaviorConfig: wizardConfig.behaviorConfig,
           } : null,
-          toolGuidelines: template?.toolWorkflow,
+          toolGuidelines: filteredToolGuidelines,
         });
         if (configDirectives) {
           finalSystemPrompt = updatePromptDirectives(finalSystemPrompt, configDirectives);
@@ -190,7 +196,7 @@ export async function POST(request: NextRequest) {
             template_id: templateId ?? null,
             model: "openai/gpt-4o-mini",
             status: "draft",
-            tool_guidelines: template?.toolWorkflow ?? null,
+            tool_guidelines: filteredToolGuidelines ?? null,
             wizard_config: wizardConfig
               ? {
                   templateId: wizardConfig.templateId,
@@ -214,6 +220,18 @@ export async function POST(request: NextRequest) {
             error: "Failed to save agent. Please try again.",
           });
         } else {
+          // Emit completion immediately so the client redirects fast.
+          // KB processing, tools, and versioning continue in the background.
+          logger.info("Agent created", {
+            agentId: newAgent.id,
+            userId: user.id,
+            templateId: templateId ?? null,
+          });
+          enqueue({
+            type: "complete",
+            agent: { ...agentConfig, id: newAgent.id },
+          });
+
           // Post-generation: process wizard knowledge data
           if (wizardConfig) {
             const pageCount = wizardConfig.scrapedPages?.length ?? 0;
@@ -327,15 +345,6 @@ export async function POST(request: NextRequest) {
             // Versioning table may not exist yet — don't block creation
           }
 
-          logger.info("Agent created", {
-            agentId: newAgent.id,
-            userId: user.id,
-            templateId: templateId ?? null,
-          });
-          enqueue({
-            type: "complete",
-            agent: { ...agentConfig, id: newAgent.id },
-          });
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Unknown error";
@@ -515,22 +524,27 @@ async function processWizardKnowledge(
   }
 
   try {
-    // 1. Process scraped pages
-    for (const page of wizardConfig.scrapedPages ?? []) {
-      if (!page.content) continue;
-      await insertKnowledgeDoc(page.url, "website", page.content);
-    }
+    // Combine all knowledge items and process 3 documents concurrently
+    const DOC_CONCURRENCY = 3;
+    const allItems: Array<{ name: string; type: "website" | "faq" | "file"; content: string }> = [
+      ...(wizardConfig.scrapedPages ?? [])
+        .filter((p) => p.content)
+        .map((p) => ({ name: p.url, type: "website" as const, content: p.content })),
+      ...(wizardConfig.faqs ?? []).map((f) => ({
+        name: f.question.slice(0, 100),
+        type: "faq" as const,
+        content: `Q: ${f.question}\nA: ${f.answer}`,
+      })),
+      ...(wizardConfig.files ?? [])
+        .filter((f) => f.extractedText)
+        .map((f) => ({ name: f.name, type: "file" as const, content: f.extractedText! })),
+    ];
 
-    // 2. Process FAQs (each FAQ becomes a single-chunk document)
-    for (const faq of wizardConfig.faqs ?? []) {
-      const content = `Q: ${faq.question}\nA: ${faq.answer}`;
-      await insertKnowledgeDoc(faq.question.slice(0, 100), "faq", content);
-    }
-
-    // 3. Process uploaded files
-    for (const file of wizardConfig.files ?? []) {
-      if (!file.extractedText) continue;
-      await insertKnowledgeDoc(file.name, "file", file.extractedText);
+    for (let i = 0; i < allItems.length; i += DOC_CONCURRENCY) {
+      const batch = allItems.slice(i, i + DOC_CONCURRENCY);
+      await Promise.allSettled(
+        batch.map((item) => insertKnowledgeDoc(item.name, item.type, item.content))
+      );
     }
 
     logger.info("Knowledge processing complete", {
@@ -561,4 +575,59 @@ async function processWizardKnowledge(
   }
 
   return { processed, failed };
+}
+
+// ---------------------------------------------------------------------------
+// Filter tool guidelines based on wizard choices
+// ---------------------------------------------------------------------------
+
+function filterToolGuidelines(
+  toolWorkflow: string | undefined,
+  wizardConfig: {
+    templateId: string;
+    behaviorConfig: Record<string, unknown>;
+    selectedToolkits?: string[];
+  } | null | undefined,
+): string | undefined {
+  if (!toolWorkflow || !wizardConfig) return toolWorkflow;
+
+  const bc = wizardConfig.behaviorConfig;
+  let filtered = toolWorkflow;
+
+  // Lead-capture + sheet_only: strip Gmail steps
+  if (
+    (wizardConfig.templateId === "lead-capture" || wizardConfig.templateId === "lead-qualification") &&
+    bc.notification_behavior === "sheet_only"
+  ) {
+    // Remove lines referencing GMAIL_SEND_EMAIL and internal notification email
+    filtered = filtered
+      .split("\n")
+      .filter((line) => !line.includes("GMAIL_SEND_EMAIL") && !line.includes("notification email"))
+      .join("\n");
+  }
+
+  // Customer-support + always_available: strip ESCALATION block
+  if (
+    wizardConfig.templateId === "customer-support" &&
+    bc.escalation_mode === "always_available"
+  ) {
+    const escIdx = filtered.indexOf("ESCALATION:");
+    if (escIdx !== -1) {
+      filtered = filtered.slice(0, escIdx).trimEnd();
+    }
+  }
+
+  // Appointment-booker without gmail selected: strip Gmail step
+  if (
+    wizardConfig.templateId === "appointment-booker" &&
+    wizardConfig.selectedToolkits &&
+    !wizardConfig.selectedToolkits.includes("gmail")
+  ) {
+    filtered = filtered
+      .split("\n")
+      .filter((line) => !line.includes("GMAIL_SEND_EMAIL") && !line.includes("confirmation email"))
+      .join("\n");
+  }
+
+  return filtered.trim() || undefined;
 }

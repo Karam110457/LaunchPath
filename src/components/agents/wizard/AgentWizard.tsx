@@ -32,6 +32,8 @@ import { ReviewStep } from "./steps/ReviewStep";
 
 interface AgentWizardProps {
   initialTemplateId?: string;
+  /** When provided (regenerate flow), hydrate wizard state from this config and start at Review */
+  initialWizardConfig?: WizardGenerationPayload;
   onBack: () => void;
 }
 
@@ -101,19 +103,67 @@ function saveDraft(stepIndex: number, state: AgentWizardState) {
 
 const clearDraft = clearWizardDraft;
 
-export function AgentWizard({ initialTemplateId, onBack }: AgentWizardProps) {
+export function AgentWizard({ initialTemplateId, initialWizardConfig, onBack }: AgentWizardProps) {
   const router = useRouter();
 
-  const draft = useRef(loadDraft());
+  // When regenerating, skip localStorage draft — use initialWizardConfig instead
+  const draft = useRef(initialWizardConfig ? null : loadDraft());
 
   // If a template was pre-selected from the landing page, skip step 1 (choose-type)
-  const hasInitialTemplate = !draft.current && !!initialTemplateId;
+  const hasInitialTemplate = !draft.current && !initialWizardConfig && !!initialTemplateId;
 
-  const [stepIndex, setStepIndex] = useState(
-    draft.current?.stepIndex ?? (hasInitialTemplate ? 1 : 0),
-  );
+  const [stepIndex, setStepIndex] = useState(() => {
+    if (initialWizardConfig) {
+      // Start at the review step
+      const steps = getWizardSteps(initialWizardConfig.templateId);
+      const reviewIdx = steps.findIndex((s) => s.id === "review");
+      return reviewIdx >= 0 ? reviewIdx : steps.length - 1;
+    }
+    return draft.current?.stepIndex ?? (hasInitialTemplate ? 1 : 0);
+  });
   const [direction, setDirection] = useState<"forward" | "back">("forward");
   const [state, setState] = useState<AgentWizardState>(() => {
+    // Regenerate flow: hydrate from stored wizard config
+    if (initialWizardConfig) {
+      const wc = initialWizardConfig;
+      const base = createInitialWizardState();
+      base.templateId = wc.templateId as AgentWizardState["templateId"];
+      base.agentName = wc.agentName;
+      base.agentDescription = wc.agentDescription;
+      base.businessDescription = wc.businessDescription ?? "";
+      base.tone = wc.personality.tone;
+      base.greetingMessage = wc.personality.greeting_message;
+      base.qualifyingQuestions = wc.qualifyingQuestions.length > 0
+        ? wc.qualifyingQuestions
+        : base.qualifyingQuestions;
+      base.faqs = wc.faqs.map((f, i) => ({
+        id: `regen-${i}`,
+        question: f.question,
+        answer: f.answer,
+        source: "manual" as const,
+      }));
+      base.selectedToolkits = wc.selectedToolkits ?? [];
+
+      // Hydrate behavior config based on template
+      if (wc.templateId === "appointment-booker") {
+        base.appointmentBookerConfig = {
+          ...base.appointmentBookerConfig,
+          ...(wc.behaviorConfig as Partial<typeof base.appointmentBookerConfig>),
+        };
+      } else if (wc.templateId === "customer-support") {
+        base.customerSupportConfig = {
+          ...base.customerSupportConfig,
+          ...(wc.behaviorConfig as Partial<typeof base.customerSupportConfig>),
+        };
+      } else {
+        base.leadCaptureConfig = {
+          ...base.leadCaptureConfig,
+          ...(wc.behaviorConfig as Partial<typeof base.leadCaptureConfig>),
+        };
+      }
+      return base;
+    }
+
     if (draft.current?.state) return draft.current.state;
     const initial = createInitialWizardState();
     if (initialTemplateId) {
@@ -128,7 +178,7 @@ export function AgentWizard({ initialTemplateId, onBack }: AgentWizardProps) {
     }
     return initial;
   });
-  const { isLoading, currentLabel, agent, error, startGeneration } =
+  const { isLoading, currentLabel, agent, error, startGeneration, cancel, reset } =
     useAgentGeneration();
 
   // Dynamic steps based on selected template
@@ -166,7 +216,15 @@ export function AgentWizard({ initialTemplateId, onBack }: AgentWizardProps) {
   }, [agent, router]);
 
   if (isLoading || error) {
-    return <AgentGenerating currentLabel={currentLabel} error={error} />;
+    return (
+      <AgentGenerating
+        currentLabel={currentLabel}
+        error={error}
+        onCancel={cancel}
+        onRetry={() => handleGenerate()}
+        onBack={reset}
+      />
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -184,8 +242,8 @@ export function AgentWizard({ initialTemplateId, onBack }: AgentWizardProps) {
   // Validation — per step
   // ---------------------------------------------------------------------------
 
-  function getValidationError(): string | null {
-    switch (currentStep.id) {
+  function getValidationErrorForStep(stepId: WizardStepId): string | null {
+    switch (stepId) {
       case "choose-type":
         return state.templateId === null
           ? "Select an agent type to continue"
@@ -281,8 +339,21 @@ export function AgentWizard({ initialTemplateId, onBack }: AgentWizardProps) {
     }
   }
 
+  function getValidationError(): string | null {
+    return getValidationErrorForStep(currentStep.id);
+  }
+
   function canProceed(): boolean {
     return !getValidationError();
+  }
+
+  /** Validate all steps — returns first failing step or null */
+  function validateAllSteps(): { stepId: WizardStepId; error: string } | null {
+    for (const step of activeSteps) {
+      const err = getValidationErrorForStep(step.id);
+      if (err) return { stepId: step.id, error: err };
+    }
+    return null;
   }
 
   /** Non-blocking hint shown below navigation */
@@ -356,6 +427,13 @@ export function AgentWizard({ initialTemplateId, onBack }: AgentWizardProps) {
 
   function handleGenerate() {
     if (!state.templateId) return;
+
+    // Validate all steps before generating
+    const validation = validateAllSteps();
+    if (validation) {
+      goToStepById(validation.stepId);
+      return;
+    }
 
     const behaviorConfig =
       state.templateId === "appointment-booker"

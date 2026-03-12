@@ -82,7 +82,7 @@ export function buildAgentGenerationContext(input: {
 
     if (wc.templateId === "appointment-booker") {
       const bc = wc.behaviorConfig as {
-        lead_fields?: { phone?: boolean; company?: boolean; custom_fields?: string[] };
+        lead_fields?: { name?: boolean; email?: boolean; phone?: boolean; company?: boolean; custom_fields?: string[] };
         booking_behavior?: string;
         availability?: {
           timezone?: string; working_days?: string[]; start_time?: string;
@@ -108,14 +108,20 @@ export function buildAgentGenerationContext(input: {
         );
       }
 
-      const fields = ["name (always)", "email (always)"];
+      const fields: string[] = [];
+      if (bc.lead_fields?.name !== false) fields.push("name");
+      if (bc.lead_fields?.email !== false) fields.push("email");
       if (bc.lead_fields?.phone) fields.push("phone");
       if (bc.lead_fields?.company) fields.push("company");
       const custom = (bc.lead_fields?.custom_fields ?? []).filter((f) =>
         f.trim(),
       );
       fields.push(...custom);
-      lines.push(`Lead fields to capture: ${fields.join(", ")}`);
+      if (fields.length > 0) {
+        lines.push(`Lead fields to capture: ${fields.join(", ")}`);
+      } else {
+        lines.push("Lead fields: Do not collect any personal information. Focus on the conversation only.");
+      }
       lines.push(
         `Booking behavior: ${bc.booking_behavior === "book_directly" ? "Book appointments directly on calendar" : "Collect lead information for manual follow-up"}`,
       );
@@ -182,7 +188,7 @@ export function buildAgentGenerationContext(input: {
     } else if (wc.templateId === "lead-capture" || wc.templateId === "lead-qualification") {
       const lc = wc.behaviorConfig as {
         lead_fields?: {
-          phone?: boolean; company?: boolean; custom_fields?: string[];
+          name?: boolean; email?: boolean; phone?: boolean; company?: boolean; custom_fields?: string[];
         };
         notification_behavior?: string;
         notification_email?: string;
@@ -203,14 +209,20 @@ export function buildAgentGenerationContext(input: {
         );
       }
 
-      const fields = ["name (always)", "email (always)"];
+      const fields: string[] = [];
+      if (lc.lead_fields?.name !== false) fields.push("name");
+      if (lc.lead_fields?.email !== false) fields.push("email");
       if (lc.lead_fields?.phone) fields.push("phone");
       if (lc.lead_fields?.company) fields.push("company");
       const customFields = (lc.lead_fields?.custom_fields ?? []).filter(
         (f) => f.trim(),
       );
       fields.push(...customFields);
-      lines.push(`Lead fields to capture: ${fields.join(", ")}`);
+      if (fields.length > 0) {
+        lines.push(`Lead fields to capture: ${fields.join(", ")}`);
+      } else {
+        lines.push("Lead fields: Do not collect any personal information. Focus on the conversation only.");
+      }
 
       lines.push(
         `Notification: ${lc.notification_behavior === "email_team" ? "Email team with lead summary when captured" : "Save leads to spreadsheet only"}`,

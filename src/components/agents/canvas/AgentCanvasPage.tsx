@@ -1800,6 +1800,7 @@ function AgentCanvasInner({
         isTestOpen={chatOpen}
         saveStatus={saveStatus}
         onBack={handleBack}
+        onRegenerate={formState.wizardConfig ? () => router.push(`/dashboard/agents/new?regenerate=${agent.id}`) : undefined}
       />
 
       <LeftCatalogPanel

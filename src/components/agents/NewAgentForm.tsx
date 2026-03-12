@@ -39,7 +39,7 @@ export function NewAgentForm({ businesses }: NewAgentFormProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
   const [selectedBusiness, setSelectedBusiness] = useState<string | null>(null);
-  const { isLoading, currentLabel, agent, error, startGeneration } =
+  const { isLoading, currentLabel, agent, error, startGeneration, cancel, reset } =
     useAgentGeneration();
 
   // Redirect on generation complete
@@ -51,7 +51,15 @@ export function NewAgentForm({ businesses }: NewAgentFormProps) {
 
   // Show generating state
   if (isLoading || error) {
-    return <AgentGenerating currentLabel={currentLabel} error={error} />;
+    return (
+      <AgentGenerating
+        currentLabel={currentLabel}
+        error={error}
+        onCancel={cancel}
+        onRetry={() => handleGenerate()}
+        onBack={reset}
+      />
+    );
   }
 
   function handleGenerate() {
