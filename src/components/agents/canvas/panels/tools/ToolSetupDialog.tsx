@@ -245,7 +245,7 @@ export function ToolSetupDialog({
               <div className="space-y-1.5 max-h-40 overflow-y-auto">
                 {mcpTools.map((t) => (
                   <div key={t.name} className="text-xs">
-                    <span className="font-mono text-primary">{t.name}</span>
+                    <span className="font-mono text-[#FF8C00]">{t.name}</span>
                     {t.description && (
                       <span className="text-muted-foreground ml-1.5">— {t.description}</span>
                     )}
@@ -343,7 +343,7 @@ export function ToolSetupDialog({
               <button
                 type="button"
                 onClick={() => setIsEnabled((p) => !p)}
-                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${isEnabled ? "bg-primary" : "bg-muted"
+                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${isEnabled ? "gradient-accent-bg" : "bg-muted"
                   }`}
               >
                 <span

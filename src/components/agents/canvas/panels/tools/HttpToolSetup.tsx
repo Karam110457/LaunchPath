@@ -213,7 +213,7 @@ export function HttpToolSetup({
                   type="button"
                   onClick={() => setMethod(m)}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${method === m
-                      ? "bg-primary text-primary-foreground"
+                      ? "gradient-accent-bg text-white"
                       : "bg-muted/50 text-muted-foreground hover:bg-muted"
                     }`}
                 >
@@ -233,7 +233,7 @@ export function HttpToolSetup({
                   type="button"
                   onClick={() => setAuthType(at.value)}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${authType === at.value
-                      ? "bg-primary text-primary-foreground"
+                      ? "gradient-accent-bg text-white"
                       : "bg-muted/50 text-muted-foreground hover:bg-muted"
                     }`}
                 >
@@ -294,7 +294,7 @@ export function HttpToolSetup({
                         })
                       }
                       className={`px-2.5 py-1 rounded text-xs transition-colors ${(authConfig.api_key_in ?? "header") === placement
-                          ? "bg-primary/20 text-primary"
+                          ? "bg-[#FF8C00]/15 text-[#FF8C00]"
                           : "bg-muted/30 text-muted-foreground"
                         }`}
                     >
@@ -337,7 +337,7 @@ export function HttpToolSetup({
                 onClick={() =>
                   setHeaders([...headers, { key: "", value: "" }])
                 }
-                className="text-xs text-primary hover:text-primary/80 flex items-center gap-0.5"
+                className="text-xs text-[#FF8C00] hover:text-[#FF8C00]/80 flex items-center gap-0.5"
               >
                 <Plus className="w-3 h-3" /> Add
               </button>

@@ -433,8 +433,8 @@ export function AgentEditPanel({
           <div className="space-y-5">
             {/* ── Live sync banner (wizard agents) ── */}
             {hasWizard && (
-              <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 flex items-start gap-2">
-                <Info className="w-3.5 h-3.5 text-primary/70 mt-0.5 shrink-0" />
+              <div className="bg-[#FF8C00]/5 border border-[#FF8C00]/10 rounded-lg p-3 flex items-start gap-2">
+                <Info className="w-3.5 h-3.5 text-[#FF8C00]/70 mt-0.5 shrink-0" />
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
                   Changes here are automatically applied to your agent&apos;s
                   instructions. You can view and fine-tune them on the Prompt tab.
@@ -473,7 +473,7 @@ export function AgentEditPanel({
                     ))}
                   </div>
                   {goalChangedNote && (
-                    <p className="text-[11px] text-primary/80 bg-primary/5 border border-primary/10 rounded-md px-3 py-2 animate-in fade-in duration-200">
+                    <p className="text-[11px] text-[#FF8C00]/80 bg-[#FF8C00]/5 border border-[#FF8C00]/10 rounded-md px-3 py-2 animate-in fade-in duration-200">
                       {goalChangedNote}
                     </p>
                   )}
@@ -542,7 +542,7 @@ export function AgentEditPanel({
                 <button
                   type="button"
                   onClick={() => setShowCustomTone(!showCustomTone)}
-                  className="text-[11px] text-primary/70 hover:text-primary transition-colors"
+                  className="text-[11px] text-[#FF8C00]/70 hover:text-[#FF8C00] transition-colors"
                 >
                   {showCustomTone ? "Pick a preset" : "Write your own"}
                 </button>
@@ -646,7 +646,7 @@ export function AgentEditPanel({
                       key={tmpl.id}
                       type="button"
                       onClick={() => handleAdoptGoal(tmpl.id)}
-                      className="w-full flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs hover:border-primary/30 hover:bg-primary/5 transition-all"
+                      className="w-full flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5 transition-all"
                     >
                       <span className="font-medium">{tmpl.name}</span>
                       <span className="text-muted-foreground">— {tmpl.description}</span>
@@ -990,8 +990,8 @@ function BehaviorSection({
                     className={cn(
                       "px-2 py-1 rounded-full text-[11px] font-medium border transition-all cursor-pointer",
                       days.includes(d.value)
-                        ? "bg-primary/10 border-primary/30 text-primary"
-                        : "bg-muted/50 border-border text-muted-foreground hover:border-primary/30"
+                        ? "bg-[#FF8C00]/10 border-[#FF8C00]/30 text-[#FF8C00]"
+                        : "bg-muted/50 border-border text-muted-foreground hover:border-[#FF8C00]/30"
                     )}
                   >
                     {d.label}
@@ -1399,7 +1399,7 @@ function QuestionsSection({
                   <button
                     type="button"
                     onClick={saveEdit}
-                    className="shrink-0 p-1 rounded-md text-primary hover:bg-primary/10 transition-colors"
+                    className="shrink-0 p-1 rounded-md text-[#FF8C00] hover:bg-[#FF8C00]/10 transition-colors"
                   >
                     <Check className="w-3.5 h-3.5" />
                   </button>
@@ -1417,7 +1417,7 @@ function QuestionsSection({
                     <button
                       type="button"
                       onClick={() => startEdit(i)}
-                      className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                      className="p-1 rounded-md text-muted-foreground hover:text-[#FF8C00] hover:bg-[#FF8C00]/10 transition-colors"
                     >
                       <Pencil className="w-3 h-3" />
                     </button>
@@ -1513,7 +1513,7 @@ function LeadFilteringSection({
           className={cn(
             "w-full text-left rounded-lg border px-3 py-2.5 transition-all",
             mode === "describe"
-              ? "border-primary/40 bg-primary/5 ring-1 ring-primary/20"
+              ? "border-[#FF8C00]/40 bg-[#FF8C00]/5 ring-1 ring-[#FF8C00]/20"
               : "hover:border-border/80"
           )}
         >
@@ -1528,7 +1528,7 @@ function LeadFilteringSection({
           className={cn(
             "w-full text-left rounded-lg border px-3 py-2.5 transition-all",
             mode === "questions"
-              ? "border-primary/40 bg-primary/5 ring-1 ring-primary/20"
+              ? "border-[#FF8C00]/40 bg-[#FF8C00]/5 ring-1 ring-[#FF8C00]/20"
               : "hover:border-border/80"
           )}
         >
@@ -1593,7 +1593,7 @@ function LeadFilteringSection({
                       <button
                         type="button"
                         onClick={saveEdit}
-                        className="shrink-0 p-1 rounded-md text-primary hover:bg-primary/10 transition-colors"
+                        className="shrink-0 p-1 rounded-md text-[#FF8C00] hover:bg-[#FF8C00]/10 transition-colors"
                       >
                         <Check className="w-3.5 h-3.5" />
                       </button>
@@ -1611,7 +1611,7 @@ function LeadFilteringSection({
                         <button
                           type="button"
                           onClick={() => startEdit(i)}
-                          className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                          className="p-1 rounded-md text-muted-foreground hover:text-[#FF8C00] hover:bg-[#FF8C00]/10 transition-colors"
                         >
                           <Pencil className="w-3 h-3" />
                         </button>
@@ -1682,8 +1682,8 @@ function FieldToggle({
         "px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
         disabled ? "cursor-default" : "cursor-pointer",
         enabled
-          ? "bg-primary/10 border-primary/30 text-primary"
-          : "bg-muted/50 border-border text-muted-foreground hover:border-primary/30"
+          ? "bg-[#FF8C00]/10 border-[#FF8C00]/30 text-[#FF8C00]"
+          : "bg-muted/50 border-border text-muted-foreground hover:border-[#FF8C00]/30"
       )}
     >
       {label}

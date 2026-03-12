@@ -75,7 +75,7 @@ function humanLabel(name: string, prop: JsonSchemaProperty): string {
 }
 
 const INPUT_BASE =
-  "w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30";
+  "w-full px-3 py-2 text-xs bg-background border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/25";
 
 // ---------------------------------------------------------------------------
 // ArrayInput — add/remove items UI (like screenshot)
@@ -230,7 +230,7 @@ function ValueInput({
         <div
           className={cn(
             "w-11 h-6 rounded-full transition-colors relative",
-            isOn ? "bg-primary" : "bg-muted-foreground/20"
+            isOn ? "gradient-accent-bg" : "bg-muted-foreground/20"
           )}
         >
           <span
@@ -264,7 +264,7 @@ function ValueInput({
             min={min}
             max={max}
             step={step}
-            className="flex-1 h-1.5 rounded-full appearance-none bg-muted-foreground/20 accent-primary cursor-pointer [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:shadow-md"
+            className="flex-1 h-1.5 rounded-full appearance-none bg-muted-foreground/20 accent-[#FF8C00] cursor-pointer [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#FF8C00] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:shadow-md"
           />
           <input
             type="number"
@@ -275,7 +275,7 @@ function ValueInput({
             min={min}
             max={max}
             step={step}
-            className="w-16 px-2 py-1 text-xs text-center bg-muted/30 border border-border/40 rounded-md focus:outline-none focus:ring-1 focus:ring-primary/30"
+            className="w-16 px-2 py-1 text-xs text-center bg-muted/30 border border-border/40 rounded-md focus:outline-none focus:ring-1 focus:ring-[#FF8C00]/25"
           />
         </div>
       </div>
@@ -563,7 +563,7 @@ function ObjectInput({
   }
 
   return (
-    <div className="space-y-2 pl-3 border-l-2 border-primary/10">
+    <div className="space-y-2 pl-3 border-l-2 border-[#FF8C00]/10">
       {entries.map(([fieldName, subProp]) => (
         <div key={fieldName}>
           <label className="text-[10px] font-medium text-muted-foreground/70 mb-1 block">
@@ -747,7 +747,7 @@ function ParameterConfigPanel({
                   <button
                     type="button"
                     onClick={() => setAi(name)}
-                    className="flex items-center gap-1.5 mt-1.5 text-[10px] text-muted-foreground/50 hover:text-primary transition-colors"
+                    className="flex items-center gap-1.5 mt-1.5 text-[10px] text-muted-foreground/50 hover:text-[#FF8C00] transition-colors"
                   >
                     <Bot className="w-3 h-3" />
                     Let AI decide
@@ -1293,7 +1293,7 @@ export function ComposioToolSetup({
                         "text-[10px] font-medium transition-colors",
                         allEnabled
                           ? "text-muted-foreground/30 cursor-not-allowed"
-                          : "text-primary hover:text-primary/80"
+                          : "text-[#FF8C00] hover:text-[#FF8C00]/80"
                       )}
                     >
                       All
@@ -1324,7 +1324,7 @@ export function ComposioToolSetup({
                     value={actionSearch}
                     onChange={(e) => setActionSearch(e.target.value)}
                     placeholder="Search actions..."
-                    className="w-full pl-8 pr-7 py-1.5 text-xs bg-muted/30 border border-border/40 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/40"
+                    className="w-full pl-8 pr-7 py-1.5 text-xs bg-muted/30 border border-border/40 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#FF8C00]/25 placeholder:text-muted-foreground/40"
                   />
                   {actionSearch && (
                     <button
@@ -1369,7 +1369,7 @@ export function ComposioToolSetup({
                         className={cn(
                           "rounded-lg border transition-colors",
                           enabled
-                            ? "border-primary/20 bg-primary/[0.03]"
+                            ? "border-[#FF8C00]/20 bg-[#FF8C00]/[0.03]"
                             : "border-border/30"
                         )}
                       >
@@ -1381,7 +1381,7 @@ export function ComposioToolSetup({
                             className={cn(
                               "w-8 h-[18px] rounded-full transition-colors relative shrink-0",
                               enabled
-                                ? "bg-primary"
+                                ? "gradient-accent-bg"
                                 : "bg-muted-foreground/20"
                             )}
                           >
