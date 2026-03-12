@@ -3,8 +3,23 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Copy, Check, Globe, MessageSquare, Pause, Play } from "lucide-react";
+import {
+  ArrowLeft,
+  Copy,
+  Check,
+  Globe,
+  MessageSquare,
+  Pause,
+  Play,
+  Palette,
+  MousePointer2,
+  Settings2,
+  Sparkles,
+  Plus,
+  X,
+} from "lucide-react";
 import { usePortal } from "@/contexts/PortalContext";
+import { cn } from "@/lib/utils";
 
 interface PortalCampaignDetailProps {
   campaign: {
@@ -22,6 +37,114 @@ interface PortalCampaignDetailProps {
   conversationCount: number;
   appOrigin: string;
   role: "admin" | "viewer";
+}
+
+const INPUT_CLASS =
+  "w-full rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-4 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors duration-150 disabled:opacity-60";
+
+function SectionCard({
+  icon: Icon,
+  title,
+  description,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-6 space-y-5">
+      <div>
+        <div className="flex items-center gap-2 mb-1">
+          <Icon className="size-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold">{title}</h3>
+        </div>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function FieldGroup({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-sm font-medium">{label}</label>
+      {children}
+      {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+function TogglePills({
+  options,
+  value,
+  onChange,
+  disabled,
+}: {
+  options: { value: string; label: string }[];
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex gap-2">
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => !disabled && onChange(opt.value)}
+          disabled={disabled}
+          className={cn(
+            "px-4 py-2 text-sm rounded-full border transition-colors duration-150 disabled:opacity-60",
+            value === opt.value
+              ? "bg-foreground text-background shadow-md border-transparent"
+              : "border-border/40 hover:bg-muted/50"
+          )}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Toggle({
+  checked,
+  onChange,
+  disabled,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => !disabled && onChange(!checked)}
+      disabled={disabled}
+      className={cn(
+        "relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 disabled:opacity-60",
+        checked ? "gradient-accent-bg" : "bg-muted-foreground/30"
+      )}
+    >
+      <span
+        className={cn(
+          "inline-block size-3.5 transform rounded-full bg-white transition-transform duration-200",
+          checked ? "translate-x-[18px]" : "translate-x-[3px]"
+        )}
+      />
+    </button>
+  );
 }
 
 export function PortalCampaignDetail({
@@ -43,9 +166,30 @@ export function PortalCampaignDetail({
   const [config, setConfig] = useState(widgetChannel?.config ?? {});
   const [isSaving, setIsSaving] = useState(false);
 
+  const starters = (config.conversationStarters as string[]) ?? [];
+
   const embedCode = widgetChannel
     ? `<script src="${appOrigin}/widget.js" data-channel-id="${widgetChannel.id}"></script>`
     : null;
+
+  function updateConfig(key: string, value: unknown) {
+    setConfig({ ...config, [key]: value });
+  }
+
+  function addStarter() {
+    if (starters.length >= 4) return;
+    updateConfig("conversationStarters", [...starters, ""]);
+  }
+
+  function updateStarter(index: number, value: string) {
+    const updated = [...starters];
+    updated[index] = value;
+    updateConfig("conversationStarters", updated);
+  }
+
+  function removeStarter(index: number) {
+    updateConfig("conversationStarters", starters.filter((_, i) => i !== index));
+  }
 
   async function toggleStatus() {
     const newStatus = status === "active" ? "paused" : "active";
@@ -113,13 +257,14 @@ export function PortalCampaignDetail({
           )}
         </div>
         <span
-          className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+          className={cn(
+            "text-xs px-2.5 py-1 rounded-full font-medium",
             status === "active"
-              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+              ? "bg-gradient-to-r from-[#FF8C00]/10 to-[#9D50BB]/10 text-neutral-900 dark:text-neutral-100 border border-[#FF8C00]/20"
               : status === "paused"
-              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
               : "bg-zinc-500/10 text-zinc-500"
-          }`}
+          )}
         >
           {status}
         </span>
@@ -127,11 +272,12 @@ export function PortalCampaignDetail({
           <button
             onClick={toggleStatus}
             disabled={isUpdating}
-            className={`inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-full transition-colors duration-150 disabled:opacity-50 ${
+            className={cn(
+              "inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-full transition-colors duration-150 disabled:opacity-50",
               status === "active"
                 ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20"
-                : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20"
-            }`}
+                : "gradient-accent-bg text-white hover:opacity-90"
+            )}
           >
             {status === "active" ? (
               <><Pause className="size-3.5" /> Pause</>
@@ -143,40 +289,41 @@ export function PortalCampaignDetail({
       </div>
 
       {/* Tabs */}
-      <nav className="flex items-center p-1 rounded-full border border-border/40 bg-card/60 backdrop-blur-md w-fit">
+      <nav className="flex items-center p-1.5 rounded-full border border-border/40 bg-card/60 backdrop-blur-md w-fit shadow-sm">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-5 py-2 text-sm font-medium rounded-full transition-all duration-150 ${
+            className={cn(
+              "px-5 py-2 text-sm font-medium rounded-full transition-all duration-150",
               activeTab === tab.key
                 ? "bg-foreground text-background shadow-md"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-            }`}
+            )}
           >
             {tab.label}
           </button>
         ))}
       </nav>
 
-      {/* Tab Content */}
+      {/* ═══════ OVERVIEW TAB ═══════ */}
       {activeTab === "overview" && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4">
-              <p className="text-xs text-muted-foreground font-medium">Status</p>
-              <p className="text-lg font-bold capitalize">{status}</p>
-            </div>
-            <div className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4">
-              <p className="text-xs text-muted-foreground font-medium">Conversations</p>
-              <p className="text-lg font-bold">{conversationCount}</p>
-            </div>
-            <div className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-4">
-              <p className="text-xs text-muted-foreground font-medium">Widget</p>
-              <p className="text-lg font-bold">
-                {widgetChannel?.is_enabled ? "Live" : "Offline"}
-              </p>
-            </div>
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 stagger-enter">
+            {[
+              { label: "Status", value: status, capitalize: true },
+              { label: "Conversations", value: String(conversationCount) },
+              { label: "Widget", value: widgetChannel?.is_enabled ? "Live" : "Offline" },
+            ].map((stat, i) => (
+              <div
+                key={stat.label}
+                style={{ "--stagger": i } as React.CSSProperties}
+                className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-5"
+              >
+                <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
+                <p className={cn("text-xl font-bold mt-1", stat.capitalize && "capitalize")}>{stat.value}</p>
+              </div>
+            ))}
           </div>
 
           <Link
@@ -189,79 +336,233 @@ export function PortalCampaignDetail({
         </div>
       )}
 
+      {/* ═══════ WIDGET CONFIG TAB ═══════ */}
       {activeTab === "widget" && (
-        <div className="space-y-5">
+        <div className="space-y-6 animate-in fade-in duration-200">
           {!widgetChannel ? (
-            <p className="text-sm text-muted-foreground">
-              No widget channel configured for this campaign yet.
-            </p>
+            <div className="text-center py-20 px-6 rounded-[32px] border border-dashed border-border/60 bg-card/30">
+              <Settings2 className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+              <h3 className="text-lg font-medium">No widget channel configured</h3>
+              <p className="text-muted-foreground text-sm mt-1 max-w-sm mx-auto">
+                Contact your agency to set up a website widget for this campaign.
+              </p>
+            </div>
           ) : (
             <>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Welcome Message</label>
-                  <textarea
-                    value={(config.welcomeMessage as string) ?? ""}
-                    onChange={(e) => setConfig({ ...config, welcomeMessage: e.target.value })}
-                    disabled={!isAdmin}
-                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 resize-none transition-colors duration-150"
-                    rows={3}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Primary Color</label>
+              {/* Appearance */}
+              <SectionCard
+                icon={Palette}
+                title="Appearance"
+                description="Control how the widget looks on your website."
+              >
+                <FieldGroup label="Primary Color" hint="The main color for the header, buttons, and user messages.">
                   <div className="flex items-center gap-3">
                     <input
                       type="color"
                       value={(config.primaryColor as string) ?? "#6366f1"}
-                      onChange={(e) => setConfig({ ...config, primaryColor: e.target.value })}
+                      onChange={(e) => updateConfig("primaryColor", e.target.value)}
                       disabled={!isAdmin}
-                      className="size-10 rounded-lg border cursor-pointer disabled:opacity-60"
+                      className="size-10 rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] cursor-pointer shadow-sm disabled:opacity-60"
                     />
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-sm text-muted-foreground font-mono">
                       {(config.primaryColor as string) ?? "#6366f1"}
                     </span>
                   </div>
-                </div>
+                </FieldGroup>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Agent Name</label>
+                <FieldGroup label="Theme">
+                  <TogglePills
+                    options={[
+                      { value: "light", label: "Light" },
+                      { value: "dark", label: "Dark" },
+                    ]}
+                    value={(config.theme as string) ?? "light"}
+                    onChange={(v) => updateConfig("theme", v)}
+                    disabled={!isAdmin}
+                  />
+                </FieldGroup>
+
+                <FieldGroup label="Corner Style" hint="Rounded gives a modern look. Sharp gives a more structured feel.">
+                  <TogglePills
+                    options={[
+                      { value: "rounded", label: "Rounded" },
+                      { value: "sharp", label: "Sharp" },
+                    ]}
+                    value={(config.borderRadius as string) ?? "rounded"}
+                    onChange={(v) => updateConfig("borderRadius", v)}
+                    disabled={!isAdmin}
+                  />
+                </FieldGroup>
+
+                <FieldGroup label="Widget Size" hint="Controls the overall size of the chat widget and button.">
+                  <TogglePills
+                    options={[
+                      { value: "compact", label: "Compact" },
+                      { value: "default", label: "Default" },
+                      { value: "large", label: "Large" },
+                    ]}
+                    value={(config.widgetSize as string) ?? "default"}
+                    onChange={(v) => updateConfig("widgetSize", v)}
+                    disabled={!isAdmin}
+                  />
+                </FieldGroup>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium">Show &ldquo;Powered by&rdquo;</label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Display LaunchPath branding in the widget footer.
+                    </p>
+                  </div>
+                  <Toggle
+                    checked={(config.showBranding as boolean) !== false}
+                    onChange={(v) => updateConfig("showBranding", v)}
+                    disabled={!isAdmin}
+                  />
+                </div>
+              </SectionCard>
+
+              {/* Content & Identity */}
+              <SectionCard
+                icon={Sparkles}
+                title="Content & Identity"
+                description="Set up the agent's name, avatar, and messages visitors see."
+              >
+                <FieldGroup label="Display Name" hint="Shown at the top of the chat window.">
                   <input
                     type="text"
                     value={(config.agentName as string) ?? ""}
-                    onChange={(e) => setConfig({ ...config, agentName: e.target.value })}
+                    onChange={(e) => updateConfig("agentName", e.target.value)}
                     disabled={!isAdmin}
-                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 transition-colors duration-150"
+                    placeholder="AI Assistant"
+                    className={INPUT_CLASS}
                   />
-                </div>
+                </FieldGroup>
+
+                <FieldGroup label="Chat Avatar" hint="An image URL or emoji shown next to the name.">
+                  <input
+                    type="text"
+                    value={(config.agentAvatar as string) ?? ""}
+                    onChange={(e) => updateConfig("agentAvatar", e.target.value)}
+                    disabled={!isAdmin}
+                    placeholder="https://... or emoji like 🤖"
+                    className={INPUT_CLASS}
+                  />
+                </FieldGroup>
+
+                <FieldGroup label="Welcome Message" hint="The first message visitors see when they open the chat.">
+                  <textarea
+                    value={(config.welcomeMessage as string) ?? ""}
+                    onChange={(e) => updateConfig("welcomeMessage", e.target.value)}
+                    disabled={!isAdmin}
+                    placeholder="Hi! How can I help you today?"
+                    rows={3}
+                    className={cn(INPUT_CLASS, "resize-none")}
+                  />
+                </FieldGroup>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Position</label>
-                  <div className="flex gap-2">
-                    {["right", "left"].map((pos) => (
-                      <button
-                        key={pos}
-                        onClick={() => isAdmin && setConfig({ ...config, position: pos })}
-                        disabled={!isAdmin}
-                        className={`px-4 py-2 text-sm rounded-full border transition-colors duration-150 ${
-                          (config.position ?? "right") === pos
-                            ? "bg-foreground text-background shadow-md border-transparent"
-                            : "border-border/40 hover:bg-muted/50"
-                        } disabled:opacity-60`}
-                      >
-                        {pos.charAt(0).toUpperCase() + pos.slice(1)}
-                      </button>
+                  <label className="text-sm font-medium">Quick Reply Buttons</label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Suggested messages visitors can click to start a conversation.
+                  </p>
+                  <div className="space-y-2">
+                    {starters.map((s, i) => (
+                      <div key={i} className="flex gap-2">
+                        <input
+                          value={s}
+                          onChange={(e) => updateStarter(i, e.target.value)}
+                          disabled={!isAdmin}
+                          placeholder={`e.g. "What services do you offer?"`}
+                          className={cn(INPUT_CLASS, "flex-1")}
+                        />
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => removeStarter(i)}
+                            className="p-2.5 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors duration-150"
+                          >
+                            <X className="size-3.5" />
+                          </button>
+                        )}
+                      </div>
                     ))}
                   </div>
+                  {isAdmin && starters.length < 4 && (
+                    <button
+                      type="button"
+                      onClick={addStarter}
+                      className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors duration-150"
+                    >
+                      <Plus className="size-3" />
+                      Add quick reply
+                    </button>
+                  )}
                 </div>
-              </div>
 
+                <FieldGroup label="Greeting Message" hint="A small popup that appears next to the chat button. Leave empty to disable.">
+                  <textarea
+                    value={(config.greetingMessage as string) ?? ""}
+                    onChange={(e) => updateConfig("greetingMessage", e.target.value)}
+                    disabled={!isAdmin}
+                    placeholder="👋 Hi there! Need any help?"
+                    rows={2}
+                    className={cn(INPUT_CLASS, "resize-none")}
+                  />
+                </FieldGroup>
+
+                <FieldGroup label="Greeting Delay" hint="Seconds before the greeting popup appears.">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      max={60}
+                      value={(config.greetingDelay as number) ?? 3}
+                      onChange={(e) => updateConfig("greetingDelay", parseInt(e.target.value) || 0)}
+                      disabled={!isAdmin}
+                      className={cn(INPUT_CLASS, "w-24")}
+                    />
+                    <span className="text-xs text-muted-foreground">seconds</span>
+                  </div>
+                </FieldGroup>
+              </SectionCard>
+
+              {/* Button & Position */}
+              <SectionCard
+                icon={MousePointer2}
+                title="Button & Position"
+                description="Customize the floating chat button."
+              >
+                <FieldGroup label="Button Icon" hint="Custom icon for the floating button. Leave empty for default chat bubble.">
+                  <input
+                    type="text"
+                    value={(config.launcherIcon as string) ?? ""}
+                    onChange={(e) => updateConfig("launcherIcon", e.target.value)}
+                    disabled={!isAdmin}
+                    placeholder="https://... or emoji like 💬"
+                    className={INPUT_CLASS}
+                  />
+                </FieldGroup>
+
+                <FieldGroup label="Button Position" hint="Which corner of the screen the chat button appears in.">
+                  <TogglePills
+                    options={[
+                      { value: "right", label: "Bottom Right" },
+                      { value: "left", label: "Bottom Left" },
+                    ]}
+                    value={(config.position as string) ?? "right"}
+                    onChange={(v) => updateConfig("position", v)}
+                    disabled={!isAdmin}
+                  />
+                </FieldGroup>
+              </SectionCard>
+
+              {/* Save button */}
               {isAdmin && (
                 <button
                   onClick={handleSaveConfig}
                   disabled={isSaving}
-                  className="px-6 py-2.5 text-sm font-medium rounded-full gradient-accent-bg text-white hover:scale-[1.02] transition-transform transition-colors duration-150 disabled:opacity-50 shadow-sm"
+                  className="px-6 py-2.5 text-sm font-medium rounded-full gradient-accent-bg text-white hover:scale-[1.02] transition-transform duration-150 disabled:opacity-50 shadow-sm"
                 >
                   {isSaving ? "Saving..." : "Save Changes"}
                 </button>
@@ -271,61 +572,87 @@ export function PortalCampaignDetail({
         </div>
       )}
 
+      {/* ═══════ DEPLOY TAB ═══════ */}
       {activeTab === "deploy" && (
-        <div className="space-y-5">
+        <div className="space-y-6 animate-in fade-in duration-200">
           {!widgetChannel ? (
-            <p className="text-sm text-muted-foreground">
-              No widget channel to deploy yet.
-            </p>
+            <div className="text-center py-20 px-6 rounded-[32px] border border-dashed border-border/60 bg-card/30">
+              <Globe className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+              <h3 className="text-lg font-medium">No widget to deploy</h3>
+              <p className="text-muted-foreground text-sm mt-1 max-w-sm mx-auto">
+                Contact your agency to set up a website widget for this campaign.
+              </p>
+            </div>
           ) : (
             <>
-              <div className="flex items-center gap-3">
-                <Globe className="size-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">
-                    Widget is {widgetChannel.is_enabled ? "deployed" : "not deployed"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {widgetChannel.is_enabled
-                      ? "The widget is live and accepting conversations."
-                      : "Deploy the campaign to make the widget live."}
-                  </p>
+              {/* Status banner */}
+              <div className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-6">
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "size-12 rounded-2xl flex items-center justify-center",
+                    widgetChannel.is_enabled
+                      ? "bg-gradient-to-br from-[#FF8C00]/15 to-[#9D50BB]/10"
+                      : "bg-muted/50"
+                  )}>
+                    <Globe className={cn(
+                      "size-6",
+                      widgetChannel.is_enabled ? "text-[#FF8C00]" : "text-muted-foreground"
+                    )} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">
+                      Widget is {widgetChannel.is_enabled ? "deployed" : "not deployed"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {widgetChannel.is_enabled
+                        ? "The widget is live and accepting conversations."
+                        : "Deploy the campaign to make the widget live."}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold">Embed Code</h3>
-                <p className="text-xs text-muted-foreground">
-                  Add this snippet before the closing &lt;/body&gt; tag on your website.
-                </p>
+              {/* Embed Code */}
+              <SectionCard
+                icon={Settings2}
+                title="Embed Code"
+                description="Add this snippet before the closing </body> tag on your website."
+              >
                 <div className="relative">
-                  <pre className="rounded-xl bg-muted/50 border border-border/30 p-4 text-xs overflow-x-auto pr-12 font-mono">
+                  <pre className="rounded-2xl bg-white dark:bg-[#151515] border border-neutral-200/60 dark:border-[#2A2A2A] p-4 text-xs overflow-x-auto pr-14 font-mono shadow-sm">
                     {embedCode}
                   </pre>
                   <button
                     onClick={copyEmbed}
-                    className="absolute top-3 right-3 p-1.5 rounded-md hover:bg-background/80 transition-colors"
+                    className="absolute top-3 right-3 p-2 rounded-xl bg-muted/50 hover:bg-muted transition-colors duration-150"
                   >
                     {copied ? (
-                      <Check className="size-4 text-emerald-500" />
+                      <Check className="size-4 text-[#FF8C00]" />
                     ) : (
                       <Copy className="size-4 text-muted-foreground" />
                     )}
                   </button>
                 </div>
-              </div>
+              </SectionCard>
 
+              {/* Allowed Origins */}
               {widgetChannel.allowed_origins.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-semibold">Allowed Origins</h3>
+                <SectionCard
+                  icon={Globe}
+                  title="Allowed Origins"
+                  description="Only these websites can use the widget."
+                >
                   <div className="flex flex-wrap gap-2">
                     {widgetChannel.allowed_origins.map((origin, i) => (
-                      <span key={i} className="px-2.5 py-1 text-xs rounded-full bg-muted font-mono">
+                      <span
+                        key={i}
+                        className="px-3 py-1.5 text-xs rounded-full bg-white dark:bg-[#151515] border border-neutral-200/60 dark:border-[#2A2A2A] font-mono shadow-sm"
+                      >
                         {origin}
                       </span>
                     ))}
                   </div>
-                </div>
+                </SectionCard>
               )}
             </>
           )}
