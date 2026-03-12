@@ -638,6 +638,16 @@ export function AgentWizard({ initialTemplateId, onBack }: AgentWizardProps) {
 
   return (
     <div className="max-w-xl mx-auto space-y-8 animate-in fade-in duration-300">
+      {/* Shared SVG gradient for icons across all wizard steps */}
+      <svg width="0" height="0" className="absolute" aria-hidden="true">
+        <defs>
+          <linearGradient id="wizard-icon-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FF8C00" />
+            <stop offset="100%" stopColor="#9D50BB" />
+          </linearGradient>
+        </defs>
+      </svg>
+
       {/* Progress indicator (#12 — step label cross-fades) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">

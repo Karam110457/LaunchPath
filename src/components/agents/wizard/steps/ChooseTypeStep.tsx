@@ -21,16 +21,6 @@ interface ChooseTypeStepProps {
 export function ChooseTypeStep({ templateId, onSelect }: ChooseTypeStepProps) {
   return (
     <div className="space-y-6">
-      {/* SVG gradient for icons */}
-      <svg width="0" height="0" className="absolute">
-        <defs>
-          <linearGradient id="wizard-icon-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FF8C00" />
-            <stop offset="100%" stopColor="#9D50BB" />
-          </linearGradient>
-        </defs>
-      </svg>
-
       <WizardStepHeader
         title="What type of agent do you want to build?"
         description="Choose a template to get started."

@@ -179,7 +179,7 @@ function WebsiteSection({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Globe className="w-4 h-4 text-[#FF8C00]" />
+            <Globe className="w-4 h-4" style={{ stroke: "url(#wizard-icon-gradient)" }} />
             <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
               Website pages
             </span>
@@ -400,7 +400,7 @@ function FaqsSection({
               size="sm"
               variant="ghost"
               onClick={() => setShowAddForm(!showAddForm)}
-              className="gap-1 rounded-full text-xs h-7 text-neutral-500 hover:text-[#FF8C00]"
+              className="gap-1 rounded-full text-xs h-7 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
             >
               <Plus className="w-3 h-3" />
               Add

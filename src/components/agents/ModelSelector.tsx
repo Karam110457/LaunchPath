@@ -14,6 +14,8 @@ interface ModelSelectorProps {
   value: string;
   onChange: (modelId: string) => void;
   className?: string;
+  /** Use a simple native <select> — best for narrow panels */
+  compact?: boolean;
 }
 
 const TIER_ORDER: ModelTier[] = ["fast", "standard", "advanced"];
@@ -27,7 +29,39 @@ const TIER_BADGE_COLORS: Record<ModelTier, string> = {
 const DROPDOWN_W = 360;
 const DROPDOWN_MAX_H = 420;
 
-export function ModelSelector({ value, onChange, className }: ModelSelectorProps) {
+/** Models grouped by provider for the native <select> */
+const PROVIDER_GROUPS = (() => {
+  const map = new Map<string, ModelOption[]>();
+  for (const m of MODEL_OPTIONS) {
+    const list = map.get(m.provider) ?? [];
+    list.push(m);
+    map.set(m.provider, list);
+  }
+  return Array.from(map.entries());
+})();
+
+export function ModelSelector({ value, onChange, className, compact }: ModelSelectorProps) {
+  // ── Compact mode: native <select> grouped by provider ──
+  if (compact) {
+    return (
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${className ?? ""}`}
+      >
+        {PROVIDER_GROUPS.map(([provider, models]) => (
+          <optgroup key={provider} label={provider}>
+            {models.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label} — {m.multiplier}x
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+    );
+  }
+  // ── Full mode: searchable dropdown ──
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [providerFilter, setProviderFilter] = useState<string | null>(null);

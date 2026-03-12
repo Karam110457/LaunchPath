@@ -23,7 +23,7 @@ import {
   X,
 } from "lucide-react";
 
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
   Calendar,
   Headphones,
   LifeBuoy,
@@ -150,6 +150,16 @@ export function AgentCreationLanding() {
 
   return (
     <div className="relative flex flex-col items-center justify-center min-h-[70vh] px-4">
+      {/* Shared SVG gradient for icons */}
+      <svg width="0" height="0" className="absolute" aria-hidden="true">
+        <defs>
+          <linearGradient id="wizard-icon-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FF8C00" />
+            <stop offset="100%" stopColor="#9D50BB" />
+          </linearGradient>
+        </defs>
+      </svg>
+
       {/* Draft resume banner (#6, #7) */}
       {draftInfo.exists && (
         <div
@@ -176,10 +186,10 @@ export function AgentCreationLanding() {
                 {draftTemplate ? (
                   (() => {
                     const Icon = ICON_MAP[draftTemplate.icon] ?? Sparkles;
-                    return <Icon className="h-5 w-5 text-[#FF8C00]" />;
+                    return <Icon className="h-5 w-5" style={{ stroke: "url(#wizard-icon-gradient)" }} />;
                   })()
                 ) : (
-                  <Sparkles className="h-5 w-5 text-[#FF8C00]" />
+                  <Sparkles className="h-5 w-5" style={{ stroke: "url(#wizard-icon-gradient)" }} />
                 )}
               </div>
 
@@ -291,7 +301,7 @@ export function AgentCreationLanding() {
                   key={template.id}
                   onClick={() => setWizardTemplateId(template.id)}
                   style={{ "--stagger": 2 + i } as React.CSSProperties}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-border/50 bg-background/60 text-muted-foreground text-sm transition-all duration-200 hover:border-[#FF8C00]/30 hover:text-foreground hover:bg-muted/30 hover:-translate-y-0.5 hover:shadow-sm active:scale-95"
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-border/50 bg-background/60 text-muted-foreground text-sm transition-all duration-200 hover:border-neutral-400 dark:hover:border-neutral-500 hover:text-foreground hover:bg-muted/30 hover:-translate-y-0.5 hover:shadow-sm active:scale-95"
                 >
                   <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                   {template.name}

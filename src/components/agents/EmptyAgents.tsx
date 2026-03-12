@@ -8,7 +8,15 @@ export function EmptyAgents() {
     <Card className="border-dashed">
       <CardContent className="flex flex-col items-center justify-center py-16 text-center">
         <div className="h-12 w-12 rounded-full bg-gradient-to-r from-[#FF8C00]/10 to-[#9D50BB]/10 flex items-center justify-center mb-4">
-          <Bot className="h-6 w-6 text-[#FF8C00]" />
+          <svg width="0" height="0" className="absolute" aria-hidden="true">
+            <defs>
+              <linearGradient id="empty-icon-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#FF8C00" />
+                <stop offset="100%" stopColor="#9D50BB" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <Bot className="h-6 w-6" style={{ stroke: "url(#empty-icon-gradient)" }} />
         </div>
         <h3 className="text-lg font-medium mb-2">Create your first agent</h3>
         <p className="text-sm text-muted-foreground mb-6 max-w-sm">

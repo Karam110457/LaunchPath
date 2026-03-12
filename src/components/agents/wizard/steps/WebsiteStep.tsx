@@ -152,7 +152,7 @@ export function WebsiteStep({
             htmlFor="website-url"
             className="flex items-center gap-2 text-sm font-medium text-neutral-800 dark:text-neutral-200"
           >
-            <Globe className="w-4 h-4 text-[#FF8C00]" />
+            <Globe className="w-4 h-4" style={{ stroke: "url(#wizard-icon-gradient)" }} />
             Website URL
           </Label>
           <div className="flex gap-2">
@@ -209,7 +209,7 @@ export function WebsiteStep({
               <div className="flex gap-2">
                 <button
                   type="button"
-                  className="text-xs text-[#FF8C00] hover:underline"
+                  className="text-xs bg-gradient-to-r from-[#FF8C00] to-[#9D50BB] bg-clip-text text-transparent hover:underline"
                   onClick={() => toggleAll(true)}
                 >
                   Select all

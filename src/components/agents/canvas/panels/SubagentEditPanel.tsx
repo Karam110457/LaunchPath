@@ -408,6 +408,7 @@ export function SubagentEditPanel({
             <ModelSelector
               value={model}
               onChange={(v) => { setModel(v); markDirty(); }}
+              compact
             />
           </section>
 

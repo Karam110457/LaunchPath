@@ -704,6 +704,7 @@ export function AgentEditPanel({
               <ModelSelector
                 value={formState.model}
                 onChange={(v) => update("model", v)}
+                compact={!isExpanded}
               />
             </section>
 

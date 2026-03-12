@@ -23,19 +23,19 @@ const TEMPLATE_META: Record<
 > = {
   "appointment-booker": {
     label: "Appointment Booker",
-    icon: <Calendar className="w-4 h-4 text-[#FF8C00]" />,
+    icon: <Calendar className="w-4 h-4" style={{ stroke: "url(#wizard-icon-gradient)" }} />,
   },
   "customer-support": {
     label: "Customer Support",
-    icon: <LifeBuoy className="w-4 h-4 text-[#FF8C00]" />,
+    icon: <LifeBuoy className="w-4 h-4" style={{ stroke: "url(#wizard-icon-gradient)" }} />,
   },
   "lead-capture": {
     label: "Lead Capture",
-    icon: <Target className="w-4 h-4 text-[#FF8C00]" />,
+    icon: <Target className="w-4 h-4" style={{ stroke: "url(#wizard-icon-gradient)" }} />,
   },
   "lead-qualification": {
     label: "Lead Capture",
-    icon: <Target className="w-4 h-4 text-[#FF8C00]" />,
+    icon: <Target className="w-4 h-4" style={{ stroke: "url(#wizard-icon-gradient)" }} />,
   },
 };
 
@@ -70,7 +70,7 @@ export function ReviewStep({
         {/* Agent Type */}
         <ReviewCard title="Agent Type" stepId="choose-type" onEdit={onGoToStep}>
           <div className="flex items-center gap-2">
-            {meta?.icon ?? <Bot className="w-4 h-4 text-[#FF8C00]" />}
+            {meta?.icon ?? <Bot className="w-4 h-4" style={{ stroke: "url(#wizard-icon-gradient)" }} />}
             <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
               {meta?.label ?? "Custom Agent"}
             </span>
@@ -81,7 +81,7 @@ export function ReviewStep({
         <ReviewCard title="Agent" stepId="agent-name" onEdit={onGoToStep}>
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Bot className="w-4 h-4 text-[#FF8C00]" />
+              <Bot className="w-4 h-4" style={{ stroke: "url(#wizard-icon-gradient)" }} />
               <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                 {state.agentName || "Unnamed agent"}
               </span>
@@ -254,7 +254,7 @@ function ReviewCard({
         <button
           type="button"
           onClick={() => onEdit(stepId)}
-          className="flex items-center gap-1 text-xs text-neutral-400 hover:text-[#FF8C00] transition-colors shrink-0 mt-0.5"
+          className="flex items-center gap-1 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors shrink-0 mt-0.5"
         >
           <Pencil className="w-3 h-3" />
           Edit

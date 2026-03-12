@@ -21,7 +21,7 @@ import {
 
 const ICON_MAP: Record<
   string,
-  React.ComponentType<{ className?: string }>
+  React.ComponentType<{ className?: string; style?: React.CSSProperties }>
 > = {
   Calendar,
   Headphones,
@@ -67,6 +67,14 @@ export function NewAgentForm({ businesses }: NewAgentFormProps) {
 
   return (
     <div className="space-y-8 max-w-3xl">
+      <svg width="0" height="0" className="absolute" aria-hidden="true">
+        <defs>
+          <linearGradient id="wizard-icon-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FF8C00" />
+            <stop offset="100%" stopColor="#9D50BB" />
+          </linearGradient>
+        </defs>
+      </svg>
       {/* Template Selection */}
       <div>
         <h2 className="text-sm font-medium mb-3">Start from a template</h2>
@@ -86,14 +94,14 @@ export function NewAgentForm({ businesses }: NewAgentFormProps) {
                   className={cn(
                     "transition-all cursor-pointer h-full",
                     isSelected
-                      ? "border-[#FF8C00] ring-1 ring-[#FF8C00]/20 bg-gradient-to-r from-[#FF8C00]/5 to-[#9D50BB]/5"
-                      : "hover:border-[#FF8C00]/30",
+                      ? "ring-2 ring-[#FF8C00]/30 border-transparent bg-white dark:bg-[#252525] shadow-[0_0_20px_-5px_rgba(157,80,187,0.15)]"
+                      : "hover:border-neutral-300 dark:hover:border-neutral-600",
                   )}
                 >
                   <CardContent className="pt-6">
                     <div className="flex items-start gap-3">
                       <div className="h-8 w-8 rounded-lg bg-gradient-to-r from-[#FF8C00]/10 to-[#9D50BB]/10 flex items-center justify-center shrink-0">
-                        <Icon className="h-4 w-4 text-[#FF8C00]" />
+                        <Icon className="h-4 w-4" style={{ stroke: "url(#wizard-icon-gradient)" }} />
                       </div>
                       <div>
                         <h3 className="font-medium text-sm">
