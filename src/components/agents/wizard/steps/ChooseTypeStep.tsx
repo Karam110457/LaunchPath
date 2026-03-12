@@ -36,8 +36,8 @@ export function ChooseTypeStep({ templateId, onSelect }: ChooseTypeStepProps) {
         description="Choose a template to get started."
       />
 
-      <div className="space-y-3">
-        {AGENT_TEMPLATES.map((template) => {
+      <div className="stagger-enter space-y-3">
+        {AGENT_TEMPLATES.map((template, i) => {
           const Icon = ICON_MAP[template.icon] ?? Calendar;
           const isSelected = templateId === template.id;
 
@@ -45,6 +45,7 @@ export function ChooseTypeStep({ templateId, onSelect }: ChooseTypeStepProps) {
             <button
               key={template.id}
               type="button"
+              style={{ "--stagger": i } as React.CSSProperties}
               onClick={() =>
                 onSelect(
                   template.id as "appointment-booker" | "customer-support" | "lead-capture",
@@ -55,7 +56,7 @@ export function ChooseTypeStep({ templateId, onSelect }: ChooseTypeStepProps) {
                 focus:outline-none
                 ${
                   isSelected
-                    ? "relative overflow-hidden border-neutral-300 dark:border-neutral-600 bg-white dark:bg-[#252525] shadow-sm before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-gradient-to-b before:from-[#FF8C00] before:to-[#9D50BB]"
+                    ? "ring-2 ring-[#FF8C00]/30 border-transparent bg-white dark:bg-[#252525] shadow-[0_0_20px_-5px_rgba(157,80,187,0.15)]"
                     : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:bg-white dark:hover:bg-[#252525] hover:shadow-sm hover:-translate-y-0.5"
                 }
               `}
@@ -66,7 +67,7 @@ export function ChooseTypeStep({ templateId, onSelect }: ChooseTypeStepProps) {
                     h-[48px] w-[48px] rounded-[16px] flex items-center justify-center shrink-0 border transition-transform
                     ${
                       isSelected
-                        ? "bg-white dark:bg-[#252525] border-neutral-300 dark:border-neutral-500"
+                        ? "bg-white dark:bg-[#252525] border-[#FF8C00]/20"
                         : "bg-white dark:bg-[#252525] border-black/5 dark:border-[#333333]"
                     }
                   `}

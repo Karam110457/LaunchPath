@@ -112,6 +112,7 @@ export function AgentWizard({ initialTemplateId, onBack }: AgentWizardProps) {
   const [stepIndex, setStepIndex] = useState(
     draft.current?.stepIndex ?? (hasInitialTemplate ? 1 : 0),
   );
+  const [direction, setDirection] = useState<"forward" | "back">("forward");
   const [state, setState] = useState<AgentWizardState>(() => {
     if (draft.current?.state) return draft.current.state;
     const initial = createInitialWizardState();
@@ -325,6 +326,7 @@ export function AgentWizard({ initialTemplateId, onBack }: AgentWizardProps) {
           }));
         }
       }
+      setDirection("forward");
       setStepIndex(clampedIndex + 1);
     }
   }
@@ -334,6 +336,7 @@ export function AgentWizard({ initialTemplateId, onBack }: AgentWizardProps) {
       clearDraft();
       onBack();
     } else {
+      setDirection("back");
       setStepIndex(clampedIndex - 1);
     }
   }
@@ -341,7 +344,10 @@ export function AgentWizard({ initialTemplateId, onBack }: AgentWizardProps) {
   /** Navigate to a step by its ID (used by ReviewStep edit buttons) */
   function goToStepById(stepId: WizardStepId) {
     const idx = activeSteps.findIndex((s) => s.id === stepId);
-    if (idx >= 0) setStepIndex(idx);
+    if (idx >= 0) {
+      setDirection(idx < clampedIndex ? "back" : "forward");
+      setStepIndex(idx);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -625,15 +631,23 @@ export function AgentWizard({ initialTemplateId, onBack }: AgentWizardProps) {
 
   const progress = ((clampedIndex + 1) / totalSteps) * 100;
 
+  const slideClass =
+    direction === "forward"
+      ? "animate-in fade-in slide-in-from-right-4 duration-300"
+      : "animate-in fade-in slide-in-from-left-4 duration-300";
+
   return (
-    <div className="max-w-xl mx-auto space-y-8">
-      {/* Progress indicator */}
+    <div className="max-w-xl mx-auto space-y-8 animate-in fade-in duration-300">
+      {/* Progress indicator (#12 — step label cross-fades) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-sm text-neutral-400 dark:text-neutral-500 tabular-nums">
             Step {clampedIndex + 1} of {totalSteps}
           </p>
-          <p className="text-sm text-neutral-400 dark:text-neutral-500">
+          <p
+            key={currentStep.label}
+            className="text-sm text-neutral-400 dark:text-neutral-500 animate-in fade-in duration-200"
+          >
             {currentStep.label}
           </p>
         </div>
@@ -648,23 +662,26 @@ export function AgentWizard({ initialTemplateId, onBack }: AgentWizardProps) {
         </div>
       </div>
 
-      {/* Step content with animation */}
-      <div
-        className="animate-in fade-in slide-in-from-right-4 duration-300"
-        key={currentStep.id}
-      >
+      {/* Step content with directional animation (#9) */}
+      <div className={slideClass} key={currentStep.id}>
         {renderStep()}
       </div>
 
-      {/* Navigation */}
+      {/* Navigation (#10, #11) */}
       <div className="space-y-2 pt-4">
         {getValidationError() && (
-          <p className="text-xs text-neutral-400 dark:text-neutral-500 text-center">
+          <p
+            key={getValidationError()}
+            className="text-xs text-neutral-400 dark:text-neutral-500 text-center animate-in fade-in duration-200"
+          >
             {getValidationError()}
           </p>
         )}
         {!getValidationError() && getStepHint() && (
-          <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+          <p
+            key={getStepHint()}
+            className="text-xs text-amber-600 dark:text-amber-400 text-center animate-in fade-in duration-200"
+          >
             {getStepHint()}
           </p>
         )}
@@ -672,7 +689,7 @@ export function AgentWizard({ initialTemplateId, onBack }: AgentWizardProps) {
           <Button
             variant="ghost"
             onClick={handleBack}
-            className="text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+            className="text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 transition-transform duration-150 hover:-translate-x-0.5 active:scale-95"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
@@ -681,7 +698,7 @@ export function AgentWizard({ initialTemplateId, onBack }: AgentWizardProps) {
           {currentStep.id === "review" ? (
             <Button
               onClick={handleGenerate}
-              className="gradient-accent-bg text-white border-0 shadow-sm rounded-full px-6 h-10"
+              className="gradient-accent-bg text-white border-0 shadow-sm rounded-full px-6 h-10 transition-transform duration-150 hover:scale-[1.02] active:scale-95"
             >
               <Sparkles className="h-4 w-4 mr-2" />
               Generate Agent
@@ -690,7 +707,7 @@ export function AgentWizard({ initialTemplateId, onBack }: AgentWizardProps) {
             <Button
               onClick={handleNext}
               disabled={!canProceed()}
-              className="gradient-accent-bg text-white border-0 shadow-sm rounded-full px-6 h-10 disabled:opacity-40"
+              className="gradient-accent-bg text-white border-0 shadow-sm rounded-full px-6 h-10 disabled:opacity-40 transition-transform duration-150 hover:scale-[1.02] hover:translate-x-0.5 active:scale-95"
             >
               Continue
               <ArrowRight className="h-4 w-4 ml-2" />

@@ -37,14 +37,14 @@ export const AgentNode = memo(function AgentNode({ data, dragging }: NodeProps) 
         duration={8}
         color={["#FF8C00", "#9D50BB"]}
         className="relative !p-[3px] !bg-transparent cursor-pointer overflow-visible z-10"
-        style={{ width: NODE_W, height: NODE_H }}
+        style={{ width: NODE_W, minHeight: NODE_H }}
       >
         <div className="w-full h-full liquid-glass-node flex items-center gap-3 justify-center !border-none px-4" style={{ borderRadius: 45 }}>
           <div className="flex items-center justify-center shrink-0 text-4xl">
             <Bot strokeWidth={1.5} className="w-9 h-9 text-neutral-700 canvas-dark:text-neutral-300" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-[14px] font-semibold text-neutral-800 canvas-dark:text-neutral-200 text-left truncate leading-tight">
+            <h3 className="text-[14px] font-semibold text-neutral-800 canvas-dark:text-neutral-200 text-left leading-tight line-clamp-2">
               {d.name}
             </h3>
             <span className="inline-block text-[10px] font-medium text-neutral-500 canvas-dark:text-neutral-400 mt-0.5">

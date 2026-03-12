@@ -28,7 +28,7 @@ export function ResponseBehaviorStep({ config, onUpdate }: ResponseBehaviorStepP
           onClick={() => onUpdate((prev) => ({ ...prev, response_style: "concise" }))}
           className={`w-full text-left rounded-[20px] border p-5 transition-all duration-200 ${
             config.response_style === "concise"
-              ? "relative overflow-hidden border-neutral-300 dark:border-neutral-600 bg-white dark:bg-[#252525] shadow-sm before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-gradient-to-b before:from-[#FF8C00] before:to-[#9D50BB]"
+              ? "ring-2 ring-[#FF8C00]/30 border-transparent bg-white dark:bg-[#252525] shadow-[0_0_20px_-5px_rgba(157,80,187,0.15)]"
               : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:border-neutral-300 dark:hover:border-neutral-500"
           }`}
         >
@@ -44,7 +44,7 @@ export function ResponseBehaviorStep({ config, onUpdate }: ResponseBehaviorStepP
           onClick={() => onUpdate((prev) => ({ ...prev, response_style: "detailed" }))}
           className={`w-full text-left rounded-[20px] border p-5 transition-all duration-200 ${
             config.response_style === "detailed"
-              ? "relative overflow-hidden border-neutral-300 dark:border-neutral-600 bg-white dark:bg-[#252525] shadow-sm before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-gradient-to-b before:from-[#FF8C00] before:to-[#9D50BB]"
+              ? "ring-2 ring-[#FF8C00]/30 border-transparent bg-white dark:bg-[#252525] shadow-[0_0_20px_-5px_rgba(157,80,187,0.15)]"
               : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:border-neutral-300 dark:hover:border-neutral-500"
           }`}
         >

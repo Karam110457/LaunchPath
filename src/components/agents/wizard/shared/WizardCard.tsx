@@ -12,9 +12,10 @@ export function WizardCard({ children, className }: WizardCardProps) {
   return (
     <div
       className={cn(
-        "rounded-[24px] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 border border-black/5 dark:border-[#2A2A2A] p-6",
+        "rounded-[24px] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 border border-black/5 dark:border-[#2A2A2A] p-6 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both",
         className,
       )}
+      style={{ animationDelay: "100ms" }}
     >
       {children}
     </div>
