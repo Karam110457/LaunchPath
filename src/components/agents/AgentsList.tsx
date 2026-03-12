@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useMemo } from "react";
-import { Copy, Trash2, Loader2, Search, Bot, Plus } from "lucide-react";
+import { useCallback, useEffect, useState, useMemo } from "react";
+import { Copy, Trash2, Loader2, Search, Bot, Plus, AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,31 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
   const router = useRouter();
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [deleteImpact, setDeleteImpact] = useState<{
+    agentId: string;
+    campaigns: number;
+    channels: number;
+    conversations: number;
+    subagents: number;
+    clientAssignments: number;
+  } | null>(null);
+  const [impactLoading, setImpactLoading] = useState(false);
+
+  const fetchImpact = useCallback(async (agentId: string) => {
+    setImpactLoading(true);
+    setDeleteImpact(null);
+    try {
+      const res = await fetch(`/api/agents/${agentId}/impact`);
+      if (res.ok) {
+        const data = await res.json();
+        setDeleteImpact({ agentId, ...data });
+      }
+    } catch {
+      // Non-critical — dialog will still work without impact data
+    } finally {
+      setImpactLoading(false);
+    }
+  }, []);
 
   const filtered = useMemo(() => {
     return agents.filter((a) => {
@@ -188,7 +213,7 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
                         )}
                       </button>
 
-                      <AlertDialog>
+                      <AlertDialog onOpenChange={(open) => { if (open) void fetchImpact(agent.id); }}>
                         <AlertDialogTrigger asChild>
                           <button
                             type="button"
@@ -209,8 +234,44 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
                             <AlertDialogTitle className="text-xl">
                               Delete &ldquo;{agent.name}&rdquo;?
                             </AlertDialogTitle>
-                            <AlertDialogDescription className="text-base text-muted-foreground">
-                              This permanently deletes the agent, all connected knowledge tools, and conversation history. You cannot undo this action.
+                            <AlertDialogDescription asChild>
+                              <div className="text-base text-muted-foreground space-y-3">
+                                <p>This permanently deletes the agent and everything connected to it. You cannot undo this action.</p>
+
+                                {/* Impact summary */}
+                                {impactLoading ? (
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground/60">
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    Checking impact...
+                                  </div>
+                                ) : deleteImpact?.agentId === agent.id && (
+                                  deleteImpact.campaigns > 0 ||
+                                  deleteImpact.conversations > 0 ||
+                                  deleteImpact.subagents > 0 ||
+                                  deleteImpact.clientAssignments > 0
+                                ) ? (
+                                  <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 space-y-1.5">
+                                    <div className="flex items-center gap-1.5 text-sm font-medium text-destructive">
+                                      <AlertTriangle className="w-3.5 h-3.5" />
+                                      The following will also be deleted:
+                                    </div>
+                                    <ul className="text-sm text-muted-foreground space-y-0.5 pl-5 list-disc">
+                                      {deleteImpact.campaigns > 0 && (
+                                        <li><span className="font-medium text-foreground">{deleteImpact.campaigns}</span> campaign{deleteImpact.campaigns !== 1 ? "s" : ""} (including widget deployments)</li>
+                                      )}
+                                      {deleteImpact.conversations > 0 && (
+                                        <li><span className="font-medium text-foreground">{deleteImpact.conversations}</span> end-user conversation{deleteImpact.conversations !== 1 ? "s" : ""}</li>
+                                      )}
+                                      {deleteImpact.subagents > 0 && (
+                                        <li><span className="font-medium text-foreground">{deleteImpact.subagents}</span> sub-agent{deleteImpact.subagents !== 1 ? "s" : ""} (and their tools, knowledge, channels)</li>
+                                      )}
+                                      {deleteImpact.clientAssignments > 0 && (
+                                        <li>Agent will be removed from <span className="font-medium text-foreground">{deleteImpact.clientAssignments}</span> client{deleteImpact.clientAssignments !== 1 ? "s" : ""}</li>
+                                      )}
+                                    </ul>
+                                  </div>
+                                ) : null}
+                              </div>
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter className="mt-6">

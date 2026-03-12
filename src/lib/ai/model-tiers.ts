@@ -82,7 +82,7 @@ export const MODEL_OPTIONS: ModelOption[] = [
   // Anthropic — direct Anthropic pricing + openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
   // Fast
-  { value: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5", provider: "Anthropic", tier: "fast", multiplier: 0.53 },  // $1/$5 → $2.50 blended
+  { value: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5", provider: "Anthropic", tier: "fast", multiplier: 0.46 },  // $1/$5 → $2.20 blended
   // Standard
   { value: "claude-sonnet-4-5-20250929", label: "Claude Sonnet 4.5", provider: "Anthropic", tier: "standard", multiplier: 1.39 }, // $3/$15 → $6.60 blended (direct)
   { value: "anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6", provider: "Anthropic", tier: "standard", multiplier: 1.39 }, // $3/$15 → $6.60 blended
@@ -94,7 +94,7 @@ export const MODEL_OPTIONS: ModelOption[] = [
   // (Gemini 2.0 Flash removed — deprecated June 2026)
   // ---------------------------------------------------------------------------
   // Fast
-  { value: "google/gemini-2.5-flash-preview", label: "Gemini 2.5 Flash", provider: "Google", tier: "fast", multiplier: 0.06 }, // ~$0.15/$0.60 → $0.29 blended
+  { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "Google", tier: "fast", multiplier: 0.20 },          // $0.30/$2.50 → $0.96 blended
   { value: "google/gemini-3-flash-preview", label: "Gemini 3 Flash", provider: "Google", tier: "fast", multiplier: 0.26 },     // $0.50/$3.00 → $1.25 blended
   { value: "google/gemini-3.1-flash-lite-preview", label: "Gemini 3.1 Flash Lite", provider: "Google", tier: "fast", multiplier: 0.13 }, // $0.25/$1.50 → $0.63 blended
   // Standard
@@ -117,11 +117,11 @@ export const MODEL_OPTIONS: ModelOption[] = [
   // Mistral — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
   // Fast
-  { value: "mistralai/ministral-3b-2512", label: "Ministral 3B", provider: "Mistral", tier: "fast", multiplier: 0.01 },       // ~$0.04/$0.04 → $0.04 blended
-  { value: "mistralai/ministral-8b-2512", label: "Ministral 8B", provider: "Mistral", tier: "fast", multiplier: 0.01 },       // ~$0.04/$0.04 → $0.04 blended
+  { value: "mistralai/ministral-3b-2512", label: "Ministral 3B", provider: "Mistral", tier: "fast", multiplier: 0.02 },       // $0.10/$0.10 → $0.10 blended
+  { value: "mistralai/ministral-8b-2512", label: "Ministral 8B", provider: "Mistral", tier: "fast", multiplier: 0.03 },       // $0.15/$0.15 → $0.15 blended
   { value: "mistralai/mistral-small-creative", label: "Mistral Small Creative", provider: "Mistral", tier: "fast", multiplier: 0.03 }, // $0.10/$0.30 → $0.16 blended
   // Standard
-  { value: "mistralai/ministral-14b-2512", label: "Ministral 14B", provider: "Mistral", tier: "standard", multiplier: 0.02 }, // ~$0.10/$0.10 → $0.10 blended
+  { value: "mistralai/ministral-14b-2512", label: "Ministral 14B", provider: "Mistral", tier: "standard", multiplier: 0.04 }, // $0.20/$0.20 → $0.20 blended
   { value: "mistralai/mistral-large-2512", label: "Mistral Large 3", provider: "Mistral", tier: "standard", multiplier: 0.17 }, // $0.50/$1.50 → $0.80 blended
   { value: "mistralai/devstral-2512", label: "Devstral 2", provider: "Mistral", tier: "standard", multiplier: 0.19 },         // $0.40/$2.00 → $0.88 blended
 
@@ -139,11 +139,11 @@ export const MODEL_OPTIONS: ModelOption[] = [
   // Qwen — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
   // Fast
-  { value: "qwen/qwen3.5-9b", label: "Qwen 3.5 9B", provider: "Qwen", tier: "fast", multiplier: 0.01 },                     // ~$0.02/$0.06 → $0.03 blended
-  { value: "qwen/qwen3.5-flash-02-23", label: "Qwen 3.5 Flash", provider: "Qwen", tier: "fast", multiplier: 0.01 },          // ~$0.02/$0.06 → $0.03 blended
+  { value: "qwen/qwen3.5-9b", label: "Qwen 3.5 9B", provider: "Qwen", tier: "fast", multiplier: 0.02 },                     // $0.10/$0.15 → $0.12 blended
+  { value: "qwen/qwen3.5-flash-02-23", label: "Qwen 3.5 Flash", provider: "Qwen", tier: "fast", multiplier: 0.04 },          // $0.10/$0.40 → $0.19 blended
   // Standard
   { value: "qwen/qwen3.5-27b", label: "Qwen 3.5 27B", provider: "Qwen", tier: "standard", multiplier: 0.13 },                // $0.20/$1.56 → $0.60 blended
-  { value: "qwen/qwen3.5-plus-02-15", label: "Qwen 3.5 Plus", provider: "Qwen", tier: "standard", multiplier: 0.13 },        // ~$0.20/$1.56 → $0.60 blended
+  { value: "qwen/qwen3.5-plus-02-15", label: "Qwen 3.5 Plus", provider: "Qwen", tier: "standard", multiplier: 0.14 },        // $0.26/$1.56 → $0.65 blended
   { value: "qwen/qwen3.5-122b-a10b", label: "Qwen 3.5 122B MoE", provider: "Qwen", tier: "standard", multiplier: 0.17 },     // $0.26/$2.08 → $0.81 blended
   { value: "qwen/qwen3.5-397b-a17b", label: "Qwen 3.5 397B MoE", provider: "Qwen", tier: "standard", multiplier: 0.21 },     // $0.39/$2.34 → $0.97 blended
   // Advanced
@@ -157,7 +157,7 @@ export const MODEL_OPTIONS: ModelOption[] = [
   // ---------------------------------------------------------------------------
   // Cohere — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
-  { value: "cohere/command-r-plus", label: "Command R+", provider: "Cohere", tier: "standard", multiplier: 0.63 },             // ~$2.50/$10 → $3.00 blended
+  { value: "cohere/command-r-plus", label: "Command R+", provider: "Cohere", tier: "standard", multiplier: 1.00 },             // ~$2.50/$10 → $4.75 blended (estimated)
   { value: "cohere/command-r", label: "Command R", provider: "Cohere", tier: "fast", multiplier: 0.06 },                       // ~$0.15/$0.60 → $0.29 blended
 
   // ---------------------------------------------------------------------------
@@ -166,7 +166,7 @@ export const MODEL_OPTIONS: ModelOption[] = [
   { value: "x-ai/grok-2", label: "Grok 2", provider: "xAI", tier: "standard", multiplier: 1.0 },                              // ~$2/$10 → $4.80 blended
   { value: "x-ai/grok-3-mini-beta", label: "Grok 3 Mini", provider: "xAI", tier: "standard", multiplier: 0.08 },              // $0.30/$0.50 → $0.36 blended
   { value: "x-ai/grok-3-beta", label: "Grok 3", provider: "xAI", tier: "advanced", multiplier: 1.39 },                        // $3/$15 → $6.60 blended
-  { value: "x-ai/grok-4.1-fast", label: "Grok 4.1 Fast", provider: "xAI", tier: "fast", multiplier: 0.05 },                   // $0.20/$0.50 → $0.29 blended — best agentic tool-calling, 2M ctx
+  { value: "x-ai/grok-4.1-fast", label: "Grok 4.1 Fast", provider: "xAI", tier: "fast", multiplier: 0.06 },                   // $0.20/$0.50 → $0.29 blended — best agentic tool-calling, 2M ctx
 
   // ---------------------------------------------------------------------------
   // MiniMax — openrouter.ai, March 2026
