@@ -768,11 +768,14 @@ function AgentCanvasInner({
         }
       }
 
-      // 4. Auto-create edges for tool/subagent nodes that have no connection
-      //    (e.g. tools auto-added by the wizard generate route)
+      // 4. Auto-create edges for ENABLED tool/subagent nodes that have no connection
+      //    (e.g. tools auto-added by the wizard generate route).
+      //    Disabled tools (dragged from catalog but not yet connected) get no edge.
       const connectedTargets = new Set(updated.map(e => e.target));
       for (const ln of layoutNodes) {
-        if (ln.id.startsWith("tool-") && !connectedTargets.has(ln.id)) {
+        const d = ln.data as Record<string, unknown>;
+        const isEnabled = d.isEnabled === true;
+        if (ln.id.startsWith("tool-") && isEnabled && !connectedTargets.has(ln.id)) {
           const edgeId = `e-agent-${ln.id}`;
           if (!currentIds.has(edgeId)) {
             updated.push({ id: edgeId, source: "agent", sourceHandle: "bottom-right", target: ln.id, type: "dashedEdge" });

@@ -20,6 +20,18 @@ function SkeletonPulse({ className }: { className?: string }) {
   );
 }
 
+function StatCardSkeleton({ stagger }: { stagger: number }) {
+  return (
+    <div
+      className="px-5 py-4 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-[#2A2A2A] shadow-sm"
+      style={{ "--stagger": String(stagger) } as React.CSSProperties}
+    >
+      <SkeletonPulse className="h-4 w-24 mb-3" />
+      <SkeletonPulse className="h-7 w-16" />
+    </div>
+  );
+}
+
 function TableRowSkeleton({ stagger }: { stagger: number }) {
   return (
     <tr
@@ -93,7 +105,7 @@ export function AgencyAnalyticsDashboard() {
   }, [data]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -120,27 +132,41 @@ export function AgencyAnalyticsDashboard() {
       </div>
 
       {/* Summary stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <SummaryCard
-          label="Total Clients"
-          value={loading ? "—" : String(totals.clients)}
-          icon={<Users className="w-4 h-4" />}
-        />
-        <SummaryCard
-          label="Total Credits"
-          value={loading ? "—" : totals.credits.toFixed(2)}
-          icon={<Coins className="w-4 h-4" />}
-        />
-        <SummaryCard
-          label="Total Requests"
-          value={loading ? "—" : totals.messages.toLocaleString()}
-          icon={<MessageSquare className="w-4 h-4" />}
-        />
-        <SummaryCard
-          label="Total Tokens"
-          value={loading ? "—" : totals.tokens.toLocaleString()}
-          icon={<Cpu className="w-4 h-4" />}
-        />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 stagger-enter">
+        {loading && !data ? (
+          <>
+            {[0, 1, 2, 3].map((i) => (
+              <StatCardSkeleton key={i} stagger={i} />
+            ))}
+          </>
+        ) : (
+          <>
+            <SummaryCard
+              label="Total Clients"
+              value={String(totals.clients)}
+              icon={<Users className="w-4 h-4" />}
+              stagger={0}
+            />
+            <SummaryCard
+              label="Total Credits"
+              value={totals.credits.toFixed(2)}
+              icon={<Coins className="w-4 h-4" />}
+              stagger={1}
+            />
+            <SummaryCard
+              label="Total Requests"
+              value={totals.messages.toLocaleString()}
+              icon={<MessageSquare className="w-4 h-4" />}
+              stagger={2}
+            />
+            <SummaryCard
+              label="Total Tokens"
+              value={totals.tokens.toLocaleString()}
+              icon={<Cpu className="w-4 h-4" />}
+              stagger={3}
+            />
+          </>
+        )}
       </div>
 
       {/* Client comparison table */}
@@ -261,13 +287,18 @@ function SummaryCard({
   label,
   value,
   icon,
+  stagger = 0,
 }: {
   label: string;
   value: string;
   icon: React.ReactNode;
+  stagger?: number;
 }) {
   return (
-    <div className="px-5 py-4 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-[#2A2A2A] shadow-sm">
+    <div
+      className="px-5 py-4 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-[#2A2A2A] shadow-sm"
+      style={{ "--stagger": stagger } as React.CSSProperties}
+    >
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-muted-foreground font-medium">
           {label}
