@@ -193,9 +193,9 @@ export function CampaignBuilder({
     : campaign.ai_agents;
 
   return (
-    <div className="flex flex-col h-screen bg-neutral-50/80 dark:bg-neutral-950/80">
+    <div className="flex flex-col h-screen bg-background">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-200/40 dark:border-neutral-800/40 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-md shrink-0">
+      <div className="flex items-center justify-between px-5 pt-4 pb-2 shrink-0">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push(backUrl)}
@@ -275,7 +275,7 @@ export function CampaignBuilder({
       </div>
 
       {/* Main content — floating card layout */}
-      <div className="flex flex-1 gap-4 p-4 overflow-hidden">
+      <div className="flex flex-1 gap-4 px-5 pb-5 pt-2 overflow-hidden">
         <ConfigPanel
           config={config}
           onChange={setConfig}
