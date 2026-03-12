@@ -60,7 +60,7 @@ export function QuestionList({ questions, onChange }: QuestionListProps) {
               <button
                 type="button"
                 onClick={saveEdit}
-                className="shrink-0 p-1.5 rounded-full text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                className="shrink-0 p-1.5 rounded-full text-neutral-500 hover:text-[#FF8C00] hover:bg-[#FF8C00]/10 transition-colors"
               >
                 <Check className="w-4 h-4" />
               </button>
@@ -78,7 +78,7 @@ export function QuestionList({ questions, onChange }: QuestionListProps) {
                 <button
                   type="button"
                   onClick={() => startEdit(i)}
-                  className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                  className="p-1.5 rounded-full text-neutral-400 hover:text-[#FF8C00] hover:bg-[#FF8C00]/10 transition-colors"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -112,10 +112,10 @@ export function AddQuestionButton({
       variant="ghost"
       size="sm"
       onClick={() => onChange([...questions, ""])}
-      className="gap-1.5 text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 rounded-full"
+      className="group gap-1.5 text-neutral-500 dark:text-neutral-400 hover:bg-transparent rounded-full"
     >
-      <Plus className="w-3.5 h-3.5" />
-      Add question
+      <Plus className="w-3.5 h-3.5 group-hover:text-[#FF8C00] transition-colors" />
+      <span className="group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FF8C00] group-hover:to-[#9D50BB] transition-colors">Add question</span>
     </Button>
   );
 }

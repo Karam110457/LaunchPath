@@ -94,7 +94,7 @@ export function NewAgentForm({ businesses }: NewAgentFormProps) {
                   className={cn(
                     "transition-all cursor-pointer h-full",
                     isSelected
-                      ? "ring-2 ring-[#FF8C00]/30 border-transparent bg-white dark:bg-[#252525] shadow-[0_0_20px_-5px_rgba(157,80,187,0.15)]"
+                      ? "wizard-card-selected bg-white dark:bg-[#252525] shadow-[0_0_20px_-5px_rgba(157,80,187,0.15)]"
                       : "hover:border-neutral-300 dark:hover:border-neutral-600",
                   )}
                 >

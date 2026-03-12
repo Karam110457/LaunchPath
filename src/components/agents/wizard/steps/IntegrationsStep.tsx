@@ -94,7 +94,7 @@ export function IntegrationsStep({
                       w-full flex items-start gap-3 rounded-[20px] border p-5 text-left transition-all duration-200
                       ${
                         isSelected
-                          ? "ring-2 ring-[#FF8C00]/30 border-transparent bg-white dark:bg-[#252525] shadow-[0_0_20px_-5px_rgba(157,80,187,0.15)]"
+                          ? "wizard-card-selected bg-white dark:bg-[#252525] shadow-[0_0_20px_-5px_rgba(157,80,187,0.15)]"
                           : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:bg-white dark:hover:bg-[#252525] hover:shadow-sm"
                       }
                     `}

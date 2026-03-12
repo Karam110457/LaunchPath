@@ -254,10 +254,10 @@ function ReviewCard({
         <button
           type="button"
           onClick={() => onEdit(stepId)}
-          className="flex items-center gap-1 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors shrink-0 mt-0.5"
+          className="group flex items-center gap-1 text-xs text-neutral-400 transition-colors shrink-0 mt-0.5"
         >
-          <Pencil className="w-3 h-3" />
-          Edit
+          <Pencil className="w-3 h-3 group-hover:text-[#FF8C00] transition-colors" />
+          <span className="group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FF8C00] group-hover:to-[#9D50BB] transition-colors">Edit</span>
         </button>
       </div>
     </WizardCard>
