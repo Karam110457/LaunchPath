@@ -15,7 +15,7 @@ interface AppShellProps {
 
 export function AppShell({ children, systems, agentCount, clientCount }: AppShellProps) {
   const pathname = usePathname();
-  const isBuilder = pathname && (pathname.endsWith("/builder") || pathname.match(/\/dashboard\/agents\/[^/]+$/) || pathname.match(/\/campaigns\/[^/]+$/));
+  const isBuilder = pathname && (pathname.endsWith("/builder") || pathname.match(/\/dashboard\/agents\/[^/]+$/));
   const isGlobalPage = pathname?.startsWith("/dashboard/agents") || pathname?.startsWith("/dashboard/clients") || pathname?.startsWith("/dashboard/settings") || pathname?.startsWith("/dashboard/usage");
   const hideSidebar = isBuilder || isGlobalPage;
 
@@ -41,10 +41,10 @@ export function AppShell({ children, systems, agentCount, clientCount }: AppShel
           <Header systems={systems} />
         </div>
         <main className={cn(
-          "flex-1 overflow-y-auto bg-card border-l border-border/40 transition-[border-radius,padding,box-shadow] duration-250 ease-out",
+          "flex-1 overflow-y-auto transition-[border-radius,padding,box-shadow] duration-250 ease-out",
           hideSidebar
-            ? "rounded-tl-none border-t-0 p-0 shadow-none z-50 relative"
-            : "rounded-tl-[32px] border-t p-4 md:p-8 ml-0 md:ml-0 shadow-2xl"
+            ? "rounded-tl-none border-t-0 p-0 shadow-none z-50 relative bg-background"
+            : "rounded-tl-[32px] border-t border-l border-border/40 p-4 md:p-8 ml-0 md:ml-0 shadow-2xl bg-card"
         )}>
           {children}
         </main>

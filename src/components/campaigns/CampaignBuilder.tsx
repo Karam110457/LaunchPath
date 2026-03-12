@@ -193,7 +193,7 @@ export function CampaignBuilder({
     : campaign.ai_agents;
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-screen">
       {/* Top bar */}
       <div className="flex items-center justify-between px-5 pt-4 pb-2 shrink-0">
         <div className="flex items-center gap-3">
