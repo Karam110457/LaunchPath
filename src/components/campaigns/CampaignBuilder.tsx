@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Rocket, Pause, Save } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { ConfigPanel } from "./ConfigPanel";
 import { PreviewPanel } from "./PreviewPanel";
 import type { WidgetConfig } from "@/lib/channels/types";
@@ -193,13 +193,13 @@ export function CampaignBuilder({
     : campaign.ai_agents;
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-background">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-border shrink-0">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa]/80 dark:bg-[#1E1E1E]/60 backdrop-blur-md shrink-0">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push(backUrl)}
-            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="p-2 rounded-full border border-border/40 bg-card/60 backdrop-blur-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
@@ -216,6 +216,18 @@ export function CampaignBuilder({
                   : null}
             </p>
           </div>
+          <span
+            className={cn(
+              "text-[10px] px-2.5 py-0.5 rounded-full font-medium ml-1",
+              status === "active"
+                ? "bg-gradient-to-r from-[#FF8C00]/10 to-[#9D50BB]/10 text-neutral-900 dark:text-neutral-100 border border-[#FF8C00]/20"
+                : status === "paused"
+                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                : "bg-muted text-muted-foreground border border-border"
+            )}
+          >
+            {status.charAt(0).toUpperCase() + status.slice(1)}
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -223,44 +235,41 @@ export function CampaignBuilder({
             <span className="text-xs text-destructive mr-2">{error}</span>
           )}
 
-          <Button
-            variant="outline"
-            size="sm"
+          <button
             onClick={handleSaveDraft}
             disabled={saving || deploying}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full border border-border/40 bg-card/60 backdrop-blur-md hover:bg-muted/50 transition-colors duration-150 disabled:opacity-50"
           >
             {saving ? (
-              <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
-              <Save className="w-3.5 h-3.5 mr-1.5" />
+              <Save className="w-3.5 h-3.5" />
             )}
             Save
-          </Button>
+          </button>
 
           {status === "active" ? (
-            <Button
-              variant="outline"
-              size="sm"
+            <button
               onClick={handlePause}
               disabled={saving || deploying}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors duration-150 disabled:opacity-50"
             >
-              <Pause className="w-3.5 h-3.5 mr-1.5" />
+              <Pause className="w-3.5 h-3.5" />
               Pause
-            </Button>
+            </button>
           ) : (
-            <Button
-              size="sm"
+            <button
               onClick={handleDeploy}
               disabled={saving || deploying}
-              className="shadow-md gradient-accent-bg text-white hover:scale-[1.02] transition-transform border-0"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full gradient-accent-bg text-white shadow-sm hover:scale-[1.02] transition-transform duration-150 disabled:opacity-50"
             >
               {deploying ? (
-                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
-                <Rocket className="w-3.5 h-3.5 mr-1.5" />
+                <Rocket className="w-3.5 h-3.5" />
               )}
               Deploy
-            </Button>
+            </button>
           )}
         </div>
       </div>

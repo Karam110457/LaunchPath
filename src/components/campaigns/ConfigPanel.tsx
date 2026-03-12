@@ -2,10 +2,14 @@
 
 import { useState } from "react";
 import { Plus, X, Palette, MessageSquare, MousePointer2, Settings2 } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import type { WidgetConfig } from "@/lib/channels/types";
+
+const INPUT_CLASS =
+  "w-full rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-3 py-2 text-sm shadow-sm outline-none focus:ring-2 focus:ring-[#FF8C00]/30 focus:border-[#FF8C00]/40 transition-all placeholder:text-muted-foreground/50";
+
+const TEXTAREA_CLASS =
+  "w-full rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-3 py-2 text-sm shadow-sm outline-none focus:ring-2 focus:ring-[#FF8C00]/30 focus:border-[#FF8C00]/40 transition-all placeholder:text-muted-foreground/50 resize-none";
 
 interface ConfigPanelProps {
   config: WidgetConfig;
@@ -42,10 +46,10 @@ function ToggleButton({
           key={opt.value}
           type="button"
           onClick={() => onChange(opt.value)}
-          className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium border transition-all ${
+          className={`flex-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
             value === opt.value
-              ? "bg-gradient-to-r from-[#FF8C00]/10 to-[#9D50BB]/10 border-[#FF8C00]/30 text-[#FF8C00]"
-              : "bg-muted/50 border-border text-muted-foreground hover:border-[#FF8C00]/30"
+              ? "bg-gradient-to-r from-[#FF8C00]/10 to-[#9D50BB]/10 border-[#FF8C00]/30 text-[#FF8C00] shadow-sm"
+              : "bg-card/60 border-border/40 text-muted-foreground hover:border-[#FF8C00]/30"
           }`}
         >
           {opt.label}
@@ -81,7 +85,7 @@ function Toggle({
 
 function SectionHeader({ title, description }: { title: string; description: string }) {
   return (
-    <div className="pb-2 border-b border-border/50">
+    <div className="pb-2 border-b border-black/5 dark:border-[#2A2A2A]">
       <h4 className="text-sm font-semibold text-foreground">{title}</h4>
       <p className="text-[11px] text-muted-foreground mt-0.5">{description}</p>
     </div>
@@ -144,9 +148,9 @@ export function ConfigPanel({
   }
 
   return (
-    <div className="w-[400px] shrink-0 border-r border-border flex flex-col h-full">
+    <div className="w-[400px] shrink-0 border-r border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa]/50 dark:bg-[#1E1E1E]/40 flex flex-col h-full">
       {/* Tab Navigation */}
-      <div className="flex border-b border-border shrink-0">
+      <div className="flex border-b border-black/5 dark:border-[#2A2A2A] shrink-0">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           return (
@@ -157,7 +161,7 @@ export function ConfigPanel({
               className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-all border-b-2 ${
                 activeTab === tab.id
                   ? "border-[#FF8C00] text-[#FF8C00] bg-gradient-to-r from-[#FF8C00]/5 to-[#9D50BB]/5"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
               }`}
               title={tab.description}
             >
@@ -180,13 +184,13 @@ export function ConfigPanel({
 
             <FieldGroup label="Primary Color" hint="The main color used for the header, buttons, and user messages.">
               <div className="flex gap-2 items-center">
-                <Input
+                <input
                   value={config.primaryColor || "#6366f1"}
                   onChange={(e) => updateConfig("primaryColor", e.target.value)}
-                  className="h-8 text-sm flex-1 font-mono"
+                  className={`${INPUT_CLASS} flex-1 font-mono`}
                   placeholder="#6366f1"
                 />
-                <label className="relative w-8 h-8 rounded-md border border-border shrink-0 cursor-pointer overflow-hidden">
+                <label className="relative w-9 h-9 rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] shrink-0 cursor-pointer overflow-hidden shadow-sm">
                   <input
                     type="color"
                     value={config.primaryColor || "#6366f1"}
@@ -194,7 +198,7 @@ export function ConfigPanel({
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
                   <div
-                    className="w-full h-full rounded-md"
+                    className="w-full h-full rounded-xl"
                     style={{ backgroundColor: config.primaryColor || "#6366f1" }}
                   />
                 </label>
@@ -266,29 +270,29 @@ export function ConfigPanel({
             />
 
             <FieldGroup label="Display Name" hint="Shown at the top of the chat window.">
-              <Input
+              <input
                 value={config.agentName || ""}
                 onChange={(e) => updateConfig("agentName", e.target.value)}
-                className="h-8 text-sm"
+                className={INPUT_CLASS}
                 placeholder="AI Assistant"
               />
             </FieldGroup>
 
             <FieldGroup label="Chat Avatar" hint="An image URL or emoji shown next to the name in the header.">
-              <Input
+              <input
                 value={config.agentAvatar || ""}
                 onChange={(e) => updateConfig("agentAvatar", e.target.value)}
-                className="h-8 text-sm"
+                className={INPUT_CLASS}
                 placeholder="https://... or emoji like 🤖"
               />
             </FieldGroup>
 
             <FieldGroup label="Welcome Message" hint="The first message visitors see when they open the chat.">
-              <Textarea
+              <textarea
                 value={config.welcomeMessage || ""}
                 onChange={(e) => updateConfig("welcomeMessage", e.target.value)}
                 rows={2}
-                className="text-sm"
+                className={TEXTAREA_CLASS}
                 placeholder="Hi! How can I help you today?"
               />
             </FieldGroup>
@@ -301,16 +305,16 @@ export function ConfigPanel({
               <div className="space-y-1.5">
                 {starters.map((s, i) => (
                   <div key={i} className="flex gap-1.5">
-                    <Input
+                    <input
                       value={s}
                       onChange={(e) => updateStarter(i, e.target.value)}
-                      className="h-7 text-xs flex-1"
+                      className={`${INPUT_CLASS} flex-1 text-xs py-1.5`}
                       placeholder={`e.g. "What services do you offer?"`}
                     />
                     <button
                       type="button"
                       onClick={() => removeStarter(i)}
-                      className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      className="p-1 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -340,10 +344,10 @@ export function ConfigPanel({
             />
 
             <FieldGroup label="Button Icon" hint="Custom icon for the floating chat button. Leave empty for the default chat bubble.">
-              <Input
+              <input
                 value={config.launcherIcon || ""}
                 onChange={(e) => updateConfig("launcherIcon", e.target.value)}
-                className="h-8 text-sm"
+                className={INPUT_CLASS}
                 placeholder="https://... or emoji like 💬"
               />
             </FieldGroup>
@@ -359,17 +363,17 @@ export function ConfigPanel({
               />
             </FieldGroup>
 
-            <hr className="border-border/50" />
+            <hr className="border-black/5 dark:border-[#2A2A2A]" />
 
             <FieldGroup
               label="Greeting Message"
               hint="A small popup message that appears next to the chat button to encourage visitors to start a conversation. Leave empty to disable."
             >
-              <Textarea
+              <textarea
                 value={config.greetingMessage || ""}
                 onChange={(e) => updateConfig("greetingMessage", e.target.value)}
                 rows={2}
-                className="text-sm"
+                className={TEXTAREA_CLASS}
                 placeholder="👋 Hi there! Need any help?"
               />
             </FieldGroup>
@@ -379,13 +383,13 @@ export function ConfigPanel({
               hint="How many seconds after the page loads before the greeting appears."
             >
               <div className="flex items-center gap-2">
-                <Input
+                <input
                   type="number"
                   min={0}
                   max={60}
                   value={config.greetingDelay ?? 3}
                   onChange={(e) => updateConfig("greetingDelay", parseInt(e.target.value) || 0)}
-                  className="h-8 text-sm w-20"
+                  className={`${INPUT_CLASS} w-20`}
                 />
                 <span className="text-xs text-muted-foreground">seconds</span>
               </div>
@@ -402,10 +406,10 @@ export function ConfigPanel({
             />
 
             <FieldGroup label="Client Website" hint="Preview how the widget looks on this website. Used for the live preview on the right.">
-              <Input
+              <input
                 value={clientWebsite}
                 onChange={(e) => onClientWebsiteChange(e.target.value)}
-                className="h-8 text-sm"
+                className={INPUT_CLASS}
                 placeholder="https://example.com"
               />
             </FieldGroup>
@@ -414,11 +418,11 @@ export function ConfigPanel({
               label="Allowed Websites"
               hint="Only these websites can use the widget. Leave empty to allow any website. One URL per line."
             >
-              <Textarea
+              <textarea
                 value={allowedOrigins}
                 onChange={(e) => onAllowedOriginsChange(e.target.value)}
                 rows={3}
-                className="text-sm font-mono"
+                className={`${TEXTAREA_CLASS} font-mono`}
                 placeholder={"https://example.com\nhttps://staging.example.com"}
               />
             </FieldGroup>
@@ -426,20 +430,20 @@ export function ConfigPanel({
             {/* Embed Code */}
             {embedCode && (
               <>
-                <hr className="border-border/50" />
+                <hr className="border-black/5 dark:border-[#2A2A2A]" />
                 <div className="space-y-1.5">
                   <Label className="text-xs">Embed Code</Label>
                   <p className="text-[11px] text-muted-foreground">
                     Copy this code and paste it before the closing <code className="text-[10px] bg-muted px-1 py-0.5 rounded">&lt;/body&gt;</code> tag on your client&apos;s website.
                   </p>
                   <div className="relative">
-                    <pre className="bg-muted/50 rounded-lg p-3 text-xs font-mono text-foreground/80 overflow-x-auto whitespace-pre-wrap break-all">
+                    <pre className="bg-black/[0.03] dark:bg-white/[0.03] rounded-2xl p-3 text-xs font-mono text-foreground/80 overflow-x-auto whitespace-pre-wrap break-all border border-black/5 dark:border-[#2A2A2A]">
                       {embedCode}
                     </pre>
                     <button
                       type="button"
                       onClick={() => navigator.clipboard.writeText(embedCode)}
-                      className="absolute top-2 right-2 px-2 py-1 text-[10px] font-medium bg-background border border-border rounded-md hover:bg-muted transition-colors"
+                      className="absolute top-2 right-2 px-2.5 py-1 text-[10px] font-medium bg-card/80 backdrop-blur-md border border-border/40 rounded-full hover:bg-muted/50 transition-colors"
                     >
                       Copy
                     </button>
@@ -449,9 +453,9 @@ export function ConfigPanel({
             )}
 
             {!embedCode && (
-              <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 p-4">
+              <div className="rounded-2xl border border-dashed border-black/10 dark:border-[#2A2A2A] bg-black/[0.02] dark:bg-white/[0.02] p-4">
                 <p className="text-xs text-muted-foreground text-center">
-                  Deploy your widget to get the embed code. Click &ldquo;Deploy Widget&rdquo; in the top bar when you&apos;re ready.
+                  Deploy your widget to get the embed code. Click &ldquo;Deploy&rdquo; in the top bar when you&apos;re ready.
                 </p>
               </div>
             )}

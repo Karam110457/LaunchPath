@@ -60,7 +60,7 @@ export function PreviewPanel({
   }
 
   return (
-    <div className="flex-1 relative overflow-hidden rounded-lg m-2">
+    <div className="flex-1 relative overflow-hidden rounded-2xl m-2 border border-black/5 dark:border-[#2A2A2A]">
       {/* Background layer — always present */}
       {hasWebsite && iframeStatus !== "blocked" ? (
         <iframe
@@ -96,9 +96,9 @@ export function PreviewPanel({
 
       {/* Placeholder — shown when no URL, loading, or blocked (and no screenshot) */}
       {(!hasWebsite || iframeStatus === "blocked") && !screenshotUrl && (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-100 via-slate-50 to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-          <div className="flex size-16 items-center justify-center rounded-2xl bg-white/60 dark:bg-white/10 mb-3 shadow-sm">
-            <Globe className="size-7 text-muted-foreground/40" />
+        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#FF8C00]/[0.03] via-background to-[#9D50BB]/[0.03] dark:from-[#FF8C00]/[0.02] dark:via-[#1E1E1E] dark:to-[#9D50BB]/[0.02]">
+          <div className="flex size-16 items-center justify-center rounded-[20px] bg-gradient-to-br from-[#FF8C00]/10 to-[#9D50BB]/10 mb-3 shadow-sm border border-[#FF8C00]/10">
+            <Globe className="size-7 text-[#FF8C00]/40" />
           </div>
           <p className="text-sm font-medium text-foreground/40">
             {iframeStatus === "blocked"
@@ -129,7 +129,7 @@ export function PreviewPanel({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="mt-4 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#FF8C00]/10 text-[#FF8C00] text-xs font-medium hover:bg-[#FF8C00]/20 transition-colors"
+                className="mt-4 flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-[#FF8C00]/10 to-[#9D50BB]/10 text-[#FF8C00] text-xs font-medium hover:from-[#FF8C00]/20 hover:to-[#9D50BB]/20 transition-all border border-[#FF8C00]/20"
               >
                 <Upload className="w-3.5 h-3.5" />
                 Upload a screenshot instead
