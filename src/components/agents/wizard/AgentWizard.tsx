@@ -601,9 +601,27 @@ export function AgentWizard({ initialTemplateId, onBack }: AgentWizardProps) {
         const template = state.templateId
           ? getTemplateById(state.templateId)
           : null;
+        let tools = template?.suggestedTools ?? [];
+
+        // Filter integrations based on wizard choices:
+        // - "sheet_only" notification → no Gmail needed
+        // - customer-support without escalation → no Gmail needed
+        if (
+          (state.templateId === "lead-capture" || state.templateId === "lead-qualification") &&
+          state.leadCaptureConfig.notification_behavior === "sheet_only"
+        ) {
+          tools = tools.filter((t) => t.toolkit !== "gmail");
+        }
+        if (
+          state.templateId === "customer-support" &&
+          state.customerSupportConfig.escalation_mode === "always_available"
+        ) {
+          tools = tools.filter((t) => t.toolkit !== "gmail");
+        }
+
         return (
           <IntegrationsStep
-            suggestedTools={template?.suggestedTools ?? []}
+            suggestedTools={tools}
             selectedToolkits={state.selectedToolkits}
             onSelectedToolkitsChange={(toolkits) =>
               updateState("selectedToolkits", toolkits)

@@ -85,20 +85,22 @@ export function generateConfigDirectives(input: DirectivesInput): string {
 
     if (bc.lead_fields) {
       const fields = bc.lead_fields as Record<string, unknown>;
-      const active = [
-        "name",
-        "email",
-        ...Object.entries(fields)
-          .filter(([k, v]) => k !== "custom_fields" && v === true)
-          .map(([k]) => k),
-      ];
+      const active = Object.entries(fields)
+        .filter(([k, v]) => k !== "custom_fields" && v === true)
+        .map(([k]) => k);
       const customFields = fields.custom_fields;
       if (Array.isArray(customFields)) {
         active.push(...customFields.filter((f: unknown) => typeof f === "string" && f.trim()));
       }
-      directives.push(
-        `Lead capture: Collect the following fields from the visitor: ${active.join(", ")}.`
-      );
+      if (active.length > 0) {
+        directives.push(
+          `Lead capture: Collect the following fields from the visitor: ${active.join(", ")}.`
+        );
+      } else {
+        directives.push(
+          "Lead capture: Do not collect any personal information from the visitor. Focus on the conversation only."
+        );
+      }
     }
 
     if (bc.booking_behavior === "book_directly") {
