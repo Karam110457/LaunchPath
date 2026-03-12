@@ -30,6 +30,8 @@ export interface WizardFile {
 
 export interface AppointmentBookerConfig {
   lead_fields: {
+    name: boolean;
+    email: boolean;
     phone: boolean;
     company: boolean;
     custom_fields: string[];
@@ -63,6 +65,8 @@ export interface CustomerSupportConfig {
 
 export interface LeadCaptureConfig {
   lead_fields: {
+    name: boolean;
+    email: boolean;
     phone: boolean;
     company: boolean;
     custom_fields: string[];
@@ -208,7 +212,7 @@ export function createInitialWizardState(): AgentWizardState {
     greetingMessage: "",
     qualifyingQuestions: [],
     appointmentBookerConfig: {
-      lead_fields: { phone: true, company: false, custom_fields: [] },
+      lead_fields: { name: true, email: true, phone: true, company: false, custom_fields: [] },
       booking_behavior: "book_directly",
       availability: {
         timezone: "",
@@ -234,7 +238,7 @@ export function createInitialWizardState(): AgentWizardState {
       forbidden_topics: [],
     },
     leadCaptureConfig: {
-      lead_fields: { phone: true, company: true, custom_fields: [] },
+      lead_fields: { name: true, email: true, phone: true, company: true, custom_fields: [] },
       notification_behavior: "email_team",
       notification_email: "",
       qualification_mode: "describe",

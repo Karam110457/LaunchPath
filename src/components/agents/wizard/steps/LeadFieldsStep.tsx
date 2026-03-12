@@ -19,14 +19,38 @@ export function LeadFieldsStep({ config, onUpdate }: LeadFieldsStepProps) {
     <div className="space-y-6">
       <WizardStepHeader
         title="What info should your agent collect?"
-        description="Name and email are always collected. Toggle on anything else you need before booking."
+        description="Toggle on the fields you need before booking. All fields are optional."
       />
 
       <WizardCard>
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2">
-            <FieldToggle label="Name" enabled disabled />
-            <FieldToggle label="Email" enabled disabled />
+            <FieldToggle
+              label="Name"
+              enabled={config.lead_fields.name}
+              onToggle={() =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  lead_fields: {
+                    ...prev.lead_fields,
+                    name: !prev.lead_fields.name,
+                  },
+                }))
+              }
+            />
+            <FieldToggle
+              label="Email"
+              enabled={config.lead_fields.email}
+              onToggle={() =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  lead_fields: {
+                    ...prev.lead_fields,
+                    email: !prev.lead_fields.email,
+                  },
+                }))
+              }
+            />
             <FieldToggle
               label="Phone"
               enabled={config.lead_fields.phone}

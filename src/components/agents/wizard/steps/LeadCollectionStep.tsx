@@ -31,12 +31,36 @@ export function LeadCollectionStep({ config, onUpdate }: LeadCollectionStepProps
               Lead capture fields
             </Label>
             <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-              Name and email are always collected. Toggle on anything else you need.
+              Toggle on the fields you want to collect. All fields are optional.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <FieldToggle label="Name" enabled disabled />
-            <FieldToggle label="Email" enabled disabled />
+            <FieldToggle
+              label="Name"
+              enabled={config.lead_fields.name}
+              onToggle={() =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  lead_fields: {
+                    ...prev.lead_fields,
+                    name: !prev.lead_fields.name,
+                  },
+                }))
+              }
+            />
+            <FieldToggle
+              label="Email"
+              enabled={config.lead_fields.email}
+              onToggle={() =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  lead_fields: {
+                    ...prev.lead_fields,
+                    email: !prev.lead_fields.email,
+                  },
+                }))
+              }
+            />
             <FieldToggle
               label="Phone"
               enabled={config.lead_fields.phone}

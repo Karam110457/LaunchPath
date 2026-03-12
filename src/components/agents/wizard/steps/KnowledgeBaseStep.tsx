@@ -44,6 +44,7 @@ export function KnowledgeBaseStep({
   const scannedPages = selectedPages.filter((p) => p.status === "done");
   const hasPages = discoveredPages.length > 0;
   const hasContent = scannedPages.length > 0 || businessDescription.trim().length > 0;
+  const isScanning = selectedPages.some((p) => p.status === "pending" || p.status === "scraping");
 
   return (
     <div className="space-y-6">
@@ -67,6 +68,7 @@ export function KnowledgeBaseStep({
         scrapedContent={scannedPages.map((p) => p.content || "").join("\n\n")}
         businessDescription={businessDescription}
         hasContent={hasContent}
+        isScanning={isScanning}
       />
 
       {/* Files summary (uploaded in previous step) */}
@@ -281,33 +283,20 @@ function FaqsSection({
   scrapedContent,
   businessDescription,
   hasContent,
+  isScanning,
 }: {
   faqs: WizardFaq[];
   onFaqsChange: (faqs: WizardFaq[]) => void;
   scrapedContent: string;
   businessDescription: string;
   hasContent: boolean;
+  isScanning: boolean;
 }) {
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newQuestion, setNewQuestion] = useState("");
   const [newAnswer, setNewAnswer] = useState("");
-  const autoGenFired = useRef(false);
-
-  // Auto-generate FAQs on mount if content exists and no FAQs yet
-  useEffect(() => {
-    if (autoGenFired.current) return;
-    if (faqs.length > 0) return;
-    const hasScraped = scrapedContent.trim().length > 0;
-    const hasDesc = businessDescription.trim().length > 0;
-    if (hasScraped || hasDesc) {
-      autoGenFired.current = true;
-      handleGenerateFaqs();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scrapedContent, businessDescription]);
-
   async function handleGenerateFaqs() {
     setGenerating(true);
     setGenError(null);
@@ -385,15 +374,17 @@ function FaqsSection({
               type="button"
               size="sm"
               onClick={handleGenerateFaqs}
-              disabled={generating || !hasContent}
+              disabled={generating || isScanning || !hasContent}
               className="gap-1.5 rounded-full gradient-accent-bg text-white border-0 shadow-sm text-xs h-7"
             >
               {generating ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
+              ) : isScanning ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
               ) : (
                 <Sparkles className="w-3 h-3" />
               )}
-              Generate
+              {isScanning ? "Waiting for scan..." : "Generate"}
             </Button>
             <Button
               type="button"
@@ -464,9 +455,11 @@ function FaqsSection({
         {faqs.length === 0 && !generating ? (
           <div className="py-4 text-center">
             <p className="text-sm text-neutral-400 dark:text-neutral-500">
-              {hasContent
-                ? "Click Generate to create FAQs from your content."
-                : "Add a business description or website first to auto-generate FAQs."}
+              {isScanning
+                ? "Scanning your website — you can generate FAQs once it's done."
+                : hasContent
+                  ? "Click Generate to create FAQs from your content."
+                  : "Add a business description or website first to generate FAQs."}
             </p>
           </div>
         ) : (
