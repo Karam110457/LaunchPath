@@ -43,6 +43,7 @@ export const PROVIDERS = [
   "Amazon",
   "Cohere",
   "xAI",
+  "MiniMax",
 ] as const;
 
 export type Provider = (typeof PROVIDERS)[number];
@@ -80,21 +81,20 @@ export const MODEL_OPTIONS: ModelOption[] = [
   // ---------------------------------------------------------------------------
   // Anthropic — direct Anthropic pricing + openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
-  // Fast (direct)
-  { value: "claude-haiku-3-5-20241022", label: "Claude Haiku 3.5", provider: "Anthropic", tier: "fast", multiplier: 0.37 },  // $0.80/$4.00 → $1.76 blended
-  // Standard (direct)
-  { value: "claude-sonnet-4-5-20250929", label: "Claude Sonnet 4.5", provider: "Anthropic", tier: "standard", multiplier: 1.39 }, // $3/$15 → $6.60 blended
-  // Standard (via OpenRouter — newer)
+  // Fast
+  { value: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5", provider: "Anthropic", tier: "fast", multiplier: 0.53 },  // $1/$5 → $2.50 blended
+  // Standard
+  { value: "claude-sonnet-4-5-20250929", label: "Claude Sonnet 4.5", provider: "Anthropic", tier: "standard", multiplier: 1.39 }, // $3/$15 → $6.60 blended (direct)
   { value: "anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6", provider: "Anthropic", tier: "standard", multiplier: 1.39 }, // $3/$15 → $6.60 blended
-  // Advanced
-  { value: "anthropic/claude-opus-4", label: "Claude Opus 4", provider: "Anthropic", tier: "advanced", multiplier: 6.95 },    // $15/$75 → $33.00 blended
+  // Advanced (Opus 4 removed — 4.6 is better, cheaper, 1M context)
   { value: "anthropic/claude-opus-4.6", label: "Claude Opus 4.6", provider: "Anthropic", tier: "advanced", multiplier: 2.32 }, // $5/$25 → $11.00 blended
 
   // ---------------------------------------------------------------------------
   // Google — openrouter.ai, March 2026
+  // (Gemini 2.0 Flash removed — deprecated June 2026)
   // ---------------------------------------------------------------------------
   // Fast
-  { value: "google/gemini-2.0-flash-001", label: "Gemini 2.0 Flash", provider: "Google", tier: "fast", multiplier: 0.04 },    // $0.10/$0.40 → $0.19 blended
+  { value: "google/gemini-2.5-flash-preview", label: "Gemini 2.5 Flash", provider: "Google", tier: "fast", multiplier: 0.06 }, // ~$0.15/$0.60 → $0.29 blended
   { value: "google/gemini-3-flash-preview", label: "Gemini 3 Flash", provider: "Google", tier: "fast", multiplier: 0.26 },     // $0.50/$3.00 → $1.25 blended
   { value: "google/gemini-3.1-flash-lite-preview", label: "Gemini 3.1 Flash Lite", provider: "Google", tier: "fast", multiplier: 0.13 }, // $0.25/$1.50 → $0.63 blended
   // Standard
@@ -166,10 +166,16 @@ export const MODEL_OPTIONS: ModelOption[] = [
   { value: "x-ai/grok-2", label: "Grok 2", provider: "xAI", tier: "standard", multiplier: 1.0 },                              // ~$2/$10 → $4.80 blended
   { value: "x-ai/grok-3-mini-beta", label: "Grok 3 Mini", provider: "xAI", tier: "standard", multiplier: 0.08 },              // $0.30/$0.50 → $0.36 blended
   { value: "x-ai/grok-3-beta", label: "Grok 3", provider: "xAI", tier: "advanced", multiplier: 1.39 },                        // $3/$15 → $6.60 blended
+  { value: "x-ai/grok-4.1-fast", label: "Grok 4.1 Fast", provider: "xAI", tier: "fast", multiplier: 0.05 },                   // $0.20/$0.50 → $0.29 blended — best agentic tool-calling, 2M ctx
+
+  // ---------------------------------------------------------------------------
+  // MiniMax — openrouter.ai, March 2026
+  // ---------------------------------------------------------------------------
+  { value: "minimax/minimax-m2.5", label: "MiniMax M2.5", provider: "MiniMax", tier: "standard", multiplier: 0.10 },           // $0.27/$0.95 → $0.47 blended — strong at structured/productivity tasks
 ];
 
 /** Default model for new agents */
-export const DEFAULT_MODEL = "openai/gpt-4o-mini";
+export const DEFAULT_MODEL = "openai/gpt-4.1-mini";
 
 /** Get unique providers from MODEL_OPTIONS */
 export function getAvailableProviders(): string[] {
