@@ -44,6 +44,8 @@ import { useUndoRedo } from "@/hooks/useUndoRedo";
 import { Undo2, Redo2 } from "lucide-react";
 import { CanvasActionsContext } from "./canvas-context";
 import { CanvasThemeProvider, useCanvasTheme } from "./canvas-theme";
+import { TipsContext } from "./tips-context";
+import { TIPS_STORAGE_KEY } from "./nodes/NodeHelperTip";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LeftCatalogPanel } from "./LeftCatalogPanel";
 import { generateConfigDirectives, updatePromptDirectives } from "@/lib/agents/config-directives";
@@ -1219,6 +1221,10 @@ function AgentCanvasInner({
   // ─── Interaction ─────────────────────────────────────────────────────────
   const [modal, setModal] = useState<PanelState>({ type: "none" });
   const [chatOpen, setChatOpen] = useState(false);
+  const [showTips, setShowTips] = useState(true);
+  const resetDismissed = useCallback(() => {
+    try { localStorage.removeItem(TIPS_STORAGE_KEY); } catch { /* ignore */ }
+  }, []);
   const { theme, toggleTheme } = useCanvasTheme();
 
   // Tool dialog state — scoped to a specific agent (parent or sub-agent)
@@ -1790,7 +1796,10 @@ function AgentCanvasInner({
   else if (modal.type === "subagent-knowledge") modalTitle = "Sub-Agent Knowledge Base";
   else if (modal.type === "edit-subagent") modalTitle = "Edit Sub-Agent";
 
+  const tipsContextValue = useMemo(() => ({ showTips, setShowTips, resetDismissed }), [showTips, resetDismissed]);
+
   return (
+    <TipsContext.Provider value={tipsContextValue}>
     <div className={`${theme === "dark" ? "canvas-dark" : "light"} fixed inset-0 z-[100] w-full h-full overflow-hidden ${theme === "dark" ? "bg-[#050505]" : "bg-[#eef0f2]"} text-foreground transition-colors duration-300`}>
       <TopBar
         agentName={formState.name}
@@ -2212,6 +2221,7 @@ function AgentCanvasInner({
       </AnimatePresence>
 
     </div>
+    </TipsContext.Provider>
   );
 }
 

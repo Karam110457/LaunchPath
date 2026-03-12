@@ -1,7 +1,8 @@
 "use client";
 
-import { ArrowLeft, Loader2, Check, Play, Bot } from "lucide-react";
+import { ArrowLeft, Loader2, Check, Play, Bot, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTips } from "./tips-context";
 
 interface TopBarProps {
   agentName: string;
@@ -22,6 +23,16 @@ export function TopBar({
   saveStatus = "idle",
   onBack,
 }: TopBarProps) {
+  const { showTips, setShowTips, resetDismissed } = useTips();
+
+  const handleToggleTips = () => {
+    if (!showTips) {
+      // Turning tips ON: also reset dismissed so all tips reappear
+      resetDismissed();
+    }
+    setShowTips(!showTips);
+  };
+
   return (
     <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 flex items-center justify-between px-6 py-2.5 bg-white/70 canvas-dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 canvas-dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-full w-[800px] max-w-[90vw]">
       <div className="flex items-center gap-4">
@@ -76,6 +87,22 @@ export function TopBar({
             Saved
           </span>
         )}
+
+        {/* Tips toggle */}
+        <button
+          type="button"
+          onClick={handleToggleTips}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium transition-all",
+            showTips
+              ? "bg-neutral-100 canvas-dark:bg-neutral-800 text-neutral-700 canvas-dark:text-neutral-300"
+              : "text-neutral-400 canvas-dark:text-neutral-500 hover:text-neutral-600 canvas-dark:hover:text-neutral-300 hover:bg-black/5 canvas-dark:hover:bg-white/5"
+          )}
+          title={showTips ? "Hide tips" : "Show tips"}
+        >
+          <HelpCircle className="w-3.5 h-3.5" />
+          Tips
+        </button>
 
         {onTest && (
           <button

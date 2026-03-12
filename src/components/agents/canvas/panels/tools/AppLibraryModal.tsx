@@ -139,7 +139,7 @@ export function AppLibraryModal({
   }, [apps]);
 
   /** Schemes that don't require developer app registration — user just enters a key/token. */
-  const SIMPLE_SCHEMES = new Set(["API_KEY", "BEARER_TOKEN", "BASIC"]);
+  const SIMPLE_SCHEMES = new Set(["API_KEY", "BEARER_TOKEN", "BASIC", "BASIC_WITH_JWT", "GOOGLE_SERVICE_ACCOUNT"]);
 
   /**
    * Categorize an app's auth situation for UI display.
@@ -178,6 +178,8 @@ export function AppLibraryModal({
       API_KEY: "API Key",
       BEARER_TOKEN: "Bearer Token",
       BASIC: "Basic Auth",
+      BASIC_WITH_JWT: "Basic Auth",
+      GOOGLE_SERVICE_ACCOUNT: "Service Account",
       OAUTH2: "OAuth",
       OAUTH1: "OAuth",
     };

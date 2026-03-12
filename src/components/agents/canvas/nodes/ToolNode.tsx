@@ -9,10 +9,12 @@ import {
   Globe,
   Users,
   AlertTriangle,
+  Link2,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ToolNodeData } from "../canvas-types";
+import { NodeHelperTip } from "./NodeHelperTip";
 import { NODE_ENTER, NODE_DRAG, NODE_EXIT } from "../animation-constants";
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -102,7 +104,12 @@ export const ToolNode = memo(function ToolNode({ data, dragging }: NodeProps) {
         <Handle
           type="target"
           position={Position.Top}
-          className="!bg-neutral-200 canvas-dark:!bg-neutral-600 !w-2.5 !h-2.5 !border-[1.5px] !border-white canvas-dark:!border-neutral-800 !rounded-full !top-[-5px] opacity-0 group-hover:opacity-100 transition-opacity z-20"
+          className={cn(
+            "!bg-neutral-200 canvas-dark:!bg-neutral-600 !w-2.5 !h-2.5 !border-[1.5px] !border-white canvas-dark:!border-neutral-800 !rounded-full !top-[-5px] transition-opacity z-20",
+            d.isEnabled
+              ? "opacity-0 group-hover:opacity-100"
+              : "opacity-100 animate-pulse"
+          )}
         />
       </div>
 
@@ -112,13 +119,23 @@ export const ToolNode = memo(function ToolNode({ data, dragging }: NodeProps) {
           {d.displayName}
         </h3>
         {!d.isEnabled ? (
-          <p className="text-[10px] text-neutral-400 canvas-dark:text-neutral-500 mt-0.5 font-medium">Disabled</p>
+          <p className="text-[10px] mt-0.5 font-medium gradient-text">Drag to connect</p>
         ) : (
           <p className="text-[10px] text-neutral-500 canvas-dark:text-neutral-400 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
             {actionLabel}
           </p>
         )}
       </div>
+
+      {/* Helper tip for unconnected tools */}
+      {!d.isEnabled && (
+        <NodeHelperTip
+          tipId="tool-connect"
+          icon={<Link2 className="w-3.5 h-3.5 text-orange-400" />}
+          text="Draw a line from your agent's Tools handle down to this node to activate it"
+          position="left-[calc(100%+16px)] top-[50%] -translate-y-1/2"
+        />
+      )}
     </motion.div>
   );
 });

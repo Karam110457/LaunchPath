@@ -26,6 +26,7 @@ import type {
   JsonSchemaProperty,
 } from "@/lib/tools/types";
 import { useComposioConnections } from "@/hooks/useComposioConnections";
+import { OAuthCredentialsForm } from "./OAuthCredentialsForm";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -928,7 +929,7 @@ export function ComposioToolSetup({
   onClose,
   onAuthChanged,
 }: ComposioToolSetupProps) {
-  const { connect: rawConnect, connecting, connectError, isConnected, getConnection, disconnect, loading: connectionsLoading } = useComposioConnections();
+  const { connect: rawConnect, connecting, connectError, clearConnectError, isConnected, getConnection, disconnect, loading: connectionsLoading } = useComposioConnections();
 
   // Wrap connect to notify the canvas when auth completes
   const connect = useCallback(
@@ -1198,17 +1199,40 @@ export function ComposioToolSetup({
             <p className="text-sm text-muted-foreground mb-8 max-w-[260px] leading-relaxed">
               Authenticate with {toolkitName} to allow your agent to perform actions on your behalf.
             </p>
-            <button
-              onClick={() => void connect(toolkit, toolkitName, toolkitIcon)}
-              disabled={connecting === toolkit}
-              className="px-6 py-2.5 bg-neutral-900 canvas-dark:bg-neutral-100 text-white canvas-dark:text-neutral-900 font-medium rounded-xl hover:bg-neutral-800 canvas-dark:hover:bg-neutral-200 transition-all disabled:opacity-50 flex items-center gap-2 shadow-sm"
-            >
-              {connecting === toolkit ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {connecting === toolkit ? "Connecting..." : `Connect ${toolkitName}`}
-            </button>
-            {connectError?.toolkit === toolkit && (
-              <p className="text-xs text-red-500 mt-4 max-w-sm">{connectError.message}</p>
+
+            {/* Credential input form — shown when the backend says we need credentials */}
+            {connectError?.toolkit === toolkit &&
+              (connectError.code === "CREDENTIALS_REQUIRED" || connectError.code === "CUSTOM_CREDENTIALS_REQUIRED") &&
+              (connectError.requiredFields ?? []).length > 0 ? (
+              <div className="w-full max-w-sm text-left">
+                <OAuthCredentialsForm
+                  key={`${toolkit}-${connectError.authScheme ?? "unknown"}`}
+                  toolkitName={toolkitName}
+                  authScheme={connectError.authScheme ?? "API_KEY"}
+                  requiredFields={connectError.requiredFields!}
+                  submitting={connecting === toolkit}
+                  onSubmit={(credentials) => {
+                    void connect(toolkit, toolkitName, toolkitIcon, connectError.authScheme, credentials);
+                  }}
+                  onCancel={() => clearConnectError()}
+                />
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={() => void connect(toolkit, toolkitName, toolkitIcon)}
+                  disabled={connecting === toolkit}
+                  className="px-6 py-2.5 bg-neutral-900 canvas-dark:bg-neutral-100 text-white canvas-dark:text-neutral-900 font-medium rounded-xl hover:bg-neutral-800 canvas-dark:hover:bg-neutral-200 transition-all disabled:opacity-50 flex items-center gap-2 shadow-sm"
+                >
+                  {connecting === toolkit ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  {connecting === toolkit ? "Connecting..." : `Connect ${toolkitName}`}
+                </button>
+                {connectError?.toolkit === toolkit && (
+                  <p className="text-xs text-red-500 mt-4 max-w-sm">{connectError.message}</p>
+                )}
+              </>
             )}
+
             {existing && (
               <div className="mt-8 pt-6 border-t border-border/40 w-full max-w-xs">
                 <button

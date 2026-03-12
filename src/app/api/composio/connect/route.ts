@@ -64,7 +64,9 @@ type ToolkitInfo = {
 };
 
 /** Schemes where the user enters their own credentials directly — no developer app needed. */
-const SIMPLE_AUTH_SCHEMES = new Set(["API_KEY", "BEARER_TOKEN", "BASIC"]);
+const SIMPLE_AUTH_SCHEMES = new Set([
+  "API_KEY", "BEARER_TOKEN", "BASIC", "BASIC_WITH_JWT", "GOOGLE_SERVICE_ACCOUNT",
+]);
 
 // ---------------------------------------------------------------------------
 // ensureAuthConfig — Layer 1 (auth config creation/reuse)
@@ -230,6 +232,12 @@ function buildConnectionConfig(
       return AuthScheme.BearerToken(credentials as { token: string });
     case "BASIC":
       return AuthScheme.Basic(credentials as { username: string; password: string });
+    case "BASIC_WITH_JWT":
+      return AuthScheme.BasicWithJWT(credentials as { username: string; password: string });
+    case "GOOGLE_SERVICE_ACCOUNT":
+      return AuthScheme.GoogleServiceAccount(credentials as { credentials_json: string });
+    case "NO_AUTH":
+      return AuthScheme.NoAuth();
     default:
       logger.warn("Unknown auth scheme, falling back to APIKey", { scheme: mode });
       return AuthScheme.APIKey(credentials);
@@ -506,13 +514,50 @@ export async function POST(request: NextRequest) {
     });
 
     // Parse Composio API errors for better user messages
-    let userError = "Failed to initiate connection. Please try again.";
     if (
       message.includes("Missing required field") ||
       message.includes("ConnectedAccount_MissingRequiredFields")
     ) {
-      userError = `${toolkitName} requires credentials to connect. Please try again.`;
-    } else if (message.includes("Auth_Config_ValidationError")) {
+      // The connection needs credentials we don't have yet.
+      // Try to fetch the toolkit metadata to get the required fields.
+      try {
+        const composio = getComposioClient();
+        const toolkitInfo = (await composio.toolkits.get(toolkit)) as unknown as ToolkitInfo;
+        const allSchemes = toolkitInfo.authConfigDetails ?? [];
+        const targetScheme = allSchemes.find((s) => SIMPLE_AUTH_SCHEMES.has(s.mode.toUpperCase()))
+          ?? allSchemes[0];
+        const connFields = targetScheme?.fields?.connectedAccountInitiation?.required ?? [];
+
+        void flushComposio();
+        return NextResponse.json(
+          {
+            error: `${toolkitName} requires your credentials to connect.`,
+            code: "CREDENTIALS_REQUIRED",
+            requiredFields: connFields.length > 0
+              ? connFields.map((f) => ({ name: f.name, displayName: f.displayName, description: f.description }))
+              : [{ name: "api_key", displayName: "API Key", description: `Your ${toolkitName} API key` }],
+            authScheme: targetScheme?.mode?.toUpperCase() ?? "API_KEY",
+          },
+          { status: 400 }
+        );
+      } catch {
+        // If metadata fetch fails, still return a helpful error
+      }
+
+      void flushComposio();
+      return NextResponse.json(
+        {
+          error: `${toolkitName} requires credentials to connect.`,
+          code: "CREDENTIALS_REQUIRED",
+          requiredFields: [{ name: "api_key", displayName: "API Key", description: `Your ${toolkitName} API key` }],
+          authScheme: "API_KEY",
+        },
+        { status: 400 }
+      );
+    }
+
+    let userError = "Failed to initiate connection. Please try again.";
+    if (message.includes("Auth_Config_ValidationError")) {
       userError = `${toolkitName} requires developer credentials that aren't available. This app may need custom OAuth setup.`;
     }
 
