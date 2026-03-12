@@ -96,6 +96,7 @@ export async function PATCH(
     website?: string | null;
     logo_url?: string | null;
     status?: string;
+    credit_cap_monthly?: number | null;
     branding?: {
       primary_color?: string | null;
       accent_color?: string | null;
@@ -137,6 +138,11 @@ export async function PATCH(
       );
     }
     updates.status = body.status;
+  }
+
+  if (body.credit_cap_monthly !== undefined) {
+    // null = unlimited, number = monthly cap
+    updates.credit_cap_monthly = body.credit_cap_monthly;
   }
 
   // Handle branding upsert

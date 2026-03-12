@@ -92,11 +92,12 @@ export function NewAgentForm({ businesses }: NewAgentFormProps) {
               >
                 <Card
                   className={cn(
-                    "transition-all cursor-pointer h-full",
+                    "transition-all cursor-pointer h-full border-2",
                     isSelected
-                      ? "wizard-card-selected bg-white dark:bg-[#252525] shadow-[0_0_20px_-5px_rgba(157,80,187,0.15)]"
+                      ? "[--card-bg:#ffffff] dark:[--card-bg:#252525] border-transparent"
                       : "hover:border-neutral-300 dark:hover:border-neutral-600",
                   )}
+                  style={isSelected ? { backgroundImage: "linear-gradient(var(--card-bg), var(--card-bg)), linear-gradient(135deg, #FF8C00, #9D50BB)", backgroundOrigin: "border-box", backgroundClip: "padding-box, border-box" } : undefined}
                 >
                   <CardContent className="pt-6">
                     <div className="flex items-start gap-3">

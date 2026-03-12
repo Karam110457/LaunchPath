@@ -13,6 +13,14 @@ const ICON_MAP: Record<
   Target,
 };
 
+/** Inline style object for gradient border via background-clip trick */
+const gradientBorderStyle: React.CSSProperties = {
+  backgroundImage:
+    "linear-gradient(var(--card-bg), var(--card-bg)), linear-gradient(135deg, #FF8C00, #9D50BB)",
+  backgroundOrigin: "border-box",
+  backgroundClip: "padding-box, border-box",
+};
+
 interface ChooseTypeStepProps {
   templateId: string | null;
   onSelect: (id: "appointment-booker" | "customer-support" | "lead-capture") => void;
@@ -35,18 +43,21 @@ export function ChooseTypeStep({ templateId, onSelect }: ChooseTypeStepProps) {
             <button
               key={template.id}
               type="button"
-              style={{ "--stagger": i } as React.CSSProperties}
+              style={{
+                "--stagger": i,
+                ...(isSelected ? gradientBorderStyle : {}),
+              } as React.CSSProperties}
               onClick={() =>
                 onSelect(
                   template.id as "appointment-booker" | "customer-support" | "lead-capture",
                 )
               }
               className={`
-                w-full text-left px-6 py-5 rounded-[20px] border transition-all duration-200
+                w-full text-left px-6 py-5 rounded-[20px] border-2 transition-all duration-200
                 focus:outline-none
                 ${
                   isSelected
-                    ? "wizard-card-selected bg-white dark:bg-[#252525] shadow-[0_0_20px_-5px_rgba(157,80,187,0.15)]"
+                    ? "[--card-bg:#ffffff] dark:[--card-bg:#252525] border-transparent"
                     : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:bg-white dark:hover:bg-[#252525] hover:shadow-sm hover:-translate-y-0.5"
                 }
               `}
@@ -57,7 +68,7 @@ export function ChooseTypeStep({ templateId, onSelect }: ChooseTypeStepProps) {
                     h-[48px] w-[48px] rounded-[16px] flex items-center justify-center shrink-0 border transition-transform
                     ${
                       isSelected
-                        ? "wizard-icon-selected bg-white dark:bg-[#252525]"
+                        ? "bg-white dark:bg-[#252525] border-neutral-200 dark:border-neutral-600"
                         : "bg-white dark:bg-[#252525] border-black/5 dark:border-[#333333]"
                     }
                   `}

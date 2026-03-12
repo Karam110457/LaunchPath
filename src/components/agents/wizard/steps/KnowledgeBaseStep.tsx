@@ -400,10 +400,10 @@ function FaqsSection({
               size="sm"
               variant="ghost"
               onClick={() => setShowAddForm(!showAddForm)}
-              className="group gap-1 rounded-full text-xs h-7 text-neutral-500 hover:bg-transparent"
+              className="gap-1 rounded-full text-xs h-7 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
             >
-              <Plus className="w-3 h-3 group-hover:text-[#FF8C00] transition-colors" />
-              <span className="group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FF8C00] group-hover:to-[#9D50BB] transition-colors">Add</span>
+              <Plus className="w-3 h-3" />
+              Add
             </Button>
           </div>
         </div>

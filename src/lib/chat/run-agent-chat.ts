@@ -155,6 +155,36 @@ export async function runAgentChat(
   }
 
   // -------------------------------------------------------------------------
+  // Client credit cap check (when serving a client channel)
+  // -------------------------------------------------------------------------
+
+  if (clientId) {
+    const { data: clientCap } = await supabase
+      .from("clients")
+      .select("credit_cap_monthly, credit_cap_used")
+      .eq("id", clientId)
+      .single();
+
+    if (
+      clientCap?.credit_cap_monthly != null &&
+      Number(clientCap.credit_cap_used) + estimatedCredits >
+        Number(clientCap.credit_cap_monthly)
+    ) {
+      return new Response(
+        JSON.stringify({
+          error: "client_cap_exceeded",
+          message:
+            "This client's monthly credit cap has been reached. Please contact your agency.",
+        }),
+        {
+          status: 429,
+          headers: { "Content-Type": "application/json", ...extraHeaders },
+        }
+      );
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Load enabled tools
   // -------------------------------------------------------------------------
 
@@ -439,6 +469,24 @@ export async function runAgentChat(
               p_user_id: agent.user_id,
               p_amount: actualCredits,
             });
+
+            // Increment client cap usage (if serving a client channel)
+            if (clientId) {
+              await supabase.rpc("increment_client_cap_used", {
+                p_client_id: clientId,
+                p_amount: actualCredits,
+              });
+            }
+
+            // Track cost on the conversation record
+            if (finalConversationId) {
+              await supabase.rpc("increment_conversation_cost", {
+                p_conversation_id: finalConversationId,
+                p_credits: actualCredits,
+                p_input: usage?.inputTokens ?? 0,
+                p_output: usage?.outputTokens ?? 0,
+              });
+            }
           } catch (usageErr) {
             // Usage logging is non-blocking — don't fail the chat
             logger.error("Failed to log usage or deduct credits", {

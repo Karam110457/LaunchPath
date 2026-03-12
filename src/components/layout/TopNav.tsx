@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Moon, Sun, Settings, Bot, Rocket, BarChart3, LogOut, Plus } from "lucide-react";
+import { Moon, Sun, Settings, Bot, Rocket, BarChart3, PieChart, LogOut, Plus } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +15,7 @@ const NAV_LINKS = [
     { label: "Agents", href: "/dashboard/agents", icon: Bot },
     { label: "Deploy", href: "/dashboard/clients", icon: Rocket },
     { label: "Usage",  href: "/dashboard/usage",   icon: BarChart3 },
+    { label: "Analytics", href: "/dashboard/analytics", icon: PieChart },
 ];
 
 export function TopNav() {

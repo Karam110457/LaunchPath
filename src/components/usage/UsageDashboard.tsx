@@ -12,6 +12,7 @@ import {
   ChevronDown,
   ChevronUp,
   Layers,
+  Download,
 } from "lucide-react";
 import { getModelInfo } from "@/lib/ai/model-tiers";
 import type { UsageData } from "@/lib/dashboard/usage-data";
@@ -140,6 +141,30 @@ export function UsageDashboard({ userName, initialData }: UsageDashboardProps) {
         </defs>
       </svg>
 
+      {/* Credit usage alert banners */}
+      {data && (() => {
+        const pct = data.credits.monthly_included > 0
+          ? data.credits.monthly_used / data.credits.monthly_included
+          : 0;
+        if (pct >= 0.95) {
+          return (
+            <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-400 text-sm font-medium">
+              <Zap className="w-4 h-4 shrink-0" />
+              You&apos;ve used {Math.round(pct * 100)}% of your monthly credits. Top up or upgrade to avoid interruptions.
+            </div>
+          );
+        }
+        if (pct >= 0.8) {
+          return (
+            <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-sm font-medium">
+              <Zap className="w-4 h-4 shrink-0" />
+              You&apos;ve used {Math.round(pct * 100)}% of your monthly credits.
+            </div>
+          );
+        }
+        return null;
+      })()}
+
       {/* ----------------------------------------------------------------- */}
       {/* Header Row                                                        */}
       {/* ----------------------------------------------------------------- */}
@@ -154,6 +179,14 @@ export function UsageDashboard({ userName, initialData }: UsageDashboardProps) {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
+          {/* Export CSV */}
+          <a
+            href={`/api/dashboard/usage/export?period=${period}`}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </a>
           {/* Redeem promo button */}
           <button
             onClick={() => setPromoOpen(true)}

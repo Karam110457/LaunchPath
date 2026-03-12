@@ -27,11 +27,12 @@ export function EscalationStep({ config, onUpdate }: EscalationStepProps) {
         <button
           type="button"
           onClick={() => onUpdate((prev) => ({ ...prev, escalation_mode: "always_available" }))}
-          className={`w-full text-left rounded-[20px] border p-5 transition-all duration-200 ${
+          className={`w-full text-left rounded-[20px] border-2 p-5 transition-all duration-200 ${
             config.escalation_mode === "always_available"
-              ? "wizard-card-selected bg-white dark:bg-[#252525] shadow-[0_0_20px_-5px_rgba(157,80,187,0.15)]"
+              ? "[--card-bg:#ffffff] dark:[--card-bg:#252525] border-transparent"
               : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:border-neutral-300 dark:hover:border-neutral-500"
           }`}
+          style={config.escalation_mode === "always_available" ? { backgroundImage: "linear-gradient(var(--card-bg), var(--card-bg)), linear-gradient(135deg, #FF8C00, #9D50BB)", backgroundOrigin: "border-box", backgroundClip: "padding-box, border-box" } : undefined}
         >
           <p className={`text-sm font-medium ${config.escalation_mode === "always_available" ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-800 dark:text-neutral-200"}`}>
             Handle everything
@@ -43,11 +44,12 @@ export function EscalationStep({ config, onUpdate }: EscalationStepProps) {
         <button
           type="button"
           onClick={() => onUpdate((prev) => ({ ...prev, escalation_mode: "escalate_complex" }))}
-          className={`w-full text-left rounded-[20px] border p-5 transition-all duration-200 ${
+          className={`w-full text-left rounded-[20px] border-2 p-5 transition-all duration-200 ${
             config.escalation_mode === "escalate_complex"
-              ? "wizard-card-selected bg-white dark:bg-[#252525] shadow-[0_0_20px_-5px_rgba(157,80,187,0.15)]"
+              ? "[--card-bg:#ffffff] dark:[--card-bg:#252525] border-transparent"
               : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:border-neutral-300 dark:hover:border-neutral-500"
           }`}
+          style={config.escalation_mode === "escalate_complex" ? { backgroundImage: "linear-gradient(var(--card-bg), var(--card-bg)), linear-gradient(135deg, #FF8C00, #9D50BB)", backgroundOrigin: "border-box", backgroundClip: "padding-box, border-box" } : undefined}
         >
           <p className={`text-sm font-medium ${config.escalation_mode === "escalate_complex" ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-800 dark:text-neutral-200"}`}>
             Escalate complex issues

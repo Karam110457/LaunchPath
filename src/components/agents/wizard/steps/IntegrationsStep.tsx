@@ -91,13 +91,14 @@ export function IntegrationsStep({
                     type="button"
                     onClick={() => toggleToolkit(tool.toolkit)}
                     className={`
-                      w-full flex items-start gap-3 rounded-[20px] border p-5 text-left transition-all duration-200
+                      w-full flex items-start gap-3 rounded-[20px] border-2 p-5 text-left transition-all duration-200
                       ${
                         isSelected
-                          ? "wizard-card-selected bg-white dark:bg-[#252525] shadow-[0_0_20px_-5px_rgba(157,80,187,0.15)]"
+                          ? "[--card-bg:#ffffff] dark:[--card-bg:#252525] border-transparent"
                           : "border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 hover:bg-white dark:hover:bg-[#252525] hover:shadow-sm"
                       }
                     `}
+                    style={isSelected ? { backgroundImage: "linear-gradient(var(--card-bg), var(--card-bg)), linear-gradient(135deg, #FF8C00, #9D50BB)", backgroundOrigin: "border-box", backgroundClip: "padding-box, border-box" } : undefined}
                   >
                     {/* Checkbox */}
                     <div

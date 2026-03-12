@@ -19,6 +19,7 @@ const tabs = [
   { label: "Overview", href: "" },
   { label: "Campaigns", href: "/campaigns" },
   { label: "Conversations", href: "/conversations" },
+  { label: "Usage", href: "/usage" },
   { label: "Settings", href: "/settings" },
 ];
 

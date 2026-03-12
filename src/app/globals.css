@@ -692,74 +692,9 @@
     0 0 12px 2px rgba(157, 80, 187, 0.08);
 }
 
-.wizard-card-selected {
-  position: relative;
-  z-index: 0;
-  border-color: transparent !important;
-}
-
-.wizard-card-selected::before {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  border-radius: inherit;
-  background: var(--gradient-accent);
-  opacity: 0.25;
-  z-index: -10;
-}
-
-.wizard-icon-selected {
-  position: relative;
-  z-index: 0;
-  border-color: transparent !important;
-}
-
-.wizard-icon-selected::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  background: var(--gradient-accent);
-  opacity: 0.25;
-  z-index: -10;
-}
-
-.hover-gradient-border {
-  position: relative;
-  z-index: 0;
-}
-
-.hover-gradient-border:hover {
-  border-color: transparent !important;
-}
-
-.hover-gradient-border::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  background: var(--gradient-accent);
-  opacity: 0;
-  z-index: -10;
-  transition: opacity 0.2s;
-}
-
-.hover-gradient-border:hover::before {
-  opacity: 0.5;
-}
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
-  }
-
-  /* Override focus ring for inputs to use brand colors (orange border + purple glow) */
-  input:focus-visible, 
-  textarea:focus-visible, 
-  select:focus-visible {
-    outline: none !important;
-    border-color: #FF8C00 !important;
-    box-shadow: 0 0 0 1px #FF8C00, 0 0 12px 2px rgba(157, 80, 187, 0.2) !important;
   }
 
   html {

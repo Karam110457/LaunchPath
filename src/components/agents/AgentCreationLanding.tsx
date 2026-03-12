@@ -301,7 +301,7 @@ export function AgentCreationLanding() {
                   key={template.id}
                   onClick={() => setWizardTemplateId(template.id)}
                   style={{ "--stagger": 2 + i } as React.CSSProperties}
-                  className="group inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-border/50 bg-background/60 text-muted-foreground text-sm transition-all duration-200 hover-gradient-border hover:text-foreground hover:bg-muted/30 hover:-translate-y-0.5 hover:shadow-sm active:scale-95"
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-border/50 bg-background/60 text-muted-foreground text-sm transition-all duration-200 hover:border-neutral-400 dark:hover:border-neutral-500 hover:text-foreground hover:bg-muted/30 hover:-translate-y-0.5 hover:shadow-sm active:scale-95"
                 >
                   <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                   {template.name}
