@@ -5,6 +5,7 @@ import { Plus, Megaphone } from "lucide-react";
 import { AssignClientDropdown } from "@/components/clients/AssignClientDropdown";
 import { TopNav } from "@/components/layout/TopNav";
 import { GlobalBackground } from "@/components/layout/GlobalBackground";
+import { ClientsPageTabs } from "@/components/clients/ClientsPageTabs";
 
 export default async function ClientsPage() {
   const user = await requireAuth();
@@ -62,6 +63,7 @@ export default async function ClientsPage() {
 
       <div className="w-full h-px bg-border/40" />
 
+      <ClientsPageTabs>
       {shaped.length === 0 && (!unlinkedCampaigns || unlinkedCampaigns.length === 0) ? (
         <div className="text-center py-20 px-6 rounded-3xl border border-dashed border-border/60 bg-card/30">
           <Megaphone className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
@@ -197,6 +199,7 @@ export default async function ClientsPage() {
           )}
         </>
       )}
+      </ClientsPageTabs>
         </div>
       </div>
     </div>

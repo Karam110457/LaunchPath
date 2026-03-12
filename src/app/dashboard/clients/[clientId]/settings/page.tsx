@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Send, Trash2, Palette, Upload, Users } from "lucide-react";
+import { Send, Trash2, Palette, Upload, Users, Coins } from "lucide-react";
 
 interface Client {
   id: string;
@@ -45,6 +45,13 @@ export default function ClientSettingsPage() {
   const [website, setWebsite] = useState("");
   const [status, setStatus] = useState("active");
 
+  // Credit cap
+  const [capEnabled, setCapEnabled] = useState(false);
+  const [capMonthly, setCapMonthly] = useState("");
+  const [capUsed, setCapUsed] = useState(0);
+  const [savingCap, setSavingCap] = useState(false);
+  const [capMsg, setCapMsg] = useState<string | null>(null);
+
   // Branding
   const [brandingLogoUrl, setBrandingLogoUrl] = useState("");
   const [accentColor, setAccentColor] = useState("#FF8C00");
@@ -68,6 +75,14 @@ export default function ClientSettingsPage() {
     setEmail(data.client.email ?? "");
     setWebsite(data.client.website ?? "");
     setStatus(data.client.status);
+    if (data.client.credit_cap_monthly != null) {
+      setCapEnabled(true);
+      setCapMonthly(String(data.client.credit_cap_monthly));
+    } else {
+      setCapEnabled(false);
+      setCapMonthly("");
+    }
+    setCapUsed(Number(data.client.credit_cap_used ?? 0));
     if (data.branding) {
       setBrandingLogoUrl(data.branding.logo_url ?? "");
       setAccentColor(data.branding.primary_color ?? "#FF8C00");
@@ -235,6 +250,118 @@ export default function ClientSettingsPage() {
           </button>
           {saveMsg && (
             <span className="text-xs text-muted-foreground">{saveMsg}</span>
+          )}
+        </div>
+      </div>
+
+      {/* Credit Cap */}
+      <div className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-6 space-y-5">
+        <div className="flex items-center gap-2">
+          <Coins className="size-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold">Monthly Credit Cap</h2>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Set a monthly credit limit for this client. When the cap is reached, AI responses will be blocked until the next billing cycle.
+        </p>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setCapEnabled(!capEnabled)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${
+              capEnabled ? "bg-foreground" : "bg-muted-foreground/30"
+            }`}
+          >
+            <span
+              className={`inline-block size-3.5 transform rounded-full bg-background transition-transform duration-200 ${
+                capEnabled ? "translate-x-[18px]" : "translate-x-[3px]"
+              }`}
+            />
+          </button>
+          <div>
+            <label className="text-sm font-medium">
+              {capEnabled ? "Cap enabled" : "Unlimited (no cap)"}
+            </label>
+          </div>
+        </div>
+
+        {capEnabled && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Monthly Limit (credits)</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={capMonthly}
+                onChange={(e) => setCapMonthly(e.target.value)}
+                placeholder="e.g. 500"
+                className={INPUT_CLASS}
+              />
+            </div>
+
+            {/* Progress bar */}
+            {capMonthly && Number(capMonthly) > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">
+                    Used this month
+                  </span>
+                  <span className="font-medium tabular-nums">
+                    {capUsed.toFixed(2)} / {Number(capMonthly).toFixed(2)} credits
+                  </span>
+                </div>
+                <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      capUsed / Number(capMonthly) >= 0.95
+                        ? "bg-red-500"
+                        : capUsed / Number(capMonthly) >= 0.8
+                          ? "bg-amber-500"
+                          : "bg-gradient-to-r from-[#FF8C00] to-[#9D50BB]"
+                    }`}
+                    style={{
+                      width: `${Math.min(100, (capUsed / Number(capMonthly)) * 100)}%`,
+                    }}
+                  />
+                </div>
+                {capUsed / Number(capMonthly) >= 0.8 && (
+                  <p className={`text-xs font-medium ${
+                    capUsed / Number(capMonthly) >= 0.95
+                      ? "text-red-500"
+                      : "text-amber-500"
+                  }`}>
+                    {capUsed / Number(capMonthly) >= 0.95
+                      ? "Credit cap nearly exhausted"
+                      : "Approaching credit cap limit"}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={async () => {
+              setSavingCap(true);
+              setCapMsg(null);
+              const value = capEnabled && capMonthly ? Number(capMonthly) : null;
+              const res = await fetch(`/api/clients/${clientId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ credit_cap_monthly: value }),
+              });
+              setCapMsg(res.ok ? "Cap saved" : "Failed to save");
+              setSavingCap(false);
+            }}
+            disabled={savingCap}
+            className="px-5 py-2.5 text-sm font-medium rounded-full shadow-sm gradient-accent-bg text-white hover:scale-[1.02] transition-transform duration-150 disabled:opacity-50"
+          >
+            {savingCap ? "Saving..." : "Save Cap"}
+          </button>
+          {capMsg && (
+            <span className="text-xs text-muted-foreground">{capMsg}</span>
           )}
         </div>
       </div>
