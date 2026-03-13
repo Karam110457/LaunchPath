@@ -6,10 +6,10 @@ import { Label } from "@/components/ui/label";
 import type { WidgetConfig } from "@/lib/channels/types";
 
 const INPUT_CLASS =
-  "w-full rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-3 py-2 text-sm shadow-sm outline-none focus:ring-2 focus:ring-[#FF8C00]/30 focus:border-[#FF8C00]/40 transition-all placeholder:text-muted-foreground/50";
+  "w-full rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-3 py-2 text-sm shadow-sm outline-none focus:ring-2 focus:ring-neutral-400/20 focus:border-neutral-400/50 dark:focus:ring-neutral-500/20 dark:focus:border-neutral-500/40 transition-all placeholder:text-muted-foreground/50";
 
 const TEXTAREA_CLASS =
-  "w-full rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-3 py-2 text-sm shadow-sm outline-none focus:ring-2 focus:ring-[#FF8C00]/30 focus:border-[#FF8C00]/40 transition-all placeholder:text-muted-foreground/50 resize-none";
+  "w-full rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-3 py-2 text-sm shadow-sm outline-none focus:ring-2 focus:ring-neutral-400/20 focus:border-neutral-400/50 dark:focus:ring-neutral-500/20 dark:focus:border-neutral-500/40 transition-all placeholder:text-muted-foreground/50 resize-none";
 
 interface ConfigPanelProps {
   config: WidgetConfig;
@@ -46,10 +46,10 @@ function ToggleButton({
           key={opt.value}
           type="button"
           onClick={() => onChange(opt.value)}
-          className={`flex-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+          className={`flex-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
             value === opt.value
-              ? "bg-gradient-to-r from-[#FF8C00]/10 to-[#9D50BB]/10 border-[#FF8C00]/30 text-[#FF8C00] shadow-sm"
-              : "bg-card/60 border-border/40 text-muted-foreground hover:border-[#FF8C00]/30"
+              ? "gradient-accent-border bg-card text-foreground shadow-sm"
+              : "border border-border/40 bg-card/60 text-muted-foreground hover:border-border/80 hover:text-foreground"
           }`}
         >
           {opt.label}
@@ -153,14 +153,15 @@ export function ConfigPanel({
       <div className="flex border-b border-neutral-200/50 dark:border-neutral-700/50 shrink-0">
         {TABS.map((tab) => {
           const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
               className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-all border-b-2 ${
-                activeTab === tab.id
-                  ? "border-[#FF8C00] text-[#FF8C00] bg-gradient-to-r from-[#FF8C00]/5 to-[#9D50BB]/5"
+                isActive
+                  ? "border-foreground text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
               }`}
               title={tab.description}
@@ -325,7 +326,7 @@ export function ConfigPanel({
                 <button
                   type="button"
                   onClick={addStarter}
-                  className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <Plus className="w-3 h-3" />
                   Add quick reply
@@ -495,7 +496,7 @@ export function ConfigPanel({
                       const keywords = [...(config.autoEscalation?.keywords ?? []), ""];
                       updateConfig("autoEscalation", { enabled: true, keywords });
                     }}
-                    className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <Plus className="w-3 h-3" />
                     Add keyword
