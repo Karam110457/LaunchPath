@@ -564,11 +564,16 @@ export function AgentEditPanel({
                       onClick={() => {
                         update("tone", preset.value);
                       }}
+                      style={currentPreset === preset.value ? {
+                        backgroundImage: "linear-gradient(var(--card-bg), var(--card-bg)), linear-gradient(135deg, #FF8C00, #9D50BB)",
+                        backgroundOrigin: "border-box",
+                        backgroundClip: "padding-box, border-box",
+                      } : undefined}
                       className={cn(
-                        "flex items-start gap-2 rounded-lg border px-3 py-2.5 text-left transition-all",
+                        "flex items-start gap-2 rounded-lg border-2 px-3 py-2.5 text-left transition-all",
                         currentPreset === preset.value
-                          ? "border-transparent gradient-accent-border bg-white dark:bg-neutral-900 canvas-dark:bg-neutral-900"
-                          : "border-border hover:bg-muted/50"
+                          ? "[--card-bg:#1E1E1E] border-transparent shadow-sm"
+                          : "border-black/5 dark:border-[#2A2A2A] canvas-dark:border-[#2A2A2A] hover:bg-[#252525]"
                       )}
                     >
                       <div className="min-w-0">
