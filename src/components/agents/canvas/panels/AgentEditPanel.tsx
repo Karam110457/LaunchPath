@@ -464,7 +464,6 @@ export function AgentEditPanel({
                     {AGENT_TEMPLATES.map((tmpl) => (
                       <OptionCard
                         key={tmpl.id}
-                        variant="mono"
                         value={tmpl.id}
                         label={tmpl.name}
                         description={tmpl.description}
@@ -568,20 +567,20 @@ export function AgentEditPanel({
                       className={cn(
                         "flex items-start gap-2 rounded-lg border px-3 py-2.5 text-left transition-all",
                         currentPreset === preset.value
-                          ? "bg-foreground text-background border-transparent"
-                          : "border-border hover:bg-muted/60"
+                          ? "border-transparent gradient-accent-border bg-gradient-to-br from-[#FF8C00]/8 to-[#9D50BB]/8"
+                          : "border-border hover:bg-muted/50"
                       )}
                     >
                       <div className="min-w-0">
                         <p className={cn(
                           "text-xs font-medium",
-                          currentPreset === preset.value ? "text-background" : "text-foreground"
+                          currentPreset === preset.value ? "text-foreground" : ""
                         )}>
                           {preset.label}
                         </p>
                         <p className={cn(
                           "text-[11px] leading-tight mt-0.5",
-                          currentPreset === preset.value ? "text-background/70" : "text-muted-foreground"
+                          "text-muted-foreground"
                         )}>
                           {preset.desc}
                         </p>
@@ -1159,7 +1158,6 @@ function BehaviorSection({
           <Label className="text-xs">When a lead is captured</Label>
           <div className="space-y-2">
             <OptionCard
-              variant="mono"
               value="email_team"
               label="Email team with lead summary"
               description="Sends an internal notification with the lead details to your team"
@@ -1167,7 +1165,6 @@ function BehaviorSection({
               onSelect={() => updateBc({ notification_behavior: "email_team" })}
             />
             <OptionCard
-              variant="mono"
               value="sheet_only"
               label="Save to spreadsheet only"
               description="Leads are saved to Google Sheets without email notifications"
@@ -1222,7 +1219,6 @@ function BehaviorSection({
         <Label className="text-xs">Escalation behavior</Label>
         <div className="space-y-2">
           <OptionCard
-            variant="mono"
             value="always_available"
             label="Handle everything"
             description="The agent tries to resolve all issues without escalating"
@@ -1230,7 +1226,6 @@ function BehaviorSection({
             onSelect={() => updateBc({ escalation_mode: "always_available" })}
           />
           <OptionCard
-            variant="mono"
             value="escalate_complex"
             label="Escalate complex issues"
             description="The agent hands off to a human when it can't resolve an issue"
@@ -1261,7 +1256,6 @@ function BehaviorSection({
         <Label className="text-xs">Response style</Label>
         <div className="space-y-2">
           <OptionCard
-            variant="mono"
             value="concise"
             label="Concise answers"
             description="Short, direct responses that get to the point quickly"
@@ -1269,7 +1263,6 @@ function BehaviorSection({
             onSelect={() => updateBc({ response_style: "concise" })}
           />
           <OptionCard
-            variant="mono"
             value="detailed"
             label="Detailed explanations"
             description="Thorough, step-by-step responses with context"
@@ -2148,7 +2141,6 @@ function SwitchConfigFields({
           <Label className="text-xs">Escalation behavior</Label>
           <div className="space-y-1.5">
             <OptionCard
-              variant="mono"
               value="always_available"
               label="Handle everything"
               description="Agent resolves all issues without escalating"
@@ -2156,7 +2148,6 @@ function SwitchConfigFields({
               onSelect={() => onChange({ escalation_mode: "always_available" })}
             />
             <OptionCard
-              variant="mono"
               value="escalate_complex"
               label="Escalate complex issues"
               description="Hand off to a human when it can't resolve an issue"
