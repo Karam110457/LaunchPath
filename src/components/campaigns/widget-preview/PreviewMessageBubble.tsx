@@ -1,10 +1,17 @@
 import { getContrastColor } from "./contrast";
 
+interface PreviewMessageAttachment {
+  name: string;
+  type: string;
+  url: string;
+}
+
 interface PreviewMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
   isStreaming?: boolean;
+  attachment?: PreviewMessageAttachment;
 }
 
 interface PreviewMessageBubbleProps {
@@ -72,6 +79,28 @@ export function PreviewMessageBubble({
       }`}
       style={isUser ? { backgroundColor: primaryColor, color: contrastColor } : undefined}
     >
+      {message.attachment && (
+        message.attachment.type.startsWith("image/") ? (
+          <img
+            src={message.attachment.url}
+            alt={message.attachment.name}
+            className="max-w-full rounded-lg mb-1.5"
+            style={{ maxHeight: 160 }}
+          />
+        ) : (
+          <div className={`flex items-center gap-2 px-2.5 py-2 rounded-lg mb-1.5 text-xs ${
+            isUser
+              ? "bg-white/15"
+              : isDark ? "bg-gray-700" : "bg-gray-200"
+          }`}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+            <span className="truncate">{message.attachment.name}</span>
+          </div>
+        )
+      )}
       {lines.map((line, i) => (
         <span key={i}>
           {formatText(line)}
@@ -82,4 +111,4 @@ export function PreviewMessageBubble({
   );
 }
 
-export type { PreviewMessage };
+export type { PreviewMessage, PreviewMessageAttachment };
