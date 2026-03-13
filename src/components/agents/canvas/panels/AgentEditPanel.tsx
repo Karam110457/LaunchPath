@@ -433,8 +433,8 @@ export function AgentEditPanel({
           <div className="space-y-5">
             {/* ── Live sync banner (wizard agents) ── */}
             {hasWizard && (
-              <div className="bg-[#FF8C00]/5 border border-[#FF8C00]/10 rounded-lg p-3 flex items-start gap-2">
-                <Info className="w-3.5 h-3.5 text-[#FF8C00]/70 mt-0.5 shrink-0" />
+              <div className="bg-muted/50 border border-border rounded-lg p-3 flex items-start gap-2">
+                <Info className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
                   Changes here are automatically applied to your agent&apos;s
                   instructions. You can view and fine-tune them on the Prompt tab.
@@ -473,7 +473,7 @@ export function AgentEditPanel({
                     ))}
                   </div>
                   {goalChangedNote && (
-                    <p className="text-[11px] text-[#FF8C00]/80 bg-[#FF8C00]/5 border border-[#FF8C00]/10 rounded-md px-3 py-2 animate-in fade-in duration-200">
+                    <p className="text-[11px] text-muted-foreground bg-muted/50 border border-border rounded-md px-3 py-2 animate-in fade-in duration-200">
                       {goalChangedNote}
                     </p>
                   )}
@@ -542,7 +542,7 @@ export function AgentEditPanel({
                 <button
                   type="button"
                   onClick={() => setShowCustomTone(!showCustomTone)}
-                  className="text-[11px] text-[#FF8C00]/70 hover:text-[#FF8C00] transition-colors"
+                  className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showCustomTone ? "Pick a preset" : "Write your own"}
                 </button>
@@ -567,20 +567,20 @@ export function AgentEditPanel({
                       className={cn(
                         "flex items-start gap-2 rounded-lg border px-3 py-2.5 text-left transition-all",
                         currentPreset === preset.value
-                          ? "border-transparent gradient-accent-border bg-gradient-to-br from-[#FF8C00]/8 to-[#9D50BB]/8"
-                          : "border-border hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5"
+                          ? "bg-foreground text-background border-transparent"
+                          : "border-border hover:bg-muted/60"
                       )}
                     >
                       <div className="min-w-0">
                         <p className={cn(
                           "text-xs font-medium",
-                          currentPreset === preset.value ? "text-white" : ""
+                          currentPreset === preset.value ? "text-background" : "text-foreground"
                         )}>
                           {preset.label}
                         </p>
                         <p className={cn(
                           "text-[11px] leading-tight mt-0.5",
-                          currentPreset === preset.value ? "text-white/80" : "text-muted-foreground"
+                          currentPreset === preset.value ? "text-background/70" : "text-muted-foreground"
                         )}>
                           {preset.desc}
                         </p>
@@ -646,7 +646,7 @@ export function AgentEditPanel({
                       key={tmpl.id}
                       type="button"
                       onClick={() => handleAdoptGoal(tmpl.id)}
-                      className="w-full flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5 transition-all"
+                      className="w-full flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs hover:bg-muted/60 transition-all"
                     >
                       <span className="font-medium">{tmpl.name}</span>
                       <span className="text-muted-foreground">— {tmpl.description}</span>
@@ -990,8 +990,8 @@ function BehaviorSection({
                     className={cn(
                       "px-2 py-1 rounded-full text-[11px] font-medium border transition-all cursor-pointer",
                       days.includes(d.value)
-                        ? "border-transparent gradient-accent-border bg-gradient-to-br from-[#FF8C00]/10 to-[#9D50BB]/10 text-foreground"
-                        : "bg-muted/50 border-border text-muted-foreground hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5"
+                        ? "bg-foreground text-background border-transparent"
+                        : "bg-muted/50 border-border text-muted-foreground hover:bg-muted/80"
                     )}
                   >
                     {d.label}
@@ -1399,7 +1399,7 @@ function QuestionsSection({
                   <button
                     type="button"
                     onClick={saveEdit}
-                    className="shrink-0 p-1 rounded-md text-[#FF8C00] hover:bg-[#FF8C00]/10 transition-colors"
+                    className="shrink-0 p-1 rounded-md text-foreground hover:bg-muted/60 transition-colors"
                   >
                     <Check className="w-3.5 h-3.5" />
                   </button>
@@ -1417,7 +1417,7 @@ function QuestionsSection({
                     <button
                       type="button"
                       onClick={() => startEdit(i)}
-                      className="p-1 rounded-md text-muted-foreground hover:text-[#FF8C00] hover:bg-[#FF8C00]/10 transition-colors"
+                      className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
                     >
                       <Pencil className="w-3 h-3" />
                     </button>
@@ -1513,12 +1513,12 @@ function LeadFilteringSection({
           className={cn(
             "w-full text-left rounded-xl border px-3 py-2.5 transition-all",
             mode === "describe"
-              ? "border-transparent gradient-accent-border bg-gradient-to-br from-[#FF8C00]/8 to-[#9D50BB]/8"
-              : "border-border hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5"
+              ? "bg-foreground/10 border-foreground/20"
+              : "border-border hover:bg-muted/60"
           )}
         >
-          <p className={cn("text-xs font-medium", mode === "describe" && "text-foreground")}>Describe your ideal customer</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
+          <p className={cn("text-xs font-medium", mode === "describe" ? "text-foreground" : "text-muted-foreground")}>Describe your ideal customer</p>
+          <p className={cn("text-[11px] mt-0.5", mode === "describe" ? "text-foreground/60" : "text-muted-foreground")}>
             Tell the agent who you&apos;re looking for and it will figure out the right questions to ask.
           </p>
         </button>
@@ -1528,12 +1528,12 @@ function LeadFilteringSection({
           className={cn(
             "w-full text-left rounded-xl border px-3 py-2.5 transition-all",
             mode === "questions"
-              ? "border-transparent gradient-accent-border bg-gradient-to-br from-[#FF8C00]/8 to-[#9D50BB]/8"
-              : "border-border hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5"
+              ? "bg-foreground/10 border-foreground/20"
+              : "border-border hover:bg-muted/60"
           )}
         >
-          <p className={cn("text-xs font-medium", mode === "questions" && "text-foreground")}>Set specific questions</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
+          <p className={cn("text-xs font-medium", mode === "questions" ? "text-foreground" : "text-muted-foreground")}>Set specific questions</p>
+          <p className={cn("text-[11px] mt-0.5", mode === "questions" ? "text-foreground/60" : "text-muted-foreground")}>
             Write the exact questions your agent should ask every visitor.
           </p>
         </button>
@@ -1593,7 +1593,7 @@ function LeadFilteringSection({
                       <button
                         type="button"
                         onClick={saveEdit}
-                        className="shrink-0 p-1 rounded-md text-[#FF8C00] hover:bg-[#FF8C00]/10 transition-colors"
+                        className="shrink-0 p-1 rounded-md text-foreground hover:bg-muted/60 transition-colors"
                       >
                         <Check className="w-3.5 h-3.5" />
                       </button>
@@ -1611,7 +1611,7 @@ function LeadFilteringSection({
                         <button
                           type="button"
                           onClick={() => startEdit(i)}
-                          className="p-1 rounded-md text-muted-foreground hover:text-[#FF8C00] hover:bg-[#FF8C00]/10 transition-colors"
+                          className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
                         >
                           <Pencil className="w-3 h-3" />
                         </button>
@@ -1682,8 +1682,8 @@ function FieldToggle({
         "px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
         disabled ? "cursor-default" : "cursor-pointer",
         enabled
-          ? "border-transparent gradient-accent-border bg-gradient-to-br from-[#FF8C00]/10 to-[#9D50BB]/10 text-foreground"
-          : "bg-muted/50 border-border text-muted-foreground hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5"
+          ? "bg-foreground text-background border-transparent"
+          : "bg-muted/50 border-border text-muted-foreground hover:bg-muted/80"
       )}
     >
       {label}
@@ -1935,9 +1935,9 @@ function TemplateSwitchDialog({
                 </div>
               )}
               {dialog.toolsToAdd.length > 0 && (
-                <div className="rounded-md border border-[#FF8C00]/20 bg-[#FF8C00]/5 p-2.5">
-                  <p className="text-xs font-medium text-[#FF8C00] mb-1">Add:</p>
-                  <ul className="text-xs text-[#FF8C00]/80 list-disc pl-4 space-y-0.5">
+                <div className="rounded-md border border-border bg-muted/50 p-2.5">
+                  <p className="text-xs font-medium text-foreground mb-1">Add:</p>
+                  <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-0.5">
                     {dialog.toolsToAdd.map((t) => (
                       <li key={t}>{t}</li>
                     ))}
@@ -1958,7 +1958,7 @@ function TemplateSwitchDialog({
                   type="checkbox"
                   checked={dialog.keepQuestions}
                   onChange={(e) => onKeepQuestionsChange(e.target.checked)}
-                  className="rounded border-border accent-[#FF8C00]"
+                  className="rounded border-border"
                 />
                 <div>
                   <p className="text-xs font-medium">
@@ -2005,7 +2005,7 @@ function TemplateSwitchDialog({
               e.preventDefault();
               onConfirm();
             }}
-            className="gradient-accent-bg text-white border-0 hover:opacity-90"
+            className="bg-foreground text-background border-0 hover:bg-foreground/90"
           >
             {switching ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
@@ -2253,7 +2253,7 @@ function RemoveTemplateDialog({
                 type="checkbox"
                 checked={removeTools}
                 onChange={(e) => setRemoveTools(e.target.checked)}
-                className="rounded border-border accent-[#FF8C00]"
+                className="rounded border-border"
               />
               <div>
                 <p className="text-xs font-medium">
