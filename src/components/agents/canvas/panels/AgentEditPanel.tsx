@@ -570,7 +570,7 @@ export function AgentEditPanel({
                         backgroundClip: "padding-box, border-box",
                       } : undefined}
                       className={cn(
-                        "flex items-start gap-2 rounded-lg border-2 px-3 py-2.5 text-left transition-all",
+                        "flex items-start gap-2 rounded-[20px] border-2 px-3 py-2.5 text-left transition-all",
                         currentPreset === preset.value
                           ? "[--card-bg:#1E1E1E] border-transparent shadow-sm"
                           : "border-black/5 dark:border-[#2A2A2A] canvas-dark:border-[#2A2A2A] hover:bg-[#252525]"

@@ -32,7 +32,7 @@ export function OptionCard({
       onClick={() => onSelect(value)}
       style={selected ? gradientBorderStyle : undefined}
       className={cn(
-        "w-full text-left px-5 py-4 rounded-xl border-2 transition-all duration-200",
+        "w-full text-left px-5 py-4 rounded-[20px] border-2 transition-all duration-200",
         "focus:outline-none focus:ring-2 focus:ring-foreground/20",
         selected
           ? "[--card-bg:#f8f9fa] dark:[--card-bg:#1E1E1E] canvas-dark:[--card-bg:#1E1E1E] border-transparent shadow-sm"

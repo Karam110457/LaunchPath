@@ -122,6 +122,46 @@ async function getActiveToolkits(
 }
 
 /**
+ * Recursively fix JSON Schema nodes that have "type": "array" but no "items".
+ * OpenAI (via OpenRouter) rejects these schemas.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function fixArraySchemas(node: any): any {
+  if (!node || typeof node !== "object") return node;
+
+  if (Array.isArray(node)) {
+    return node.map(fixArraySchemas);
+  }
+
+  const fixed = { ...node };
+
+  // Fix: array type without items
+  if (fixed.type === "array" && !fixed.items) {
+    fixed.items = {};
+  }
+
+  // Recurse into common JSON Schema keywords
+  for (const key of [
+    "properties", "items", "additionalProperties",
+    "allOf", "anyOf", "oneOf", "not", "then", "else", "if",
+  ]) {
+    if (fixed[key] !== undefined) {
+      if (key === "properties" && typeof fixed[key] === "object" && !Array.isArray(fixed[key])) {
+        const props = { ...fixed[key] };
+        for (const propName of Object.keys(props)) {
+          props[propName] = fixArraySchemas(props[propName]);
+        }
+        fixed[key] = props;
+      } else {
+        fixed[key] = fixArraySchemas(fixed[key]);
+      }
+    }
+  }
+
+  return fixed;
+}
+
+/**
  * Creates a schema modifier that cleans descriptions, strips pinned (fixed)
  * parameter fields, and annotates default parameter fields.
  */
@@ -191,7 +231,8 @@ function makeSchemaModifier(
       }
     }
 
-    return schema;
+    // Fix malformed Composio schemas (e.g. array without items)
+    return fixArraySchemas(schema);
   };
 }
 
