@@ -26,7 +26,7 @@ export function OptionCard({
         "w-full text-left px-5 py-4 rounded-xl border transition-all duration-200",
         "focus:outline-none focus:ring-2 focus:ring-foreground/20",
         selected
-          ? "border-transparent gradient-accent-border bg-gradient-to-br from-[#FF8C00]/8 to-[#9D50BB]/8 shadow-sm"
+          ? "border-transparent gradient-accent-border bg-card shadow-sm"
           : "border-border bg-card hover:bg-muted/50"
       )}
     >

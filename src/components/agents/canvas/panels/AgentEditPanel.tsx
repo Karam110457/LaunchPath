@@ -567,7 +567,7 @@ export function AgentEditPanel({
                       className={cn(
                         "flex items-start gap-2 rounded-lg border px-3 py-2.5 text-left transition-all",
                         currentPreset === preset.value
-                          ? "border-transparent gradient-accent-border bg-gradient-to-br from-[#FF8C00]/8 to-[#9D50BB]/8"
+                          ? "border-transparent gradient-accent-border bg-card"
                           : "border-border hover:bg-muted/50"
                       )}
                     >
