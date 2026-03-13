@@ -41,6 +41,9 @@ export function PreviewChatPanel({
   const [inputValue, setInputValue] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [preChatCompleted, setPreChatCompleted] = useState(false);
+  const [preChatName, setPreChatName] = useState("");
+  const [preChatEmail, setPreChatEmail] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const sessionIdRef = useRef(generateId());
@@ -55,6 +58,10 @@ export function PreviewChatPanel({
   const isDark = config.theme === "dark";
   const isSharp = config.borderRadius === "sharp";
   const showBranding = config.showBranding !== false;
+  const showFileUpload = config.fileUpload?.enabled !== false;
+  const showEndChat = config.endChat?.enabled !== false;
+  const showPreChatForm = config.preChatForm?.enabled ?? false;
+  const preChatFields = config.preChatForm?.fields ?? ["name", "email"];
 
   const avatarContent = config.agentAvatar;
   const isAvatarUrl = avatarContent?.startsWith("http");
@@ -261,25 +268,47 @@ export function PreviewChatPanel({
             Online
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
-          style={{ color: contrastMuted }}
-          aria-label="Close chat"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
+        <div className="flex items-center gap-0.5">
+          {showEndChat && messages.length > 0 && (
+            <button
+              className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:opacity-80"
+              style={{ color: contrastMuted }}
+              title="End chat"
+              aria-label="End chat"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+              </svg>
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+            style={{ color: contrastMuted }}
+            aria-label="Close chat"
           >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -345,8 +374,88 @@ export function PreviewChatPanel({
         </div>
       )}
 
+      {/* Pre-Chat Form Overlay */}
+      {showPreChatForm && !preChatCompleted && messages.length === 0 && (
+        <div className={`absolute inset-0 z-10 flex flex-col ${isDark ? "bg-gray-900" : "bg-white"}`}>
+          <div
+            className="px-4 py-3.5 flex items-center gap-2.5 shrink-0"
+            style={{ backgroundColor: primaryColor }}
+          >
+            <div className="font-semibold" style={{ color: contrastColor, fontSize: `${fontSize}px` }}>
+              {agentName}
+            </div>
+          </div>
+          <div className="flex-1 flex flex-col justify-center px-6 gap-4">
+            <div className="text-center">
+              <p className={`text-sm font-medium ${isDark ? "text-gray-200" : "text-gray-800"}`}>
+                Before we start, tell us about yourself
+              </p>
+              <p className={`text-xs mt-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+                This helps us serve you better
+              </p>
+            </div>
+            {preChatFields.includes("name") && (
+              <input
+                value={preChatName}
+                onChange={(e) => setPreChatName(e.target.value)}
+                placeholder="Your name"
+                className={`w-full border rounded-xl px-3 py-2.5 text-sm outline-none transition-colors ${
+                  isDark
+                    ? "border-gray-700 bg-gray-800 text-gray-100 placeholder:text-gray-500"
+                    : "border-gray-200 bg-white text-gray-900 placeholder:text-gray-400"
+                }`}
+              />
+            )}
+            {preChatFields.includes("email") && (
+              <input
+                value={preChatEmail}
+                onChange={(e) => setPreChatEmail(e.target.value)}
+                placeholder="Email address"
+                type="email"
+                className={`w-full border rounded-xl px-3 py-2.5 text-sm outline-none transition-colors ${
+                  isDark
+                    ? "border-gray-700 bg-gray-800 text-gray-100 placeholder:text-gray-500"
+                    : "border-gray-200 bg-white text-gray-900 placeholder:text-gray-400"
+                }`}
+              />
+            )}
+            <button
+              onClick={() => setPreChatCompleted(true)}
+              className="w-full py-2.5 rounded-xl text-sm font-medium transition-opacity hover:opacity-90"
+              style={{ backgroundColor: primaryColor, color: contrastColor }}
+            >
+              Start Chat
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Input */}
       <div className={`px-4 py-3 border-t flex gap-2 items-end shrink-0 ${isDark ? "border-gray-700" : "border-gray-100"}`}>
+        {showFileUpload && (
+          <button
+            className={`w-[38px] h-[38px] rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+              isDark
+                ? "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
+                : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+            }`}
+            title="Attach file"
+            aria-label="Attach file"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.49" />
+            </svg>
+          </button>
+        )}
         <textarea
           ref={inputRef}
           value={inputValue}
