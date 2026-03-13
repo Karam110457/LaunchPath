@@ -30,6 +30,21 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
+/** Inline style for gradient border via background-clip trick */
+const gradientBorderStyle: React.CSSProperties = {
+  backgroundImage:
+    "linear-gradient(var(--card-bg), var(--card-bg)), linear-gradient(135deg, #FF8C00, #9D50BB)",
+  backgroundOrigin: "border-box",
+  backgroundClip: "padding-box, border-box",
+};
+
+const gradientBorderHoverStyle: React.CSSProperties = {
+  backgroundImage:
+    "linear-gradient(var(--card-bg), var(--card-bg)), linear-gradient(135deg, rgba(255,140,0,0.45), rgba(157,80,187,0.45))",
+  backgroundOrigin: "border-box",
+  backgroundClip: "padding-box, border-box",
+};
+
 function ToggleButton({
   options,
   value,
@@ -39,22 +54,40 @@ function ToggleButton({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const [hovered, setHovered] = useState<string | null>(null);
+
   return (
     <div className="flex gap-1.5">
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          onClick={() => onChange(opt.value)}
-          className={`flex-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-            value === opt.value
-              ? "gradient-accent-border bg-card text-foreground shadow-sm"
-              : "border border-border/40 bg-card/60 text-muted-foreground hover:border-border/80 hover:text-foreground"
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
+      {options.map((opt) => {
+        const isSelected = value === opt.value;
+        const isHovered = hovered === opt.value && !isSelected;
+
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            onMouseEnter={() => setHovered(opt.value)}
+            onMouseLeave={() => setHovered(null)}
+            style={
+              isSelected
+                ? gradientBorderStyle
+                : isHovered
+                  ? gradientBorderHoverStyle
+                  : undefined
+            }
+            className={`flex-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all border-2 ${
+              isSelected
+                ? "[--card-bg:#ffffff] dark:[--card-bg:#151515] border-transparent bg-card text-foreground shadow-sm"
+                : isHovered
+                  ? "[--card-bg:#ffffff] dark:[--card-bg:#151515] border-transparent text-foreground"
+                  : "border-border/40 bg-card/60 text-muted-foreground"
+            }`}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
