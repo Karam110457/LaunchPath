@@ -527,6 +527,179 @@ export function PortalCampaignDetail({
                 </FieldGroup>
               </SectionCard>
 
+              {/* Pre-Chat Form & Survey */}
+              <SectionCard
+                icon={MessageSquare}
+                title="Data Collection"
+                description="Collect visitor information and feedback."
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium">Pre-Chat Form</label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Collect name and email before the conversation starts.
+                    </p>
+                  </div>
+                  <Toggle
+                    checked={!!(config.preChatForm as Record<string, unknown> | undefined)?.enabled}
+                    onChange={(v) =>
+                      updateConfig("preChatForm", {
+                        enabled: v,
+                        fields: ((config.preChatForm as Record<string, unknown> | undefined)?.fields as string[]) ?? ["name", "email"],
+                      })
+                    }
+                    disabled={!isAdmin}
+                  />
+                </div>
+
+                {Boolean((config.preChatForm as Record<string, unknown> | undefined)?.enabled) && (
+                  <div className="pl-2 flex items-center gap-4">
+                    <label className="flex items-center gap-1.5 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={((config.preChatForm as Record<string, unknown> | undefined)?.fields as string[] | undefined)?.includes("name") ?? true}
+                        onChange={(e) => {
+                          const fields = [...(((config.preChatForm as Record<string, unknown> | undefined)?.fields as string[]) ?? ["name", "email"])];
+                          if (e.target.checked) {
+                            if (!fields.includes("name")) fields.unshift("name");
+                          } else {
+                            const idx = fields.indexOf("name");
+                            if (idx >= 0) fields.splice(idx, 1);
+                          }
+                          updateConfig("preChatForm", { enabled: true, fields });
+                        }}
+                        disabled={!isAdmin}
+                        className="rounded"
+                      />
+                      Name
+                    </label>
+                    <label className="flex items-center gap-1.5 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={((config.preChatForm as Record<string, unknown> | undefined)?.fields as string[] | undefined)?.includes("email") ?? true}
+                        onChange={(e) => {
+                          const fields = [...(((config.preChatForm as Record<string, unknown> | undefined)?.fields as string[]) ?? ["name", "email"])];
+                          if (e.target.checked) {
+                            if (!fields.includes("email")) fields.push("email");
+                          } else {
+                            const idx = fields.indexOf("email");
+                            if (idx >= 0) fields.splice(idx, 1);
+                          }
+                          updateConfig("preChatForm", { enabled: true, fields });
+                        }}
+                        disabled={!isAdmin}
+                        className="rounded"
+                      />
+                      Email
+                    </label>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium">Post-Chat Survey</label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Show a satisfaction rating when the conversation closes.
+                    </p>
+                  </div>
+                  <Toggle
+                    checked={!!(config.csatSurvey as Record<string, unknown> | undefined)?.enabled}
+                    onChange={(v) => updateConfig("csatSurvey", { enabled: v })}
+                    disabled={!isAdmin}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium">File Uploads</label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Allow visitors to send images and PDFs in the chat.
+                    </p>
+                  </div>
+                  <Toggle
+                    checked={(config.fileUpload as Record<string, unknown> | undefined)?.enabled !== false}
+                    onChange={(v) => updateConfig("fileUpload", { enabled: v })}
+                    disabled={!isAdmin}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium">End Chat Button</label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Let visitors close conversations from the widget header.
+                    </p>
+                  </div>
+                  <Toggle
+                    checked={(config.endChat as Record<string, unknown> | undefined)?.enabled !== false}
+                    onChange={(v) => updateConfig("endChat", { enabled: v })}
+                    disabled={!isAdmin}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium">Auto-Escalation</label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Transfer to a human when keywords or message loops are detected.
+                    </p>
+                  </div>
+                  <Toggle
+                    checked={(config.autoEscalation as Record<string, unknown> | undefined)?.enabled !== false}
+                    onChange={(v) =>
+                      updateConfig("autoEscalation", {
+                        enabled: v,
+                        keywords: ((config.autoEscalation as Record<string, unknown> | undefined)?.keywords as string[]) ?? [],
+                      })
+                    }
+                    disabled={!isAdmin}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium">Auto-Close Stale Conversations</label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Automatically close conversations after inactivity.
+                    </p>
+                  </div>
+                  <Toggle
+                    checked={(config.autoClose as Record<string, unknown> | undefined)?.enabled !== false}
+                    onChange={(v) =>
+                      updateConfig("autoClose", {
+                        enabled: v,
+                        hours: ((config.autoClose as Record<string, unknown> | undefined)?.hours as number) ?? 24,
+                      })
+                    }
+                    disabled={!isAdmin}
+                  />
+                </div>
+
+                {(config.autoClose as Record<string, unknown> | undefined)?.enabled !== false && (
+                  <div className="pl-2">
+                    <FieldGroup label="Inactivity Period" hint="Hours of inactivity before auto-closing.">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={1}
+                          max={168}
+                          value={((config.autoClose as Record<string, unknown> | undefined)?.hours as number) ?? 24}
+                          onChange={(e) =>
+                            updateConfig("autoClose", {
+                              enabled: true,
+                              hours: parseInt(e.target.value) || 24,
+                            })
+                          }
+                          disabled={!isAdmin}
+                          className={cn(INPUT_CLASS, "w-24")}
+                        />
+                        <span className="text-xs text-muted-foreground">hours</span>
+                      </div>
+                    </FieldGroup>
+                  </div>
+                )}
+              </SectionCard>
+
               {/* Button & Position */}
               <SectionCard
                 icon={MousePointer2}

@@ -82,11 +82,49 @@ export async function PATCH(
     return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
   }
 
+  const currentStatus = (conversation as Record<string, unknown>).status as string | undefined;
+
+  // Prevent re-closing an already closed conversation
+  if (currentStatus === "closed") {
+    return NextResponse.json(
+      { error: "Conversation is already closed" },
+      { status: 409 }
+    );
+  }
+
+  // Prevent concurrent takeover — if already taken over by a different user, reject
+  if (body.status === "human_takeover" && currentStatus === "human_takeover") {
+    const existingOwner = (conversation as Record<string, unknown>).taken_over_by as string | null;
+    if (existingOwner && existingOwner !== user.id) {
+      return NextResponse.json(
+        { error: "Conversation is already taken over by another team member" },
+        { status: 409 }
+      );
+    }
+  }
+
   const updates: Record<string, unknown> = { status: body.status };
 
   if (body.status === "human_takeover") {
     updates.taken_over_by = user.id;
     updates.taken_over_at = new Date().toISOString();
+
+    // Generate warm handoff summary from conversation messages
+    const messages = ((conversation as Record<string, unknown>).messages ?? []) as Array<{ role: string; content: string }>;
+    const visibleMessages = messages.filter((m) => ["user", "assistant"].includes(m.role));
+    if (visibleMessages.length > 0) {
+      const lastUserMessages = visibleMessages
+        .filter((m) => m.role === "user")
+        .slice(-3)
+        .map((m) => m.content);
+      const summary = `Visitor asked about: ${lastUserMessages.join(" | ")}. ${visibleMessages.length} messages exchanged.`;
+      const existingMeta = ((conversation as Record<string, unknown>).metadata ?? {}) as Record<string, unknown>;
+      updates.metadata = {
+        ...existingMeta,
+        handoff_summary: summary,
+        handoff_at: new Date().toISOString(),
+      };
+    }
   } else if (body.status === "paused") {
     updates.paused_at = new Date().toISOString();
   } else if (body.status === "active") {

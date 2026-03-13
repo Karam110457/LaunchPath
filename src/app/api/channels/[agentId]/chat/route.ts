@@ -48,7 +48,7 @@ export async function POST(
   const { data: channel } = await supabase
     .from("agent_channels")
     .select(
-      "id, agent_id, user_id, channel_type, allowed_origins, rate_limit_rpm, is_enabled"
+      "id, agent_id, user_id, channel_type, allowed_origins, rate_limit_rpm, is_enabled, config"
     )
     .eq("token", token)
     .eq("agent_id", agentId)
@@ -118,6 +118,7 @@ export async function POST(
     userMessage?: string;
     sessionId?: string;
     messages?: AgentConversationMessage[];
+    visitorInfo?: { name?: string; email?: string };
   };
 
   try {
@@ -193,8 +194,8 @@ export async function POST(
           .eq("id", existing.id);
 
         return NextResponse.json(
-          { status: "human_takeover", message: "A team member will respond shortly." },
-          { headers: corsHeaders }
+          { error: "human_takeover", message: "A team member will respond shortly." },
+          { status: 423, headers: corsHeaders }
         );
       }
 
@@ -209,6 +210,107 @@ export async function POST(
         (existing.messages as unknown as AgentConversationMessage[]) ?? []
       ).slice(-MAX_HISTORY_MESSAGES);
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // 6c. Store visitor info in conversation metadata (from pre-chat form)
+  // ---------------------------------------------------------------------------
+
+  if (body.visitorInfo && existingConversationId) {
+    const { data: convRow } = await supabase
+      .from("channel_conversations")
+      .select("metadata")
+      .eq("id", existingConversationId)
+      .single();
+    const existingMeta = ((convRow?.metadata ?? {}) as Record<string, unknown>);
+    if (!existingMeta.visitor_name && !existingMeta.visitor_email) {
+      await supabase
+        .from("channel_conversations")
+        .update({
+          metadata: {
+            ...existingMeta,
+            visitor_name: body.visitorInfo.name || null,
+            visitor_email: body.visitorInfo.email || null,
+          },
+        })
+        .eq("id", existingConversationId);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // 6d. Auto-escalation detection (gated by config toggle)
+  // ---------------------------------------------------------------------------
+
+  const widgetConfig = (channel.config ?? {}) as Record<string, unknown>;
+  const autoEscalationConfig = widgetConfig.autoEscalation as { enabled?: boolean; keywords?: string[] } | undefined;
+  const autoEscalationEnabled = autoEscalationConfig?.enabled !== false; // default: on
+
+  let wantsHuman = false;
+  let isLooping = false;
+
+  if (autoEscalationEnabled) {
+    const defaultKeywords = [
+      "talk to a human", "speak to someone", "speak to a human",
+      "talk to a person", "agent please", "real person",
+      "human agent", "transfer me", "speak with someone",
+      "let me talk to", "connect me to", "i want a human",
+    ];
+    const escalationKeywords = autoEscalationConfig?.keywords?.length
+      ? autoEscalationConfig.keywords
+      : defaultKeywords;
+
+    const messageLower = body.userMessage.toLowerCase();
+    wantsHuman = escalationKeywords.some((kw) => messageLower.includes(kw));
+
+    // Loop detection: same message sent 3+ times
+    const recentUserMessages = conversationHistory
+      .filter((m) => m.role === "user")
+      .slice(-5)
+      .map((m) => m.content.toLowerCase().trim());
+    const currentMsg = body.userMessage.toLowerCase().trim();
+    const repeatCount = recentUserMessages.filter((m) => m === currentMsg).length;
+    isLooping = repeatCount >= 2; // Current + 2 previous = 3 total
+  }
+
+  if ((wantsHuman || isLooping) && existingConversationId) {
+    // Auto-escalate to human_takeover
+    await supabase
+      .from("channel_conversations")
+      .update({
+        status: "human_takeover",
+        metadata: {
+          ...((await supabase
+            .from("channel_conversations")
+            .select("metadata")
+            .eq("id", existingConversationId)
+            .single()).data?.metadata ?? {}) as Record<string, unknown>,
+          escalation_reason: wantsHuman ? "explicit_request" : "loop_detected",
+          escalated_at: new Date().toISOString(),
+        },
+      })
+      .eq("id", existingConversationId);
+
+    // Save user message + escalation notice
+    const escalationMsg = wantsHuman
+      ? "I'm connecting you with a team member. They'll have the full context of our conversation."
+      : "It seems like you might need more help. I'm connecting you with a team member.";
+
+    const existingMessages = conversationHistory as unknown as Array<Record<string, unknown>>;
+    const updatedMessages = [
+      ...existingMessages,
+      { role: "user", content: body.userMessage, timestamp: new Date().toISOString() },
+      { role: "assistant", content: escalationMsg, timestamp: new Date().toISOString() },
+    ] as unknown as Json;
+
+    await supabase
+      .from("channel_conversations")
+      .update({ messages: updatedMessages })
+      .eq("id", existingConversationId);
+
+    return NextResponse.json(
+      { error: "human_takeover", message: escalationMsg },
+      { status: 423, headers: corsHeaders }
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -238,6 +340,12 @@ export async function POST(
           .eq("id", existingConversationId);
         return existingConversationId;
       } else {
+        const metadata = body.visitorInfo
+          ? {
+              visitor_name: body.visitorInfo.name || null,
+              visitor_email: body.visitorInfo.email || null,
+            }
+          : undefined;
         const { data: newConv } = await supabase
           .from("channel_conversations")
           .insert({
@@ -245,6 +353,7 @@ export async function POST(
             agent_id: agentId,
             session_id: body.sessionId!,
             messages: messagesJson,
+            ...(metadata ? { metadata: metadata as unknown as Json } : {}),
           })
           .select("id")
           .single();

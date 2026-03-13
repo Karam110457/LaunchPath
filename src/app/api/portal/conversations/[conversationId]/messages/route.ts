@@ -57,13 +57,16 @@ export async function POST(
     );
   }
 
-  // Append human agent message
+  // Append human agent message with sender identity for display
   const messages = (conversation.messages ?? []) as Array<Record<string, unknown>>;
+  const senderEmail = user.email ?? "Team member";
+  const senderName = senderEmail.split("@")[0];
   const newMessage = {
     role: "human_agent",
     content: body.message.trim(),
     timestamp: new Date().toISOString(),
     sent_by: user.id,
+    sent_by_name: senderName,
   };
 
   const updatedMessages = [...messages, newMessage];

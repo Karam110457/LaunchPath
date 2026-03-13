@@ -332,6 +332,218 @@ export function ConfigPanel({
                 </button>
               )}
             </div>
+
+            <hr className="border-neutral-200/50 dark:border-neutral-700/50" />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-xs">Pre-Chat Form</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Collect visitor name and email before they start chatting.
+                </p>
+              </div>
+              <Toggle
+                checked={config.preChatForm?.enabled ?? false}
+                onChange={(v) =>
+                  updateConfig("preChatForm", {
+                    enabled: v,
+                    fields: config.preChatForm?.fields ?? ["name", "email"],
+                  })
+                }
+              />
+            </div>
+
+            {config.preChatForm?.enabled && (
+              <div className="pl-2 space-y-2">
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-1.5 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={config.preChatForm?.fields?.includes("name") ?? true}
+                      onChange={(e) => {
+                        const fields = [...(config.preChatForm?.fields ?? ["name", "email"])];
+                        if (e.target.checked) {
+                          if (!fields.includes("name")) fields.unshift("name");
+                        } else {
+                          const idx = fields.indexOf("name");
+                          if (idx >= 0) fields.splice(idx, 1);
+                        }
+                        updateConfig("preChatForm", { enabled: true, fields: fields as ("name" | "email")[] });
+                      }}
+                      className="rounded"
+                    />
+                    Name
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={config.preChatForm?.fields?.includes("email") ?? true}
+                      onChange={(e) => {
+                        const fields = [...(config.preChatForm?.fields ?? ["name", "email"])];
+                        if (e.target.checked) {
+                          if (!fields.includes("email")) fields.push("email");
+                        } else {
+                          const idx = fields.indexOf("email");
+                          if (idx >= 0) fields.splice(idx, 1);
+                        }
+                        updateConfig("preChatForm", { enabled: true, fields: fields as ("name" | "email")[] });
+                      }}
+                      className="rounded"
+                    />
+                    Email
+                  </label>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-xs">Post-Chat Survey</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Show a satisfaction rating after the conversation closes.
+                </p>
+              </div>
+              <Toggle
+                checked={config.csatSurvey?.enabled ?? false}
+                onChange={(v) => updateConfig("csatSurvey", { enabled: v })}
+              />
+            </div>
+
+            <hr className="border-neutral-200/50 dark:border-neutral-700/50" />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-xs">File Uploads</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Allow visitors to send images and PDFs in the chat.
+                </p>
+              </div>
+              <Toggle
+                checked={config.fileUpload?.enabled !== false}
+                onChange={(v) => updateConfig("fileUpload", { enabled: v })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-xs">End Chat Button</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Let visitors close the conversation from the widget header.
+                </p>
+              </div>
+              <Toggle
+                checked={config.endChat?.enabled !== false}
+                onChange={(v) => updateConfig("endChat", { enabled: v })}
+              />
+            </div>
+
+            <hr className="border-neutral-200/50 dark:border-neutral-700/50" />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-xs">Auto-Escalation</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Automatically transfer to a human when keywords or loops are detected.
+                </p>
+              </div>
+              <Toggle
+                checked={config.autoEscalation?.enabled !== false}
+                onChange={(v) =>
+                  updateConfig("autoEscalation", {
+                    enabled: v,
+                    keywords: config.autoEscalation?.keywords ?? [],
+                  })
+                }
+              />
+            </div>
+
+            {config.autoEscalation?.enabled !== false && (
+              <div className="pl-2 space-y-2">
+                <FieldGroup
+                  label="Custom Keywords"
+                  hint="Add trigger phrases that will escalate to a human agent. Leave empty for defaults (e.g. &ldquo;talk to a human&rdquo;)."
+                >
+                  <div className="space-y-1.5">
+                    {(config.autoEscalation?.keywords ?? []).map((kw, i) => (
+                      <div key={i} className="flex gap-1.5">
+                        <input
+                          value={kw}
+                          onChange={(e) => {
+                            const keywords = [...(config.autoEscalation?.keywords ?? [])];
+                            keywords[i] = e.target.value;
+                            updateConfig("autoEscalation", { enabled: true, keywords });
+                          }}
+                          className={`${INPUT_CLASS} flex-1 text-xs py-1.5`}
+                          placeholder="e.g. talk to support"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const keywords = (config.autoEscalation?.keywords ?? []).filter((_, idx) => idx !== i);
+                            updateConfig("autoEscalation", { enabled: true, keywords });
+                          }}
+                          className="p-1 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const keywords = [...(config.autoEscalation?.keywords ?? []), ""];
+                      updateConfig("autoEscalation", { enabled: true, keywords });
+                    }}
+                    className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Add keyword
+                  </button>
+                </FieldGroup>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-xs">Auto-Close Stale Conversations</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Automatically close conversations after a period of inactivity.
+                </p>
+              </div>
+              <Toggle
+                checked={config.autoClose?.enabled !== false}
+                onChange={(v) =>
+                  updateConfig("autoClose", {
+                    enabled: v,
+                    hours: config.autoClose?.hours ?? 24,
+                  })
+                }
+              />
+            </div>
+
+            {config.autoClose?.enabled !== false && (
+              <div className="pl-2">
+                <FieldGroup label="Inactivity Period" hint="Hours of inactivity before auto-closing.">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={168}
+                      value={config.autoClose?.hours ?? 24}
+                      onChange={(e) =>
+                        updateConfig("autoClose", {
+                          enabled: true,
+                          hours: parseInt(e.target.value) || 24,
+                        })
+                      }
+                      className={`${INPUT_CLASS} w-20`}
+                    />
+                    <span className="text-xs text-muted-foreground">hours</span>
+                  </div>
+                </FieldGroup>
+              </div>
+            )}
           </>
         )}
 

@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
   // Get all conversations
   const { data: allConversations } = await supabase
     .from("channel_conversations")
-    .select("id, channel_id, messages, status, created_at")
+    .select("id, channel_id, messages, metadata, status, created_at")
     .in("channel_id", channelIds);
 
   const conversations = allConversations ?? [];
@@ -120,6 +120,28 @@ export async function GET(request: NextRequest) {
     })
   );
 
+  // CSAT metrics
+  const csatRatings: number[] = [];
+  let escalationCount = 0;
+  let closedCount = 0;
+
+  for (const c of conversations) {
+    const meta = ((c as Record<string, unknown>).metadata ?? {}) as Record<string, unknown>;
+    if (typeof meta.csat_rating === "number") {
+      csatRatings.push(meta.csat_rating);
+    }
+    if (meta.escalation_reason) {
+      escalationCount++;
+    }
+    if (c.status === "closed") {
+      closedCount++;
+    }
+  }
+
+  const csatAverage = csatRatings.length > 0
+    ? Math.round((csatRatings.reduce((a, b) => a + b, 0) / csatRatings.length) * 10) / 10
+    : null;
+
   return NextResponse.json({
     total_conversations: total,
     new_conversations: newCount,
@@ -128,5 +150,9 @@ export async function GET(request: NextRequest) {
     average_messages: avgMessages,
     human_takeover_count: takeoverCount,
     active_campaigns: (campaigns ?? []).filter((c) => c.status === "active").length,
+    closed_conversations: closedCount,
+    escalation_count: escalationCount,
+    csat_average: csatAverage,
+    csat_count: csatRatings.length,
   });
 }

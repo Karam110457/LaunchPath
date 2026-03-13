@@ -8,11 +8,26 @@ interface ConversationMessage {
   content: string;
   timestamp?: string;
   sent_by?: string;
+  sent_by_name?: string;
+}
+
+export interface ConversationMetadata {
+  visitor_name?: string | null;
+  visitor_email?: string | null;
+  csat_rating?: number | null;
+  csat_feedback?: string | null;
+  csat_submitted_at?: string | null;
+  escalation_reason?: string | null;
+  escalated_at?: string | null;
+  handoff_summary?: string | null;
+  handoff_at?: string | null;
+  [key: string]: unknown;
 }
 
 interface UseConversationRealtimeResult {
   messages: ConversationMessage[];
   status: string;
+  metadata: ConversationMetadata;
   isLoading: boolean;
   refresh: () => void;
 }
@@ -29,6 +44,7 @@ export function useConversationRealtime(
 ): UseConversationRealtimeResult {
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [status, setStatus] = useState("active");
+  const [metadata, setMetadata] = useState<ConversationMetadata>({});
   const [isLoading, setIsLoading] = useState(true);
   const supabaseRef = useRef(createClient());
   const lastKnownCountRef = useRef(0);
@@ -40,13 +56,15 @@ export function useConversationRealtime(
 
     const { data } = await supabase
       .from("channel_conversations")
-      .select("messages, status")
+      .select("messages, status, metadata")
       .eq("id", conversationId)
       .single();
 
     if (data) {
-      const msgs = (data.messages ?? []) as ConversationMessage[];
-      const newStatus = (data as Record<string, unknown>).status as string ?? "active";
+      const row = data as Record<string, unknown>;
+      const msgs = (row.messages ?? []) as ConversationMessage[];
+      const newStatus = (row.status as string) ?? "active";
+      const meta = (row.metadata ?? {}) as ConversationMetadata;
 
       // Only update state if something actually changed
       if (msgs.length !== lastKnownCountRef.current || newStatus !== status) {
@@ -54,6 +72,7 @@ export function useConversationRealtime(
         setStatus(newStatus);
         lastKnownCountRef.current = msgs.length;
       }
+      setMetadata(meta);
     }
     setIsLoading(false);
   }, [conversationId, status]);
@@ -89,15 +108,21 @@ export function useConversationRealtime(
           if (newRow.status) {
             setStatus(newRow.status as string);
           }
+          if (newRow.metadata) {
+            setMetadata(newRow.metadata as ConversationMetadata);
+          }
         }
       )
       .subscribe();
 
-    // Fallback: poll every 3s to catch missed Realtime events
+    // Fallback: poll every 3s to catch missed Realtime events.
+    // If Realtime fired since the last poll, skip this cycle and reset
+    // the flag so we resume polling if Realtime goes silent.
     const pollInterval = setInterval(() => {
-      // If Realtime is firing reliably, reduce polling to every 10s
-      // by skipping intermediate polls
-      if (realtimeFiredRef.current) return;
+      if (realtimeFiredRef.current) {
+        realtimeFiredRef.current = false;
+        return;
+      }
       fetchConversation();
     }, 3000);
 
@@ -107,5 +132,5 @@ export function useConversationRealtime(
     };
   }, [conversationId, fetchConversation]);
 
-  return { messages, status, isLoading, refresh: fetchConversation };
+  return { messages, status, metadata, isLoading, refresh: fetchConversation };
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { Download } from "lucide-react";
 import { usePortal } from "@/contexts/PortalContext";
 import { ConversationFilters } from "./ConversationFilters";
 
@@ -73,17 +74,53 @@ export function PortalConversationsList({ campaigns }: PortalConversationsListPr
     setOffset(0);
   }, [campaignId, status, search]);
 
+  const [isExporting, setIsExporting] = useState(false);
+
+  async function handleExport(format: "csv" | "json") {
+    setIsExporting(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("format", format);
+      if (campaignId) params.set("campaignId", campaignId);
+      const res = await fetch(`/api/portal/conversations/export?${params}`);
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `conversations.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
-      <ConversationFilters
-        campaigns={campaigns}
-        campaignId={campaignId}
-        status={status}
-        search={search}
-        onCampaignChange={setCampaignId}
-        onStatusChange={setStatus}
-        onSearchChange={setSearch}
-      />
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex-1">
+          <ConversationFilters
+            campaigns={campaigns}
+            campaignId={campaignId}
+            status={status}
+            search={search}
+            onCampaignChange={setCampaignId}
+            onStatusChange={setStatus}
+            onSearchChange={setSearch}
+          />
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => handleExport("csv")}
+            disabled={isExporting}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full border border-border/40 bg-card/60 backdrop-blur-md hover:bg-muted/50 transition-colors duration-150 disabled:opacity-50"
+          >
+            <Download className="size-3.5" />
+            {isExporting ? "Exporting..." : "Export CSV"}
+          </button>
+        </div>
+      </div>
 
       {isLoading ? (
         <div className="rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-14 text-center text-muted-foreground animate-skeleton-pulse">

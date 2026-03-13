@@ -23,6 +23,7 @@ export function ConversationControls({
   onStatusChange,
 }: ConversationControlsProps) {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const canTakeover = usePortalCan("conversation.takeover");
   const canPause = usePortalCan("conversation.pause");
   const canResume = usePortalCan("conversation.resume");
@@ -32,6 +33,7 @@ export function ConversationControls({
 
   async function updateStatus(newStatus: string) {
     setIsUpdating(true);
+    setError(null);
     try {
       const res = await fetch(`/api/portal/conversations/${conversationId}`, {
         method: "PATCH",
@@ -40,7 +42,12 @@ export function ConversationControls({
       });
       if (res.ok) {
         onStatusChange(newStatus);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Failed to update status");
       }
+    } catch {
+      setError("Network error");
     } finally {
       setIsUpdating(false);
     }
@@ -53,6 +60,10 @@ export function ConversationControls({
       >
         {statusInfo.label}
       </span>
+
+      {error && (
+        <span className="text-xs text-red-500 dark:text-red-400">{error}</span>
+      )}
 
       <div className="flex items-center gap-2">
         {status === "active" && canTakeover && (

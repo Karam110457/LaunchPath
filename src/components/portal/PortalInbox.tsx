@@ -7,7 +7,7 @@ import { useConversationRealtime } from "@/hooks/useConversationRealtime";
 import { useConversationListRealtime } from "@/hooks/useConversationListRealtime";
 import { ConversationControls } from "./ConversationControls";
 import { LiveTranscript } from "./LiveTranscript";
-import { Search, MessageSquare, ChevronLeft } from "lucide-react";
+import { Search, MessageSquare, ChevronLeft, User, Mail, Star, AlertTriangle, Info, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +22,7 @@ interface Conversation {
   message_count: number;
   last_message: string | null;
   campaign_id: string | null;
+  metadata?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
@@ -286,7 +287,9 @@ export function PortalInbox({ campaigns }: PortalInboxProps) {
                         )}
                       />
                       <span className="text-sm font-medium truncate">
-                        {conv.session_id.slice(0, 12)}
+                        {(conv.metadata as Record<string, unknown>)?.visitor_name
+                          ? String((conv.metadata as Record<string, unknown>).visitor_name)
+                          : conv.session_id.slice(0, 12)}
                       </span>
                       <span className={cn(
                         "text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 transition-colors duration-300",
@@ -388,43 +391,166 @@ function InboxDetail({
   conversationId: string;
   onBack: () => void;
 }) {
-  const { messages, status, isLoading, refresh } =
+  const { messages, status, metadata, isLoading, refresh } =
     useConversationRealtime(conversationId);
+  const [showInfo, setShowInfo] = useState(false);
 
   if (isLoading) {
     return <DetailSkeleton />;
   }
 
+  const hasMetadata = !!(
+    metadata.visitor_name ||
+    metadata.visitor_email ||
+    metadata.csat_rating ||
+    metadata.escalation_reason ||
+    metadata.handoff_summary
+  );
+
   return (
-    <div className="flex flex-col h-full animate-in fade-in slide-in-from-right-2 duration-200">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0 bg-background/80 backdrop-blur-sm">
-        <button
-          onClick={onBack}
-          className="md:hidden p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200 active:scale-95"
-        >
-          <ChevronLeft className="size-4" />
-        </button>
-        <div className="flex-1 min-w-0">
-          <ConversationControls
+    <div className="flex h-full animate-in fade-in slide-in-from-right-2 duration-200">
+      {/* Main conversation area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0 bg-background/80 backdrop-blur-sm">
+          <button
+            onClick={onBack}
+            className="md:hidden p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200 active:scale-95"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <ConversationControls
+              conversationId={conversationId}
+              status={status}
+              onStatusChange={() => refresh()}
+            />
+          </div>
+          <span className="text-xs text-muted-foreground animate-in fade-in duration-300">
+            {messages.length} msg{messages.length !== 1 ? "s" : ""}
+          </span>
+          {hasMetadata && (
+            <button
+              onClick={() => setShowInfo(!showInfo)}
+              className={cn(
+                "p-1.5 rounded-full transition-all duration-200 active:scale-95",
+                showInfo
+                  ? "text-foreground bg-muted/50"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+              title="Visitor info"
+            >
+              {showInfo ? <PanelRightClose className="size-4" /> : <PanelRightOpen className="size-4" />}
+            </button>
+          )}
+        </div>
+
+        {/* Transcript + input */}
+        <div className="flex-1 min-h-0">
+          <LiveTranscript
             conversationId={conversationId}
+            messages={messages}
             status={status}
-            onStatusChange={() => refresh()}
           />
         </div>
-        <span className="text-xs text-muted-foreground animate-in fade-in duration-300">
-          {messages.length} msg{messages.length !== 1 ? "s" : ""}
-        </span>
       </div>
 
-      {/* Transcript + input */}
-      <div className="flex-1 min-h-0">
-        <LiveTranscript
-          conversationId={conversationId}
-          messages={messages}
-          status={status}
-        />
-      </div>
+      {/* Metadata sidebar */}
+      {showInfo && hasMetadata && (
+        <div className="w-[240px] border-l border-border bg-muted/20 overflow-y-auto flex-shrink-0 animate-in slide-in-from-right-4 duration-200 hidden lg:block">
+          <div className="p-4 space-y-5">
+            {/* Visitor Info */}
+            {(metadata.visitor_name || metadata.visitor_email) && (
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  Visitor
+                </h4>
+                {metadata.visitor_name && (
+                  <div className="flex items-center gap-2">
+                    <User className="size-3.5 text-muted-foreground/60 shrink-0" />
+                    <span className="text-xs truncate">{metadata.visitor_name}</span>
+                  </div>
+                )}
+                {metadata.visitor_email && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="size-3.5 text-muted-foreground/60 shrink-0" />
+                    <span className="text-xs truncate">{metadata.visitor_email}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* CSAT Rating */}
+            {metadata.csat_rating != null && (
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  Satisfaction
+                </h4>
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Star
+                      key={n}
+                      className={cn(
+                        "size-3.5",
+                        n <= (metadata.csat_rating ?? 0)
+                          ? "text-amber-400 fill-amber-400"
+                          : "text-muted-foreground/30"
+                      )}
+                    />
+                  ))}
+                  <span className="text-xs text-muted-foreground ml-1">
+                    {metadata.csat_rating}/5
+                  </span>
+                </div>
+                {metadata.csat_feedback && (
+                  <p className="text-xs text-muted-foreground italic leading-relaxed">
+                    &ldquo;{metadata.csat_feedback}&rdquo;
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Escalation */}
+            {metadata.escalation_reason && (
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  Escalation
+                </h4>
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="size-3.5 text-amber-500 shrink-0 mt-0.5" />
+                  <span className="text-xs">
+                    {metadata.escalation_reason === "explicit_request"
+                      ? "Visitor requested a human"
+                      : metadata.escalation_reason === "loop_detected"
+                      ? "Loop detected (repeated messages)"
+                      : String(metadata.escalation_reason)}
+                  </span>
+                </div>
+                {metadata.escalated_at && (
+                  <span className="text-[10px] text-muted-foreground/60 block pl-5">
+                    {new Date(metadata.escalated_at).toLocaleString()}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Handoff Summary */}
+            {metadata.handoff_summary && (
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  Handoff Summary
+                </h4>
+                <div className="flex items-start gap-2">
+                  <Info className="size-3.5 text-blue-500 shrink-0 mt-0.5" />
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {metadata.handoff_summary}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

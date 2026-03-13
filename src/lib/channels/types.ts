@@ -19,6 +19,34 @@ export interface WidgetConfig {
   greetingDelay?: number;
   /** Widget size preset */
   widgetSize?: "compact" | "default" | "large";
+  /** Pre-chat form: collect visitor info before first message */
+  preChatForm?: {
+    enabled: boolean;
+    fields: ("name" | "email")[];
+  };
+  /** CSAT survey after conversation close */
+  csatSurvey?: {
+    enabled: boolean;
+  };
+  /** Allow visitors to upload files (images/PDFs) */
+  fileUpload?: {
+    enabled: boolean;
+  };
+  /** Show "End Chat" button in widget header */
+  endChat?: {
+    enabled: boolean;
+  };
+  /** Auto-escalation to human when keywords or loops detected */
+  autoEscalation?: {
+    enabled: boolean;
+    keywords?: string[];
+  };
+  /** Auto-close stale conversations */
+  autoClose?: {
+    enabled: boolean;
+    /** Hours of inactivity before closing (default: 24) */
+    hours?: number;
+  };
 }
 
 /** Shape returned by the channel CRUD API */

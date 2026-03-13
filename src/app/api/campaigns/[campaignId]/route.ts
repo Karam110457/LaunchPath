@@ -163,6 +163,16 @@ export async function PATCH(
     );
   }
 
+  // Sync channel is_enabled with campaign status to prevent state desync
+  if (body.status === "active" || body.status === "paused") {
+    const isEnabled = body.status === "active";
+    await supabase
+      .from("agent_channels")
+      .update({ is_enabled: isEnabled })
+      .eq("campaign_id", campaignId)
+      .eq("user_id", user.id);
+  }
+
   return NextResponse.json({ campaign });
 }
 

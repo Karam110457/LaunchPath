@@ -9,6 +9,8 @@ interface Message {
   role: string;
   content: string;
   timestamp?: string;
+  sent_by?: string;
+  sent_by_name?: string;
 }
 
 interface LiveTranscriptProps {
@@ -70,7 +72,7 @@ export function LiveTranscript({ conversationId, messages, status }: LiveTranscr
               ) : msg.role === "human_agent" ? (
                 <div className="max-w-[75%] rounded-2xl px-4 py-2.5 text-sm bg-blue-500/10 text-foreground border border-blue-500/20">
                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-blue-500/20 text-blue-600 dark:text-blue-400 mb-1">
-                    Team
+                    {msg.sent_by_name ?? "Team"}
                   </span>
                   <p className="whitespace-pre-wrap">{msg.content}</p>
                 </div>

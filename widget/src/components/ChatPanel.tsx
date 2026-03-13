@@ -2,7 +2,9 @@ import { h } from "preact";
 import { useState, useEffect, useRef, useCallback } from "preact/hooks";
 import { MessageBubble } from "./MessageBubble";
 import { TypingDots } from "./TypingDots";
-import type { WidgetConfig, Message, ConversationStatus } from "../types";
+import { PreChatForm } from "./PreChatForm";
+import { CsatSurvey } from "./CsatSurvey";
+import type { WidgetConfig, Message, MessageAttachment, ConversationStatus, VisitorInfo } from "../types";
 import { getContrastColor } from "../contrast";
 
 interface ChatPanelProps {
@@ -53,6 +55,23 @@ function saveHistory(channelId: string, messages: Message[]) {
   }
 }
 
+function loadVisitorInfo(channelId: string): VisitorInfo | null {
+  try {
+    const raw = localStorage.getItem(`lp_visitor_${channelId}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveVisitorInfo(channelId: string, info: VisitorInfo) {
+  try {
+    localStorage.setItem(`lp_visitor_${channelId}`, JSON.stringify(info));
+  } catch {
+    // Storage full — ignore
+  }
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Status banner shown during HITL states                                     */
 /* -------------------------------------------------------------------------- */
@@ -60,7 +79,7 @@ function saveHistory(channelId: string, messages: Message[]) {
 function StatusBanner({ status }: { status: ConversationStatus }) {
   if (status === "human_takeover") {
     return (
-      <div style={{
+      <div role="status" aria-live="assertive" style={{
         padding: "8px 16px",
         backgroundColor: "rgba(59,130,246,0.08)",
         borderBottom: "1px solid rgba(59,130,246,0.12)",
@@ -75,7 +94,7 @@ function StatusBanner({ status }: { status: ConversationStatus }) {
   }
   if (status === "paused") {
     return (
-      <div style={{
+      <div role="status" aria-live="assertive" style={{
         padding: "8px 16px",
         backgroundColor: "rgba(245,158,11,0.08)",
         borderBottom: "1px solid rgba(245,158,11,0.12)",
@@ -90,7 +109,7 @@ function StatusBanner({ status }: { status: ConversationStatus }) {
   }
   if (status === "closed") {
     return (
-      <div style={{
+      <div role="status" aria-live="assertive" style={{
         padding: "8px 16px",
         backgroundColor: "rgba(113,113,122,0.08)",
         borderBottom: "1px solid rgba(113,113,122,0.12)",
@@ -104,6 +123,28 @@ function StatusBanner({ status }: { status: ConversationStatus }) {
     );
   }
   return null;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Delivered receipt indicator                                                */
+/* -------------------------------------------------------------------------- */
+
+function DeliveredCheck() {
+  return (
+    <div style={{
+      display: "flex",
+      justifyContent: "flex-end",
+      alignItems: "center",
+      gap: "4px",
+      marginTop: "2px",
+      marginRight: "4px",
+    }}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+      <span style={{ fontSize: "10px", color: "#9ca3af" }}>Delivered</span>
+    </div>
+  );
 }
 
 export function ChatPanel({
@@ -125,12 +166,22 @@ export function ChatPanel({
   const [isStreaming, setIsStreaming] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [convStatus, setConvStatus] = useState<ConversationStatus>("active");
+  const [showCsat, setShowCsat] = useState(false);
+  const [csatDismissed, setCsatDismissed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const sessionId = useRef(getSessionId(channelId));
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const knownMessageCount = useRef(0);
   const hasInteracted = useRef(false);
+  const prevStatusRef = useRef<ConversationStatus>("active");
+
+  // Pre-chat form state
+  const preChatEnabled = config.preChatForm?.enabled && (config.preChatForm.fields?.length ?? 0) > 0;
+  const [visitorInfo, setVisitorInfo] = useState<VisitorInfo | null>(() =>
+    loadVisitorInfo(channelId)
+  );
+  const needsPreChat = preChatEnabled && !visitorInfo && messages.length === 0;
 
   const primaryColor = config.primaryColor || "#6366f1";
   const contrastColor = getContrastColor(primaryColor);
@@ -142,6 +193,39 @@ export function ChatPanel({
   const isSharp = config.borderRadius === "sharp";
   const showBranding = config.showBranding !== false;
 
+  // Show CSAT survey when conversation closes (if enabled)
+  useEffect(() => {
+    if (
+      convStatus === "closed" &&
+      prevStatusRef.current !== "closed" &&
+      config.csatSurvey?.enabled &&
+      !csatDismissed
+    ) {
+      setShowCsat(true);
+    }
+    prevStatusRef.current = convStatus;
+  }, [convStatus, config.csatSurvey?.enabled, csatDismissed]);
+
+  // Detect return-to-bot transition and inject system message
+  useEffect(() => {
+    if (
+      convStatus === "active" &&
+      (prevStatusRef.current === "human_takeover" || prevStatusRef.current === "paused") &&
+      messages.length > 0
+    ) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: generateId(),
+          role: "assistant",
+          content: "You're now back with our AI assistant. How else can I help?",
+          timestamp: Date.now(),
+        },
+      ]);
+    }
+    // Note: prevStatusRef is updated in the CSAT effect above
+  }, [convStatus]);
+
   // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -149,14 +233,13 @@ export function ChatPanel({
 
   // Focus input on open
   useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+    if (!needsPreChat) {
+      inputRef.current?.focus();
+    }
+  }, [needsPreChat]);
 
   // ---------------------------------------------------------------------------
   // Background status polling
-  // Polls every 10s during active (to detect takeover/pause),
-  // every 3s during human_takeover (to get human messages quickly).
-  // Only starts after the user has sent at least one message.
   // ---------------------------------------------------------------------------
   useEffect(() => {
     if (!hasInteracted.current) return;
@@ -164,7 +247,6 @@ export function ChatPanel({
 
     const interval = convStatus === "human_takeover" ? 3000 : 10000;
 
-    // Initialize known count on first poll start
     const initPoll = async () => {
       try {
         const r = await fetch(
@@ -194,12 +276,10 @@ export function ChatPanel({
         if (!r.ok) return;
         const d = await r.json();
 
-        // Status change detection
         if (d.status && d.status !== convStatus) {
           setConvStatus(d.status as ConversationStatus);
         }
 
-        // Always advance the cursor so we don't re-fetch the same slice
         if (d.totalMessages != null && d.totalMessages > knownMessageCount.current) {
           const humanMsgs = (d.newMessages ?? []).filter(
             (m: { role: string }) => m.role === "human_agent"
@@ -232,6 +312,30 @@ export function ChatPanel({
   }, [convStatus, apiOrigin, channelId]);
 
   // ---------------------------------------------------------------------------
+  // Pre-chat form submission
+  // ---------------------------------------------------------------------------
+  function handlePreChatSubmit(info: VisitorInfo) {
+    setVisitorInfo(info);
+    saveVisitorInfo(channelId, info);
+  }
+
+  // ---------------------------------------------------------------------------
+  // CSAT survey submission
+  // ---------------------------------------------------------------------------
+  function handleCsatSubmit(rating: number, feedback: string) {
+    // Fire and forget — send rating to server
+    fetch(`${apiOrigin}/api/widget/${channelId}/rating`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId: sessionId.current,
+        rating,
+        feedback: feedback || undefined,
+      }),
+    }).catch(() => {});
+  }
+
+  // ---------------------------------------------------------------------------
   // Send message
   // ---------------------------------------------------------------------------
   const sendMessage = useCallback(
@@ -254,6 +358,15 @@ export function ChatPanel({
       setIsTyping(true);
 
       try {
+        const payload: Record<string, unknown> = {
+          userMessage: text.trim(),
+          sessionId: sessionId.current,
+        };
+        // Attach visitor info on first message
+        if (visitorInfo) {
+          payload.visitorInfo = visitorInfo;
+        }
+
         const response = await fetch(
           `${apiOrigin}/api/channels/${agentId}/chat`,
           {
@@ -262,19 +375,17 @@ export function ChatPanel({
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({
-              userMessage: text.trim(),
-              sessionId: sessionId.current,
-            }),
+            body: JSON.stringify(payload),
           }
         );
 
-        // Handle HITL status responses (non-streaming JSON)
+        // Handle HITL status responses (non-streaming JSON — 423 or other error)
         const contentType = response.headers.get("content-type") ?? "";
         if (contentType.includes("application/json")) {
           const data = await response.json();
 
-          if (data.status === "human_takeover") {
+          // 423 = human_takeover or paused
+          if (data.error === "human_takeover") {
             setConvStatus("human_takeover");
             setMessages((prev) => [
               ...prev,
@@ -411,7 +522,7 @@ export function ChatPanel({
         setIsTyping(false);
       }
     },
-    [agentId, apiOrigin, token, isStreaming, convStatus]
+    [agentId, apiOrigin, token, isStreaming, convStatus, visitorInfo]
   );
 
   // Save history whenever messages change
@@ -450,12 +561,146 @@ export function ChatPanel({
     isSharp ? "lp-sharp" : "",
   ].filter(Boolean).join(" ");
 
-  const inputDisabled = isStreaming || convStatus === "closed" || convStatus === "paused";
+  // ---------------------------------------------------------------------------
+  // End chat (visitor-initiated close)
+  // ---------------------------------------------------------------------------
+  const [isClosing, setIsClosing] = useState(false);
+
+  function handleEndChat() {
+    if (isClosing || convStatus === "closed") return;
+    setIsClosing(true);
+    fetch(`${apiOrigin}/api/widget/${channelId}/close`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId: sessionId.current }),
+    })
+      .then((r) => {
+        if (r.ok) setConvStatus("closed");
+      })
+      .catch(() => {})
+      .finally(() => setIsClosing(false));
+  }
+
+  // ---------------------------------------------------------------------------
+  // File upload
+  // ---------------------------------------------------------------------------
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  async function handleFileSelect(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    input.value = ""; // Reset so same file can be re-selected
+
+    if (file.size > 5 * 1024 * 1024) {
+      setMessages((prev) => [
+        ...prev,
+        { id: generateId(), role: "assistant", content: "File is too large. Maximum size is 5MB.", timestamp: Date.now() },
+      ]);
+      return;
+    }
+
+    setIsUploading(true);
+    hasInteracted.current = true;
+
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("sessionId", sessionId.current);
+
+      const res = await fetch(`${apiOrigin}/api/widget/${channelId}/upload`, {
+        method: "POST",
+        body: form,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Upload failed");
+      }
+
+      const data = await res.json() as MessageAttachment;
+
+      // Add user message with attachment
+      const isImage = data.fileType.startsWith("image/");
+      const userMsg: Message = {
+        id: generateId(),
+        role: "user",
+        content: isImage ? "" : `Sent a file: ${data.fileName}`,
+        timestamp: Date.now(),
+        attachment: data,
+      };
+      setMessages((prev) => [...prev, userMsg]);
+
+      // Send text message referencing the file so the AI knows about it
+      await sendMessage(`[User attached a file: ${data.fileName} (${data.fileType})]`);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        { id: generateId(), role: "assistant", content: "Failed to upload file. Please try again.", timestamp: Date.now() },
+      ]);
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  const inputDisabled = isStreaming || isUploading || convStatus === "closed" || convStatus === "paused";
+
+  // Find the last user message index to show read receipt
+  const lastUserMsgIndex = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "user" && !messages[i].isStreaming) return i;
+    }
+    return -1;
+  })();
+
+  // Show receipt only after the last user message when not streaming and there's a response after it
+  const showReceipt = lastUserMsgIndex >= 0 && !isStreaming && !isTyping &&
+    (messages.length > lastUserMsgIndex + 1 || lastUserMsgIndex === messages.length - 1);
+
+  // ---------------------------------------------------------------------------
+  // Focus trap + keyboard handling
+  // ---------------------------------------------------------------------------
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      // Focus trap: Tab cycles within the panel
+      if (e.key === "Tab" && panelRef.current) {
+        const focusable = panelRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), textarea:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   return (
-    <div class={panelClass} style={{ width: `${panelW}px`, height: `${panelH}px`, fontSize: `${fontSize}px` }}>
+    <div
+      ref={panelRef}
+      class={panelClass}
+      style={{ width: `${panelW}px`, height: `${panelH}px`, fontSize: `${fontSize}px` }}
+      role="dialog"
+      aria-label={`Chat with ${agentName}`}
+      aria-modal="true"
+    >
       {/* Header — primary color banner */}
-      <div class="lp-header" style={{ backgroundColor: primaryColor }}>
+      <div class="lp-header" role="banner" style={{ backgroundColor: primaryColor }}>
         <div
           class="lp-header-avatar"
           style={{ backgroundColor: contrastColor === "#ffffff" ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)" }}
@@ -481,88 +726,182 @@ export function ChatPanel({
             {convStatus === "human_takeover" ? "Team member connected" : convStatus === "closed" ? "Closed" : "Online"}
           </div>
         </div>
-        <button
-          class="lp-close-btn"
-          onClick={onClose}
-          aria-label="Close chat"
-          style={{ color: contrastMuted }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+          {config.endChat?.enabled !== false && convStatus !== "closed" && messages.length > 0 && (
+            <button
+              onClick={handleEndChat}
+              disabled={isClosing}
+              aria-label="End chat"
+              style={{
+                background: "none",
+                border: `1px solid ${contrastColor === "#ffffff" ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.15)"}`,
+                borderRadius: "12px",
+                padding: "3px 10px",
+                cursor: isClosing ? "default" : "pointer",
+                color: contrastMuted,
+                fontSize: "11px",
+                fontWeight: 500,
+                opacity: isClosing ? 0.5 : 1,
+                transition: "opacity 150ms",
+              }}
+            >
+              {isClosing ? "Ending..." : "End Chat"}
+            </button>
+          )}
+          <button
+            class="lp-close-btn"
+            onClick={onClose}
+            aria-label="Minimize chat"
+            style={{ color: contrastMuted }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Status banner */}
       <StatusBanner status={convStatus} />
 
-      {/* Messages */}
-      <div class="lp-messages">
-        {messages.length === 0 && (
-          <div class="lp-welcome">{welcomeMessage}</div>
-        )}
-
-        {messages.map((msg) => (
-          <MessageBubble
-            key={msg.id}
-            message={msg}
-            primaryColor={primaryColor}
-          />
-        ))}
-
-        {isTyping && <TypingDots />}
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Conversation Starters */}
-      {showStarters && (
-        <div class="lp-starters">
-          {starters.slice(0, 4).map((s) => (
-            <button
-              key={s}
-              class="lp-starter-btn"
-              onClick={() => sendMessage(s)}
-              disabled={isStreaming}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
+      {/* CSAT Survey overlay */}
+      {showCsat && !csatDismissed && (
+        <CsatSurvey
+          primaryColor={primaryColor}
+          isDark={isDark}
+          onSubmit={handleCsatSubmit}
+          onDismiss={() => { setShowCsat(false); setCsatDismissed(true); }}
+        />
       )}
 
-      {/* Input */}
-      <div class="lp-input-area">
-        <textarea
-          ref={inputRef}
-          class="lp-input"
-          value={inputValue}
-          onInput={handleInput}
-          onKeyDown={handleKeyDown}
-          placeholder={
-            convStatus === "closed"
-              ? "This conversation has ended"
-              : convStatus === "paused"
-              ? "Conversation paused..."
-              : "Type a message..."
-          }
-          rows={1}
-          disabled={inputDisabled}
+      {/* Pre-chat form gate */}
+      {needsPreChat && !showCsat ? (
+        <PreChatForm
+          fields={config.preChatForm!.fields}
+          primaryColor={primaryColor}
+          isDark={isDark}
+          onSubmit={handlePreChatSubmit}
         />
-        <button
-          class="lp-send-btn"
-          style={{ backgroundColor: primaryColor, color: contrastColor }}
-          onClick={() => sendMessage(inputValue)}
-          disabled={!inputValue.trim() || inputDisabled}
-          aria-label="Send message"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13" />
-            <polygon points="22 2 15 22 11 13 2 9 22 2" />
-          </svg>
-        </button>
-      </div>
+      ) : !showCsat ? (
+        <>
+          {/* Messages */}
+          <div class="lp-messages" role="log" aria-live="polite" aria-label="Conversation messages">
+            {messages.length === 0 && (
+              <div class="lp-welcome">{welcomeMessage}</div>
+            )}
+
+            {messages.map((msg, i) => (
+              <div key={msg.id}>
+                <MessageBubble
+                  message={msg}
+                  primaryColor={primaryColor}
+                />
+                {/* Read receipt after last user message */}
+                {msg.role === "user" && i === lastUserMsgIndex && showReceipt && (
+                  <DeliveredCheck />
+                )}
+              </div>
+            ))}
+
+            {isTyping && <TypingDots />}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Conversation Starters */}
+          {showStarters && (
+            <div class="lp-starters">
+              {starters.slice(0, 4).map((s) => (
+                <button
+                  key={s}
+                  class="lp-starter-btn"
+                  onClick={() => sendMessage(s)}
+                  disabled={isStreaming}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Input */}
+          <div class="lp-input-area">
+            {config.fileUpload?.enabled !== false && (
+              <>
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/gif,image/webp,application/pdf"
+                  style={{ display: "none" }}
+                  onChange={handleFileSelect}
+                  aria-hidden="true"
+                />
+                {/* Attachment button */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={inputDisabled}
+                  aria-label="Attach file"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: inputDisabled ? "default" : "pointer",
+                    padding: "6px",
+                    color: isDark ? "#6b7280" : "#9ca3af",
+                    opacity: inputDisabled ? 0.4 : 1,
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    transition: "color 0.15s",
+                  }}
+                >
+                  {isUploading ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style={{ animation: "lp-bounce 1s ease-in-out infinite" }}>
+                      <circle cx="12" cy="12" r="10" stroke-dasharray="30" stroke-dashoffset="10" />
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                    </svg>
+                  )}
+                </button>
+              </>
+            )}
+            <textarea
+              ref={inputRef}
+              class="lp-input"
+              value={inputValue}
+              onInput={handleInput}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                convStatus === "closed"
+                  ? "This conversation has ended"
+                  : convStatus === "paused"
+                  ? "Conversation paused..."
+                  : isUploading
+                  ? "Uploading file..."
+                  : "Type a message..."
+              }
+              rows={1}
+              disabled={inputDisabled}
+              aria-label="Message input"
+            />
+            <button
+              class="lp-send-btn"
+              style={{ backgroundColor: primaryColor, color: contrastColor }}
+              onClick={() => sendMessage(inputValue)}
+              disabled={!inputValue.trim() || inputDisabled}
+              aria-label="Send message"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            </button>
+          </div>
+        </>
+      ) : null}
 
       {/* Powered by */}
       {showBranding && (

@@ -8,6 +8,9 @@ import {
   Hand,
   UserPlus,
   Rocket,
+  Star,
+  AlertTriangle,
+  XCircle,
 } from "lucide-react";
 
 export default async function PortalDashboard() {
@@ -52,8 +55,13 @@ export default async function PortalDashboard() {
     channel_id: string;
   }> = [];
 
+  let closedCount = 0;
+  let escalationCount = 0;
+  let csatAverage: number | null = null;
+  let csatCount = 0;
+
   if (channelIds.length > 0) {
-    const [totalRes, todayRes, weekRes, takeoverRes, recentRes] = await Promise.all([
+    const [totalRes, todayRes, weekRes, takeoverRes, recentRes, closedRes, metaRes] = await Promise.all([
       supabase
         .from("channel_conversations")
         .select("id", { count: "exact", head: true })
@@ -79,12 +87,40 @@ export default async function PortalDashboard() {
         .in("channel_id", channelIds)
         .order("updated_at", { ascending: false })
         .limit(5),
+      supabase
+        .from("channel_conversations")
+        .select("id", { count: "exact", head: true })
+        .in("channel_id", channelIds)
+        .eq("status", "closed"),
+      supabase
+        .from("channel_conversations")
+        .select("metadata")
+        .in("channel_id", channelIds)
+        .not("metadata", "is", null),
     ]);
     totalConversations = totalRes.count ?? 0;
     todayConversations = todayRes.count ?? 0;
     weekConversations = weekRes.count ?? 0;
     takeoverCount = takeoverRes.count ?? 0;
     recentConversations = (recentRes.data ?? []) as typeof recentConversations;
+    closedCount = closedRes.count ?? 0;
+
+    // Compute CSAT average + escalation count from metadata
+    const metaRows = (metaRes.data ?? []) as Array<{ metadata: Record<string, unknown> }>;
+    const csatRatings: number[] = [];
+    for (const row of metaRows) {
+      const meta = row.metadata;
+      if (meta?.csat_rating && typeof meta.csat_rating === "number") {
+        csatRatings.push(meta.csat_rating);
+      }
+      if (meta?.escalation_reason) {
+        escalationCount++;
+      }
+    }
+    csatCount = csatRatings.length;
+    csatAverage = csatCount > 0
+      ? Math.round((csatRatings.reduce((a, b) => a + b, 0) / csatCount) * 10) / 10
+      : null;
   }
 
   // Build channel→campaign map for recent conversations
@@ -102,6 +138,9 @@ export default async function PortalDashboard() {
     { label: "Active Campaigns", value: activeCampaigns, icon: Megaphone },
     { label: "Live Widgets", value: activeWidgets, icon: Rocket },
     { label: "Human Takeovers", value: takeoverCount, icon: Hand },
+    { label: "CSAT Average", value: csatAverage !== null ? `${csatAverage}/5` : "—", icon: Star },
+    { label: "Escalations", value: escalationCount, icon: AlertTriangle },
+    { label: "Closed", value: closedCount, icon: XCircle },
   ];
 
   return (
@@ -129,7 +168,7 @@ export default async function PortalDashboard() {
       <div className="w-full h-px bg-border/40" />
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 stagger-enter">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-4 stagger-enter">
         {stats.map((stat, i) => (
           <div
             key={stat.label}
