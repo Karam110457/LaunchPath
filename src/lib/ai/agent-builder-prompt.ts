@@ -11,22 +11,31 @@ You will receive a description of what kind of agent the user wants. You must ge
 
 2. **description** — A single sentence describing what this agent does. Be specific and action-oriented.
 
-3. **system_prompt** — A detailed, production-ready system prompt that will instruct the runtime AI agent. This should be 200-400 words and include:
-   - The agent's role and personality
-   - Specific behaviors and conversation flow
-   - What information to collect from the user
-   - Tone guidelines
-   - What NOT to do (boundaries)
+3. **system_prompt** — A detailed, production-ready system prompt that will instruct the runtime AI agent. This should be 150-300 words and include:
+   - The agent's role and identity (who it is, what business it represents)
+   - Business-specific knowledge (services, location, expertise, awards, policies — drawn from website facts and FAQs)
+   - Conversation approach (how to engage visitors, what to ask about, how to guide the conversation)
+   - Boundaries (what NOT to do, what to avoid)
    The system prompt should be written as direct instructions to the agent (second person: "You are...", "You should...").
-   Do NOT include tool workflow instructions or tool usage steps — those are appended separately after your output.
 
 4. **personality** — An object with:
    - tone: A short phrase describing communication style (e.g. "friendly and efficient", "warm and professional")
    - greeting_message: The first message the agent sends when a conversation starts (1-2 sentences)
 
-IMPORTANT RULES:
-- The system_prompt must be self-contained — it should work as standalone instructions for an AI agent without any other context.
-- Do NOT reference specific tools or tool names in the system_prompt. Describe capabilities in general terms (e.g. "collect their contact information" instead of "use the lead-capture tool").
+CRITICAL — WHAT NOT TO INCLUDE IN system_prompt:
+A "Configuration Directives" section is automatically appended to your system_prompt after generation. It precisely covers:
+- Communication tone and language
+- Which lead fields to collect (name, email, phone, etc.)
+- Scheduling rules (days, hours, duration, buffer)
+- Ideal customer profile and qualification criteria
+- Disqualification criteria
+- Tool workflow instructions (calendar booking steps, email sending, etc.)
+- Booking, escalation, and notification behavior
+
+Do NOT restate ANY of these in your system_prompt. Your output is COMBINED with these directives, so repeating them wastes tokens and can cause conflicts. Focus your system_prompt entirely on business-specific knowledge, conversation approach, and role definition that the directives DON'T cover.
+
+OTHER RULES:
+- Do NOT reference specific tools or tool names in the system_prompt.
 - The name should feel branded and specific, not generic like "AI Assistant" or "Chatbot".
 - The greeting_message should be natural and inviting, not corporate or stiff.
 - If the user mentions a specific business or niche, tailor everything to that context.`;
@@ -77,163 +86,43 @@ export function buildAgentGenerationContext(input: {
       parts.push(`BUSINESS CONTEXT:\n${wc.businessDescription}`);
     }
 
-    // Qualifying questions (now top-level, shared across templates)
-    const questions = (wc.qualifyingQuestions ?? []).filter((q) => q.trim());
-
+    // Pass only the template type and high-level behavioral mode.
+    // Specific config values (lead fields, scheduling, ICP, disqualification,
+    // tool workflows, etc.) are handled by Configuration Directives and must
+    // NOT be passed here to avoid duplication in the final prompt.
     if (wc.templateId === "appointment-booker") {
       const bc = wc.behaviorConfig as {
-        lead_fields?: { name?: boolean; email?: boolean; phone?: boolean; company?: boolean; custom_fields?: string[] };
         booking_behavior?: string;
-        availability?: {
-          timezone?: string; working_days?: string[]; start_time?: string;
-          end_time?: string; appointment_duration?: number; buffer_minutes?: number;
-          max_advance_days?: number;
-        };
-        service_types?: string[];
-        cancellation_policy?: string;
         qualification_mode?: string;
-        icp_description?: string;
-        disqualification_criteria?: string[];
       };
-
-      const lines = ["AGENT TYPE: Appointment Booker"];
-
-      if (bc.qualification_mode === "questions" && questions.length > 0) {
-        lines.push(
-          `Qualifying questions to ask leads (ask these exact questions):\n${questions.map((q, i) => `  ${i + 1}. ${q}`).join("\n")}`,
-        );
-      } else if (bc.icp_description) {
-        lines.push(
-          `Ideal customer profile: ${bc.icp_description}\nThe agent should ask natural, conversational questions to determine if the visitor matches this profile.`,
-        );
-      }
-
-      const fields: string[] = [];
-      if (bc.lead_fields?.name !== false) fields.push("name");
-      if (bc.lead_fields?.email !== false) fields.push("email");
-      if (bc.lead_fields?.phone) fields.push("phone");
-      if (bc.lead_fields?.company) fields.push("company");
-      const custom = (bc.lead_fields?.custom_fields ?? []).filter((f) =>
-        f.trim(),
-      );
-      fields.push(...custom);
-      if (fields.length > 0) {
-        lines.push(`Lead fields to capture: ${fields.join(", ")}`);
-      } else {
-        lines.push("Lead fields: Do not collect any personal information. Focus on the conversation only.");
-      }
-      lines.push(
-        `Booking behavior: ${bc.booking_behavior === "book_directly" ? "Book appointments directly on calendar" : "Collect lead information for manual follow-up"}`,
-      );
-
-      if (bc.availability?.working_days?.length) {
-        const a = bc.availability;
-        const days = a.working_days ?? [];
-        lines.push(
-          `Availability: ${days.join(", ")} ${a.start_time}–${a.end_time}${a.timezone ? ` (${a.timezone})` : ""}`,
-        );
-        lines.push(
-          `Appointment duration: ${a.appointment_duration ?? 30} min, buffer: ${a.buffer_minutes ?? 0} min, max advance: ${a.max_advance_days ?? 30} days`,
-        );
-      }
-      if (bc.service_types?.length) {
-        lines.push(`Service types: ${bc.service_types.join(", ")}`);
-      }
-      if (bc.cancellation_policy) {
-        lines.push(`Cancellation policy: ${bc.cancellation_policy}`);
-      }
-      if (bc.disqualification_criteria?.length) {
-        lines.push(`Disqualification criteria: ${bc.disqualification_criteria.join("; ")}`);
-      }
-
+      const lines = [
+        "AGENT TYPE: Appointment Booker",
+        `Qualification approach: ${bc.qualification_mode === "questions" ? "Ask specific qualifying questions (provided in Configuration Directives)" : "Have natural, conversational interactions to qualify visitors"}`,
+        `After qualifying: ${bc.booking_behavior === "book_directly" ? "Book consultation appointments directly on the calendar" : "Collect visitor's contact details so the team can follow up manually"}`,
+        "Note: Lead fields, scheduling rules, ICP criteria, service types, and tool workflows are provided in Configuration Directives — do not repeat them.",
+      ];
       parts.push(lines.join("\n"));
     } else if (wc.templateId === "customer-support") {
       const sc = wc.behaviorConfig as {
         escalation_mode?: string;
-        response_style?: string;
-        escalation_contact?: string;
-        business_hours?: string;
-        after_hours_message?: string;
-        forbidden_topics?: string[];
       };
-
-      const lines = ["AGENT TYPE: Customer Support"];
-
-      if (questions.length > 0) {
-        lines.push(
-          `Qualifying questions to ask visitors:\n${questions.map((q, i) => `  ${i + 1}. ${q}`).join("\n")}`,
-        );
-      }
-
-      lines.push(
-        `Escalation: ${sc.escalation_mode === "always_available" ? "Handle everything, never escalate" : "Escalate complex issues by sending an email to the team via Gmail"}`,
-      );
-      if (sc.escalation_contact) {
-        lines.push(`Escalation email (send escalation emails here via Gmail): ${sc.escalation_contact}`);
-      }
-      lines.push(
-        `Response style: ${sc.response_style === "concise" ? "Keep answers short and direct" : "Provide detailed, thorough explanations"}`,
-      );
-      if (sc.business_hours) {
-        lines.push(`Business hours: ${sc.business_hours}`);
-        if (sc.after_hours_message) {
-          lines.push(`After-hours message: ${sc.after_hours_message}`);
-        }
-      }
-      if (sc.forbidden_topics?.length) {
-        lines.push(`Forbidden topics (agent must never discuss): ${sc.forbidden_topics.join(", ")}`);
-      }
-
+      const lines = [
+        "AGENT TYPE: Customer Support",
+        `Escalation approach: ${sc.escalation_mode === "always_available" ? "Handle all issues without escalating to a human" : "Escalate complex issues that cannot be resolved"}`,
+        "Note: Escalation rules, response style, business hours, triage questions, and tool workflows are provided in Configuration Directives — do not repeat them.",
+      ];
       parts.push(lines.join("\n"));
     } else if (wc.templateId === "lead-capture" || wc.templateId === "lead-qualification") {
       const lc = wc.behaviorConfig as {
-        lead_fields?: {
-          name?: boolean; email?: boolean; phone?: boolean; company?: boolean; custom_fields?: string[];
-        };
-        notification_behavior?: string;
-        notification_email?: string;
         qualification_mode?: string;
-        icp_description?: string;
-        disqualification_criteria?: string[];
+        notification_behavior?: string;
       };
-
-      const lines = ["AGENT TYPE: Lead Capture"];
-
-      if (lc.qualification_mode === "questions" && questions.length > 0) {
-        lines.push(
-          `Qualifying questions to ask leads (ask these exact questions):\n${questions.map((q, i) => `  ${i + 1}. ${q}`).join("\n")}`,
-        );
-      } else if (lc.icp_description) {
-        lines.push(
-          `Ideal customer profile: ${lc.icp_description}\nThe agent should ask natural, conversational questions to determine if the visitor matches this profile.`,
-        );
-      }
-
-      const fields: string[] = [];
-      if (lc.lead_fields?.name !== false) fields.push("name");
-      if (lc.lead_fields?.email !== false) fields.push("email");
-      if (lc.lead_fields?.phone) fields.push("phone");
-      if (lc.lead_fields?.company) fields.push("company");
-      const customFields = (lc.lead_fields?.custom_fields ?? []).filter(
-        (f) => f.trim(),
-      );
-      fields.push(...customFields);
-      if (fields.length > 0) {
-        lines.push(`Lead fields to capture: ${fields.join(", ")}`);
-      } else {
-        lines.push("Lead fields: Do not collect any personal information. Focus on the conversation only.");
-      }
-
-      lines.push(
-        `Notification: ${lc.notification_behavior === "email_team" ? "Email team with lead summary when captured" : "Save leads to spreadsheet only"}`,
-      );
-      if (lc.notification_email && lc.notification_behavior === "email_team") {
-        lines.push(`Notification email: ${lc.notification_email}`);
-      }
-      if (lc.disqualification_criteria?.length) {
-        lines.push(`Disqualification criteria: ${lc.disqualification_criteria.join("; ")}`);
-      }
-
+      const lines = [
+        "AGENT TYPE: Lead Capture",
+        `Qualification approach: ${lc.qualification_mode === "questions" ? "Ask specific qualifying questions (provided in Configuration Directives)" : "Have natural, conversational interactions to qualify visitors"}`,
+        `After capturing: ${lc.notification_behavior === "email_team" ? "Send an internal notification to the team" : "Save lead data to the spreadsheet"}`,
+        "Note: Lead fields, ICP criteria, notification rules, and tool workflows are provided in Configuration Directives — do not repeat them.",
+      ];
       parts.push(lines.join("\n"));
     }
 
