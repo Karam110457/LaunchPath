@@ -50,7 +50,7 @@ export default async function ClientsPage() {
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
         <div className="space-y-2">
           <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">Clients</h1>
-          <p className="text-muted-foreground text-lg">Manage your deployed AI campaigns and clients.</p>
+          <p className="text-muted-foreground text-lg">Manage client accounts, deployments, and conversations.</p>
         </div>
         <Link
           href="/dashboard/clients/new"
@@ -69,7 +69,7 @@ export default async function ClientsPage() {
           <Megaphone className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
           <h3 className="text-lg font-medium">No clients yet</h3>
           <p className="text-muted-foreground text-sm mt-1 max-w-sm mx-auto">
-            Create your first client to start deploying campaigns.
+            Add a client to deploy agents, set up their portal, and start tracking conversations.
           </p>
         </div>
       ) : (
@@ -141,14 +141,14 @@ export default async function ClientsPage() {
             </div>
           )}
 
-          {/* Unlinked campaigns — campaigns not yet assigned to a client */}
+          {/* Unassigned campaigns — campaigns not yet assigned to a client */}
           {unlinkedCampaigns && unlinkedCampaigns.length > 0 && (
             <div className="space-y-3">
               <h2 className="text-sm font-semibold text-muted-foreground">
-                Unlinked Campaigns
+                Unassigned Campaigns
               </h2>
               <p className="text-xs text-muted-foreground">
-                These campaigns aren&apos;t linked to a client yet. Assign them to a client to manage them.
+                These campaigns aren&apos;t assigned to a client. Link them to enable portal access and analytics.
               </p>
               <div className="rounded-lg border bg-card divide-y">
                 {unlinkedCampaigns.map((campaign) => {

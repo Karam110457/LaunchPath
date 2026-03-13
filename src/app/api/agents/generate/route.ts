@@ -220,19 +220,72 @@ export async function POST(request: NextRequest) {
             error: "Failed to save agent. Please try again.",
           });
         } else {
-          // Emit completion immediately so the client redirects fast.
-          // KB processing, tools, and versioning continue in the background.
           logger.info("Agent created", {
             agentId: newAgent.id,
             userId: user.id,
             templateId: templateId ?? null,
           });
+
+          // ── Step 1: Add tools BEFORE sending complete ──────────────
+          // Tools must be in DB before the canvas loads, otherwise they
+          // won't appear until the user manually refreshes.
+          if (template?.suggestedTools?.length) {
+            enqueue({ type: "progress", label: "Setting up integrations..." });
+
+            const selectedToolkits = wizardConfig?.selectedToolkits;
+            const toolsToAdd = selectedToolkits
+              ? template.suggestedTools.filter((t) =>
+                  selectedToolkits.includes(t.toolkit),
+                )
+              : template.suggestedTools;
+
+            if (toolsToAdd.length > 0) {
+              try {
+                const toolkitLogos = await fetchToolkitLogos(
+                  toolsToAdd.map((t) => t.toolkit),
+                );
+
+                await Promise.all(
+                  toolsToAdd.map((tool) =>
+                    supabase.from("agent_tools").insert({
+                      agent_id: newAgent.id,
+                      user_id: user.id,
+                      tool_type: "composio",
+                      display_name: tool.displayName,
+                      description: tool.description,
+                      config: {
+                        toolkit: tool.toolkit,
+                        toolkit_name: tool.toolkitName,
+                        toolkit_icon: toolkitLogos[tool.toolkit] ?? undefined,
+                        enabled_actions: tool.actions,
+                      },
+                      is_enabled: true,
+                    }),
+                  ),
+                );
+                logger.info("Auto-added template tools", {
+                  agentId: newAgent.id,
+                  toolCount: toolsToAdd.length,
+                });
+              } catch (toolErr) {
+                logger.warn("Failed to auto-add template tools", {
+                  agentId: newAgent.id,
+                  error: toolErr instanceof Error ? toolErr.message : String(toolErr),
+                });
+              }
+            }
+          }
+
+          // ── Step 2: Emit complete — client redirects to canvas ─────
+          enqueue({ type: "progress", label: "Finalizing..." });
           enqueue({
             type: "complete",
             agent: { ...agentConfig, id: newAgent.id },
           });
 
-          // Post-generation: process wizard knowledge data
+          // ── Step 3: Knowledge processing (background) ──────────────
+          // Runs after complete so the redirect isn't blocked. The canvas
+          // page polls for knowledge doc status changes.
           if (wizardConfig) {
             const pageCount = wizardConfig.scrapedPages?.length ?? 0;
             const faqCount = wizardConfig.faqs?.length ?? 0;
@@ -247,7 +300,6 @@ export async function POST(request: NextRequest) {
             });
 
             if (totalKnowledge > 0) {
-              enqueue({ type: "progress", label: `Processing knowledge base (${totalKnowledge} items)...` });
               const kbResult = await processWizardKnowledge(
                 supabase,
                 newAgent.id,
@@ -257,7 +309,6 @@ export async function POST(request: NextRequest) {
               );
 
               if (kbResult.processed > 0) {
-                // Append KB usage note to the system prompt + enable KB flag
                 const kbNote =
                   "\n\n## Knowledge Base\n" +
                   "You have a knowledge base with uploaded documents and website content. " +
@@ -274,53 +325,7 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Auto-add suggested Composio tools from template (filtered by user selection)
-          if (template?.suggestedTools?.length) {
-            const selectedToolkits = wizardConfig?.selectedToolkits;
-            const toolsToAdd = selectedToolkits
-              ? template.suggestedTools.filter((t) =>
-                  selectedToolkits.includes(t.toolkit),
-                )
-              : template.suggestedTools;
-
-            if (toolsToAdd.length > 0) {
-              try {
-                // Fetch toolkit logos from Composio so canvas shows real icons
-                const toolkitLogos = await fetchToolkitLogos(
-                  toolsToAdd.map((t) => t.toolkit),
-                );
-
-                for (const tool of toolsToAdd) {
-                  await supabase.from("agent_tools").insert({
-                    agent_id: newAgent.id,
-                    user_id: user.id,
-                    tool_type: "composio",
-                    display_name: tool.displayName,
-                    description: tool.description,
-                    config: {
-                      toolkit: tool.toolkit,
-                      toolkit_name: tool.toolkitName,
-                      toolkit_icon: toolkitLogos[tool.toolkit] ?? undefined,
-                      enabled_actions: tool.actions,
-                    },
-                    is_enabled: true,
-                  });
-                }
-                logger.info("Auto-added template tools", {
-                  agentId: newAgent.id,
-                  toolCount: toolsToAdd.length,
-                });
-              } catch (toolErr) {
-                // Tool auto-config failed — agent still exists, user can add manually
-                logger.warn("Failed to auto-add template tools", {
-                  agentId: newAgent.id,
-                  error: toolErr instanceof Error ? toolErr.message : String(toolErr),
-                });
-              }
-            }
-          }
-
-          // Create initial version snapshot (v1)
+          // ── Step 4: Version snapshot ───────────────────────────────
           try {
             const { data: knowledgeDocs } = await supabase
               .from("agent_knowledge_documents")

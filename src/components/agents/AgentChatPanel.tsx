@@ -234,8 +234,8 @@ export function AgentChatPanel({
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction
+                    variant="destructive"
                     onClick={() => deleteConversation(activeConversationId)}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
                     Delete
                   </AlertDialogAction>

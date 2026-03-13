@@ -112,10 +112,10 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
         <div className="space-y-2">
           <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">
-            Welcome in, {userFullName}
+            Welcome back, {userFullName}
           </h1>
           <p className="text-muted-foreground text-lg">
-            Manage your fleet of AI agents.
+            Your agents — build, configure, deploy.
           </p>
         </div>
 
@@ -277,8 +277,8 @@ export function AgentsList({ agents, userFullName = "there" }: AgentsListProps) 
                           <AlertDialogFooter className="mt-6">
                             <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
                             <AlertDialogAction
+                              variant="destructive"
                               onClick={(e) => handleDelete(agent.id, e)}
-                              className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             >
                               Delete Agent
                             </AlertDialogAction>

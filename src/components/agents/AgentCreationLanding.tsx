@@ -32,18 +32,12 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string; style?:
   Target,
 };
 
-interface AgentCreationLandingProps {
-  initialWizardConfig?: import("@/types/agent-wizard").WizardGenerationPayload | null;
-}
-
-export function AgentCreationLanding({ initialWizardConfig }: AgentCreationLandingProps) {
+export function AgentCreationLanding() {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [prompt, setPrompt] = useState("");
   const [creatingBlank, setCreatingBlank] = useState(false);
-  const [wizardTemplateId, setWizardTemplateId] = useState<string | null>(
-    initialWizardConfig ? initialWizardConfig.templateId : null,
-  );
+  const [wizardTemplateId, setWizardTemplateId] = useState<string | null>(null);
   const [draftInfo, setDraftInfo] = useState<{
     exists: boolean;
     templateId?: string;
@@ -137,7 +131,6 @@ export function AgentCreationLanding({ initialWizardConfig }: AgentCreationLandi
       <div className="animate-in fade-in duration-300">
         <AgentWizard
           initialTemplateId={wizardTemplateId === "__resume__" ? undefined : wizardTemplateId}
-          initialWizardConfig={initialWizardConfig ?? undefined}
           onBack={() => {
             setWizardTemplateId(null);
             setDraftInfo(hasWizardDraft());
@@ -264,8 +257,8 @@ export function AgentCreationLanding({ initialWizardConfig }: AgentCreationLandi
             your agent
           </h1>
           <p className="mt-3 text-sm text-muted-foreground max-w-md mx-auto">
-            Tell us what you need and we&apos;ll build it. Add details
-            and watch your agent come to life.
+            Describe what you need or pick a template below. You can
+            customise everything after.
           </p>
         </div>
 

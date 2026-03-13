@@ -226,8 +226,8 @@ export function ChatContainer({
               <AlertDialogFooter>
                 <AlertDialogCancel>Keep going</AlertDialogCancel>
                 <AlertDialogAction
+                  variant="destructive"
                   onClick={onStartOver}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
                   Yes, start over
                 </AlertDialogAction>

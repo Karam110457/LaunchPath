@@ -96,7 +96,7 @@ export function Sidebar({ systems, agentCount, clientCount }: SidebarProps) {
   // Nav items
   const manageItems = [
     { label: "Agents", href: "/dashboard/agents", icon: Bot, count: agentCount },
-    { label: "Deploy", href: "/dashboard/clients", icon: Rocket, count: clientCount },
+    { label: "Clients", href: "/dashboard/clients", icon: Rocket, count: clientCount },
   ];
 
   const businessItems = selectedBusinessId

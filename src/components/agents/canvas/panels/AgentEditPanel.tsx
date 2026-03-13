@@ -799,8 +799,8 @@ export function AgentEditPanel({
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
+                      variant="destructive"
                       onClick={handleDelete}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
                       Delete Agent
                     </AlertDialogAction>
@@ -990,8 +990,8 @@ function BehaviorSection({
                     className={cn(
                       "px-2 py-1 rounded-full text-[11px] font-medium border transition-all cursor-pointer",
                       days.includes(d.value)
-                        ? "bg-[#FF8C00]/10 border-[#FF8C00]/30 text-[#FF8C00]"
-                        : "bg-muted/50 border-border text-muted-foreground hover:border-[#FF8C00]/30"
+                        ? "border-transparent gradient-accent-border bg-gradient-to-br from-[#FF8C00]/10 to-[#9D50BB]/10 text-foreground"
+                        : "bg-muted/50 border-border text-muted-foreground hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5"
                     )}
                   >
                     {d.label}
@@ -1511,13 +1511,13 @@ function LeadFilteringSection({
           type="button"
           onClick={() => updateBc({ qualification_mode: "describe" })}
           className={cn(
-            "w-full text-left rounded-lg border px-3 py-2.5 transition-all",
+            "w-full text-left rounded-xl border px-3 py-2.5 transition-all",
             mode === "describe"
-              ? "border-[#FF8C00]/40 bg-[#FF8C00]/5 ring-1 ring-[#FF8C00]/20"
-              : "hover:border-border/80"
+              ? "border-transparent gradient-accent-border bg-gradient-to-br from-[#FF8C00]/8 to-[#9D50BB]/8"
+              : "border-border hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5"
           )}
         >
-          <p className="text-xs font-medium">Describe your ideal customer</p>
+          <p className={cn("text-xs font-medium", mode === "describe" && "text-foreground")}>Describe your ideal customer</p>
           <p className="text-[11px] text-muted-foreground mt-0.5">
             Tell the agent who you&apos;re looking for and it will figure out the right questions to ask.
           </p>
@@ -1526,13 +1526,13 @@ function LeadFilteringSection({
           type="button"
           onClick={() => updateBc({ qualification_mode: "questions" })}
           className={cn(
-            "w-full text-left rounded-lg border px-3 py-2.5 transition-all",
+            "w-full text-left rounded-xl border px-3 py-2.5 transition-all",
             mode === "questions"
-              ? "border-[#FF8C00]/40 bg-[#FF8C00]/5 ring-1 ring-[#FF8C00]/20"
-              : "hover:border-border/80"
+              ? "border-transparent gradient-accent-border bg-gradient-to-br from-[#FF8C00]/8 to-[#9D50BB]/8"
+              : "border-border hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5"
           )}
         >
-          <p className="text-xs font-medium">Set specific questions</p>
+          <p className={cn("text-xs font-medium", mode === "questions" && "text-foreground")}>Set specific questions</p>
           <p className="text-[11px] text-muted-foreground mt-0.5">
             Write the exact questions your agent should ask every visitor.
           </p>
@@ -1682,8 +1682,8 @@ function FieldToggle({
         "px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
         disabled ? "cursor-default" : "cursor-pointer",
         enabled
-          ? "bg-[#FF8C00]/10 border-[#FF8C00]/30 text-[#FF8C00]"
-          : "bg-muted/50 border-border text-muted-foreground hover:border-[#FF8C00]/30"
+          ? "border-transparent gradient-accent-border bg-gradient-to-br from-[#FF8C00]/10 to-[#9D50BB]/10 text-foreground"
+          : "bg-muted/50 border-border text-muted-foreground hover:border-[#FF8C00]/30 hover:bg-[#FF8C00]/5"
       )}
     >
       {label}
@@ -1958,7 +1958,7 @@ function TemplateSwitchDialog({
                   type="checkbox"
                   checked={dialog.keepQuestions}
                   onChange={(e) => onKeepQuestionsChange(e.target.checked)}
-                  className="rounded border-border"
+                  className="rounded border-border accent-[#FF8C00]"
                 />
                 <div>
                   <p className="text-xs font-medium">
@@ -2253,7 +2253,7 @@ function RemoveTemplateDialog({
                 type="checkbox"
                 checked={removeTools}
                 onChange={(e) => setRemoveTools(e.target.checked)}
-                className="rounded border-border"
+                className="rounded border-border accent-[#FF8C00]"
               />
               <div>
                 <p className="text-xs font-medium">
@@ -2276,7 +2276,7 @@ function RemoveTemplateDialog({
               e.preventDefault();
               onConfirm(removeTools);
             }}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            variant="destructive"
           >
             {removing ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />

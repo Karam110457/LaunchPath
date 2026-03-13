@@ -410,6 +410,32 @@ function AgentCanvasInner({
     []
   );
 
+  // Poll for knowledge doc status when there are docs still processing.
+  // This handles the case where KB processing runs after the redirect.
+  useEffect(() => {
+    if (docCounts.processing <= 0) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/agents/${agent.id}/knowledge/status`);
+        if (!res.ok) return;
+        const docs = (await res.json()) as Array<{ status: string }>;
+        const newProcessing = docs.filter((d) => d.status === "processing").length;
+        setDocCounts({
+          total: docs.length,
+          ready: docs.filter((d) => d.status === "ready").length,
+          processing: newProcessing,
+        });
+        if (docs.length > 0) setHasKnowledge(true);
+        if (newProcessing === 0) clearInterval(interval);
+      } catch {
+        // Ignore — will retry on next tick
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [agent.id, docCounts.processing]);
+
   const knowledgeData = useMemo<KnowledgeNodeData>(
     () => ({
       agentId: agent.id,
@@ -1800,7 +1826,6 @@ function AgentCanvasInner({
         isTestOpen={chatOpen}
         saveStatus={saveStatus}
         onBack={handleBack}
-        onRegenerate={formState.wizardConfig ? () => router.push(`/dashboard/agents/new?regenerate=${agent.id}`) : undefined}
       />
 
       <LeftCatalogPanel

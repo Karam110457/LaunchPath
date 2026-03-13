@@ -28,10 +28,10 @@ function buildBreadcrumbs(
     return crumbs;
   }
 
-  // Deploy (clients) pages
+  // Clients pages
   if (pathname.startsWith("/dashboard/clients")) {
     crumbs.push({
-      label: "Deploy",
+      label: "Clients",
       href: "/dashboard/clients",
       isActive: pathname === "/dashboard/clients",
     });

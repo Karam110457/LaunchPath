@@ -155,7 +155,11 @@ function AlertDialogAction({
     <Button variant={variant} size={size} asChild>
       <AlertDialogPrimitive.Action
         data-slot="alert-dialog-action"
-        className={cn("rounded-full", className)}
+        className={cn(
+          "rounded-full",
+          variant === "default" && "bg-foreground text-background hover:bg-foreground/90",
+          className
+        )}
         {...props}
       />
     </Button>

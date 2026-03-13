@@ -20,8 +20,8 @@ export function EmptyAgents() {
         </div>
         <h3 className="text-lg font-medium mb-2">Create your first agent</h3>
         <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-          Build AI agents that handle appointments, qualify leads, and support
-          customers — then deploy them to WhatsApp, SMS, or your website.
+          Build agents for any use case — customer support, appointment booking,
+          lead qualification — and deploy to widget, WhatsApp, SMS, or API.
         </p>
         <Button asChild className="shadow-md gradient-accent-bg text-white hover:scale-[1.02] transition-transform border-0">
           <Link href="/dashboard/agents/new">
