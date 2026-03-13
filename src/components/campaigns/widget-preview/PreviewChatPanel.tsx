@@ -172,16 +172,33 @@ export function PreviewChatPanel({
                   );
                 }
               } else if (event.type === "error") {
+                setIsTyping(false);
+                const errorText =
+                  event.message || "Sorry, something went wrong. Please try again.";
                 if (!addedAssistant) {
                   setMessages((prev) => [
                     ...prev,
                     {
                       ...assistantMsg,
-                      content:
-                        "Sorry, something went wrong. Please try again.",
+                      content: errorText,
                       isStreaming: false,
                     },
                   ]);
+                } else {
+                  // Error arrived after partial text — append error notice
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantMsg.id
+                        ? {
+                            ...m,
+                            content:
+                              (m.content ? m.content + "\n\n" : "") +
+                              `⚠️ ${errorText}`,
+                            isStreaming: false,
+                          }
+                        : m
+                    )
+                  );
                 }
               }
             } catch {

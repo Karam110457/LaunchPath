@@ -53,7 +53,7 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
       "Books meetings and captures lead details. Perfect for service businesses.",
     icon: "Calendar",
     default_system_prompt_hint:
-      "An AI agent that qualifies leads by asking about their needs, then books appointments on the calendar. Captures name, email, and phone before booking.",
+      "An AI agent that qualifies leads by asking about their needs, then books appointments on the calendar. Captures the configured lead fields before booking.",
     suggested_personality: {
       tone: "friendly and efficient",
       greeting_message:
@@ -71,7 +71,7 @@ When booking an appointment, follow this exact sequence:
 CRITICAL RULES:
 - NEVER fabricate or guess availability — always check the calendar first
 - NEVER book without confirming all details with the customer
-- Collect name, email, and phone BEFORE attempting to book
+- Collect all configured lead fields BEFORE attempting to book (see "Lead capture" directive above for which fields to collect)
 - If no suitable times are available, offer to check alternative dates
 - Include all relevant details in the calendar event description`,
     suggestedTools: [
@@ -127,7 +127,7 @@ When helping customers:
 
 ESCALATION:
 When a conversation needs to be escalated (account changes, billing, technical issues you can't resolve, or anything beyond your scope):
-1. Collect the customer's name, email, and a clear description of their issue
+1. Collect the configured lead fields and a clear description of their issue (see "Lead capture" directive above for which fields to collect)
 2. Let the customer know you're passing this to someone who can help
 3. Use \`GMAIL_SEND_EMAIL\` to send an escalation email to the configured escalation contact with:
    - Subject: "Escalation: [brief issue summary]"
@@ -169,8 +169,8 @@ When a conversation needs to be escalated (account changes, billing, technical i
     toolWorkflow: `## Tool Workflow — Lead Qualification
 
 As you collect lead information through natural conversation:
-1. After collecting at least the visitor's name + email, use \`GOOGLESHEETS_BATCH_UPDATE\` to save the partial lead data to the spreadsheet
-2. Continue updating the spreadsheet row as you gather more details (phone, company, budget, timeline)
+1. After collecting at least 2 of the configured lead fields (see "Lead capture" directive above), use \`GOOGLESHEETS_BATCH_UPDATE\` to save the partial lead data to the spreadsheet
+2. Continue updating the spreadsheet row as you gather more details
 3. When qualification is complete, use \`GMAIL_SEND_EMAIL\` to send an internal notification email to the team with a summary of the qualified lead
 4. NEVER email the lead directly — notification emails are internal only
 

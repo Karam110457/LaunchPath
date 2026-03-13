@@ -124,6 +124,9 @@ async function getActiveToolkits(
 /**
  * Recursively fix JSON Schema nodes that have "type": "array" but no "items".
  * OpenAI (via OpenRouter) rejects these schemas.
+ *
+ * Recurses into ALL object values (not just known JSON Schema keywords) to
+ * catch deeply nested or non-standard schema structures from Composio.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function fixArraySchemas(node: any): any {
@@ -140,21 +143,12 @@ function fixArraySchemas(node: any): any {
     fixed.items = {};
   }
 
-  // Recurse into common JSON Schema keywords
-  for (const key of [
-    "properties", "items", "additionalProperties",
-    "allOf", "anyOf", "oneOf", "not", "then", "else", "if",
-  ]) {
-    if (fixed[key] !== undefined) {
-      if (key === "properties" && typeof fixed[key] === "object" && !Array.isArray(fixed[key])) {
-        const props = { ...fixed[key] };
-        for (const propName of Object.keys(props)) {
-          props[propName] = fixArraySchemas(props[propName]);
-        }
-        fixed[key] = props;
-      } else {
-        fixed[key] = fixArraySchemas(fixed[key]);
-      }
+  // Recurse into every value — covers properties, additionalProperties,
+  // anyOf, oneOf, allOf, items, and any non-standard keys Composio may use.
+  for (const key of Object.keys(fixed)) {
+    const val = fixed[key];
+    if (val && typeof val === "object") {
+      fixed[key] = fixArraySchemas(val);
     }
   }
 
@@ -231,8 +225,12 @@ function makeSchemaModifier(
       }
     }
 
-    // Fix malformed Composio schemas (e.g. array without items)
-    return fixArraySchemas(schema);
+    // Fix malformed Composio schemas (e.g. array without items).
+    // Apply fix to our clone AND mutate context.schema as a safety net —
+    // some SDK versions may read the mutation instead of the return value.
+    const fixedSchema = fixArraySchemas(schema);
+    Object.assign(context.schema, fixedSchema);
+    return fixedSchema;
   };
 }
 

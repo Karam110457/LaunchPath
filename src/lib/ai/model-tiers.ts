@@ -62,6 +62,7 @@ export const MODEL_OPTIONS: ModelOption[] = [
   { value: "openai/gpt-4o-mini", label: "GPT-4o Mini", provider: "OpenAI", tier: "fast", multiplier: 0.06 },       // $0.15/$0.60 → $0.29 blended
   { value: "openai/gpt-4.1-mini", label: "GPT-4.1 Mini", provider: "OpenAI", tier: "fast", multiplier: 0.16 },      // $0.40/$1.60 → $0.76 blended
   { value: "openai/gpt-4.1-nano", label: "GPT-4.1 Nano", provider: "OpenAI", tier: "fast", multiplier: 0.04 },      // $0.10/$0.40 → $0.19 blended
+  { value: "openai/gpt-5-mini", label: "GPT-5 Mini", provider: "OpenAI", tier: "fast", multiplier: 0.16 },        // $0.25/$2.00 → $0.78 blended — 400K ctx, GPT-5 reasoning at mini cost
   // Standard
   { value: "openai/gpt-4o", label: "GPT-4o", provider: "OpenAI", tier: "standard", multiplier: 1.0 },               // $2.50/$10 → $4.75 blended (BASELINE)
   { value: "openai/gpt-4.1", label: "GPT-4.1", provider: "OpenAI", tier: "standard", multiplier: 0.8 },             // $2.00/$8.00 → $3.80 blended

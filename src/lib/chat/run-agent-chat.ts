@@ -327,9 +327,9 @@ export async function runAgentChat(
   const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
   const writer = writable.getWriter();
 
-  const emit = (event: AgentServerEvent) => {
+  const emit = async (event: AgentServerEvent) => {
     try {
-      writer.write(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+      await writer.write(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
     } catch {
       // Writer may be closed if client disconnected
     }
@@ -390,8 +390,14 @@ export async function runAgentChat(
           });
         }
       }
-      emit({ type: "rag-context", sources: uniqueSources });
+      await emit({ type: "rag-context", sources: uniqueSources });
     }
+
+    // onFinish runs asynchronously after the stream ends — we must wait for
+    // it to complete before closing the writer, otherwise the "done" event
+    // is emitted to an already-closed writer and the client never receives it.
+    let resolveOnFinish: () => void;
+    const onFinishComplete = new Promise<void>((r) => { resolveOnFinish = r; });
 
     try {
       const streamOptions: Parameters<typeof streamText>[0] = {
@@ -498,11 +504,13 @@ export async function runAgentChat(
             });
           }
 
-          emit({
+          await emit({
             type: "done",
             assistantContent: fullContent,
             conversationId: finalConversationId,
           });
+
+          resolveOnFinish!();
         },
       };
 
@@ -519,19 +527,19 @@ export async function runAgentChat(
       for await (const chunk of result.fullStream) {
         if (chunk.type === "reasoning-delta") {
           if (!wasThinking) wasThinking = true;
-          emit({ type: "thinking", text: chunk.text });
+          await emit({ type: "thinking", text: chunk.text });
         } else if (chunk.type === "reasoning-end") {
           if (wasThinking) {
             wasThinking = false;
-            emit({ type: "thinking-done" });
+            await emit({ type: "thinking-done" });
           }
         } else if (chunk.type === "text-delta") {
           if (wasThinking) {
             wasThinking = false;
-            emit({ type: "thinking-done" });
+            await emit({ type: "thinking-done" });
           }
           hasUnfinishedText = true;
-          emit({ type: "text-delta", delta: chunk.text });
+          await emit({ type: "text-delta", delta: chunk.text });
         } else if (chunk.type === "tool-call") {
           toolEvents.push({
             role: "tool-call",
@@ -541,7 +549,7 @@ export async function runAgentChat(
             toolArgs: chunk.input as Record<string, unknown> | undefined,
           });
 
-          emit({
+          await emit({
             type: "tool-call",
             toolName: chunk.toolName,
             displayName: toolDisplayNames[chunk.toolName] ?? chunk.toolName,
@@ -572,7 +580,7 @@ export async function runAgentChat(
             toolSuccess: isSuccess,
           });
 
-          emit({
+          await emit({
             type: "tool-result",
             toolName: chunk.toolName,
             success: isSuccess,
@@ -583,18 +591,41 @@ export async function runAgentChat(
       }
 
       if (hasUnfinishedText) {
-        emit({ type: "text-done" });
+        await emit({ type: "text-done" });
       }
+
+      // Wait for onFinish to complete (DB saves, credit deduction, "done" emit)
+      // before the finally block closes the writer.
+      await onFinishComplete;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       logger.error("Agent chat stream failed", {
         agentId,
         error: message,
       });
-      emit({
+
+      // Surface a more helpful message for known error patterns
+      let userMessage = "Something went wrong. Please try again.";
+      if (
+        message.includes("Invalid schema for function") ||
+        message.includes("invalid_function_parameters")
+      ) {
+        // Extract the tool name if possible
+        const toolMatch = message.match(/function '([^']+)'/);
+        const toolName = toolMatch?.[1] ?? "a connected tool";
+        userMessage = `One of your tools (${toolName}) has an incompatible schema. Try disabling it or selecting specific actions instead of all actions.`;
+      } else if (message.includes("401") || message.includes("unauthorized")) {
+        userMessage = "Authentication failed with the AI provider. Please check your configuration.";
+      } else if (message.includes("429") || message.includes("rate limit")) {
+        userMessage = "Rate limit reached. Please wait a moment and try again.";
+      }
+
+      await emit({
         type: "error",
-        message: "Something went wrong. Please try again.",
+        message: userMessage,
       });
+      // Resolve in case onFinish never fires (stream errored before completion)
+      resolveOnFinish!();
     } finally {
       try {
         writer.close();
