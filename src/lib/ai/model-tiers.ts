@@ -1,15 +1,26 @@
 /**
- * Model definitions with multiplier-based credit pricing.
+ * Model definitions with cost-based credit pricing.
  *
- * Each model has a multiplier that determines credit cost based on actual
- * token usage: credits = round(totalTokens / 1000 × multiplier, 2), min 0.01.
+ * Credits are proportional to actual API cost:
+ *   credits = round((inputTokens × inputPrice + outputTokens × outputPrice) / 1_000_000 × CREDITS_PER_DOLLAR, 2)
+ *   minimum 0.01 credit per request.
  *
- * The multiplier reflects relative model cost. 1.0x baseline = GPT-4o ($4.75/M blended).
- * Multipliers derived from blended token pricing (70% input + 30% output)
- * using real OpenRouter/provider API prices as of March 2026.
+ * CREDITS_PER_DOLLAR (150) is the single constant that controls margin.
+ * 1 credit ≈ $0.00667 of API cost. At $29/1000 credits, this yields ~77% margin.
+ *
+ * Input/output prices are per million tokens, sourced from OpenRouter/provider
+ * pricing as of March 2026. When prices change, update the prices here —
+ * credits automatically adjust.
  */
 
 export type ModelTier = "fast" | "standard" | "advanced";
+
+/**
+ * How many credits $1 of API cost translates to.
+ * Higher = more credits per dollar = lower margin but more competitive.
+ * 150 gives 60-77% margins across all subscription tiers.
+ */
+export const CREDITS_PER_DOLLAR = 150;
 
 export interface ModelOption {
   /** Model ID sent to the provider (e.g. "openai/gpt-4o-mini") */
@@ -20,7 +31,14 @@ export interface ModelOption {
   provider: string;
   /** Display tier (fast / standard / advanced) — for UI grouping only */
   tier: ModelTier;
-  /** Credit multiplier — credits = round(totalTokens / 1000 × multiplier, 2) */
+  /** Price per million INPUT tokens in USD */
+  inputPrice: number;
+  /** Price per million OUTPUT tokens in USD */
+  outputPrice: number;
+  /**
+   * @deprecated Legacy flat multiplier — kept for UI display during transition.
+   * Will be removed once UI components are updated to show cost-per-message.
+   */
   multiplier: number;
 }
 
@@ -59,120 +77,119 @@ export const MODEL_OPTIONS: ModelOption[] = [
   // OpenAI — prices from openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
   // Fast
-  { value: "openai/gpt-4o-mini", label: "GPT-4o Mini", provider: "OpenAI", tier: "fast", multiplier: 0.06 },       // $0.15/$0.60 → $0.29 blended
-  { value: "openai/gpt-4.1-mini", label: "GPT-4.1 Mini", provider: "OpenAI", tier: "fast", multiplier: 0.16 },      // $0.40/$1.60 → $0.76 blended
-  { value: "openai/gpt-4.1-nano", label: "GPT-4.1 Nano", provider: "OpenAI", tier: "fast", multiplier: 0.04 },      // $0.10/$0.40 → $0.19 blended
-  { value: "openai/gpt-5-mini", label: "GPT-5 Mini", provider: "OpenAI", tier: "fast", multiplier: 0.16 },        // $0.25/$2.00 → $0.78 blended — 400K ctx, GPT-5 reasoning at mini cost
+  { value: "openai/gpt-4o-mini", label: "GPT-4o Mini", provider: "OpenAI", tier: "fast", inputPrice: 0.15, outputPrice: 0.60, multiplier: 0.06 },
+  { value: "openai/gpt-4.1-mini", label: "GPT-4.1 Mini", provider: "OpenAI", tier: "fast", inputPrice: 0.40, outputPrice: 1.60, multiplier: 0.16 },
+  { value: "openai/gpt-4.1-nano", label: "GPT-4.1 Nano", provider: "OpenAI", tier: "fast", inputPrice: 0.10, outputPrice: 0.40, multiplier: 0.04 },
+  { value: "openai/gpt-5-mini", label: "GPT-5 Mini", provider: "OpenAI", tier: "fast", inputPrice: 0.25, outputPrice: 2.00, multiplier: 0.16 },
   // Standard
-  { value: "openai/gpt-4o", label: "GPT-4o", provider: "OpenAI", tier: "standard", multiplier: 1.0 },               // $2.50/$10 → $4.75 blended (BASELINE)
-  { value: "openai/gpt-4.1", label: "GPT-4.1", provider: "OpenAI", tier: "standard", multiplier: 0.8 },             // $2.00/$8.00 → $3.80 blended
-  { value: "openai/gpt-5.2", label: "GPT-5.2", provider: "OpenAI", tier: "standard", multiplier: 1.14 },            // $1.75/$14.00 → $5.43 blended
-  { value: "openai/gpt-5.2-chat", label: "GPT-5.2 Chat", provider: "OpenAI", tier: "standard", multiplier: 1.14 },  // $1.75/$14.00 → $5.43 blended
-  { value: "openai/gpt-5.3-chat", label: "GPT-5.3 Chat", provider: "OpenAI", tier: "standard", multiplier: 1.14 },  // $1.75/$14.00 → $5.43 blended
-  { value: "openai/gpt-5.4", label: "GPT-5.4", provider: "OpenAI", tier: "standard", multiplier: 1.32 },            // $2.50/$15.00 → $6.25 blended
+  { value: "openai/gpt-4o", label: "GPT-4o", provider: "OpenAI", tier: "standard", inputPrice: 2.50, outputPrice: 10.00, multiplier: 1.0 },
+  { value: "openai/gpt-4.1", label: "GPT-4.1", provider: "OpenAI", tier: "standard", inputPrice: 2.00, outputPrice: 8.00, multiplier: 0.8 },
+  { value: "openai/gpt-5.2", label: "GPT-5.2", provider: "OpenAI", tier: "standard", inputPrice: 1.75, outputPrice: 14.00, multiplier: 1.14 },
+  { value: "openai/gpt-5.2-chat", label: "GPT-5.2 Chat", provider: "OpenAI", tier: "standard", inputPrice: 1.75, outputPrice: 14.00, multiplier: 1.14 },
+  { value: "openai/gpt-5.3-chat", label: "GPT-5.3 Chat", provider: "OpenAI", tier: "standard", inputPrice: 1.75, outputPrice: 14.00, multiplier: 1.14 },
+  { value: "openai/gpt-5.4", label: "GPT-5.4", provider: "OpenAI", tier: "standard", inputPrice: 2.50, outputPrice: 15.00, multiplier: 1.32 },
   // Advanced
-  { value: "openai/o3", label: "GPT o3", provider: "OpenAI", tier: "advanced", multiplier: 0.8 },                    // $2.00/$8.00 → $3.80 blended
-  { value: "openai/o3-mini", label: "GPT o3 Mini", provider: "OpenAI", tier: "standard", multiplier: 0.44 },         // $1.10/$4.40 → $2.09 blended
-  { value: "openai/gpt-5.2-pro", label: "GPT-5.2 Pro", provider: "OpenAI", tier: "advanced", multiplier: 13.71 },    // $21/$168 → $65.10 blended
-  { value: "openai/gpt-5.4-pro", label: "GPT-5.4 Pro", provider: "OpenAI", tier: "advanced", multiplier: 15.79 },    // $30/$180 → $75.00 blended
+  { value: "openai/o3", label: "GPT o3", provider: "OpenAI", tier: "advanced", inputPrice: 2.00, outputPrice: 8.00, multiplier: 0.8 },
+  { value: "openai/o3-mini", label: "GPT o3 Mini", provider: "OpenAI", tier: "standard", inputPrice: 1.10, outputPrice: 4.40, multiplier: 0.44 },
+  { value: "openai/gpt-5.2-pro", label: "GPT-5.2 Pro", provider: "OpenAI", tier: "advanced", inputPrice: 21.00, outputPrice: 168.00, multiplier: 13.71 },
+  { value: "openai/gpt-5.4-pro", label: "GPT-5.4 Pro", provider: "OpenAI", tier: "advanced", inputPrice: 30.00, outputPrice: 180.00, multiplier: 15.79 },
   // Codex
-  { value: "openai/gpt-5.2-codex", label: "GPT-5.2 Codex", provider: "OpenAI", tier: "standard", multiplier: 1.14 },// $1.75/$14.00 → $5.43 blended
-  { value: "openai/gpt-5.3-codex", label: "GPT-5.3 Codex", provider: "OpenAI", tier: "standard", multiplier: 1.14 },// $1.75/$14.00 → $5.43 blended
+  { value: "openai/gpt-5.2-codex", label: "GPT-5.2 Codex", provider: "OpenAI", tier: "standard", inputPrice: 1.75, outputPrice: 14.00, multiplier: 1.14 },
+  { value: "openai/gpt-5.3-codex", label: "GPT-5.3 Codex", provider: "OpenAI", tier: "standard", inputPrice: 1.75, outputPrice: 14.00, multiplier: 1.14 },
 
   // ---------------------------------------------------------------------------
   // Anthropic — direct Anthropic pricing + openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
   // Fast
-  { value: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5", provider: "Anthropic", tier: "fast", multiplier: 0.46 },  // $1/$5 → $2.20 blended
+  { value: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5", provider: "Anthropic", tier: "fast", inputPrice: 1.00, outputPrice: 5.00, multiplier: 0.46 },
   // Standard
-  { value: "claude-sonnet-4-5-20250929", label: "Claude Sonnet 4.5", provider: "Anthropic", tier: "standard", multiplier: 1.39 }, // $3/$15 → $6.60 blended (direct)
-  { value: "anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6", provider: "Anthropic", tier: "standard", multiplier: 1.39 }, // $3/$15 → $6.60 blended
-  // Advanced (Opus 4 removed — 4.6 is better, cheaper, 1M context)
-  { value: "anthropic/claude-opus-4.6", label: "Claude Opus 4.6", provider: "Anthropic", tier: "advanced", multiplier: 2.32 }, // $5/$25 → $11.00 blended
+  { value: "claude-sonnet-4-5-20250929", label: "Claude Sonnet 4.5", provider: "Anthropic", tier: "standard", inputPrice: 3.00, outputPrice: 15.00, multiplier: 1.39 },
+  { value: "anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6", provider: "Anthropic", tier: "standard", inputPrice: 3.00, outputPrice: 15.00, multiplier: 1.39 },
+  // Advanced
+  { value: "anthropic/claude-opus-4.6", label: "Claude Opus 4.6", provider: "Anthropic", tier: "advanced", inputPrice: 5.00, outputPrice: 25.00, multiplier: 2.32 },
 
   // ---------------------------------------------------------------------------
   // Google — openrouter.ai, March 2026
-  // (Gemini 2.0 Flash removed — deprecated June 2026)
   // ---------------------------------------------------------------------------
   // Fast
-  { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "Google", tier: "fast", multiplier: 0.20 },          // $0.30/$2.50 → $0.96 blended
-  { value: "google/gemini-3-flash-preview", label: "Gemini 3 Flash", provider: "Google", tier: "fast", multiplier: 0.26 },     // $0.50/$3.00 → $1.25 blended
-  { value: "google/gemini-3.1-flash-lite-preview", label: "Gemini 3.1 Flash Lite", provider: "Google", tier: "fast", multiplier: 0.13 }, // $0.25/$1.50 → $0.63 blended
+  { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "Google", tier: "fast", inputPrice: 0.30, outputPrice: 2.50, multiplier: 0.20 },
+  { value: "google/gemini-3-flash-preview", label: "Gemini 3 Flash", provider: "Google", tier: "fast", inputPrice: 0.50, outputPrice: 3.00, multiplier: 0.26 },
+  { value: "google/gemini-3.1-flash-lite-preview", label: "Gemini 3.1 Flash Lite", provider: "Google", tier: "fast", inputPrice: 0.25, outputPrice: 1.50, multiplier: 0.13 },
   // Standard
-  { value: "google/gemini-2.5-pro-preview", label: "Gemini 2.5 Pro", provider: "Google", tier: "standard", multiplier: 0.82 },// $1.25/$10.00 → $3.88 blended
-  { value: "google/gemini-3.1-pro-preview", label: "Gemini 3.1 Pro", provider: "Google", tier: "standard", multiplier: 1.05 },// $2.00/$12.00 → $5.00 blended
+  { value: "google/gemini-2.5-pro-preview", label: "Gemini 2.5 Pro", provider: "Google", tier: "standard", inputPrice: 1.25, outputPrice: 10.00, multiplier: 0.82 },
+  { value: "google/gemini-3.1-pro-preview", label: "Gemini 3.1 Pro", provider: "Google", tier: "standard", inputPrice: 2.00, outputPrice: 12.00, multiplier: 1.05 },
 
   // ---------------------------------------------------------------------------
   // Meta (Llama) — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
   // Fast
-  { value: "meta-llama/llama-3.3-8b-instruct", label: "Llama 3.3 8B", provider: "Meta", tier: "fast", multiplier: 0.01 },    // ~$0.03/$0.05 → $0.04 blended
-  { value: "meta-llama/llama-4-scout", label: "Llama 4 Scout", provider: "Meta", tier: "fast", multiplier: 0.03 },            // $0.08/$0.30 → $0.15 blended
+  { value: "meta-llama/llama-3.3-8b-instruct", label: "Llama 3.3 8B", provider: "Meta", tier: "fast", inputPrice: 0.03, outputPrice: 0.05, multiplier: 0.01 },
+  { value: "meta-llama/llama-4-scout", label: "Llama 4 Scout", provider: "Meta", tier: "fast", inputPrice: 0.08, outputPrice: 0.30, multiplier: 0.03 },
   // Standard
-  { value: "meta-llama/llama-3.3-70b-instruct", label: "Llama 3.3 70B", provider: "Meta", tier: "standard", multiplier: 0.04 }, // $0.10/$0.32 → $0.17 blended
-  { value: "meta-llama/llama-4-maverick", label: "Llama 4 Maverick", provider: "Meta", tier: "standard", multiplier: 0.06 },  // $0.15/$0.60 → $0.29 blended
+  { value: "meta-llama/llama-3.3-70b-instruct", label: "Llama 3.3 70B", provider: "Meta", tier: "standard", inputPrice: 0.10, outputPrice: 0.32, multiplier: 0.04 },
+  { value: "meta-llama/llama-4-maverick", label: "Llama 4 Maverick", provider: "Meta", tier: "standard", inputPrice: 0.15, outputPrice: 0.60, multiplier: 0.06 },
   // Advanced
-  { value: "meta-llama/llama-3.1-405b-instruct", label: "Llama 3.1 405B", provider: "Meta", tier: "advanced", multiplier: 0.84 }, // $4.00/$4.00 → $4.00 blended
+  { value: "meta-llama/llama-3.1-405b-instruct", label: "Llama 3.1 405B", provider: "Meta", tier: "advanced", inputPrice: 4.00, outputPrice: 4.00, multiplier: 0.84 },
 
   // ---------------------------------------------------------------------------
   // Mistral — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
   // Fast
-  { value: "mistralai/ministral-3b-2512", label: "Ministral 3B", provider: "Mistral", tier: "fast", multiplier: 0.02 },       // $0.10/$0.10 → $0.10 blended
-  { value: "mistralai/ministral-8b-2512", label: "Ministral 8B", provider: "Mistral", tier: "fast", multiplier: 0.03 },       // $0.15/$0.15 → $0.15 blended
-  { value: "mistralai/mistral-small-creative", label: "Mistral Small Creative", provider: "Mistral", tier: "fast", multiplier: 0.03 }, // $0.10/$0.30 → $0.16 blended
+  { value: "mistralai/ministral-3b-2512", label: "Ministral 3B", provider: "Mistral", tier: "fast", inputPrice: 0.10, outputPrice: 0.10, multiplier: 0.02 },
+  { value: "mistralai/ministral-8b-2512", label: "Ministral 8B", provider: "Mistral", tier: "fast", inputPrice: 0.15, outputPrice: 0.15, multiplier: 0.03 },
+  { value: "mistralai/mistral-small-creative", label: "Mistral Small Creative", provider: "Mistral", tier: "fast", inputPrice: 0.10, outputPrice: 0.30, multiplier: 0.03 },
   // Standard
-  { value: "mistralai/ministral-14b-2512", label: "Ministral 14B", provider: "Mistral", tier: "standard", multiplier: 0.04 }, // $0.20/$0.20 → $0.20 blended
-  { value: "mistralai/mistral-large-2512", label: "Mistral Large 3", provider: "Mistral", tier: "standard", multiplier: 0.17 }, // $0.50/$1.50 → $0.80 blended
-  { value: "mistralai/devstral-2512", label: "Devstral 2", provider: "Mistral", tier: "standard", multiplier: 0.19 },         // $0.40/$2.00 → $0.88 blended
+  { value: "mistralai/ministral-14b-2512", label: "Ministral 14B", provider: "Mistral", tier: "standard", inputPrice: 0.20, outputPrice: 0.20, multiplier: 0.04 },
+  { value: "mistralai/mistral-large-2512", label: "Mistral Large 3", provider: "Mistral", tier: "standard", inputPrice: 0.50, outputPrice: 1.50, multiplier: 0.17 },
+  { value: "mistralai/devstral-2512", label: "Devstral 2", provider: "Mistral", tier: "standard", inputPrice: 0.40, outputPrice: 2.00, multiplier: 0.19 },
 
   // ---------------------------------------------------------------------------
   // DeepSeek — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
   // Fast
-  { value: "deepseek/deepseek-chat", label: "DeepSeek V3", provider: "DeepSeek", tier: "fast", multiplier: 0.10 },            // $0.32/$0.89 → $0.49 blended
+  { value: "deepseek/deepseek-chat", label: "DeepSeek V3", provider: "DeepSeek", tier: "fast", inputPrice: 0.32, outputPrice: 0.89, multiplier: 0.10 },
   // Standard
-  { value: "deepseek/deepseek-v3.2", label: "DeepSeek V3.2", provider: "DeepSeek", tier: "standard", multiplier: 0.06 },      // $0.26/$0.38 → $0.30 blended
-  { value: "deepseek/deepseek-r1", label: "DeepSeek R1", provider: "DeepSeek", tier: "standard", multiplier: 0.26 },           // $0.70/$2.50 → $1.24 blended
-  { value: "deepseek/deepseek-v3.2-speciale", label: "DeepSeek V3.2 Speciale", provider: "DeepSeek", tier: "standard", multiplier: 0.13 }, // $0.40/$1.20 → $0.64 blended
+  { value: "deepseek/deepseek-v3.2", label: "DeepSeek V3.2", provider: "DeepSeek", tier: "standard", inputPrice: 0.26, outputPrice: 0.38, multiplier: 0.06 },
+  { value: "deepseek/deepseek-r1", label: "DeepSeek R1", provider: "DeepSeek", tier: "standard", inputPrice: 0.70, outputPrice: 2.50, multiplier: 0.26 },
+  { value: "deepseek/deepseek-v3.2-speciale", label: "DeepSeek V3.2 Speciale", provider: "DeepSeek", tier: "standard", inputPrice: 0.40, outputPrice: 1.20, multiplier: 0.13 },
 
   // ---------------------------------------------------------------------------
   // Qwen — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
   // Fast
-  { value: "qwen/qwen3.5-9b", label: "Qwen 3.5 9B", provider: "Qwen", tier: "fast", multiplier: 0.02 },                     // $0.10/$0.15 → $0.12 blended
-  { value: "qwen/qwen3.5-flash-02-23", label: "Qwen 3.5 Flash", provider: "Qwen", tier: "fast", multiplier: 0.04 },          // $0.10/$0.40 → $0.19 blended
+  { value: "qwen/qwen3.5-9b", label: "Qwen 3.5 9B", provider: "Qwen", tier: "fast", inputPrice: 0.10, outputPrice: 0.15, multiplier: 0.02 },
+  { value: "qwen/qwen3.5-flash-02-23", label: "Qwen 3.5 Flash", provider: "Qwen", tier: "fast", inputPrice: 0.10, outputPrice: 0.40, multiplier: 0.04 },
   // Standard
-  { value: "qwen/qwen3.5-27b", label: "Qwen 3.5 27B", provider: "Qwen", tier: "standard", multiplier: 0.13 },                // $0.20/$1.56 → $0.60 blended
-  { value: "qwen/qwen3.5-plus-02-15", label: "Qwen 3.5 Plus", provider: "Qwen", tier: "standard", multiplier: 0.14 },        // $0.26/$1.56 → $0.65 blended
-  { value: "qwen/qwen3.5-122b-a10b", label: "Qwen 3.5 122B MoE", provider: "Qwen", tier: "standard", multiplier: 0.17 },     // $0.26/$2.08 → $0.81 blended
-  { value: "qwen/qwen3.5-397b-a17b", label: "Qwen 3.5 397B MoE", provider: "Qwen", tier: "standard", multiplier: 0.21 },     // $0.39/$2.34 → $0.97 blended
+  { value: "qwen/qwen3.5-27b", label: "Qwen 3.5 27B", provider: "Qwen", tier: "standard", inputPrice: 0.20, outputPrice: 1.56, multiplier: 0.13 },
+  { value: "qwen/qwen3.5-plus-02-15", label: "Qwen 3.5 Plus", provider: "Qwen", tier: "standard", inputPrice: 0.26, outputPrice: 1.56, multiplier: 0.14 },
+  { value: "qwen/qwen3.5-122b-a10b", label: "Qwen 3.5 122B MoE", provider: "Qwen", tier: "standard", inputPrice: 0.26, outputPrice: 2.08, multiplier: 0.17 },
+  { value: "qwen/qwen3.5-397b-a17b", label: "Qwen 3.5 397B MoE", provider: "Qwen", tier: "standard", inputPrice: 0.39, outputPrice: 2.34, multiplier: 0.21 },
   // Advanced
-  { value: "qwen/qwen3-max-thinking", label: "Qwen 3 Max Thinking", provider: "Qwen", tier: "advanced", multiplier: 0.36 },   // $0.78/$3.90 → $1.72 blended
+  { value: "qwen/qwen3-max-thinking", label: "Qwen 3 Max Thinking", provider: "Qwen", tier: "advanced", inputPrice: 0.78, outputPrice: 3.90, multiplier: 0.36 },
 
   // ---------------------------------------------------------------------------
   // Amazon — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
-  { value: "amazon/nova-2-lite-v1", label: "Nova 2 Lite", provider: "Amazon", tier: "fast", multiplier: 0.20 },               // $0.30/$2.50 → $0.96 blended
+  { value: "amazon/nova-2-lite-v1", label: "Nova 2 Lite", provider: "Amazon", tier: "fast", inputPrice: 0.30, outputPrice: 2.50, multiplier: 0.20 },
 
   // ---------------------------------------------------------------------------
   // Cohere — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
-  { value: "cohere/command-r-plus", label: "Command R+", provider: "Cohere", tier: "standard", multiplier: 1.00 },             // ~$2.50/$10 → $4.75 blended (estimated)
-  { value: "cohere/command-r", label: "Command R", provider: "Cohere", tier: "fast", multiplier: 0.06 },                       // ~$0.15/$0.60 → $0.29 blended
+  { value: "cohere/command-r-plus", label: "Command R+", provider: "Cohere", tier: "standard", inputPrice: 2.50, outputPrice: 10.00, multiplier: 1.00 },
+  { value: "cohere/command-r", label: "Command R", provider: "Cohere", tier: "fast", inputPrice: 0.15, outputPrice: 0.60, multiplier: 0.06 },
 
   // ---------------------------------------------------------------------------
   // xAI — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
-  { value: "x-ai/grok-2", label: "Grok 2", provider: "xAI", tier: "standard", multiplier: 1.0 },                              // ~$2/$10 → $4.80 blended
-  { value: "x-ai/grok-3-mini-beta", label: "Grok 3 Mini", provider: "xAI", tier: "standard", multiplier: 0.08 },              // $0.30/$0.50 → $0.36 blended
-  { value: "x-ai/grok-3-beta", label: "Grok 3", provider: "xAI", tier: "advanced", multiplier: 1.39 },                        // $3/$15 → $6.60 blended
-  { value: "x-ai/grok-4.1-fast", label: "Grok 4.1 Fast", provider: "xAI", tier: "fast", multiplier: 0.06 },                   // $0.20/$0.50 → $0.29 blended — best agentic tool-calling, 2M ctx
+  { value: "x-ai/grok-2", label: "Grok 2", provider: "xAI", tier: "standard", inputPrice: 2.00, outputPrice: 10.00, multiplier: 1.0 },
+  { value: "x-ai/grok-3-mini-beta", label: "Grok 3 Mini", provider: "xAI", tier: "standard", inputPrice: 0.30, outputPrice: 0.50, multiplier: 0.08 },
+  { value: "x-ai/grok-3-beta", label: "Grok 3", provider: "xAI", tier: "advanced", inputPrice: 3.00, outputPrice: 15.00, multiplier: 1.39 },
+  { value: "x-ai/grok-4.1-fast", label: "Grok 4.1 Fast", provider: "xAI", tier: "fast", inputPrice: 0.20, outputPrice: 0.50, multiplier: 0.06 },
 
   // ---------------------------------------------------------------------------
   // MiniMax — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
-  { value: "minimax/minimax-m2.5", label: "MiniMax M2.5", provider: "MiniMax", tier: "standard", multiplier: 0.10 },           // $0.27/$0.95 → $0.47 blended — strong at structured/productivity tasks
+  { value: "minimax/minimax-m2.5", label: "MiniMax M2.5", provider: "MiniMax", tier: "standard", inputPrice: 0.27, outputPrice: 0.95, multiplier: 0.10 },
 ];
 
 /** Default model for new agents */
@@ -192,7 +209,8 @@ export function getModelTier(modelId: string): ModelTier {
 }
 
 /**
- * Get a model's credit multiplier. Falls back to 1.0 for unknown models.
+ * @deprecated Use getModelPrices() + calculateCredits() instead.
+ * Kept for UI components that still reference multiplier during transition.
  */
 export function getModelMultiplier(modelId: string): number {
   const match = MODEL_OPTIONS.find((m) => m.value === modelId);
@@ -200,29 +218,49 @@ export function getModelMultiplier(modelId: string): number {
 }
 
 /**
+ * Get a model's input/output prices per million tokens.
+ * Falls back to GPT-4o-level pricing ($2.50/$10.00) for unknown models.
+ */
+export function getModelPrices(modelId: string): { inputPrice: number; outputPrice: number } {
+  const match = MODEL_OPTIONS.find((m) => m.value === modelId);
+  return {
+    inputPrice: match?.inputPrice ?? 2.50,
+    outputPrice: match?.outputPrice ?? 10.00,
+  };
+}
+
+/**
  * Calculate actual credits consumed from real token usage.
- * Formula: round(totalTokens / 1000 × multiplier, 2), minimum 0.01 credit.
- * Returns 1 if token counts are unavailable (fallback).
+ *
+ * Formula: round((inputTokens × inputPrice + outputTokens × outputPrice) / 1_000_000 × CREDITS_PER_DOLLAR, 2)
+ * Minimum 0.01 credit per request. Returns 1 if token counts are unavailable.
  */
 export function calculateCredits(
   modelId: string,
   inputTokens: number | undefined,
   outputTokens: number | undefined
 ): number {
-  const total = (inputTokens ?? 0) + (outputTokens ?? 0);
-  if (total === 0) return 1; // Fallback when token count unavailable
-  const multiplier = getModelMultiplier(modelId);
-  return Math.max(0.01, Math.round((total / 1000) * multiplier * 100) / 100);
+  const inp = inputTokens ?? 0;
+  const out = outputTokens ?? 0;
+  if (inp + out === 0) return 1; // Fallback when token count unavailable
+
+  const { inputPrice, outputPrice } = getModelPrices(modelId);
+  const costDollars = (inp * inputPrice + out * outputPrice) / 1_000_000;
+  const credits = costDollars * CREDITS_PER_DOLLAR;
+
+  return Math.max(0.01, Math.round(credits * 100) / 100);
 }
 
 /**
  * Estimate credits for pre-flight check (before response).
- * Uses multiplier × 2 (assumes ~2K tokens for a typical exchange).
+ * Assumes ~1500 input tokens + ~500 output tokens for a typical exchange.
  * Minimum estimate of 0.01 credit.
  */
 export function estimateCredits(modelId: string): number {
-  const multiplier = getModelMultiplier(modelId);
-  return Math.max(0.01, Math.round(multiplier * 2 * 100) / 100);
+  const { inputPrice, outputPrice } = getModelPrices(modelId);
+  const estimatedCost = (1500 * inputPrice + 500 * outputPrice) / 1_000_000;
+  const credits = estimatedCost * CREDITS_PER_DOLLAR;
+  return Math.max(0.01, Math.round(credits * 100) / 100);
 }
 
 /**

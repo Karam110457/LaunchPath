@@ -103,8 +103,11 @@ export async function POST(
       throw new Error("No content could be extracted");
     }
 
-    // Chunk and embed
-    const chunks = chunkText(content);
+    // Chunk and embed — website content uses smaller chunks to keep RAG lean
+    const chunkOpts = doc.source_type === "website"
+      ? { targetChars: 1600, overlapChars: 320 }
+      : undefined;
+    const chunks = chunkText(content, chunkOpts);
     if (chunks.length === 0) {
       throw new Error("No text chunks could be created");
     }

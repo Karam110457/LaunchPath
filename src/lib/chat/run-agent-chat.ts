@@ -80,6 +80,34 @@ export interface RunAgentChatParams {
 }
 
 // ---------------------------------------------------------------------------
+// Query classification — skip RAG for simple follow-ups
+// ---------------------------------------------------------------------------
+
+/**
+ * Patterns that indicate a message is a simple conversational follow-up
+ * and doesn't need knowledge retrieval. Saves an embedding API call +
+ * ~1,000 tokens of RAG context on ~60% of messages.
+ */
+const SKIP_RAG_PATTERNS = [
+  /^(yes|yeah|yep|yup|no|nah|nope|ok|okay|sure|thanks|thank you|ty|cool|great|perfect|sounds good|got it|understood|right|correct|exactly|absolutely|definitely|of course)\.?!?$/i,
+  /^(hi|hello|hey|morning|afternoon|evening)\.?!?$/i,
+  /^\d{1,2}(:\d{2})?\s*(am|pm)?$/i,                // "2pm", "3:30", "14:00"
+  /^(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/i,
+  /^(that works|let's do it|go ahead|please do|do it|confirmed?)\.?!?$/i,
+];
+
+/**
+ * Returns true if the message is a short follow-up that doesn't need RAG.
+ * Only skips if there's conversation history (first message always gets RAG).
+ */
+function shouldSkipRag(message: string, hasHistory: boolean): boolean {
+  if (!hasHistory) return false; // First message always gets RAG
+  const trimmed = message.trim();
+  if (trimmed.length > 60) return false; // Anything longer might be a real question
+  return SKIP_RAG_PATTERNS.some((p) => p.test(trimmed));
+}
+
+// ---------------------------------------------------------------------------
 // Main function
 // ---------------------------------------------------------------------------
 
@@ -227,6 +255,8 @@ export async function runAgentChat(
     }
   );
 
+  const skipRag = shouldSkipRag(userMessage, conversationHistory.length > 0);
+
   const ragPromise = (async (): Promise<{
     ragContext: string;
     ragChunks: RagChunk[];
@@ -240,6 +270,15 @@ export async function runAgentChat(
 
     const hasKB = (docCount ?? 0) > 0;
     if (!hasKB) return { ragContext: "", ragChunks: [], hasKnowledgeBase: false };
+
+    // Skip RAG for simple follow-ups — agent still has search_knowledge_base tool
+    if (skipRag) {
+      logger.info("Skipping RAG for follow-up message", {
+        agentId,
+        message: userMessage.slice(0, 60),
+      });
+      return { ragContext: "", ragChunks: [], hasKnowledgeBase: true };
+    }
 
     const { count: chunkCount } = await supabase
       .from("agent_knowledge_chunks")
@@ -265,7 +304,8 @@ export async function runAgentChat(
       const ragResult = await retrieveContextWithMetadata(
         agentId,
         retrievalQuery,
-        supabase
+        supabase,
+        totalChunks
       );
       return { ragContext: ragResult.contextString, ragChunks: ragResult.chunks, hasKnowledgeBase: true };
     } catch {

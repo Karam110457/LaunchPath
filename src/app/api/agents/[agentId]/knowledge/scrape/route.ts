@@ -86,8 +86,10 @@ export async function POST(
       throw new Error("No text content could be extracted from the URL");
     }
 
-    // Chunk text
-    const chunks = chunkText(content);
+    // Chunk text — website content uses smaller chunks (1,600 chars ≈ 400 tokens)
+    // to prevent large website chunks from dominating the RAG token budget.
+    // FAQ/doc chunks (via upload route) keep the default 3,200 char target.
+    const chunks = chunkText(content, { targetChars: 1600, overlapChars: 320 });
     if (chunks.length === 0) {
       throw new Error("No text chunks could be created");
     }

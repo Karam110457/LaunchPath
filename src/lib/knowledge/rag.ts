@@ -18,6 +18,23 @@ const SIMILARITY_THRESHOLD = 0.3;
 const RRF_MIN_SCORE = 0.01;
 
 /**
+ * Max total characters to inject as RAG context into the system prompt.
+ * ~4,000 chars ≈ ~1,000 tokens. If retrieved chunks exceed this budget,
+ * the lowest-scored ones are dropped until the budget is met.
+ */
+const MAX_RAG_CHARS = 4000;
+
+/**
+ * Match count for small knowledge bases (< 30 chunks).
+ * Pulling 8 candidates from a 24-chunk KB means 1/3 of all content —
+ * overkill. 4 candidates is enough for small KBs.
+ */
+const SMALL_KB_MATCH_COUNT = 4;
+
+/** Default match count for larger KBs. */
+const DEFAULT_MATCH_COUNT = 8;
+
+/**
  * Below this chunk count, inject ALL chunks — no similarity search needed.
  * Keep this low: a 926-char avg chunk × 200 = ~46,000 tokens injected every
  * message. Set to 10 so only truly tiny KBs skip embedding retrieval.
@@ -108,14 +125,26 @@ export async function retrieveContext(
  * Retrieve knowledge context with full metadata.
  * Returns structured chunk data alongside the context string so the UI
  * can display which documents were referenced.
+ *
+ * Applies a token budget cap (MAX_RAG_CHARS) — drops lowest-scored chunks
+ * until the total injected context fits within budget.
+ *
+ * @param totalChunks - total chunks in the KB, used to pick match_count dynamically.
  */
 export async function retrieveContextWithMetadata(
   agentId: string,
   query: string,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  totalChunks?: number
 ): Promise<RagResult> {
   try {
     const queryEmbedding = await embedText(query);
+
+    // Dynamic match_count: small KBs don't need 8 candidates
+    const matchCount =
+      totalChunks != null && totalChunks < 30
+        ? SMALL_KB_MATCH_COUNT
+        : DEFAULT_MATCH_COUNT;
 
     // Hybrid search: combines vector similarity + BM25 keyword search via RRF
     const { data: chunks, error } = await supabase.rpc(
@@ -124,7 +153,7 @@ export async function retrieveContextWithMetadata(
         query_text: query,
         query_embedding: JSON.stringify(queryEmbedding),
         match_agent_id: agentId,
-        match_count: 8,
+        match_count: matchCount,
       }
     );
 
@@ -148,7 +177,19 @@ export async function retrieveContextWithMetadata(
       return { contextString: "", chunks: [] };
     }
 
-    const ragChunks: RagChunk[] = relevant.map((c) => ({
+    // Apply token budget: keep highest-scored chunks until we hit the cap.
+    // `relevant` is already sorted by RRF score descending.
+    let totalChars = 0;
+    const budgeted: typeof relevant = [];
+    for (const c of relevant) {
+      if (totalChars + c.content.length > MAX_RAG_CHARS && budgeted.length > 0) {
+        break; // Always include at least one chunk
+      }
+      budgeted.push(c);
+      totalChars += c.content.length;
+    }
+
+    const ragChunks: RagChunk[] = budgeted.map((c) => ({
       content: c.content,
       similarity: c.similarity,
       sourceName: c.source_name,
@@ -156,7 +197,7 @@ export async function retrieveContextWithMetadata(
       documentId: c.document_id,
     }));
 
-    const contextParts = relevant.map((c) => c.content);
+    const contextParts = budgeted.map((c) => c.content);
     const contextString =
       "Use the following knowledge to answer questions. " +
       "If the answer is not in the knowledge base, say so honestly.\n\n" +
