@@ -31,6 +31,9 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
   const dataArrayRef = useRef<Uint8Array | null>(null);
   const animationFrameRef = useRef<number>();
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const isMicReadyRef = useRef(false);
+  const enableVoiceRef = useRef(enableVoiceControl);
+  enableVoiceRef.current = enableVoiceControl;
 
   const vert = /* glsl */ `
     precision highp float;
@@ -240,6 +243,7 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
       }
 
       dataArrayRef.current = null;
+      isMicReadyRef.current = false;
       console.log('Microphone stopped and cleaned up');
     } catch (error) {
       console.warn('Error stopping microphone:', error);
@@ -283,6 +287,7 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
       microphoneRef.current.connect(analyserRef.current);
       dataArrayRef.current = new Uint8Array(analyserRef.current.frequencyBinCount);
 
+      isMicReadyRef.current = true;
       console.log('Microphone initialized successfully');
       return true;
     } catch (error) {
@@ -369,18 +374,6 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
       let currentRot = 0;
       let voiceLevel = 0;
       const baseRotationSpeed = 0.3;
-      let isMicrophoneInitialized = false;
-
-      // Initialize or stop microphone based on voice control setting
-      if (enableVoiceControl) {
-        initMicrophone().then((success) => {
-          isMicrophoneInitialized = success;
-        });
-      } else {
-        // Stop microphone when voice control is disabled
-        stopMicrophone();
-        isMicrophoneInitialized = false;
-      }
 
       const update = (t: number) => {
         rafId = requestAnimationFrame(update);
@@ -391,8 +384,8 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
         program.uniforms.iTime.value = t * 0.001;
         program.uniforms.hue.value = hue;
 
-        // Handle voice input
-        if (enableVoiceControl && isMicrophoneInitialized) {
+        // Handle voice input — read from refs so we don't need enableVoiceControl in deps
+        if (enableVoiceRef.current && isMicReadyRef.current) {
           voiceLevel = analyzeAudio();
 
           // Notify parent component about voice detection
@@ -446,9 +439,6 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
           }
         }
 
-        // Stop microphone and clean up audio resources
-        stopMicrophone();
-
         if (glContext) {
           glContext.getExtension("WEBGL_lose_context")?.loseContext();
         }
@@ -465,7 +455,6 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
     }
   }, [
     hue,
-    enableVoiceControl,
     voiceSensitivity,
     maxRotationSpeed,
     maxHoverIntensity,
@@ -473,25 +462,24 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
     frag
   ]);
 
-  // Handle microphone state changes separately
+  // Handle microphone lifecycle — sole owner of mic init/cleanup
   useEffect(() => {
-    let isMounted = true;
+    let cancelled = false;
 
-    const handleMicrophoneState = async () => {
-      if (enableVoiceControl) {
-        const success = await initMicrophone();
-        if (!isMounted) return;
-        // Update the microphone state in the WebGL context if needed
-      } else {
-        stopMicrophone();
-      }
-    };
-
-    handleMicrophoneState();
+    if (enableVoiceControl) {
+      initMicrophone().then((success) => {
+        if (cancelled) {
+          // Effect was cleaned up before init finished — tear down
+          stopMicrophone();
+        }
+      });
+    } else {
+      stopMicrophone();
+    }
 
     return () => {
-      isMounted = false;
-      // Don't stop microphone here as it will be handled by the main cleanup
+      cancelled = true;
+      stopMicrophone();
     };
   }, [enableVoiceControl]);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Copy, Check, Shield, MessageSquare, Settings2, Sliders } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import type { WhatsAppConfig } from "@/lib/channels/types";
@@ -139,6 +139,28 @@ export function WhatsAppConfigPanel({
 }: WhatsAppConfigPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>("credentials");
   const [copied, setCopied] = useState(false);
+  const [tabFading, setTabFading] = useState(false);
+  const [contentHeight, setContentHeight] = useState<number | undefined>(undefined);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Measure content height for smooth transitions
+  useEffect(() => {
+    if (!contentRef.current || tabFading) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setContentHeight(entry.contentRect.height);
+    });
+    ro.observe(contentRef.current);
+    return () => ro.disconnect();
+  }, [activeTab, tabFading]);
+
+  const switchTab = useCallback((next: TabId) => {
+    if (next === activeTab) return;
+    setTabFading(true);
+    setTimeout(() => {
+      setActiveTab(next);
+      requestAnimationFrame(() => setTabFading(false));
+    }, 130);
+  }, [activeTab]);
 
   function updateConfig<K extends keyof WhatsAppConfig>(
     key: K,
@@ -165,16 +187,16 @@ export function WhatsAppConfigPanel({
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => switchTab(tab.id)}
               style={isActive ? gradientBorderStyle : undefined}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-all border-b-2 ${
+              className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-all duration-200 border-b-2 ${
                 isActive
                   ? "border-transparent text-foreground [--card-bg:rgba(255,255,255,0.7)] dark:[--card-bg:rgba(23,23,23,0.7)]"
                   : "border-transparent text-muted-foreground hover:text-foreground hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
               }`}
               title={tab.description}
             >
-              <Icon className="w-3.5 h-3.5" />
+              <Icon className={`w-3.5 h-3.5 transition-transform duration-200 ${isActive ? "scale-110" : ""}`} />
               {tab.label}
             </button>
           );
@@ -182,7 +204,16 @@ export function WhatsAppConfigPanel({
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-5">
+      <div
+        className="flex-1 overflow-y-auto overflow-x-hidden transition-[height] duration-300 ease-out"
+        style={{ height: contentHeight !== undefined ? contentHeight + 40 : undefined }}
+      >
+        <div
+          ref={contentRef}
+          className={`p-5 space-y-5 transition-all duration-200 ease-out ${
+            tabFading ? "opacity-0 translate-y-1" : "opacity-100 translate-y-0"
+          }`}
+        >
         {/* ═══════ CREDENTIALS TAB ═══════ */}
         {activeTab === "credentials" && (
           <>
@@ -671,6 +702,7 @@ export function WhatsAppConfigPanel({
             )}
           </>
         )}
+        </div>
       </div>
     </div>
   );
