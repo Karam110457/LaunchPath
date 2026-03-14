@@ -2127,6 +2127,8 @@ function AgentCanvasInner({
             greetingMessage={personality?.greeting_message}
             voiceConfig={formState.voiceConfig}
             onVoiceConfigUpdate={(config) => setFormState((prev) => ({ ...prev, voiceConfig: config }))}
+            agentModel={formState.model}
+            onModelChange={(model) => setFormState((prev) => ({ ...prev, model }))}
             onClose={() => setChatOpen(false)}
           />
         )}

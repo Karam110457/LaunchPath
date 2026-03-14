@@ -40,6 +40,8 @@ export interface ModelOption {
    * Will be removed once UI components are updated to show cost-per-message.
    */
   multiplier: number;
+  /** Whether this model has low enough latency for voice conversations */
+  voiceReady?: boolean;
 }
 
 /** Tier display labels */
@@ -62,6 +64,8 @@ export const PROVIDERS = [
   "Cohere",
   "xAI",
   "MiniMax",
+  "Inception",
+  "ByteDance",
 ] as const;
 
 export type Provider = (typeof PROVIDERS)[number];
@@ -77,18 +81,18 @@ export const MODEL_OPTIONS: ModelOption[] = [
   // OpenAI — prices from openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
   // Fast
-  { value: "openai/gpt-4o-mini", label: "GPT-4o Mini", provider: "OpenAI", tier: "fast", inputPrice: 0.15, outputPrice: 0.60, multiplier: 0.06 },
-  { value: "openai/gpt-4.1-mini", label: "GPT-4.1 Mini", provider: "OpenAI", tier: "fast", inputPrice: 0.40, outputPrice: 1.60, multiplier: 0.16 },
-  { value: "openai/gpt-4.1-nano", label: "GPT-4.1 Nano", provider: "OpenAI", tier: "fast", inputPrice: 0.10, outputPrice: 0.40, multiplier: 0.04 },
-  { value: "openai/gpt-5-mini", label: "GPT-5 Mini", provider: "OpenAI", tier: "fast", inputPrice: 0.25, outputPrice: 2.00, multiplier: 0.16 },
+  { value: "openai/gpt-4o-mini", label: "GPT-4o Mini", provider: "OpenAI", tier: "fast", inputPrice: 0.15, outputPrice: 0.60, multiplier: 0.06, voiceReady: true },
+  { value: "openai/gpt-4.1-mini", label: "GPT-4.1 Mini", provider: "OpenAI", tier: "fast", inputPrice: 0.40, outputPrice: 1.60, multiplier: 0.16, voiceReady: true },
+  { value: "openai/gpt-4.1-nano", label: "GPT-4.1 Nano", provider: "OpenAI", tier: "fast", inputPrice: 0.10, outputPrice: 0.40, multiplier: 0.04, voiceReady: true },
+  { value: "openai/gpt-5-mini", label: "GPT-5 Mini", provider: "OpenAI", tier: "fast", inputPrice: 0.25, outputPrice: 2.00, multiplier: 0.16, voiceReady: true },
   // Standard
-  { value: "openai/gpt-4o", label: "GPT-4o", provider: "OpenAI", tier: "standard", inputPrice: 2.50, outputPrice: 10.00, multiplier: 1.0 },
+  { value: "openai/gpt-4o", label: "GPT-4o", provider: "OpenAI", tier: "standard", inputPrice: 2.50, outputPrice: 10.00, multiplier: 1.0, voiceReady: true },
   { value: "openai/gpt-4.1", label: "GPT-4.1", provider: "OpenAI", tier: "standard", inputPrice: 2.00, outputPrice: 8.00, multiplier: 0.8 },
   { value: "openai/gpt-5.2", label: "GPT-5.2", provider: "OpenAI", tier: "standard", inputPrice: 1.75, outputPrice: 14.00, multiplier: 1.14 },
   { value: "openai/gpt-5.2-chat", label: "GPT-5.2 Chat", provider: "OpenAI", tier: "standard", inputPrice: 1.75, outputPrice: 14.00, multiplier: 1.14 },
   { value: "openai/gpt-5.3-chat", label: "GPT-5.3 Chat", provider: "OpenAI", tier: "standard", inputPrice: 1.75, outputPrice: 14.00, multiplier: 1.14 },
   { value: "openai/gpt-5.4", label: "GPT-5.4", provider: "OpenAI", tier: "standard", inputPrice: 2.50, outputPrice: 15.00, multiplier: 1.32 },
-  // Advanced
+  // Advanced (reasoning models — NOT voice-ready due to deliberation latency)
   { value: "openai/o3", label: "GPT o3", provider: "OpenAI", tier: "advanced", inputPrice: 2.00, outputPrice: 8.00, multiplier: 0.8 },
   { value: "openai/o3-mini", label: "GPT o3 Mini", provider: "OpenAI", tier: "standard", inputPrice: 1.10, outputPrice: 4.40, multiplier: 0.44 },
   { value: "openai/gpt-5.2-pro", label: "GPT-5.2 Pro", provider: "OpenAI", tier: "advanced", inputPrice: 21.00, outputPrice: 168.00, multiplier: 13.71 },
@@ -101,7 +105,7 @@ export const MODEL_OPTIONS: ModelOption[] = [
   // Anthropic — direct Anthropic pricing + openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
   // Fast
-  { value: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5", provider: "Anthropic", tier: "fast", inputPrice: 1.00, outputPrice: 5.00, multiplier: 0.46 },
+  { value: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5", provider: "Anthropic", tier: "fast", inputPrice: 1.00, outputPrice: 5.00, multiplier: 0.46, voiceReady: true },
   // Standard
   { value: "claude-sonnet-4-5-20250929", label: "Claude Sonnet 4.5", provider: "Anthropic", tier: "standard", inputPrice: 3.00, outputPrice: 15.00, multiplier: 1.39 },
   { value: "anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6", provider: "Anthropic", tier: "standard", inputPrice: 3.00, outputPrice: 15.00, multiplier: 1.39 },
@@ -112,9 +116,9 @@ export const MODEL_OPTIONS: ModelOption[] = [
   // Google — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
   // Fast
-  { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "Google", tier: "fast", inputPrice: 0.30, outputPrice: 2.50, multiplier: 0.20 },
-  { value: "google/gemini-3-flash-preview", label: "Gemini 3 Flash", provider: "Google", tier: "fast", inputPrice: 0.50, outputPrice: 3.00, multiplier: 0.26 },
-  { value: "google/gemini-3.1-flash-lite-preview", label: "Gemini 3.1 Flash Lite", provider: "Google", tier: "fast", inputPrice: 0.25, outputPrice: 1.50, multiplier: 0.13 },
+  { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "Google", tier: "fast", inputPrice: 0.30, outputPrice: 2.50, multiplier: 0.20, voiceReady: true },
+  { value: "google/gemini-3-flash-preview", label: "Gemini 3 Flash", provider: "Google", tier: "fast", inputPrice: 0.50, outputPrice: 3.00, multiplier: 0.26, voiceReady: true },
+  { value: "google/gemini-3.1-flash-lite-preview", label: "Gemini 3.1 Flash Lite", provider: "Google", tier: "fast", inputPrice: 0.25, outputPrice: 1.50, multiplier: 0.13, voiceReady: true },
   // Standard
   { value: "google/gemini-2.5-pro-preview", label: "Gemini 2.5 Pro", provider: "Google", tier: "standard", inputPrice: 1.25, outputPrice: 10.00, multiplier: 0.82 },
   { value: "google/gemini-3.1-pro-preview", label: "Gemini 3.1 Pro", provider: "Google", tier: "standard", inputPrice: 2.00, outputPrice: 12.00, multiplier: 1.05 },
@@ -123,8 +127,8 @@ export const MODEL_OPTIONS: ModelOption[] = [
   // Meta (Llama) — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
   // Fast
-  { value: "meta-llama/llama-3.3-8b-instruct", label: "Llama 3.3 8B", provider: "Meta", tier: "fast", inputPrice: 0.03, outputPrice: 0.05, multiplier: 0.01 },
-  { value: "meta-llama/llama-4-scout", label: "Llama 4 Scout", provider: "Meta", tier: "fast", inputPrice: 0.08, outputPrice: 0.30, multiplier: 0.03 },
+  { value: "meta-llama/llama-3.3-8b-instruct", label: "Llama 3.3 8B", provider: "Meta", tier: "fast", inputPrice: 0.03, outputPrice: 0.05, multiplier: 0.01, voiceReady: true },
+  { value: "meta-llama/llama-4-scout", label: "Llama 4 Scout", provider: "Meta", tier: "fast", inputPrice: 0.08, outputPrice: 0.30, multiplier: 0.03, voiceReady: true },
   // Standard
   { value: "meta-llama/llama-3.3-70b-instruct", label: "Llama 3.3 70B", provider: "Meta", tier: "standard", inputPrice: 0.10, outputPrice: 0.32, multiplier: 0.04 },
   { value: "meta-llama/llama-4-maverick", label: "Llama 4 Maverick", provider: "Meta", tier: "standard", inputPrice: 0.15, outputPrice: 0.60, multiplier: 0.06 },
@@ -135,9 +139,9 @@ export const MODEL_OPTIONS: ModelOption[] = [
   // Mistral — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
   // Fast
-  { value: "mistralai/ministral-3b-2512", label: "Ministral 3B", provider: "Mistral", tier: "fast", inputPrice: 0.10, outputPrice: 0.10, multiplier: 0.02 },
-  { value: "mistralai/ministral-8b-2512", label: "Ministral 8B", provider: "Mistral", tier: "fast", inputPrice: 0.15, outputPrice: 0.15, multiplier: 0.03 },
-  { value: "mistralai/mistral-small-creative", label: "Mistral Small Creative", provider: "Mistral", tier: "fast", inputPrice: 0.10, outputPrice: 0.30, multiplier: 0.03 },
+  { value: "mistralai/ministral-3b-2512", label: "Ministral 3B", provider: "Mistral", tier: "fast", inputPrice: 0.10, outputPrice: 0.10, multiplier: 0.02, voiceReady: true },
+  { value: "mistralai/ministral-8b-2512", label: "Ministral 8B", provider: "Mistral", tier: "fast", inputPrice: 0.15, outputPrice: 0.15, multiplier: 0.03, voiceReady: true },
+  { value: "mistralai/mistral-small-creative", label: "Mistral Small Creative", provider: "Mistral", tier: "fast", inputPrice: 0.10, outputPrice: 0.30, multiplier: 0.03, voiceReady: true },
   // Standard
   { value: "mistralai/ministral-14b-2512", label: "Ministral 14B", provider: "Mistral", tier: "standard", inputPrice: 0.20, outputPrice: 0.20, multiplier: 0.04 },
   { value: "mistralai/mistral-large-2512", label: "Mistral Large 3", provider: "Mistral", tier: "standard", inputPrice: 0.50, outputPrice: 1.50, multiplier: 0.17 },
@@ -147,7 +151,7 @@ export const MODEL_OPTIONS: ModelOption[] = [
   // DeepSeek — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
   // Fast
-  { value: "deepseek/deepseek-chat", label: "DeepSeek V3", provider: "DeepSeek", tier: "fast", inputPrice: 0.32, outputPrice: 0.89, multiplier: 0.10 },
+  { value: "deepseek/deepseek-chat", label: "DeepSeek V3", provider: "DeepSeek", tier: "fast", inputPrice: 0.32, outputPrice: 0.89, multiplier: 0.10, voiceReady: true },
   // Standard
   { value: "deepseek/deepseek-v3.2", label: "DeepSeek V3.2", provider: "DeepSeek", tier: "standard", inputPrice: 0.26, outputPrice: 0.38, multiplier: 0.06 },
   { value: "deepseek/deepseek-r1", label: "DeepSeek R1", provider: "DeepSeek", tier: "standard", inputPrice: 0.70, outputPrice: 2.50, multiplier: 0.26 },
@@ -157,8 +161,8 @@ export const MODEL_OPTIONS: ModelOption[] = [
   // Qwen — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
   // Fast
-  { value: "qwen/qwen3.5-9b", label: "Qwen 3.5 9B", provider: "Qwen", tier: "fast", inputPrice: 0.10, outputPrice: 0.15, multiplier: 0.02 },
-  { value: "qwen/qwen3.5-flash-02-23", label: "Qwen 3.5 Flash", provider: "Qwen", tier: "fast", inputPrice: 0.10, outputPrice: 0.40, multiplier: 0.04 },
+  { value: "qwen/qwen3.5-9b", label: "Qwen 3.5 9B", provider: "Qwen", tier: "fast", inputPrice: 0.10, outputPrice: 0.15, multiplier: 0.02, voiceReady: true },
+  { value: "qwen/qwen3.5-flash-02-23", label: "Qwen 3.5 Flash", provider: "Qwen", tier: "fast", inputPrice: 0.10, outputPrice: 0.40, multiplier: 0.04, voiceReady: true },
   // Standard
   { value: "qwen/qwen3.5-27b", label: "Qwen 3.5 27B", provider: "Qwen", tier: "standard", inputPrice: 0.20, outputPrice: 1.56, multiplier: 0.13 },
   { value: "qwen/qwen3.5-plus-02-15", label: "Qwen 3.5 Plus", provider: "Qwen", tier: "standard", inputPrice: 0.26, outputPrice: 1.56, multiplier: 0.14 },
@@ -170,13 +174,13 @@ export const MODEL_OPTIONS: ModelOption[] = [
   // ---------------------------------------------------------------------------
   // Amazon — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
-  { value: "amazon/nova-2-lite-v1", label: "Nova 2 Lite", provider: "Amazon", tier: "fast", inputPrice: 0.30, outputPrice: 2.50, multiplier: 0.20 },
+  { value: "amazon/nova-2-lite-v1", label: "Nova 2 Lite", provider: "Amazon", tier: "fast", inputPrice: 0.30, outputPrice: 2.50, multiplier: 0.20, voiceReady: true },
 
   // ---------------------------------------------------------------------------
   // Cohere — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
   { value: "cohere/command-r-plus", label: "Command R+", provider: "Cohere", tier: "standard", inputPrice: 2.50, outputPrice: 10.00, multiplier: 1.00 },
-  { value: "cohere/command-r", label: "Command R", provider: "Cohere", tier: "fast", inputPrice: 0.15, outputPrice: 0.60, multiplier: 0.06 },
+  { value: "cohere/command-r", label: "Command R", provider: "Cohere", tier: "fast", inputPrice: 0.15, outputPrice: 0.60, multiplier: 0.06, voiceReady: true },
 
   // ---------------------------------------------------------------------------
   // xAI — openrouter.ai, March 2026
@@ -184,12 +188,22 @@ export const MODEL_OPTIONS: ModelOption[] = [
   { value: "x-ai/grok-2", label: "Grok 2", provider: "xAI", tier: "standard", inputPrice: 2.00, outputPrice: 10.00, multiplier: 1.0 },
   { value: "x-ai/grok-3-mini-beta", label: "Grok 3 Mini", provider: "xAI", tier: "standard", inputPrice: 0.30, outputPrice: 0.50, multiplier: 0.08 },
   { value: "x-ai/grok-3-beta", label: "Grok 3", provider: "xAI", tier: "advanced", inputPrice: 3.00, outputPrice: 15.00, multiplier: 1.39 },
-  { value: "x-ai/grok-4.1-fast", label: "Grok 4.1 Fast", provider: "xAI", tier: "fast", inputPrice: 0.20, outputPrice: 0.50, multiplier: 0.06 },
+  { value: "x-ai/grok-4.1-fast", label: "Grok 4.1 Fast", provider: "xAI", tier: "fast", inputPrice: 0.20, outputPrice: 0.50, multiplier: 0.06, voiceReady: true },
 
   // ---------------------------------------------------------------------------
   // MiniMax — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
   { value: "minimax/minimax-m2.5", label: "MiniMax M2.5", provider: "MiniMax", tier: "standard", inputPrice: 0.27, outputPrice: 0.95, multiplier: 0.10 },
+
+  // ---------------------------------------------------------------------------
+  // Inception — openrouter.ai, March 2026 (voice-optimized diffusion LLM)
+  // ---------------------------------------------------------------------------
+  { value: "inception/mercury-2", label: "Mercury 2", provider: "Inception", tier: "fast", inputPrice: 0.25, outputPrice: 0.75, multiplier: 0.08, voiceReady: true },
+
+  // ---------------------------------------------------------------------------
+  // ByteDance — openrouter.ai, March 2026
+  // ---------------------------------------------------------------------------
+  { value: "bytedance-seed/seed-2.0-mini", label: "Seed 2.0 Mini", provider: "ByteDance", tier: "fast", inputPrice: 0.10, outputPrice: 0.40, multiplier: 0.04, voiceReady: true },
 ];
 
 /** Default model for new agents */
@@ -276,4 +290,21 @@ export function getModelInfo(modelId: string): ModelOption | undefined {
  */
 export function isOpenRouterModel(modelId: string): boolean {
   return modelId.includes("/");
+}
+
+/**
+ * Check if a model is suitable for voice conversations (low TTFT).
+ */
+export function isVoiceReadyModel(modelId: string): boolean {
+  const match = MODEL_OPTIONS.find((m) => m.value === modelId);
+  return match?.voiceReady === true;
+}
+
+/**
+ * Get all voice-ready models, sorted by price (cheapest first).
+ */
+export function getVoiceReadyModels(): ModelOption[] {
+  return MODEL_OPTIONS
+    .filter((m) => m.voiceReady)
+    .sort((a, b) => (a.inputPrice + a.outputPrice) - (b.inputPrice + b.outputPrice));
 }

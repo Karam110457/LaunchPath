@@ -1,18 +1,43 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, MessageSquare, Volume2, Mic, MicOff, Play, Square, Loader2, Settings2 } from "lucide-react";
+import {
+  X,
+  MessageSquare,
+  Volume2,
+  Mic,
+  MicOff,
+  Play,
+  Square,
+  Loader2,
+  Settings2,
+  AlertTriangle,
+  FileText,
+  ChevronDown,
+  Zap,
+} from "lucide-react";
 import { AgentChatPanel } from "@/components/agents/AgentChatPanel";
 import { VoicePoweredOrb } from "@/components/ui/voice-powered-orb";
 import { PANEL_SLIDE } from "./animation-constants";
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import type { AgentVoiceSettings } from "@/lib/channels/types";
+import {
+  isVoiceReadyModel,
+  getVoiceReadyModels,
+  getModelInfo,
+  type ModelOption,
+} from "@/lib/ai/model-tiers";
 
 type TestMode = "chat" | "voice";
+
+interface TranscriptEntry {
+  role: "user" | "agent";
+  text: string;
+  timestamp: Date;
+}
 
 interface FloatingChatWidgetProps {
   agentId: string;
@@ -20,6 +45,8 @@ interface FloatingChatWidgetProps {
   greetingMessage?: string;
   voiceConfig: AgentVoiceSettings | null;
   onVoiceConfigUpdate: (config: AgentVoiceSettings | null) => void;
+  agentModel: string;
+  onModelChange: (model: string) => void;
   onClose: () => void;
 }
 
@@ -49,12 +76,23 @@ const chatVariants = {
   exit: { x: 24, opacity: 0, scale: 0.97 },
 };
 
+/** Group voice-ready models by provider for the quick-switch dropdown */
+function groupByProvider(models: ModelOption[]): Record<string, ModelOption[]> {
+  const groups: Record<string, ModelOption[]> = {};
+  for (const m of models) {
+    (groups[m.provider] ??= []).push(m);
+  }
+  return groups;
+}
+
 export function FloatingChatWidget({
   agentId,
   agentName,
   greetingMessage,
   voiceConfig,
   onVoiceConfigUpdate,
+  agentModel,
+  onModelChange,
   onClose,
 }: FloatingChatWidgetProps) {
   const [mode, setMode] = useState<TestMode>("chat");
@@ -63,9 +101,17 @@ export function FloatingChatWidget({
   const [isLoading, setIsLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [voiceDetected, setVoiceDetected] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(false);
+  const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
+  const [showModelPicker, setShowModelPicker] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const transcriptEndRef = useRef<HTMLDivElement | null>(null);
 
   const config = voiceConfig ?? DEFAULT_VOICE_CONFIG;
+  const voiceReady = isVoiceReadyModel(agentModel);
+  const currentModelInfo = getModelInfo(agentModel);
+  const voiceModels = useMemo(() => getVoiceReadyModels(), []);
+  const voiceModelGroups = useMemo(() => groupByProvider(voiceModels), [voiceModels]);
 
   const updateConfig = useCallback(
     (partial: Partial<AgentVoiceSettings>) => {
@@ -73,6 +119,12 @@ export function FloatingChatWidget({
     },
     [config, onVoiceConfigUpdate]
   );
+
+  const addTranscriptEntry = useCallback((role: "user" | "agent", text: string) => {
+    setTranscript((prev) => [...prev, { role, text, timestamp: new Date() }]);
+    // Auto-scroll after React re-render
+    setTimeout(() => transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+  }, []);
 
   const stopPlayback = useCallback(() => {
     if (audioRef.current) {
@@ -110,6 +162,9 @@ export function FloatingChatWidget({
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
 
+      // Add agent greeting to transcript
+      addTranscriptEntry("agent", text);
+
       audio.onended = () => {
         setIsPlaying(false);
         URL.revokeObjectURL(url);
@@ -127,7 +182,7 @@ export function FloatingChatWidget({
       setIsLoading(false);
       setIsPlaying(false);
     }
-  }, [agentId, greetingMessage, config.voiceId, config.speed, stopPlayback]);
+  }, [agentId, greetingMessage, config.voiceId, config.speed, stopPlayback, addTranscriptEntry]);
 
   const handlePlayStop = () => {
     if (isPlaying) {
@@ -198,6 +253,91 @@ export function FloatingChatWidget({
           />
         ) : (
           <div className="flex flex-col h-full">
+            {/* Voice model warning banner */}
+            <AnimatePresence>
+              {!voiceReady && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden shrink-0"
+                >
+                  <div className="mx-4 mt-3 rounded-xl border border-amber-200/60 canvas-dark:border-amber-500/20 bg-amber-50/80 canvas-dark:bg-amber-950/30 px-3.5 py-2.5">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-medium text-amber-800 canvas-dark:text-amber-300">
+                          {currentModelInfo?.label ?? agentModel} may have high latency for voice
+                        </p>
+                        <p className="text-[10px] text-amber-600 canvas-dark:text-amber-400/70 mt-0.5">
+                          Switch to a low-latency model for a better voice experience.
+                        </p>
+                        <div className="relative mt-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowModelPicker((prev) => !prev)}
+                            className="flex items-center gap-1.5 text-[11px] font-medium text-amber-700 canvas-dark:text-amber-300 hover:text-amber-900 canvas-dark:hover:text-amber-200 transition-colors"
+                          >
+                            <Zap className="w-3 h-3" />
+                            Switch to voice-optimized model
+                            <ChevronDown className={cn(
+                              "w-3 h-3 transition-transform",
+                              showModelPicker && "rotate-180"
+                            )} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick-switch model picker */}
+                    <AnimatePresence>
+                      {showModelPicker && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.15 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="mt-2 max-h-[180px] overflow-y-auto rounded-lg border border-amber-200/40 canvas-dark:border-amber-500/10 bg-white/60 canvas-dark:bg-neutral-900/60">
+                            {Object.entries(voiceModelGroups).map(([provider, models]) => (
+                              <div key={provider}>
+                                <div className="px-2.5 pt-2 pb-1 text-[9px] font-semibold uppercase tracking-wider text-neutral-400 canvas-dark:text-neutral-500">
+                                  {provider}
+                                </div>
+                                {models.map((m) => (
+                                  <button
+                                    key={m.value}
+                                    type="button"
+                                    onClick={() => {
+                                      onModelChange(m.value);
+                                      setShowModelPicker(false);
+                                    }}
+                                    className={cn(
+                                      "w-full flex items-center justify-between px-2.5 py-1.5 text-[11px] hover:bg-amber-100/50 canvas-dark:hover:bg-amber-900/20 transition-colors",
+                                      m.value === agentModel && "bg-amber-100/60 canvas-dark:bg-amber-900/30 font-medium"
+                                    )}
+                                  >
+                                    <span className="text-neutral-700 canvas-dark:text-neutral-300 truncate">
+                                      {m.label}
+                                    </span>
+                                    <span className="text-[9px] text-neutral-400 canvas-dark:text-neutral-500 shrink-0 ml-2">
+                                      {m.tier}
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Orb area */}
             <div className="flex-1 flex flex-col items-center justify-center px-6 py-4 min-h-0">
               <div className="w-48 h-48 relative">
@@ -222,7 +362,7 @@ export function FloatingChatWidget({
                       : "Tap the mic to start"}
               </p>
 
-              {/* Mic + Play controls */}
+              {/* Mic + Play + Transcript controls */}
               <div className="flex items-center gap-3 mt-4">
                 <button
                   type="button"
@@ -261,6 +401,21 @@ export function FloatingChatWidget({
                     <Play className="w-5 h-5 ml-0.5" />
                   )}
                 </button>
+
+                {/* Transcript toggle */}
+                <button
+                  type="button"
+                  onClick={() => setShowTranscript((prev) => !prev)}
+                  className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center transition-all",
+                    showTranscript
+                      ? "bg-neutral-200 canvas-dark:bg-neutral-700 text-neutral-800 canvas-dark:text-neutral-100"
+                      : "bg-neutral-100 canvas-dark:bg-neutral-800 text-neutral-500 canvas-dark:text-neutral-400 hover:bg-neutral-200 canvas-dark:hover:bg-neutral-700"
+                  )}
+                  title="Show transcript"
+                >
+                  <FileText className="w-4 h-4" />
+                </button>
               </div>
 
               <p className="mt-2 text-[10px] text-neutral-400 canvas-dark:text-neutral-500">
@@ -268,8 +423,68 @@ export function FloatingChatWidget({
               </p>
             </div>
 
+            {/* Transcript panel */}
+            <AnimatePresence>
+              {showTranscript && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 200, opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: "easeInOut" }}
+                  className="shrink-0 overflow-hidden border-t border-neutral-200/50 canvas-dark:border-neutral-700/50"
+                >
+                  <div className="h-full flex flex-col">
+                    <div className="flex items-center justify-between px-4 py-2 border-b border-neutral-200/30 canvas-dark:border-neutral-700/30">
+                      <span className="text-[11px] font-medium text-neutral-500 canvas-dark:text-neutral-400 flex items-center gap-1.5">
+                        <FileText className="w-3 h-3" />
+                        Transcript
+                      </span>
+                      {transcript.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setTranscript([])}
+                          className="text-[10px] text-neutral-400 canvas-dark:text-neutral-500 hover:text-neutral-600 canvas-dark:hover:text-neutral-300 transition-colors"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2">
+                      {transcript.length === 0 ? (
+                        <p className="text-[11px] text-neutral-400 canvas-dark:text-neutral-500 text-center py-6">
+                          Transcript will appear here as you speak
+                        </p>
+                      ) : (
+                        transcript.map((entry, i) => (
+                          <div
+                            key={i}
+                            className={cn(
+                              "flex gap-2",
+                              entry.role === "user" ? "justify-end" : "justify-start"
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "max-w-[85%] rounded-xl px-3 py-1.5 text-[11px] leading-relaxed",
+                                entry.role === "user"
+                                  ? "bg-neutral-200/60 canvas-dark:bg-neutral-700/60 text-neutral-800 canvas-dark:text-neutral-200"
+                                  : "bg-white/60 canvas-dark:bg-neutral-800/60 border border-neutral-200/40 canvas-dark:border-neutral-700/40 text-neutral-700 canvas-dark:text-neutral-300"
+                              )}
+                            >
+                              {entry.text}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                      <div ref={transcriptEndRef} />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Settings toggle */}
-            <div className="border-t border-neutral-200/50 canvas-dark:border-neutral-700/50">
+            <div className="border-t border-neutral-200/50 canvas-dark:border-neutral-700/50 shrink-0">
               <button
                 type="button"
                 onClick={() => setShowSettings((prev) => !prev)}
