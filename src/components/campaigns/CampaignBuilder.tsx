@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -126,9 +126,24 @@ export function CampaignBuilder({
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const [webhookCopied, setWebhookCopied] = useState(false);
   const [approvedTemplates, setApprovedTemplates] = useState<{ id: string; name: string; language: string; status: string }[]>([]);
+  const [tabTransition, setTabTransition] = useState(false);
+  const prevTabRef = useRef<WhatsAppTab>(waTab);
 
   const agentId = campaign.agent_id;
   const token = channel?.token ?? "";
+
+  // Animate tab content on switch
+  const switchWaTab = useCallback((next: WhatsAppTab) => {
+    if (next === waTab) return;
+    setTabTransition(true);
+    const timeout = setTimeout(() => {
+      prevTabRef.current = next;
+      setWaTab(next);
+      // Re-enable after a frame so the new content fades in
+      requestAnimationFrame(() => setTabTransition(false));
+    }, 120);
+    return () => clearTimeout(timeout);
+  }, [waTab]);
 
   // Fetch approved templates for fallback selector
   useEffect(() => {
@@ -342,11 +357,11 @@ export function CampaignBuilder({
 
   // ── Page header (shared between widget and WhatsApp) ───────────────────
   const pageHeader = (
-    <div className="flex items-center justify-between mb-6">
+    <div className="flex items-center justify-between mb-6 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both">
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.push(backUrl)}
-          className="p-2 rounded-full border border-border/40 bg-card/60 backdrop-blur-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          className="p-2 rounded-full border border-border/40 bg-card/60 backdrop-blur-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200 hover:scale-105 active:scale-95"
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
@@ -386,7 +401,7 @@ export function CampaignBuilder({
       <div className="flex items-center gap-2">
         {error && <span className="text-xs text-destructive mr-2">{error}</span>}
         {successMsg && (
-          <span className="text-xs text-emerald-600 dark:text-emerald-400 mr-2 flex items-center gap-1">
+          <span className="text-xs text-emerald-600 dark:text-emerald-400 mr-2 flex items-center gap-1 animate-in fade-in slide-in-from-right-2 duration-200">
             <CheckCircle2 className="w-3.5 h-3.5" />
             {successMsg}
           </span>
@@ -395,7 +410,7 @@ export function CampaignBuilder({
         <button
           onClick={handleSaveDraft}
           disabled={saving || deploying}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full border border-border/40 bg-card/60 backdrop-blur-md hover:bg-muted/50 transition-colors disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full border border-border/40 bg-card/60 backdrop-blur-md hover:bg-muted/50 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
         >
           {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
           Save
@@ -429,24 +444,28 @@ export function CampaignBuilder({
     return (
       <div className="space-y-4">
         {pageHeader}
-        <div className="flex gap-4" style={{ minHeight: "calc(100vh - 360px)" }}>
-          <ConfigPanel
-            config={widgetConfig}
-            onChange={setWidgetConfig}
-            clientWebsite={clientWebsite}
-            onClientWebsiteChange={setClientWebsite}
-            allowedOrigins={allowedOrigins}
-            onAllowedOriginsChange={setAllowedOrigins}
-            embedCode={status === "active" ? embedCode : null}
-          />
-          <PreviewPanel
-            config={widgetConfig}
-            token={token}
-            agentId={agentId}
-            clientWebsite={clientWebsite}
-            screenshotUrl={screenshotUrl}
-            onScreenshotChange={setScreenshotUrl}
-          />
+        <div className="flex gap-4 stagger-enter" style={{ minHeight: "calc(100vh - 360px)" }}>
+          <div style={{ '--stagger': 0 } as React.CSSProperties} className="flex-1 min-w-0">
+            <ConfigPanel
+              config={widgetConfig}
+              onChange={setWidgetConfig}
+              clientWebsite={clientWebsite}
+              onClientWebsiteChange={setClientWebsite}
+              allowedOrigins={allowedOrigins}
+              onAllowedOriginsChange={setAllowedOrigins}
+              embedCode={status === "active" ? embedCode : null}
+            />
+          </div>
+          <div style={{ '--stagger': 1 } as React.CSSProperties} className="flex-1 min-w-0">
+            <PreviewPanel
+              config={widgetConfig}
+              token={token}
+              agentId={agentId}
+              clientWebsite={clientWebsite}
+              screenshotUrl={screenshotUrl}
+              onScreenshotChange={setScreenshotUrl}
+            />
+          </div>
         </div>
       </div>
     );
@@ -458,7 +477,7 @@ export function CampaignBuilder({
       {pageHeader}
 
       {/* WhatsApp sub-navigation */}
-      <div className="flex items-center gap-1 border-b border-border/40 mb-6">
+      <div className="flex items-center gap-1 border-b border-border/40 mb-6 animate-in fade-in slide-in-from-bottom-1 duration-300 delay-100 fill-mode-both">
         {WA_TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = waTab === tab.id;
@@ -467,10 +486,10 @@ export function CampaignBuilder({
             <button
               key={tab.id}
               type="button"
-              onClick={() => !needsChannel && setWaTab(tab.id)}
+              onClick={() => !needsChannel && switchWaTab(tab.id)}
               disabled={needsChannel}
               className={cn(
-                "flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
+                "relative flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-all duration-200",
                 isActive
                   ? "border-foreground text-foreground"
                   : needsChannel
@@ -478,7 +497,7 @@ export function CampaignBuilder({
                     : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
               )}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className={cn("w-4 h-4 transition-transform duration-200", isActive && "scale-110")} />
               {tab.label}
             </button>
           );
@@ -492,8 +511,10 @@ export function CampaignBuilder({
                 key={i}
                 title={step.label}
                 className={cn(
-                  "w-2 h-2 rounded-full transition-colors",
-                  step.done ? "bg-emerald-500" : "bg-neutral-200 dark:bg-neutral-700"
+                  "w-2 h-2 rounded-full transition-all duration-300",
+                  step.done
+                    ? "bg-emerald-500 scale-110"
+                    : "bg-neutral-200 dark:bg-neutral-700 scale-100"
                 )}
               />
             ))}
@@ -505,11 +526,20 @@ export function CampaignBuilder({
       </div>
 
       {/* Tab content */}
+      <div
+        key={waTab}
+        className={cn(
+          "transition-all duration-200 ease-out",
+          tabTransition
+            ? "opacity-0 translate-y-1"
+            : "opacity-100 translate-y-0"
+        )}
+      >
       {waTab === "settings" && (
         <div className="space-y-5">
           {/* Live banner */}
           {status === "active" && (
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/40 dark:border-emerald-800/30">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/40 dark:border-emerald-800/30 animate-in fade-in slide-in-from-top-2 duration-300 fill-mode-both">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
               <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400 flex-1">
                 Campaign is live and receiving messages
@@ -538,7 +568,7 @@ export function CampaignBuilder({
 
           {/* Connection status — inline */}
           {channel && (
-            <div className="flex items-center gap-4 py-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-4 py-2 text-xs text-muted-foreground animate-in fade-in duration-300 delay-150 fill-mode-both">
               <span className="flex items-center gap-1.5">
                 <span className={cn("w-1.5 h-1.5 rounded-full", channel.is_enabled ? "bg-emerald-500" : "bg-neutral-300")} />
                 Channel {channel.is_enabled ? "Active" : "Paused"}
@@ -625,6 +655,7 @@ export function CampaignBuilder({
           onAction={() => setWaTab("settings")}
         />
       )}
+      </div>
     </div>
   );
 }
@@ -648,8 +679,8 @@ function EmptyTabState({
   onAction: () => void;
 }) {
   return (
-    <div className="flex items-center justify-center py-20">
-      <div className="text-center max-w-xs">
+    <div className="flex items-center justify-center py-20 animate-in fade-in duration-300 fill-mode-both">
+      <div className="text-center max-w-xs animate-in fade-in zoom-in-95 slide-in-from-bottom-3 duration-400 fill-mode-both">
         <div className="w-14 h-14 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mx-auto mb-4">
           <Icon className="w-7 h-7 text-muted-foreground/40" />
         </div>
@@ -658,7 +689,7 @@ function EmptyTabState({
         <button
           type="button"
           onClick={onAction}
-          className="px-4 py-2 text-xs font-medium rounded-full gradient-accent-bg text-white shadow-sm hover:scale-[1.02] transition-transform"
+          className="px-4 py-2 text-xs font-medium rounded-full gradient-accent-bg text-white shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-transform"
         >
           {action}
         </button>
