@@ -1,23 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Trash2, Globe, Code } from "lucide-react";
+import { Pencil, Trash2, Globe, Code, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ChannelResponse } from "@/lib/channels/types";
 
 const CHANNEL_ICONS: Record<string, typeof Globe> = {
   widget: Globe,
   api: Code,
+  whatsapp: MessageCircle,
 };
 
 const CHANNEL_COLORS: Record<string, string> = {
   widget: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   api: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  whatsapp: "bg-green-500/10 text-green-400 border-green-500/20",
 };
 
 const CHANNEL_LABELS: Record<string, string> = {
   widget: "Widget",
   api: "API",
+  whatsapp: "WhatsApp",
 };
 
 interface ChannelsListProps {

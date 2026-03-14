@@ -49,6 +49,42 @@ export interface WidgetConfig {
   };
 }
 
+/** WhatsApp-specific configuration stored in agent_channels.config */
+export interface WhatsAppConfig {
+  /** Meta phone number ID */
+  phoneNumberId: string;
+  /** WhatsApp Business Account ID */
+  businessAccountId?: string;
+  /** Long-lived system user access token (masked in API responses) */
+  accessToken: string;
+  /** Shared secret for webhook verification handshake */
+  verifyToken: string;
+  /** Simulated typing delay in ms before sending reply (default: 2000) */
+  responseDelay?: number;
+  /** Send read receipts on incoming messages */
+  readReceipts?: boolean;
+  /** Message sent to first-time contacts */
+  greetingMessage?: string;
+  /** Auto-close conversations after N hours of inactivity */
+  autoClose?: { enabled: boolean; hours?: number };
+  /** Auto-escalate to human on keywords/loops */
+  autoEscalation?: { enabled: boolean; keywords?: string[] };
+}
+
+/** Union of all channel-specific config types */
+export type ChannelConfig = WidgetConfig | WhatsAppConfig;
+
+/** Type guard for WhatsApp channel config */
+export function isWhatsAppConfig(
+  config: ChannelConfig
+): config is WhatsAppConfig {
+  return (
+    "phoneNumberId" in config &&
+    "accessToken" in config &&
+    "verifyToken" in config
+  );
+}
+
 /** Shape returned by the channel CRUD API */
 export interface ChannelResponse {
   id: string;
@@ -57,9 +93,10 @@ export interface ChannelResponse {
   channel_type: string;
   name: string;
   token: string;
+  webhook_path: string | null;
   allowed_origins: string[];
   rate_limit_rpm: number | null;
-  config: WidgetConfig;
+  config: ChannelConfig;
   is_enabled: boolean;
   created_at: string;
   updated_at: string;

@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { maskConfig, mergeConfig } from "@/lib/tools/mask-config";
 import { logger } from "@/lib/security/logger";
 
 export async function PATCH(
@@ -23,10 +24,10 @@ export async function PATCH(
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  // Verify channel ownership (agent_id + user_id match)
+  // Verify channel ownership (agent_id + user_id match) and fetch stored config
   const { data: existing } = await supabase
     .from("agent_channels")
-    .select("id")
+    .select("id, config")
     .eq("id", channelId)
     .eq("agent_id", agentId)
     .eq("user_id", user.id)
@@ -85,7 +86,11 @@ export async function PATCH(
         { status: 400 }
       );
     }
-    updates.config = body.config;
+    // Merge with stored config to preserve masked sensitive values (e.g. WhatsApp accessToken)
+    updates.config = mergeConfig(
+      (existing.config ?? {}) as Record<string, unknown>,
+      body.config
+    );
   }
 
   if (body.is_enabled !== undefined) {
@@ -124,7 +129,13 @@ export async function PATCH(
     );
   }
 
-  return NextResponse.json({ channel });
+  // Mask sensitive config values before returning
+  const maskedChannel = {
+    ...channel,
+    config: maskConfig(channel.config as Record<string, unknown>),
+  };
+
+  return NextResponse.json({ channel: maskedChannel });
 }
 
 export async function DELETE(

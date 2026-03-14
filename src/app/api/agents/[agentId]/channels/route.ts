@@ -6,10 +6,14 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { generateChannelToken } from "@/lib/channels/token";
+import { generateChannelToken, generateWebhookPath } from "@/lib/channels/token";
+import { maskConfig } from "@/lib/tools/mask-config";
 import { logger } from "@/lib/security/logger";
 
-const ALLOWED_CHANNEL_TYPES = new Set(["widget", "api"]);
+const ALLOWED_CHANNEL_TYPES = new Set(["widget", "api", "whatsapp"]);
+
+/** Channel types that require a webhook_path for inbound messages. */
+const WEBHOOK_CHANNEL_TYPES = new Set(["whatsapp"]);
 
 export async function GET(
   _req: NextRequest,
@@ -51,7 +55,13 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({ channels: channels ?? [] });
+  // Mask sensitive fields (e.g. WhatsApp accessToken) before returning
+  const masked = (channels ?? []).map((ch) => ({
+    ...ch,
+    config: maskConfig(ch.config as Record<string, unknown>),
+  }));
+
+  return NextResponse.json({ channels: masked });
 }
 
 export async function POST(
@@ -94,9 +104,24 @@ export async function POST(
 
   if (!channel_type || !ALLOWED_CHANNEL_TYPES.has(channel_type)) {
     return NextResponse.json(
-      { error: "channel_type must be one of: widget, api" },
+      { error: "channel_type must be one of: widget, api, whatsapp" },
       { status: 400 }
     );
+  }
+
+  // Validate WhatsApp-specific config
+  if (channel_type === "whatsapp") {
+    const cfg = config as Record<string, unknown> | undefined;
+    if (
+      !cfg?.phoneNumberId ||
+      !cfg?.accessToken ||
+      !cfg?.verifyToken
+    ) {
+      return NextResponse.json(
+        { error: "WhatsApp channels require phoneNumberId, accessToken, and verifyToken in config" },
+        { status: 400 }
+      );
+    }
   }
 
   if (!name || typeof name !== "string" || !name.trim()) {
@@ -116,6 +141,9 @@ export async function POST(
   }
 
   const token = generateChannelToken();
+  const webhookPath = WEBHOOK_CHANNEL_TYPES.has(channel_type)
+    ? generateWebhookPath()
+    : null;
 
   const { data: channel, error } = await supabase
     .from("agent_channels")
@@ -125,6 +153,7 @@ export async function POST(
       channel_type,
       name: name.trim(),
       token,
+      webhook_path: webhookPath,
       allowed_origins: allowed_origins ?? [],
       rate_limit_rpm: rate_limit_rpm ?? null,
       config: config ?? {},
@@ -152,6 +181,12 @@ export async function POST(
     channelType: channel_type,
   });
 
+  // Mask sensitive config values before returning
+  const maskedChannel = {
+    ...channel,
+    config: maskConfig(channel.config as Record<string, unknown>),
+  };
+
   // Return with token — this is the only time the raw token is exposed
-  return NextResponse.json({ channel }, { status: 201 });
+  return NextResponse.json({ channel: maskedChannel }, { status: 201 });
 }

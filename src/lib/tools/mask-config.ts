@@ -17,6 +17,8 @@ const SENSITIVE_KEYS = new Set([
   "token",
   "api_key_value",
   "password",
+  "accessToken",
+  "verifyToken",
 ]);
 
 /** Patterns that indicate a value is likely a secret even in nested contexts. */
