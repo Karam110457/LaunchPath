@@ -25,6 +25,29 @@ function now() {
 /** Conversations older than this are considered stale for auto-loading. */
 const STALE_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
 
+/**
+ * Convert a raw tool key (e.g. "GOOGLECALENDAR_CREATE_EVENT") into a
+ * readable display name (e.g. "Googlecalendar: Create Event").
+ * Used when reconstructing tool activities from persisted history,
+ * where only the raw key is stored.
+ */
+function formatToolName(toolKey: string): string {
+  if (toolKey === "search_knowledge_base") return "Search Knowledge Base";
+  // Composio-style keys: PREFIX_ACTION_NAME
+  const underscoreIdx = toolKey.indexOf("_");
+  if (underscoreIdx > 0) {
+    const prefix = toolKey.slice(0, underscoreIdx);
+    const action = toolKey.slice(underscoreIdx + 1);
+    const readablePrefix = prefix.charAt(0) + prefix.slice(1).toLowerCase();
+    const readableAction = action
+      .toLowerCase()
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+    return `${readablePrefix}: ${readableAction}`;
+  }
+  return toolKey;
+}
+
 interface UseAgentChatOptions {
   agentId: string;
   greetingMessage?: string;
@@ -198,20 +221,63 @@ export function useAgentChat({
           : [];
 
         historyRef.current = msgs as AgentConversationMessage[];
-        // Only display user/assistant messages — tool-call/tool-result
-        // entries are stored for LLM context but not shown in the chat UI
-        const displayMsgs = (msgs as AgentConversationMessage[]).filter(
-          (m) => m.role === "user" || m.role === "assistant"
-        );
-        setMessages(
-          displayMsgs.map((m) => ({
-            id: generateId(),
-            role: m.role as "user" | "assistant",
-            content: m.content,
-            isStreaming: false,
-            timestamp: m.timestamp,
-          }))
-        );
+
+        // Reconstruct display messages with tool activities attached.
+        // Tool-call/tool-result entries are grouped and attached to the
+        // next assistant message so they survive page reloads.
+        const allMsgs = msgs as AgentConversationMessage[];
+        const displayMsgs: AgentChatMessage[] = [];
+        let pendingTools: ToolActivity[] = [];
+
+        for (const m of allMsgs) {
+          if (m.role === "tool-call") {
+            const key = m.toolName ?? "unknown";
+            pendingTools.push({
+              toolName: key,
+              displayName: formatToolName(key),
+              status: "running",
+              args: m.toolArgs,
+            });
+          } else if (m.role === "tool-result") {
+            // Match to the last pending tool with matching name
+            const matchIdx = pendingTools.findIndex(
+              (t) => t.toolName === m.toolName && t.status === "running"
+            );
+            if (matchIdx >= 0) {
+              pendingTools[matchIdx] = {
+                ...pendingTools[matchIdx],
+                status: m.toolSuccess === false ? "failed" : "done",
+                message: m.content,
+              };
+            } else {
+              const key = m.toolName ?? "unknown";
+              pendingTools.push({
+                toolName: key,
+                displayName: formatToolName(key),
+                status: m.toolSuccess === false ? "failed" : "done",
+                message: m.content,
+              });
+            }
+          } else if (m.role === "user" || m.role === "assistant") {
+            const chatMsg: AgentChatMessage = {
+              id: generateId(),
+              role: m.role,
+              content: m.content,
+              isStreaming: false,
+              timestamp: m.timestamp,
+            };
+
+            // Attach accumulated tool activities to the assistant message
+            if (m.role === "assistant" && pendingTools.length > 0) {
+              chatMsg.toolActivities = [...pendingTools];
+              pendingTools = [];
+            }
+
+            displayMsgs.push(chatMsg);
+          }
+        }
+
+        setMessages(displayMsgs);
       } catch {
         // Network error
       } finally {
