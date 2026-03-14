@@ -51,7 +51,6 @@ export async function POST(request: NextRequest) {
     client_name?: string;
     client_website?: string;
     client_id?: string;
-    channel_type?: string;
   };
 
   if (!body.name || typeof body.name !== "string" || !body.name.trim()) {
@@ -86,7 +85,6 @@ export async function POST(request: NextRequest) {
       client_name: body.client_name?.trim() || null,
       client_website: body.client_website?.trim() || null,
       client_id: body.client_id || null,
-      channel_type: body.channel_type === "whatsapp" ? "whatsapp" : "widget",
     })
     .select("*")
     .single();
