@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -28,6 +28,7 @@ import { WhatsAppConfigPanel } from "./WhatsAppConfigPanel";
 import { TemplatesTab } from "./whatsapp/TemplatesTab";
 import { ContactsTab } from "./whatsapp/ContactsTab";
 import { SendsTab } from "./whatsapp/SendsTab";
+import { SequencesTab } from "./whatsapp/SequencesTab";
 import type { WidgetConfig, WhatsAppConfig } from "@/lib/channels/types";
 import type { ChannelResponse } from "@/lib/channels/types";
 
@@ -35,7 +36,7 @@ import type { ChannelResponse } from "@/lib/channels/types";
 // Types & constants
 // ---------------------------------------------------------------------------
 
-type WhatsAppTab = "settings" | "templates" | "contacts" | "sends";
+type WhatsAppTab = "settings" | "templates" | "contacts" | "sends" | "sequences";
 
 const WA_TABS: {
   id: WhatsAppTab;
@@ -47,6 +48,7 @@ const WA_TABS: {
   { id: "templates", label: "Templates", icon: FileText, description: "Message templates" },
   { id: "contacts", label: "Contacts", icon: Users, description: "Manage audience" },
   { id: "sends", label: "Sends", icon: Send, description: "Outbound campaigns" },
+  { id: "sequences", label: "Sequences", icon: Zap, description: "Drip campaigns" },
 ];
 
 const gradientBorderStyle: React.CSSProperties = {
@@ -130,11 +132,24 @@ export function CampaignBuilder({
   const [saving, setSaving] = useState(false);
   const [deploying, setDeploying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const [webhookCopied, setWebhookCopied] = useState(false);
+  const [approvedTemplates, setApprovedTemplates] = useState<{ id: string; name: string; language: string; status: string }[]>([]);
 
   const agentId = campaign.agent_id;
   const token = channel?.token ?? "";
+
+  // Fetch approved templates for fallback selector
+  useEffect(() => {
+    if (!isWhatsApp || !channel) return;
+    fetch(`/api/agents/${agentId}/channels/${channel.id}/templates?status=APPROVED`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.templates) setApprovedTemplates(data.templates);
+      })
+      .catch(() => {});
+  }, [isWhatsApp, channel, agentId]);
   const appOrigin = typeof window !== "undefined" ? window.location.origin : "";
 
   const embedCode = channel && !isWhatsApp
@@ -253,6 +268,11 @@ export function CampaignBuilder({
     [channel, widgetConfig, waConfig, originsArray, rateLimitRpm, agentId, campaign.id, campaign.name, isWhatsApp]
   );
 
+  function showSuccess(msg: string) {
+    setSuccessMsg(msg);
+    setTimeout(() => setSuccessMsg(null), 3000);
+  }
+
   async function handleSaveDraft() {
     setSaving(true);
     setError(null);
@@ -263,6 +283,7 @@ export function CampaignBuilder({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ client_website: clientWebsite.trim() || null }),
       });
+      showSuccess("Settings saved successfully");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {
@@ -281,6 +302,7 @@ export function CampaignBuilder({
         body: JSON.stringify({ status: "active", client_website: clientWebsite.trim() || null }),
       });
       setStatus("active");
+      showSuccess("Campaign deployed successfully");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Deploy failed");
     } finally {
@@ -338,6 +360,7 @@ export function CampaignBuilder({
           status={status}
           isWhatsApp={false}
           error={error}
+          successMsg={successMsg}
           saving={saving}
           deploying={deploying}
           deployDisabled={deployDisabled}
@@ -379,6 +402,7 @@ export function CampaignBuilder({
         status={status}
         isWhatsApp
         error={error}
+        successMsg={successMsg}
         saving={saving}
         deploying={deploying}
         deployDisabled={deployDisabled}
@@ -532,6 +556,8 @@ export function CampaignBuilder({
                       onRateLimitChange={setRateLimitRpm}
                       webhookUrl={webhookUrl}
                       verifyTokenDisplay={waConfig.verifyToken ?? ""}
+                      approvedTemplates={approvedTemplates}
+                      campaignId={campaign.id}
                     />
                   </div>
 
@@ -673,6 +699,25 @@ export function CampaignBuilder({
                 onAction={() => setWaTab("settings")}
               />
             )}
+
+            {/* ═══ SEQUENCES TAB ═══ */}
+            {waTab === "sequences" && channel && (
+              <div className="max-w-4xl mx-auto p-6">
+                <div className="rounded-[2rem] bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] p-6">
+                  <SequencesTab campaignId={campaign.id} channelId={channel.id} />
+                </div>
+              </div>
+            )}
+
+            {waTab === "sequences" && !channel && (
+              <EmptyTabState
+                icon={Zap}
+                title="Deploy First"
+                description="Deploy your campaign before creating follow-up sequences."
+                action="Go to Settings"
+                onAction={() => setWaTab("settings")}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -691,6 +736,7 @@ function TopBar({
   status,
   isWhatsApp,
   error,
+  successMsg,
   saving,
   deploying,
   deployDisabled,
@@ -704,6 +750,7 @@ function TopBar({
   status: string;
   isWhatsApp: boolean;
   error: string | null;
+  successMsg?: string | null;
   saving: boolean;
   deploying: boolean;
   deployDisabled: boolean;
@@ -757,6 +804,12 @@ function TopBar({
 
       <div className="flex items-center gap-2">
         {error && <span className="text-xs text-destructive mr-2">{error}</span>}
+        {successMsg && (
+          <span className="text-xs text-emerald-600 dark:text-emerald-400 mr-2 flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            {successMsg}
+          </span>
+        )}
 
         <button
           onClick={onSave}

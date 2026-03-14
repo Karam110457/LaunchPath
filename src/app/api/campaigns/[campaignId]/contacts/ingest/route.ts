@@ -8,8 +8,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { rateLimit, getClientIdentifier } from "@/lib/api/rate-limit";
+import { rateLimit } from "@/lib/api/rate-limit";
 import { logger } from "@/lib/security/logger";
+import { checkAutoEnrollOnIngest } from "@/lib/sequences/triggers";
 
 const E164_RE = /^\+[1-9]\d{6,14}$/;
 const MAX_CONTACTS_PER_REQUEST = 100;
@@ -41,9 +42,8 @@ export async function POST(
     return NextResponse.json({ error: "Invalid token or campaign" }, { status: 401 });
   }
 
-  // Rate limit
-  const identifier = getClientIdentifier(req);
-  const rl = rateLimit(identifier, "contact-ingest", 10);
+  // Rate limit per token (not per IP — this is a machine-to-machine API)
+  const rl = rateLimit(token, "contact-ingest", 10);
   if (!rl.success) {
     return NextResponse.json(
       { error: "Rate limited. Try again later.", retryAfterMs: rl.retryAfter },
@@ -91,8 +91,35 @@ export async function POST(
       continue;
     }
 
+    // Try source_id match first (CRM records may change phone numbers)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: contact, error } = await (supabase.from as any)("campaign_contacts")
+    const fromAny = supabase.from as any;
+    if (c.source_id) {
+      const { data: existingBySource } = await fromAny("campaign_contacts")
+        .select("id")
+        .eq("channel_id", channel.id)
+        .eq("source_id", c.source_id)
+        .single();
+
+      if (existingBySource) {
+        await fromAny("campaign_contacts")
+          .update({
+            phone,
+            name: c.name?.trim() || null,
+            email: c.email?.trim() || null,
+            tags: c.tags ?? [],
+            source: c.source ?? "api",
+            custom_fields: c.custom_fields ?? {},
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existingBySource.id);
+        updated++;
+        continue;
+      }
+    }
+
+    // Fall through to phone-based upsert
+    const { data: contact, error } = await fromAny("campaign_contacts")
       .upsert(
         {
           user_id: channel.user_id,
@@ -122,6 +149,8 @@ export async function POST(
       const updatedAt = new Date(contact.updated_at).getTime();
       if (Math.abs(updatedAt - createdAt) < 1000) {
         imported++;
+        // Auto-enroll new contacts in active sequences
+        checkAutoEnrollOnIngest(supabase, contact.id, channel.id).catch(() => {});
       } else {
         updated++;
       }

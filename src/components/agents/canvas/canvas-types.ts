@@ -74,6 +74,7 @@ export interface AgentFormState {
   model: string;
   systemPrompt: string;
   wizardConfig: WizardConfig | null;
+  voiceConfig: import("@/lib/channels/types").AgentVoiceSettings | null;
 }
 
 // Panel state: which panel is open and what data it needs

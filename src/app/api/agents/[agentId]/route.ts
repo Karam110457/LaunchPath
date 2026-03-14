@@ -26,7 +26,7 @@ export async function GET(
 
   const { data: agent, error } = await supabase
     .from("ai_agents")
-    .select("id, name, description, system_prompt, personality, model, status, wizard_config, tool_guidelines, created_at")
+    .select("id, name, description, system_prompt, personality, model, status, wizard_config, voice_config, tool_guidelines, created_at")
     .eq("id", agentId)
     .eq("user_id", user.id)
     .single();
@@ -46,6 +46,7 @@ const ALLOWED_FIELDS = [
   "model",
   "status",
   "wizard_config",
+  "voice_config",
   "tool_guidelines",
   "knowledge_enabled",
 ] as const;
@@ -108,7 +109,7 @@ export async function PATCH(
     try {
       const { data: updated } = await supabase
         .from("ai_agents")
-        .select("name, description, system_prompt, personality, model, status, wizard_config, tool_guidelines")
+        .select("name, description, system_prompt, personality, model, status, wizard_config, voice_config, tool_guidelines")
         .eq("id", agentId)
         .eq("user_id", user.id)
         .single();

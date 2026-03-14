@@ -17,9 +17,40 @@ interface LiveTranscriptProps {
   conversationId: string;
   messages: Message[];
   status: string;
+  /** Conversation metadata — contains message_statuses for WhatsApp delivery ticks */
+  metadata?: Record<string, unknown>;
+  /** Channel type — delivery ticks only shown for whatsapp */
+  channelType?: string;
 }
 
-export function LiveTranscript({ conversationId, messages, status }: LiveTranscriptProps) {
+function DeliveryTicks({ messageStatuses, outboundIds, messageIndex }: {
+  messageStatuses: Record<string, string>;
+  outboundIds: string[];
+  messageIndex: number;
+}) {
+  // Map assistant message index (0-based among assistant messages) to outbound ID
+  const msgId = outboundIds[messageIndex];
+  if (!msgId) return null;
+
+  const status = messageStatuses[msgId];
+  if (!status) return null;
+
+  if (status === "read") {
+    return <span className="text-[10px] text-blue-500 ml-1" title="Read">&#10003;&#10003;</span>;
+  }
+  if (status === "delivered") {
+    return <span className="text-[10px] text-muted-foreground ml-1" title="Delivered">&#10003;&#10003;</span>;
+  }
+  if (status === "sent") {
+    return <span className="text-[10px] text-muted-foreground ml-1" title="Sent">&#10003;</span>;
+  }
+  if (status === "failed") {
+    return <span className="text-[10px] text-red-500 ml-1" title="Failed">!</span>;
+  }
+  return null;
+}
+
+export function LiveTranscript({ conversationId, messages, status, metadata, channelType }: LiveTranscriptProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -55,34 +86,51 @@ export function LiveTranscript({ conversationId, messages, status }: LiveTranscr
             No messages yet
           </p>
         )}
-        {messages
-          .filter((m) => ["user", "assistant", "human_agent"].includes(m.role))
-          .map((msg, i) => (
-            <div
-              key={i}
-              className={cn(
-                "flex",
-                msg.role === "user" ? "justify-end" : "justify-start"
-              )}
-            >
-              {msg.role === "user" ? (
-                <div className="max-w-[75%] rounded-2xl rounded-tr-sm px-4 py-2.5 bg-primary text-primary-foreground text-sm">
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
+        {(() => {
+          const isWhatsApp = channelType === "whatsapp";
+          const messageStatuses = (metadata?.message_statuses ?? {}) as Record<string, string>;
+          const outboundIds = (metadata?.outbound_message_ids ?? []) as string[];
+          let assistantIdx = 0;
+
+          return messages
+            .filter((m) => ["user", "assistant", "human_agent"].includes(m.role))
+            .map((msg, i) => {
+              const currentAssistantIdx = msg.role === "assistant" ? assistantIdx++ : -1;
+              return (
+                <div
+                  key={i}
+                  className={cn(
+                    "flex",
+                    msg.role === "user" ? "justify-end" : "justify-start"
+                  )}
+                >
+                  {msg.role === "user" ? (
+                    <div className="max-w-[75%] rounded-2xl rounded-tr-sm px-4 py-2.5 bg-primary text-primary-foreground text-sm">
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                    </div>
+                  ) : msg.role === "human_agent" ? (
+                    <div className="max-w-[75%] rounded-2xl px-4 py-2.5 text-sm bg-blue-500/10 text-foreground border border-blue-500/20">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-blue-500/20 text-blue-600 dark:text-blue-400 mb-1">
+                        {msg.sent_by_name ?? "Team"}
+                      </span>
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                    </div>
+                  ) : (
+                    <div className="max-w-[75%] text-sm text-foreground leading-relaxed py-1">
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                      {isWhatsApp && (
+                        <DeliveryTicks
+                          messageStatuses={messageStatuses}
+                          outboundIds={outboundIds}
+                          messageIndex={currentAssistantIdx}
+                        />
+                      )}
+                    </div>
+                  )}
                 </div>
-              ) : msg.role === "human_agent" ? (
-                <div className="max-w-[75%] rounded-2xl px-4 py-2.5 text-sm bg-blue-500/10 text-foreground border border-blue-500/20">
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-blue-500/20 text-blue-600 dark:text-blue-400 mb-1">
-                    {msg.sent_by_name ?? "Team"}
-                  </span>
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
-                </div>
-              ) : (
-                <div className="max-w-[75%] text-sm text-foreground leading-relaxed py-1">
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
-                </div>
-              )}
-            </div>
-          ))}
+              );
+            });
+        })()}
       </div>
 
       {showInput && (

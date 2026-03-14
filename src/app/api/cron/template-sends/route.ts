@@ -1,11 +1,14 @@
 /**
- * Template Send Cron Processor
+ * Template Send Cron Processor (DEPRECATED — use Supabase Edge Function)
  * POST /api/cron/template-sends
  *
- * Processes pending/processing send jobs by batching queued messages.
- * Schedule: every 1 minute → ~50 messages/batch → ~3000/hour.
+ * Primary scheduling: pg_cron → pg_net → supabase/functions/template-sends
+ * This Next.js route is kept as a manual/admin fallback.
  *
- * Requires CRON_SECRET header (same pattern as auto-close).
+ * Processes pending/processing send jobs by batching queued messages.
+ * ~50 messages/batch → ~3000/hour.
+ *
+ * Requires CRON_SECRET header.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -175,15 +178,6 @@ export async function POST(req: NextRequest) {
             })
             .eq("id", msg.id);
 
-          // Increment job counter
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (supabase.from as any)("template_send_jobs")
-            .update({
-              sent_count: job.sent_count + totalSent + 1,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", job.id);
-
           totalSent++;
         } catch (err) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -194,16 +188,44 @@ export async function POST(req: NextRequest) {
             })
             .eq("id", msg.id);
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (supabase.from as any)("template_send_jobs")
-            .update({
-              failed_count: job.failed_count + totalFailed + 1,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", job.id);
-
           totalFailed++;
         }
+      }
+
+      // Recount from actual message statuses to avoid race conditions
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: msgStatuses } = await (supabase.from as any)("template_send_messages")
+        .select("status")
+        .eq("job_id", job.id);
+
+      if (msgStatuses) {
+        const sentCount = msgStatuses.filter((m: Record<string, string>) =>
+          ["sent", "delivered", "read"].includes(m.status)
+        ).length;
+        const deliveredCount = msgStatuses.filter((m: Record<string, string>) =>
+          ["delivered", "read"].includes(m.status)
+        ).length;
+        const readCount = msgStatuses.filter((m: Record<string, string>) => m.status === "read").length;
+        const failedCount = msgStatuses.filter((m: Record<string, string>) => m.status === "failed").length;
+        const queuedCount = msgStatuses.filter((m: Record<string, string>) => m.status === "queued").length;
+
+        const jobUpdate: Record<string, unknown> = {
+          sent_count: sentCount,
+          delivered_count: deliveredCount,
+          read_count: readCount,
+          failed_count: failedCount,
+          updated_at: new Date().toISOString(),
+        };
+
+        if (queuedCount === 0) {
+          jobUpdate.status = "completed";
+          jobUpdate.completed_at = new Date().toISOString();
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase.from as any)("template_send_jobs")
+          .update(jobUpdate)
+          .eq("id", job.id);
       }
     }
 

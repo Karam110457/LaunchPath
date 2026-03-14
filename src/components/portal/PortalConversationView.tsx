@@ -6,10 +6,11 @@ import { LiveTranscript } from "./LiveTranscript";
 
 interface PortalConversationViewProps {
   conversationId: string;
+  channelType?: string;
 }
 
-export function PortalConversationView({ conversationId }: PortalConversationViewProps) {
-  const { messages, status, isLoading, refresh } = useConversationRealtime(conversationId);
+export function PortalConversationView({ conversationId, channelType }: PortalConversationViewProps) {
+  const { messages, status, metadata, isLoading, refresh } = useConversationRealtime(conversationId);
 
   if (isLoading) {
     return (
@@ -32,6 +33,8 @@ export function PortalConversationView({ conversationId }: PortalConversationVie
           conversationId={conversationId}
           messages={messages}
           status={status}
+          metadata={metadata}
+          channelType={channelType}
         />
       </div>
 

@@ -22,6 +22,12 @@ import {
   markMessageRead,
   isSessionWindowOpen,
 } from "@/lib/channels/whatsapp";
+import { isOptOutKeyword, handleOptOut } from "@/lib/channels/opt-out";
+import { downloadWhatsAppMedia, transcribeAudio, describeImage } from "@/lib/channels/media";
+import { isWithinBusinessHours } from "@/lib/channels/business-hours";
+import { stopSequencesOnReply } from "@/lib/sequences/triggers";
+import { buildTagContactTool, TAG_TOOL_SYSTEM_PROMPT } from "@/lib/tools/integrations/system-tools";
+import { dispatchEvent } from "@/lib/events/dispatcher";
 import type { WhatsAppConfig } from "@/lib/channels/types";
 import { runAgentChat } from "@/lib/chat/run-agent-chat";
 import type { AgentConversationMessage } from "@/lib/chat/agent-chat-types";
@@ -171,6 +177,29 @@ export async function POST(
             }
           }
         }
+        // Also update message_statuses in channel_conversations metadata
+        // so the portal UI can show delivery ticks
+        if (statusUpdate.recipientPhone) {
+          const { data: conv } = await supabase
+            .from("channel_conversations")
+            .select("id, metadata")
+            .eq("session_id", statusUpdate.recipientPhone)
+            .order("updated_at", { ascending: false })
+            .limit(1)
+            .single();
+
+          if (conv) {
+            const meta = (conv.metadata ?? {}) as Record<string, unknown>;
+            const statuses = (meta.message_statuses ?? {}) as Record<string, string>;
+            statuses[statusUpdate.messageId] = statusUpdate.status;
+            await supabase
+              .from("channel_conversations")
+              .update({
+                metadata: { ...meta, message_statuses: statuses } as unknown as Json,
+              })
+              .eq("id", conv.id);
+          }
+        }
       } catch (err) {
         logger.error("Status update processing failed", {
           messageId: statusUpdate.messageId,
@@ -204,6 +233,17 @@ export async function POST(
 
   const config = channel.config as unknown as WhatsAppConfig;
 
+  // Look up client_id for credit cap enforcement
+  let clientId: string | undefined;
+  if (channel.campaign_id) {
+    const { data: campaign } = await supabase
+      .from("campaigns")
+      .select("client_id")
+      .eq("id", channel.campaign_id)
+      .single();
+    clientId = (campaign as { client_id?: string } | null)?.client_id ?? undefined;
+  }
+
   // -------------------------------------------------------------------------
   // 4. Return 200 immediately — process in background via after()
   // -------------------------------------------------------------------------
@@ -215,6 +255,7 @@ export async function POST(
         channel,
         config,
         parsed,
+        clientId,
       });
     } catch (err) {
       logger.error("WhatsApp message processing failed", {
@@ -244,8 +285,9 @@ async function processInboundMessage(ctx: {
   };
   config: WhatsAppConfig;
   parsed: NonNullable<ReturnType<typeof parseInboundMessage>>;
+  clientId?: string;
 }) {
-  const { supabase, channel, config, parsed } = ctx;
+  const { supabase, channel, config, parsed, clientId } = ctx;
 
   // -------------------------------------------------------------------------
   // 1. Send read receipt (if configured)
@@ -261,20 +303,133 @@ async function processInboundMessage(ctx: {
   }
 
   // -------------------------------------------------------------------------
-  // 2. Handle non-text messages (Phase 1: text only)
+  // 2. Opt-out handling
   // -------------------------------------------------------------------------
-  if (parsed.type !== "text" || !parsed.text) {
-    await sendWhatsAppMessage({
+  if (isOptOutKeyword(parsed.text)) {
+    await handleOptOut({
+      supabase,
+      channelId: channel.id,
+      phone: parsed.from,
       phoneNumberId: config.phoneNumberId,
       accessToken: config.accessToken,
-      to: parsed.from,
-      text: "Thanks for your message! I can currently only process text messages. Please send your question as text and I'll be happy to help.",
     });
     return;
   }
 
   // -------------------------------------------------------------------------
-  // 3. Load or create conversation (session_id = phone number)
+  // 3. Handle non-text messages (voice notes, images, or unsupported)
+  // -------------------------------------------------------------------------
+  if (parsed.type !== "text" || !parsed.text) {
+    // Voice note transcription
+    if (parsed.type === "audio" && parsed.mediaId && config.voiceNotes?.transcriptionEnabled) {
+      try {
+        const media = await downloadWhatsAppMedia({
+          mediaId: parsed.mediaId,
+          accessToken: config.accessToken,
+        });
+        const { text } = await transcribeAudio(media.buffer, media.mimeType);
+        parsed.text = `[Voice note]: ${text}`;
+        // Fall through to normal processing
+      } catch (err) {
+        logger.error("Voice note transcription failed", {
+          channelId: channel.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        await sendWhatsAppMessage({
+          phoneNumberId: config.phoneNumberId,
+          accessToken: config.accessToken,
+          to: parsed.from,
+          text: "Sorry, I couldn't process your voice message. Could you please type your question instead?",
+        });
+        return;
+      }
+    }
+    // Image description via vision
+    else if (parsed.type === "image" && parsed.mediaId && config.imageHandling?.visionEnabled) {
+      try {
+        const media = await downloadWhatsAppMedia({
+          mediaId: parsed.mediaId,
+          accessToken: config.accessToken,
+        });
+        const description = await describeImage(media.buffer, media.mimeType);
+        parsed.text = `[Image received]: ${description}`;
+        // Fall through to normal processing
+      } catch (err) {
+        logger.error("Image description failed", {
+          channelId: channel.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        await sendWhatsAppMessage({
+          phoneNumberId: config.phoneNumberId,
+          accessToken: config.accessToken,
+          to: parsed.from,
+          text: "Sorry, I couldn't process your image. Could you please describe what you're asking about?",
+        });
+        return;
+      }
+    }
+    // Unsupported media type
+    else if (!parsed.text) {
+      await sendWhatsAppMessage({
+        phoneNumberId: config.phoneNumberId,
+        accessToken: config.accessToken,
+        to: parsed.from,
+        text: "Thanks for your message! I can currently only process text messages. Please send your question as text and I'll be happy to help.",
+      });
+      return;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // 4. Business hours check
+  // -------------------------------------------------------------------------
+  if (config.businessHours?.enabled && !isWithinBusinessHours(config.businessHours)) {
+    const behavior = config.businessHours.outsideHoursBehavior;
+    if (behavior === "away_message" && config.businessHours.awayMessage) {
+      await sendWhatsAppMessage({
+        phoneNumberId: config.phoneNumberId,
+        accessToken: config.accessToken,
+        to: parsed.from,
+        text: config.businessHours.awayMessage,
+      });
+    }
+    // For both 'queue' and 'away_message': save the user message to conversation but don't run AI
+    // Load/create conversation to persist the message
+    const sessionId = parsed.from;
+    const { data: existingRow } = await supabase
+      .from("channel_conversations")
+      .select("id, messages")
+      .eq("channel_id", channel.id)
+      .eq("session_id", sessionId)
+      .single();
+
+    const userMsg = { role: "user" as const, content: parsed.text!, timestamp: new Date().toISOString() };
+    if (existingRow) {
+      const msgs = ((existingRow.messages as unknown as AgentConversationMessage[]) ?? []);
+      await supabase
+        .from("channel_conversations")
+        .update({ messages: [...msgs, userMsg] as unknown as Json })
+        .eq("id", existingRow.id);
+    } else {
+      await supabase
+        .from("channel_conversations")
+        .insert({
+          channel_id: channel.id,
+          agent_id: channel.agent_id,
+          session_id: sessionId,
+          messages: [userMsg] as unknown as Json,
+          metadata: {
+            last_customer_message_at: new Date().toISOString(),
+            whatsapp_profile_name: parsed.displayName,
+            whatsapp_phone: parsed.from,
+          },
+        });
+    }
+    return;
+  }
+
+  // -------------------------------------------------------------------------
+  // 5. Load or create conversation (session_id = phone number)
   // -------------------------------------------------------------------------
   const sessionId = parsed.from;
 
@@ -345,21 +500,31 @@ async function processInboundMessage(ctx: {
   }
 
   // -------------------------------------------------------------------------
-  // 5. Apply response delay (humanisation)
+  // 5. Response delay is computed after agent reply (humanisation)
   // -------------------------------------------------------------------------
-  const delayMs = config.responseDelay ?? 0;
+  const baseDelayMs = config.responseDelay ?? 0;
 
   // -------------------------------------------------------------------------
   // 6. Run agent and send reply
   // -------------------------------------------------------------------------
   let assistantReply = "";
 
+  // Build system tools for WhatsApp agent
+  const systemTools = buildTagContactTool({
+    supabase,
+    channelId: channel.id,
+    phone: parsed.from,
+  });
+
   const response = await runAgentChat({
     agentId: channel.agent_id,
-    userMessage: parsed.text,
+    userMessage: parsed.text!,
     conversationHistory,
     supabase,
     composioUserId: channel.user_id,
+    clientId,
+    additionalTools: systemTools,
+    additionalSystemPrompt: TAG_TOOL_SYSTEM_PROMPT,
 
     onConversationSave: async ({ updatedHistory, assistantContent, userMessage }) => {
       assistantReply = assistantContent;
@@ -399,7 +564,7 @@ async function processInboundMessage(ctx: {
 
   // Consume the SSE stream to completion (we don't send it to a client)
   // The onConversationSave callback already captured assistantReply
-  if (response.body) {
+  if (response.ok && response.body) {
     const reader = response.body.getReader();
     try {
       while (true) {
@@ -409,25 +574,75 @@ async function processInboundMessage(ctx: {
     } finally {
       reader.releaseLock();
     }
+  } else if (!response.ok) {
+    // Agent call failed (402 insufficient credits, 429 rate limit, 404 agent not found, etc.)
+    logger.error("Agent chat failed for WhatsApp message", {
+      channelId: channel.id,
+      status: response.status,
+      from: parsed.from,
+    });
+    // Don't leave the customer without a response — send a generic error message
+    // within the 24h window
+    try {
+      await sendWhatsAppMessage({
+        phoneNumberId: config.phoneNumberId,
+        accessToken: config.accessToken,
+        to: parsed.from,
+        text: "Sorry, I'm temporarily unable to respond. Please try again later.",
+      });
+    } catch {
+      // Best-effort — don't fail the webhook
+    }
   }
 
   // -------------------------------------------------------------------------
   // 7. Send reply via WhatsApp (with optional delay)
   // -------------------------------------------------------------------------
   if (assistantReply) {
-    if (delayMs > 0) {
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    // Scale delay with response length for human-like pacing
+    // baseDelay + min(length * 5ms, 3000ms), capped at 8s total
+    const scaledDelay = baseDelayMs > 0
+      ? Math.min(baseDelayMs + Math.min(assistantReply.length * 5, 3000), 8000)
+      : 0;
+    if (scaledDelay > 0) {
+      await new Promise((resolve) => setTimeout(resolve, scaledDelay));
     }
 
     // Check 24-hour window (should always be open since customer just messaged)
     const windowOpen = isSessionWindowOpen(now);
     if (windowOpen) {
-      await sendWhatsAppMessage({
+      const sendResult = await sendWhatsAppMessage({
         phoneNumberId: config.phoneNumberId,
         accessToken: config.accessToken,
         to: parsed.from,
         text: assistantReply,
       });
+
+      // Store outbound messageId in conversation metadata for delivery tick tracking
+      if (sendResult.messageId && existingConversationId) {
+        const { data: convForMeta } = await supabase
+          .from("channel_conversations")
+          .select("metadata")
+          .eq("id", existingConversationId)
+          .single();
+        if (convForMeta) {
+          const meta = (convForMeta.metadata ?? {}) as Record<string, unknown>;
+          const statuses = (meta.message_statuses ?? {}) as Record<string, string>;
+          statuses[sendResult.messageId] = "sent";
+          const outboundIds = ((meta.outbound_message_ids ?? []) as string[]);
+          outboundIds.push(sendResult.messageId);
+          await supabase
+            .from("channel_conversations")
+            .update({
+              metadata: {
+                ...meta,
+                message_statuses: statuses,
+                outbound_message_ids: outboundIds,
+              } as unknown as Json,
+            })
+            .eq("id", existingConversationId);
+        }
+      }
     } else {
       logger.warn("WhatsApp session window closed, attempting template fallback", {
         channelId: channel.id,
@@ -468,7 +683,14 @@ async function processInboundMessage(ctx: {
   }
 
   // -------------------------------------------------------------------------
-  // 8. Upsert contact record
+  // 8. Stop sequences on reply
+  // -------------------------------------------------------------------------
+  await stopSequencesOnReply(supabase, channel.id, parsed.from).catch(() => {
+    // Non-critical
+  });
+
+  // -------------------------------------------------------------------------
+  // 9. Upsert contact record
   // -------------------------------------------------------------------------
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (supabase.from as any)("campaign_contacts")
@@ -499,4 +721,19 @@ async function processInboundMessage(ctx: {
           .eq("phone", parsed.from);
       }
     });
+
+  // -------------------------------------------------------------------------
+  // 10. Dispatch webhook event
+  // -------------------------------------------------------------------------
+  dispatchEvent(supabase, {
+    channelId: channel.id,
+    eventType: "whatsapp.message.received",
+    payload: {
+      from: parsed.from,
+      displayName: parsed.displayName,
+      messageType: parsed.type,
+      text: parsed.text?.slice(0, 500),
+      conversationId: existingConversationId,
+    },
+  }).catch(() => {});
 }

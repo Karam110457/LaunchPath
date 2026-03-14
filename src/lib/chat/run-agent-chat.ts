@@ -67,6 +67,12 @@ export interface RunAgentChatParams {
   /** Extra headers to add to the SSE response (e.g. CORS headers). */
   extraHeaders?: Record<string, string>;
 
+  /** Additional tools to inject (e.g. system tools for WhatsApp tagging). */
+  additionalTools?: Record<string, unknown>;
+
+  /** Extra system prompt to append (e.g. tagging instructions). */
+  additionalSystemPrompt?: string;
+
   /**
    * Callback to persist conversation after completion.
    * Different for authenticated (agent_conversations) vs public (channel_conversations).
@@ -128,6 +134,8 @@ export async function runAgentChat(
     composioUserId,
     clientId,
     extraHeaders,
+    additionalTools,
+    additionalSystemPrompt,
     onConversationSave,
   } = params;
 
@@ -372,7 +380,12 @@ export async function runAgentChat(
     toolDisplayNames[toolName] = KNOWLEDGE_TOOL_DISPLAY_NAME;
   }
 
-  // hasTools must be computed AFTER knowledge tool injection
+  // Merge additional tools (e.g. system tools for WhatsApp tagging)
+  if (additionalTools) {
+    Object.assign(tools, additionalTools);
+  }
+
+  // hasTools must be computed AFTER knowledge tool injection + additional tools
   const hasTools = Object.keys(tools).length > 0;
 
   // -------------------------------------------------------------------------
@@ -402,7 +415,7 @@ export async function runAgentChat(
   // Assemble final system prompt
   // -------------------------------------------------------------------------
 
-  const { systemPrompt } = assemblePrompt({
+  let { systemPrompt } = assemblePrompt({
     systemPrompt: agent.system_prompt,
     ragContext,
     toolRecords: agentToolRecords,
@@ -421,6 +434,10 @@ export async function runAgentChat(
       | null,
     toolGuidelines: (agent.tool_guidelines as string | null) ?? undefined,
   });
+
+  if (additionalSystemPrompt) {
+    systemPrompt = `${systemPrompt}\n\n${additionalSystemPrompt}`;
+  }
 
   // -------------------------------------------------------------------------
   // Set up SSE stream

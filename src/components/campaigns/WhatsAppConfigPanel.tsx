@@ -1,15 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check, Shield, MessageSquare, Settings2 } from "lucide-react";
+import { Copy, Check, Shield, MessageSquare, Settings2, Sliders } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import type { WhatsAppConfig } from "@/lib/channels/types";
+import { EventsConfigPanel } from "./whatsapp/EventsConfigPanel";
 
 const INPUT_CLASS =
   "w-full rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-3 py-2 text-sm shadow-sm outline-none focus:ring-2 focus:ring-neutral-400/20 focus:border-neutral-400/50 dark:focus:ring-neutral-500/20 dark:focus:border-neutral-500/40 transition-all placeholder:text-muted-foreground/50";
 
 const TEXTAREA_CLASS =
   "w-full rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-3 py-2 text-sm shadow-sm outline-none focus:ring-2 focus:ring-neutral-400/20 focus:border-neutral-400/50 dark:focus:ring-neutral-500/20 dark:focus:border-neutral-500/40 transition-all placeholder:text-muted-foreground/50 resize-none";
+
+interface TemplateSummary {
+  id: string;
+  name: string;
+  language: string;
+  status: string;
+}
 
 interface WhatsAppConfigPanelProps {
   config: Partial<WhatsAppConfig>;
@@ -18,13 +26,45 @@ interface WhatsAppConfigPanelProps {
   onRateLimitChange: (rpm: string) => void;
   webhookUrl: string | null;
   verifyTokenDisplay: string;
+  /** Approved templates for fallback selector */
+  approvedTemplates?: TemplateSummary[];
+  /** Campaign ID for event subscriptions */
+  campaignId?: string;
 }
 
 const TABS = [
   { id: "credentials", label: "Credentials", icon: Shield, description: "API keys & tokens" },
   { id: "messaging", label: "Messaging", icon: MessageSquare, description: "Responses & behavior" },
   { id: "deploy", label: "Deploy", icon: Settings2, description: "Webhook & setup" },
+  { id: "advanced", label: "Advanced", icon: Sliders, description: "Business hours, voice & vision" },
 ] as const;
+
+const DAYS = [
+  { key: "monday", label: "Mon" },
+  { key: "tuesday", label: "Tue" },
+  { key: "wednesday", label: "Wed" },
+  { key: "thursday", label: "Thu" },
+  { key: "friday", label: "Fri" },
+  { key: "saturday", label: "Sat" },
+  { key: "sunday", label: "Sun" },
+] as const;
+
+const TIMEZONES = [
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Asia/Dubai",
+  "Asia/Kolkata",
+  "Asia/Singapore",
+  "Asia/Tokyo",
+  "Australia/Sydney",
+  "Pacific/Auckland",
+];
 
 type TabId = (typeof TABS)[number]["id"];
 
@@ -94,6 +134,8 @@ export function WhatsAppConfigPanel({
   onRateLimitChange,
   webhookUrl,
   verifyTokenDisplay,
+  approvedTemplates = [],
+  campaignId,
 }: WhatsAppConfigPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>("credentials");
   const [copied, setCopied] = useState(false);
@@ -267,6 +309,281 @@ export function WhatsAppConfigPanel({
                 max={1000}
               />
             </FieldGroup>
+
+            <hr className="border-neutral-200/50 dark:border-neutral-700/50" />
+
+            <SectionHeader
+              title="24-Hour Window Fallback"
+              description="When a customer's session expires, send a template instead of a free-form reply."
+            />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-xs">Enable Template Fallback</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Auto-send an approved template when the 24h window closes
+                </p>
+              </div>
+              <Toggle
+                checked={config.templateFallback?.enabled ?? false}
+                onChange={(v) =>
+                  updateConfig("templateFallback" as keyof WhatsAppConfig, {
+                    ...config.templateFallback,
+                    enabled: v,
+                  } as never)
+                }
+              />
+            </div>
+
+            {config.templateFallback?.enabled && (
+              <FieldGroup
+                label="Fallback Template"
+                hint="Select an approved template to send when the session window expires"
+              >
+                <select
+                  value={config.templateFallback?.templateId ?? ""}
+                  onChange={(e) =>
+                    updateConfig("templateFallback" as keyof WhatsAppConfig, {
+                      ...config.templateFallback,
+                      enabled: true,
+                      templateId: e.target.value || undefined,
+                    } as never)
+                  }
+                  className={INPUT_CLASS}
+                >
+                  <option value="">— Select a template —</option>
+                  {approvedTemplates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.language})
+                    </option>
+                  ))}
+                </select>
+                {approvedTemplates.length === 0 && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400">
+                    No approved templates yet. Sync or create templates in the Templates tab.
+                  </p>
+                )}
+              </FieldGroup>
+            )}
+          </>
+        )}
+
+        {/* ═══════ ADVANCED TAB ═══════ */}
+        {activeTab === "advanced" && (
+          <>
+            {/* Business Hours */}
+            <SectionHeader
+              title="Business Hours"
+              description="Control when your agent responds automatically."
+            />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-xs">Enable Business Hours</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Only auto-respond during configured hours
+                </p>
+              </div>
+              <Toggle
+                checked={config.businessHours?.enabled ?? false}
+                onChange={(v) =>
+                  updateConfig("businessHours" as keyof WhatsAppConfig, {
+                    ...config.businessHours,
+                    enabled: v,
+                    timezone: config.businessHours?.timezone ?? "UTC",
+                    schedule: config.businessHours?.schedule ?? {
+                      monday: { open: "09:00", close: "17:00" },
+                      tuesday: { open: "09:00", close: "17:00" },
+                      wednesday: { open: "09:00", close: "17:00" },
+                      thursday: { open: "09:00", close: "17:00" },
+                      friday: { open: "09:00", close: "17:00" },
+                      saturday: null,
+                      sunday: null,
+                    },
+                    outsideHoursBehavior: config.businessHours?.outsideHoursBehavior ?? "away_message",
+                  } as never)
+                }
+              />
+            </div>
+
+            {config.businessHours?.enabled && (
+              <div className="space-y-4 pl-1">
+                <FieldGroup label="Timezone">
+                  <select
+                    value={config.businessHours?.timezone ?? "UTC"}
+                    onChange={(e) =>
+                      updateConfig("businessHours" as keyof WhatsAppConfig, {
+                        ...config.businessHours,
+                        timezone: e.target.value,
+                      } as never)
+                    }
+                    className={INPUT_CLASS}
+                  >
+                    {TIMEZONES.map((tz) => (
+                      <option key={tz} value={tz}>{tz}</option>
+                    ))}
+                  </select>
+                </FieldGroup>
+
+                {/* Per-day schedule */}
+                <div className="space-y-2">
+                  <Label className="text-xs">Schedule</Label>
+                  {DAYS.map((day) => {
+                    const schedule = config.businessHours?.schedule ?? {};
+                    const dayVal = schedule[day.key];
+                    const isOpen = dayVal !== null && dayVal !== undefined;
+                    return (
+                      <div key={day.key} className="flex items-center gap-2">
+                        <Toggle
+                          checked={isOpen}
+                          onChange={(v) => {
+                            const newSchedule = { ...schedule };
+                            newSchedule[day.key] = v
+                              ? { open: "09:00", close: "17:00" }
+                              : null;
+                            updateConfig("businessHours" as keyof WhatsAppConfig, {
+                              ...config.businessHours,
+                              schedule: newSchedule,
+                            } as never);
+                          }}
+                        />
+                        <span className="text-xs font-medium w-8">{day.label}</span>
+                        {isOpen && dayVal ? (
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="time"
+                              value={dayVal.open}
+                              onChange={(e) => {
+                                const newSchedule = { ...schedule };
+                                newSchedule[day.key] = {
+                                  ...dayVal,
+                                  open: e.target.value,
+                                };
+                                updateConfig("businessHours" as keyof WhatsAppConfig, {
+                                  ...config.businessHours,
+                                  schedule: newSchedule,
+                                } as never);
+                              }}
+                              className="text-xs rounded-lg border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-2 py-1"
+                            />
+                            <span className="text-xs text-muted-foreground">to</span>
+                            <input
+                              type="time"
+                              value={dayVal.close}
+                              onChange={(e) => {
+                                const newSchedule = { ...schedule };
+                                newSchedule[day.key] = {
+                                  ...dayVal,
+                                  close: e.target.value,
+                                };
+                                updateConfig("businessHours" as keyof WhatsAppConfig, {
+                                  ...config.businessHours,
+                                  schedule: newSchedule,
+                                } as never);
+                              }}
+                              className="text-xs rounded-lg border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-2 py-1"
+                            />
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground">Closed</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <FieldGroup label="Outside Hours Behavior">
+                  <select
+                    value={config.businessHours?.outsideHoursBehavior ?? "away_message"}
+                    onChange={(e) =>
+                      updateConfig("businessHours" as keyof WhatsAppConfig, {
+                        ...config.businessHours,
+                        outsideHoursBehavior: e.target.value,
+                      } as never)
+                    }
+                    className={INPUT_CLASS}
+                  >
+                    <option value="away_message">Send away message</option>
+                    <option value="queue">Queue message (no response)</option>
+                    <option value="always_on">Always respond (ignore hours)</option>
+                  </select>
+                </FieldGroup>
+
+                {config.businessHours?.outsideHoursBehavior === "away_message" && (
+                  <FieldGroup label="Away Message" hint="Sent when a customer messages outside business hours">
+                    <textarea
+                      value={config.businessHours?.awayMessage ?? ""}
+                      onChange={(e) =>
+                        updateConfig("businessHours" as keyof WhatsAppConfig, {
+                          ...config.businessHours,
+                          awayMessage: e.target.value,
+                        } as never)
+                      }
+                      rows={2}
+                      className={TEXTAREA_CLASS}
+                      placeholder="e.g., Thanks for your message! We're currently outside business hours. We'll get back to you as soon as we're open."
+                    />
+                  </FieldGroup>
+                )}
+              </div>
+            )}
+
+            <hr className="border-neutral-200/50 dark:border-neutral-700/50" />
+
+            {/* Voice Notes */}
+            <SectionHeader
+              title="Voice Notes"
+              description="Transcribe incoming voice messages using OpenAI Whisper."
+            />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-xs">Enable Transcription</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Automatically transcribe voice notes to text for AI processing
+                </p>
+              </div>
+              <Toggle
+                checked={config.voiceNotes?.transcriptionEnabled ?? false}
+                onChange={(v) =>
+                  updateConfig("voiceNotes" as keyof WhatsAppConfig, {
+                    transcriptionEnabled: v,
+                  } as never)
+                }
+              />
+            </div>
+
+            <hr className="border-neutral-200/50 dark:border-neutral-700/50" />
+
+            {/* Image Handling */}
+            <SectionHeader
+              title="Image Handling"
+              description="Describe incoming images using vision AI for context-aware responses."
+            />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-xs">Enable Vision</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Describe images with AI so your agent can respond to visual content
+                </p>
+              </div>
+              <Toggle
+                checked={config.imageHandling?.visionEnabled ?? false}
+                onChange={(v) =>
+                  updateConfig("imageHandling" as keyof WhatsAppConfig, {
+                    visionEnabled: v,
+                  } as never)
+                }
+              />
+            </div>
+
+            {campaignId && (
+              <>
+                <hr className="border-neutral-200/50 dark:border-neutral-700/50" />
+                <EventsConfigPanel campaignId={campaignId} />
+              </>
+            )}
           </>
         )}
 

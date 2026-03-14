@@ -101,6 +101,7 @@ export interface AgentCanvasPageProps {
     model: string;
     created_at: string;
     wizard_config?: WizardConfig | null;
+    voice_config?: import("@/lib/channels/types").AgentVoiceSettings | null;
     canvas_layout?: any; // We parse this below
     knowledge_enabled?: boolean;
     tool_guidelines?: string | null;
@@ -143,6 +144,7 @@ function AgentCanvasInner({
     model: agent.model,
     systemPrompt: agent.system_prompt,
     wizardConfig: (agent.wizard_config as WizardConfig) ?? null,
+    voiceConfig: (agent.voice_config as import("@/lib/channels/types").AgentVoiceSettings) ?? null,
   }), [agent, personality]);
 
   // savedFormState = the "baseline" for dirty tracking.
@@ -199,8 +201,8 @@ function AgentCanvasInner({
   const isDirty = useMemo(() => {
     return (Object.keys(savedFormState) as (keyof AgentFormState)[]).some(
       (key) => {
-        if (key === "wizardConfig") {
-          return JSON.stringify(formState.wizardConfig) !== JSON.stringify(savedFormState.wizardConfig);
+        if (key === "wizardConfig" || key === "voiceConfig") {
+          return JSON.stringify(formState[key]) !== JSON.stringify(savedFormState[key]);
         }
         return formState[key] !== savedFormState[key];
       }
@@ -226,6 +228,7 @@ function AgentCanvasInner({
     },
     model: formState.model,
     wizard_config: formState.wizardConfig,
+    voice_config: formState.voiceConfig,
   }), [formState]);
 
   // ─── Autosave (5s debounce, no version creation) ──────────────────────
@@ -2122,6 +2125,8 @@ function AgentCanvasInner({
             agentId={agent.id}
             agentName={agent.name}
             greetingMessage={personality?.greeting_message}
+            voiceConfig={formState.voiceConfig}
+            onVoiceConfigUpdate={(config) => setFormState((prev) => ({ ...prev, voiceConfig: config }))}
             onClose={() => setChatOpen(false)}
           />
         )}

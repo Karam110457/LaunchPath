@@ -10,7 +10,7 @@ import { generateChannelToken, generateWebhookPath } from "@/lib/channels/token"
 import { maskConfig } from "@/lib/tools/mask-config";
 import { logger } from "@/lib/security/logger";
 
-const ALLOWED_CHANNEL_TYPES = new Set(["widget", "api", "whatsapp"]);
+const ALLOWED_CHANNEL_TYPES = new Set(["widget", "api", "whatsapp", "voice"]);
 
 /** Channel types that require a webhook_path for inbound messages. */
 const WEBHOOK_CHANNEL_TYPES = new Set(["whatsapp"]);
@@ -104,7 +104,7 @@ export async function POST(
 
   if (!channel_type || !ALLOWED_CHANNEL_TYPES.has(channel_type)) {
     return NextResponse.json(
-      { error: "channel_type must be one of: widget, api, whatsapp" },
+      { error: "channel_type must be one of: widget, api, whatsapp, voice" },
       { status: 400 }
     );
   }
@@ -115,11 +115,22 @@ export async function POST(
     if (
       !cfg?.phoneNumberId ||
       !cfg?.accessToken ||
-      !cfg?.verifyToken ||
-      !cfg?.businessAccountId
+      !cfg?.verifyToken
     ) {
       return NextResponse.json(
-        { error: "WhatsApp channels require phoneNumberId, businessAccountId, accessToken, and verifyToken in config" },
+        { error: "WhatsApp channels require phoneNumberId, accessToken, and verifyToken in config" },
+        { status: 400 }
+      );
+    }
+    // businessAccountId is optional — template features are gated on its presence in the UI
+  }
+
+  // Validate voice-specific config
+  if (channel_type === "voice") {
+    const cfg = config as Record<string, unknown> | undefined;
+    if (!cfg?.provider || !cfg?.apiKey) {
+      return NextResponse.json(
+        { error: "Voice channels require provider and apiKey in config" },
         { status: 400 }
       );
     }

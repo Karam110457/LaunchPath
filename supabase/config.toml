@@ -1,0 +1,8 @@
+[project]
+id = "launchpath"
+
+[functions.template-sends]
+verify_jwt = false
+
+[functions.sequence-processor]
+verify_jwt = false

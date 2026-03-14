@@ -25,6 +25,8 @@ export interface ParsedWhatsAppMessage {
   text?: string;
   phoneNumberId: string; // which business number received it
   displayName?: string; // WhatsApp profile name
+  mediaId?: string; // Meta media ID for audio/image/video/document
+  mimeType?: string; // MIME type of media attachment
 }
 
 interface SendMessageResult {
@@ -195,6 +197,18 @@ export function parseInboundMessage(
       text = textObj?.body as string;
     }
 
+    // Extract media info for audio/image/video/document messages
+    let mediaId: string | undefined;
+    let mimeType: string | undefined;
+    const mediaTypes = ["audio", "image", "video", "document"];
+    if (mediaTypes.includes(type)) {
+      const mediaObj = msg[type] as Record<string, unknown> | undefined;
+      if (mediaObj) {
+        mediaId = mediaObj.id as string | undefined;
+        mimeType = mediaObj.mime_type as string | undefined;
+      }
+    }
+
     return {
       messageId: msg.id as string,
       from: msg.from as string,
@@ -204,6 +218,8 @@ export function parseInboundMessage(
       phoneNumberId: metadata?.phone_number_id as string,
       displayName: (contacts?.[0]?.profile as Record<string, unknown>)
         ?.name as string | undefined,
+      mediaId,
+      mimeType,
     };
   } catch {
     return null;

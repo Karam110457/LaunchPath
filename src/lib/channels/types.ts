@@ -71,10 +71,39 @@ export interface WhatsAppConfig {
   autoEscalation?: { enabled: boolean; keywords?: string[] };
   /** Template fallback when 24-hour session window is closed */
   templateFallback?: { enabled: boolean; templateId?: string };
+  /** Voice note transcription via OpenAI Whisper */
+  voiceNotes?: { transcriptionEnabled: boolean };
+  /** Image description via vision model */
+  imageHandling?: { visionEnabled: boolean };
+  /** Business hours configuration */
+  businessHours?: {
+    enabled: boolean;
+    timezone: string;
+    schedule: Record<string, { open: string; close: string } | null>;
+    outsideHoursBehavior: "queue" | "away_message" | "always_on";
+    awayMessage?: string;
+  };
+}
+
+/** Agent-level voice settings stored in ai_agents.voice_config */
+export interface AgentVoiceSettings {
+  ttsProvider: "browser" | "openai";
+  voiceId: string;
+  voiceName: string;
+  speed: number; // 0.5 - 2.0, default 1.0
+}
+
+/** Voice channel config for agent_channels where channel_type = 'voice' */
+export interface VoiceChannelConfig {
+  provider: "vapi" | "elevenlabs" | "retell";
+  apiKey: string;
+  assistantId?: string;
+  greetingMessage?: string;
+  autoClose?: { enabled: boolean; hours?: number };
 }
 
 /** Union of all channel-specific config types */
-export type ChannelConfig = WidgetConfig | WhatsAppConfig;
+export type ChannelConfig = WidgetConfig | WhatsAppConfig | VoiceChannelConfig;
 
 /** Type guard for WhatsApp channel config */
 export function isWhatsAppConfig(
@@ -85,6 +114,13 @@ export function isWhatsAppConfig(
     "accessToken" in config &&
     "verifyToken" in config
   );
+}
+
+/** Type guard for Voice channel config */
+export function isVoiceConfig(
+  config: ChannelConfig
+): config is VoiceChannelConfig {
+  return "provider" in config && "apiKey" in config && !("phoneNumberId" in config);
 }
 
 /** Shape returned by the channel CRUD API */

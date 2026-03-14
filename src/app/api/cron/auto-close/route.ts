@@ -1,9 +1,13 @@
 /**
- * Auto-Close Stale Conversations
+ * Auto-Close Stale Widget Conversations
  * POST /api/cron/auto-close
  *
- * Closes conversations that have been inactive for 24+ hours.
- * Intended to be called by Vercel Cron (or manually by admins).
+ * Closes widget conversations that have been inactive for 24+ hours.
+ * WhatsApp conversations are excluded — session management is handled
+ * by Meta's 24-hour window, not by closing on our side.
+ *
+ * Primary scheduling: pg_cron (auto_close_stale_widget_conversations function).
+ * This route is kept as a manual/admin fallback.
  *
  * Requires CRON_SECRET header for security.
  */
@@ -26,11 +30,12 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceClient();
 
-  // Fetch all channels to check per-channel autoClose config
+  // Fetch widget channels only — WhatsApp conversations stay open
   const { data: channels } = await supabase
     .from("agent_channels")
     .select("id, config")
-    .eq("is_enabled", true);
+    .eq("is_enabled", true)
+    .eq("channel_type", "widget");
 
   // Build a map of channel_id → autoClose hours (skip disabled channels)
   const channelHoursMap = new Map<string, number>();

@@ -74,6 +74,9 @@ export function SendsTab({ agentId, channelId, campaignId }: SendsTabProps) {
   }, [jobs, fetchJobs]);
 
   async function handleCancel(jobId: string) {
+    if (!window.confirm("Cancel this send job? Messages already sent cannot be recalled.")) {
+      return;
+    }
     try {
       const res = await fetch(`${channelApiBase}/send-jobs/${jobId}`, {
         method: "DELETE",

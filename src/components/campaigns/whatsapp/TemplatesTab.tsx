@@ -90,6 +90,9 @@ export function TemplatesTab({
   }
 
   async function handleDelete(templateId: string) {
+    if (!window.confirm("Delete this template? This will also remove it from Meta and cannot be undone.")) {
+      return;
+    }
     try {
       const res = await fetch(
         `${channelApiBase}/templates/${templateId}`,
