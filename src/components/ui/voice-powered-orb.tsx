@@ -9,6 +9,8 @@ interface VoicePoweredOrbProps {
   className?: string;
   hue?: number;
   enableVoiceControl?: boolean;
+  /** Pre-acquired MediaStream from parent — avoids duplicate getUserMedia calls */
+  mediaStream?: MediaStream | null;
   voiceSensitivity?: number;
   maxRotationSpeed?: number;
   maxHoverIntensity?: number;
@@ -19,6 +21,7 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
   className,
   hue = 0,
   enableVoiceControl = true,
+  mediaStream = null,
   voiceSensitivity = 1.5,
   maxRotationSpeed = 1.2,
   maxHoverIntensity = 0.8,
@@ -214,18 +217,9 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
     return level;
   };
 
-  // Stop microphone and cleanup
+  // Disconnect audio nodes (does NOT stop the media stream — parent owns it)
   const stopMicrophone = () => {
     try {
-      // Stop all tracks in the media stream
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(track => {
-          track.stop();
-        });
-        mediaStreamRef.current = null;
-      }
-
-      // Disconnect and cleanup audio nodes
       if (microphoneRef.current) {
         microphoneRef.current.disconnect();
         microphoneRef.current = null;
@@ -236,7 +230,6 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
         analyserRef.current = null;
       }
 
-      // Close audio context
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
         audioContextRef.current.close();
         audioContextRef.current = null;
@@ -244,34 +237,39 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
 
       dataArrayRef.current = null;
       isMicReadyRef.current = false;
-      console.log('Microphone stopped and cleaned up');
     } catch (error) {
-      console.warn('Error stopping microphone:', error);
+      console.warn('[Orb] Cleanup error:', error);
     }
   };
 
-  // Initialize microphone access
+  // Initialize audio analyser from an existing MediaStream (no getUserMedia call)
   const initMicrophone = async () => {
     try {
-      // Clean up any existing microphone first
-      stopMicrophone();
+      // Clean up any existing audio nodes first (but don't stop the stream — parent owns it)
+      if (microphoneRef.current) {
+        microphoneRef.current.disconnect();
+        microphoneRef.current = null;
+      }
+      if (analyserRef.current) {
+        analyserRef.current.disconnect();
+        analyserRef.current = null;
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+      dataArrayRef.current = null;
+      isMicReadyRef.current = false;
 
-      // Use simple constraints — strict settings (echoCancellation:false, etc.)
-      // can cause OverconstrainedError on some devices
-      let stream: MediaStream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch (err) {
-        console.error('[Orb] getUserMedia failed:', err);
+      // Use the stream passed from parent — no duplicate getUserMedia
+      const stream = mediaStreamRef.current;
+      if (!stream || stream.getAudioTracks().length === 0) {
+        console.warn('[Orb] No active media stream available');
         return false;
       }
 
-      // Store the stream reference for cleanup
-      mediaStreamRef.current = stream;
-
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
 
-      // Resume audio context if needed (required after user gesture in most browsers)
       if (audioContextRef.current.state === 'suspended') {
         await audioContextRef.current.resume();
       }
@@ -279,7 +277,6 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
       analyserRef.current = audioContextRef.current.createAnalyser();
       microphoneRef.current = audioContextRef.current.createMediaStreamSource(stream);
 
-      // Optimize for voice detection
       analyserRef.current.fftSize = 256;
       analyserRef.current.smoothingTimeConstant = 0.4;
       analyserRef.current.minDecibels = -85;
@@ -289,10 +286,10 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
       dataArrayRef.current = new Uint8Array(analyserRef.current.frequencyBinCount);
 
       isMicReadyRef.current = true;
-      console.log('[Orb] Microphone initialized, analyser bins:', analyserRef.current.frequencyBinCount);
+      console.log('[Orb] Analyser connected to stream, bins:', analyserRef.current.frequencyBinCount);
       return true;
     } catch (error) {
-      console.error("[Orb] Microphone init error:", error);
+      console.error("[Orb] Analyser init error:", error);
       return false;
     }
   };
@@ -463,16 +460,18 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
     frag
   ]);
 
-  // Handle microphone lifecycle — sole owner of mic init/cleanup
+  // Sync the mediaStream prop into our ref so initMicrophone can use it
+  useEffect(() => {
+    mediaStreamRef.current = mediaStream;
+  }, [mediaStream]);
+
+  // Handle analyser lifecycle — connect/disconnect when stream or voice control changes
   useEffect(() => {
     let cancelled = false;
 
-    if (enableVoiceControl) {
-      initMicrophone().then((success) => {
-        if (cancelled) {
-          // Effect was cleaned up before init finished — tear down
-          stopMicrophone();
-        }
+    if (enableVoiceControl && mediaStream) {
+      initMicrophone().then(() => {
+        if (cancelled) stopMicrophone();
       });
     } else {
       stopMicrophone();
@@ -482,7 +481,7 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
       cancelled = true;
       stopMicrophone();
     };
-  }, [enableVoiceControl]);
+  }, [enableVoiceControl, mediaStream]);
 
   return (
     <div
