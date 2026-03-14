@@ -140,6 +140,8 @@ export function FloatingChatWidget({
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [micStream, setMicStream] = useState<MediaStream | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playbackCtxRef = useRef<AudioContext | null>(null);
+  const playbackSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const conversationHistoryRef = useRef<Array<{ role: string; content: string }>>([]);
@@ -163,8 +165,23 @@ export function FloatingChatWidget({
     setTimeout(() => transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
   }, []);
 
-  // ─── Audio playback ──────────────────────────────────────────────────────
+  // ─── Audio playback via AudioContext (bypasses autoplay policy) ──────────
+  // AudioContext created/resumed on user gesture stays unlocked for later plays.
+  const ensurePlaybackCtx = useCallback((): AudioContext => {
+    if (!playbackCtxRef.current || playbackCtxRef.current.state === "closed") {
+      playbackCtxRef.current = new AudioContext();
+    }
+    if (playbackCtxRef.current.state === "suspended") {
+      playbackCtxRef.current.resume();
+    }
+    return playbackCtxRef.current;
+  }, []);
+
   const stopPlayback = useCallback(() => {
+    if (playbackSourceRef.current) {
+      try { playbackSourceRef.current.stop(); } catch { /* already stopped */ }
+      playbackSourceRef.current = null;
+    }
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -174,40 +191,41 @@ export function FloatingChatWidget({
     setIsLoading(false);
   }, []);
 
-  /** Play audio from an MP3 blob, returning a promise that resolves when done */
-  const playAudioBlob = useCallback((blob: Blob): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio();
+  /** Play audio from an MP3 blob using AudioContext (avoids autoplay blocks) */
+  const playAudioBlob = useCallback(async (blob: Blob): Promise<void> => {
+    const ctx = ensurePlaybackCtx();
+    const arrayBuffer = await blob.arrayBuffer();
+    const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
 
-      audio.onended = () => {
+    // Stop any current playback
+    if (playbackSourceRef.current) {
+      try { playbackSourceRef.current.stop(); } catch { /* ok */ }
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(ctx.destination);
+
+      source.onended = () => {
         setIsPlaying(false);
-        URL.revokeObjectURL(url);
-        audioRef.current = null;
+        playbackSourceRef.current = null;
         resolve();
       };
-      audio.onerror = (e) => {
-        console.error("[Voice] Audio playback error:", e);
-        setIsPlaying(false);
-        URL.revokeObjectURL(url);
-        audioRef.current = null;
-        reject(new Error("Audio playback failed"));
-      };
 
-      audioRef.current = audio;
-      audio.src = url;
+      playbackSourceRef.current = source;
       setIsPlaying(true);
 
-      // Play with error handling
-      audio.play().catch((err) => {
-        console.error("[Voice] audio.play() rejected:", err);
+      try {
+        source.start(0);
+      } catch (err) {
+        console.error("[Voice] AudioContext play error:", err);
         setIsPlaying(false);
-        URL.revokeObjectURL(url);
-        audioRef.current = null;
+        playbackSourceRef.current = null;
         reject(err);
-      });
+      }
     });
-  }, []);
+  }, [ensurePlaybackCtx]);
 
   /** Call the TTS API and play the result */
   const speakText = useCallback(async (text: string): Promise<void> => {
@@ -367,6 +385,10 @@ export function FloatingChatWidget({
   }, [micStream]);
 
   const startVoice = useCallback(async () => {
+    // Prime the playback AudioContext during user gesture so TTS audio
+    // can play later without being blocked by autoplay policy.
+    ensurePlaybackCtx();
+
     // Step 1: Acquire mic — MUST happen in the click call-stack
     let stream: MediaStream;
     try {
@@ -461,7 +483,7 @@ export function FloatingChatWidget({
       setIsListening(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handleRecognizedSpeech]);
+  }, [handleRecognizedSpeech, ensurePlaybackCtx]);
 
   // Cleanup on unmount or mode switch
   useEffect(() => {
@@ -469,6 +491,9 @@ export function FloatingChatWidget({
       if (recognitionRef.current) {
         recognitionRef.current.abort();
         recognitionRef.current = null;
+      }
+      if (playbackCtxRef.current && playbackCtxRef.current.state !== "closed") {
+        playbackCtxRef.current.close();
       }
     };
   }, []);
@@ -486,6 +511,7 @@ export function FloatingChatWidget({
     if (isPlaying) {
       stopPlayback();
     } else {
+      ensurePlaybackCtx(); // Unlock AudioContext during user gesture
       playGreeting();
     }
   };

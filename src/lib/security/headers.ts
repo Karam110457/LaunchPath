@@ -32,6 +32,7 @@ function getCsp(options?: { allowEval?: boolean; allowEmbed?: boolean }): string
     "img-src 'self' data: https: blob:",
     "font-src 'self' data: https://fonts.gstatic.com",
     "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.vercel-insights.com",
+    "media-src 'self' blob:",
     // Channel routes must be embeddable (widgets in iframes)
     options?.allowEmbed ? "frame-ancestors *" : "frame-ancestors 'none'",
     "base-uri 'self'",
