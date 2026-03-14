@@ -336,6 +336,29 @@ export async function runAgentChat(
   const hasTools = Object.keys(tools).length > 0;
 
   // -------------------------------------------------------------------------
+  // Token budget diagnostics — logs where input tokens are actually going.
+  // -------------------------------------------------------------------------
+  {
+    const toolSchemaChars = JSON.stringify(tools).length;
+    const toolCount = Object.keys(tools).length;
+    logger.info("Token budget breakdown", {
+      agentId,
+      systemPromptChars: agent.system_prompt?.length ?? 0,
+      ragContextChars: ragContext.length,
+      toolCount,
+      toolSchemaChars,
+      toolNames: Object.keys(tools),
+      historyMessages: conversationHistory.length,
+      historyChars: conversationHistory.reduce((sum, m) => sum + m.content.length, 0),
+      userMessageChars: userMessage.length,
+      estimatedSystemTokens: Math.ceil((agent.system_prompt?.length ?? 0) / 4),
+      estimatedRagTokens: Math.ceil(ragContext.length / 4),
+      estimatedToolTokens: Math.ceil(toolSchemaChars / 4),
+      estimatedHistoryTokens: Math.ceil(conversationHistory.reduce((sum, m) => sum + m.content.length, 0) / 4),
+    });
+  }
+
+  // -------------------------------------------------------------------------
   // Assemble final system prompt
   // -------------------------------------------------------------------------
 
