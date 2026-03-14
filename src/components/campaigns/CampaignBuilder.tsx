@@ -2,25 +2,54 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Rocket, Pause, Save, MessageCircle, Settings2, FileText, Users, Send } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  Rocket,
+  Pause,
+  Save,
+  MessageCircle,
+  Settings2,
+  FileText,
+  Users,
+  Send,
+  CheckCircle2,
+  Circle,
+  Copy,
+  Check,
+  Shield,
+  Zap,
+  Globe,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConfigPanel } from "./ConfigPanel";
 import { PreviewPanel } from "./PreviewPanel";
 import { WhatsAppConfigPanel } from "./WhatsAppConfigPanel";
 import { TemplatesTab } from "./whatsapp/TemplatesTab";
+import { ContactsTab } from "./whatsapp/ContactsTab";
+import { SendsTab } from "./whatsapp/SendsTab";
 import type { WidgetConfig, WhatsAppConfig } from "@/lib/channels/types";
 import type { ChannelResponse } from "@/lib/channels/types";
 
+// ---------------------------------------------------------------------------
+// Types & constants
+// ---------------------------------------------------------------------------
+
 type WhatsAppTab = "settings" | "templates" | "contacts" | "sends";
 
-const WA_TABS: { id: WhatsAppTab; label: string; icon: typeof Settings2; enabled: boolean }[] = [
-  { id: "settings", label: "Settings", icon: Settings2, enabled: true },
-  { id: "templates", label: "Templates", icon: FileText, enabled: true },
-  { id: "contacts", label: "Contacts", icon: Users, enabled: false },
-  { id: "sends", label: "Sends", icon: Send, enabled: false },
+const WA_TABS: {
+  id: WhatsAppTab;
+  label: string;
+  icon: typeof Settings2;
+  description: string;
+}[] = [
+  { id: "settings", label: "Settings", icon: Settings2, description: "API credentials & behavior" },
+  { id: "templates", label: "Templates", icon: FileText, description: "Message templates" },
+  { id: "contacts", label: "Contacts", icon: Users, description: "Manage audience" },
+  { id: "sends", label: "Sends", icon: Send, description: "Outbound campaigns" },
 ];
 
-const tabGradientStyle: React.CSSProperties = {
+const gradientBorderStyle: React.CSSProperties = {
   backgroundImage:
     "linear-gradient(var(--card-bg), var(--card-bg)), linear-gradient(135deg, #FF8C00, #9D50BB)",
   backgroundOrigin: "border-box",
@@ -51,6 +80,10 @@ interface CampaignBuilderProps {
   initialChannelType?: ChannelType;
 }
 
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export function CampaignBuilder({
   campaign,
   channels: initialChannels,
@@ -59,7 +92,7 @@ export function CampaignBuilder({
 }: CampaignBuilderProps) {
   const router = useRouter();
 
-  // Determine channel type from existing channels or initial prop
+  // Determine channel type
   const existingWhatsApp = initialChannels.find((ch) => ch.channel_type === "whatsapp");
   const existingWidget = initialChannels.find((ch) => ch.channel_type === "widget");
   const channelType: ChannelType = existingWhatsApp
@@ -89,43 +122,53 @@ export function CampaignBuilder({
   const [rateLimitRpm, setRateLimitRpm] = useState(
     existingChannel?.rate_limit_rpm?.toString() ?? ""
   );
-
-  // WhatsApp tab state
   const [waTab, setWaTab] = useState<WhatsAppTab>("settings");
 
   // Shared state
-  const [channel, setChannel] = useState<ChannelResponse | null>(
-    existingChannel ?? null
-  );
+  const [channel, setChannel] = useState<ChannelResponse | null>(existingChannel ?? null);
   const [status, setStatus] = useState(campaign.status);
   const [saving, setSaving] = useState(false);
   const [deploying, setDeploying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
+  const [webhookCopied, setWebhookCopied] = useState(false);
 
   const agentId = campaign.agent_id;
   const token = channel?.token ?? "";
-  const appOrigin =
-    typeof window !== "undefined" ? window.location.origin : "";
+  const appOrigin = typeof window !== "undefined" ? window.location.origin : "";
 
   const embedCode = channel && !isWhatsApp
     ? `<script src="${appOrigin}/widget.js" data-channel="${channel.id}" async></script>`
     : null;
 
-  const webhookUrl =
-    isWhatsApp && channel?.webhook_path
-      ? `${appOrigin}/api/webhooks/whatsapp/${channel.webhook_path}`
-      : null;
+  const webhookUrl = isWhatsApp && channel?.webhook_path
+    ? `${appOrigin}/api/webhooks/whatsapp/${channel.webhook_path}`
+    : null;
 
-  const originsArray = allowedOrigins
-    .split("\n")
-    .map((o) => o.trim())
-    .filter(Boolean);
+  const originsArray = allowedOrigins.split("\n").map((o) => o.trim()).filter(Boolean);
+
+  // Validation
+  const hasCredentials =
+    !!waConfig.phoneNumberId?.trim() &&
+    !!waConfig.accessToken?.trim() &&
+    !!waConfig.verifyToken?.trim();
+  const hasWaba = !!waConfig.businessAccountId?.trim();
+  const canDeployWhatsApp = hasCredentials && hasWaba;
+
+  // Setup progress for WhatsApp
+  const setupSteps = [
+    { label: "API Credentials", done: hasCredentials, description: "Phone ID, access token, verify token" },
+    { label: "Business Account", done: hasWaba, description: "WABA ID for templates" },
+    { label: "Channel Created", done: !!channel, description: "Save to create webhook" },
+    { label: "Deployed", done: status === "active", description: "Go live to receive messages" },
+  ];
+  const completedSteps = setupSteps.filter((s) => s.done).length;
+
+  // ── Save / Deploy / Pause logic (unchanged) ────────────────────────────
 
   const saveChannel = useCallback(
     async (enabled: boolean) => {
       if (isWhatsApp) {
-        // WhatsApp channel
         const config: Record<string, unknown> = {
           phoneNumberId: waConfig.phoneNumberId,
           businessAccountId: waConfig.businessAccountId || undefined,
@@ -134,23 +177,21 @@ export function CampaignBuilder({
           responseDelay: waConfig.responseDelay ?? 2000,
           readReceipts: waConfig.readReceipts !== false,
           greetingMessage: waConfig.greetingMessage || undefined,
+          templateFallback: waConfig.templateFallback || undefined,
         };
         const rpm = rateLimitRpm ? parseInt(rateLimitRpm, 10) : undefined;
 
         if (channel) {
-          const res = await fetch(
-            `/api/agents/${agentId}/channels/${channel.id}`,
-            {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                name: `${campaign.name} WhatsApp`,
-                config,
-                rate_limit_rpm: rpm ?? null,
-                is_enabled: enabled,
-              }),
-            }
-          );
+          const res = await fetch(`/api/agents/${agentId}/channels/${channel.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: `${campaign.name} WhatsApp`,
+              config,
+              rate_limit_rpm: rpm ?? null,
+              is_enabled: enabled,
+            }),
+          });
           if (!res.ok) throw new Error("Failed to update channel");
           const data = await res.json();
           setChannel(data.channel);
@@ -175,7 +216,6 @@ export function CampaignBuilder({
           setChannel(data.channel);
         }
       } else {
-        // Widget channel (existing logic)
         const channelBody = {
           channel_type: "widget",
           name: `${campaign.name} Widget`,
@@ -186,18 +226,15 @@ export function CampaignBuilder({
         };
 
         if (channel) {
-          const res = await fetch(
-            `/api/agents/${agentId}/channels/${channel.id}`,
-            {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                config: widgetConfig,
-                allowed_origins: originsArray,
-                is_enabled: enabled,
-              }),
-            }
-          );
+          const res = await fetch(`/api/agents/${agentId}/channels/${channel.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              config: widgetConfig,
+              allowed_origins: originsArray,
+              is_enabled: enabled,
+            }),
+          });
           if (!res.ok) throw new Error("Failed to update channel");
           const data = await res.json();
           setChannel(data.channel);
@@ -216,24 +253,15 @@ export function CampaignBuilder({
     [channel, widgetConfig, waConfig, originsArray, rateLimitRpm, agentId, campaign.id, campaign.name, isWhatsApp]
   );
 
-  // Validation for WhatsApp deploy
-  const canDeployWhatsApp =
-    !!waConfig.phoneNumberId?.trim() &&
-    !!waConfig.accessToken?.trim() &&
-    !!waConfig.verifyToken?.trim();
-
   async function handleSaveDraft() {
     setSaving(true);
     setError(null);
     try {
       await saveChannel(channel?.is_enabled ?? false);
-
       await fetch(`/api/campaigns/${campaign.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          client_website: clientWebsite.trim() || null,
-        }),
+        body: JSON.stringify({ client_website: clientWebsite.trim() || null }),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -247,16 +275,11 @@ export function CampaignBuilder({
     setError(null);
     try {
       await saveChannel(true);
-
       await fetch(`/api/campaigns/${campaign.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: "active",
-          client_website: clientWebsite.trim() || null,
-        }),
+        body: JSON.stringify({ status: "active", client_website: clientWebsite.trim() || null }),
       });
-
       setStatus("active");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Deploy failed");
@@ -277,19 +300,24 @@ export function CampaignBuilder({
         });
         setChannel({ ...channel, is_enabled: false });
       }
-
       await fetch(`/api/campaigns/${campaign.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "paused" }),
       });
-
       setStatus("paused");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Pause failed");
     } finally {
       setSaving(false);
     }
+  }
+
+  async function copyWebhookUrl() {
+    if (!webhookUrl) return;
+    await navigator.clipboard.writeText(webhookUrl);
+    setWebhookCopied(true);
+    setTimeout(() => setWebhookCopied(false), 2000);
   }
 
   const agentData = Array.isArray(campaign.ai_agents)
@@ -300,256 +328,463 @@ export function CampaignBuilder({
     ? saving || deploying || !canDeployWhatsApp
     : saving || deploying;
 
-  return (
-    <div className="flex flex-col h-screen">
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-5 pt-4 pb-2 shrink-0">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push(backUrl)}
-            className="p-2 rounded-full border border-border/40 bg-card/60 backdrop-blur-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-          <div>
-            <h1 className="text-sm font-semibold text-foreground">
-              {campaign.name}
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              {agentData?.name ?? "Unknown agent"}
-              {campaign.clients?.name
-                ? ` \u2022 ${campaign.clients.name}`
-                : campaign.client_name
-                  ? ` \u2022 ${campaign.client_name}`
-                  : null}
-            </p>
-          </div>
-          {/* Channel type badge */}
-          {isWhatsApp && (
-            <span className="inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full font-medium bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
-              <MessageCircle className="w-3 h-3" />
-              WhatsApp
-            </span>
-          )}
-          <span
-            className={cn(
-              "text-[10px] px-2.5 py-0.5 rounded-full font-medium ml-1",
-              status === "active"
-                ? "bg-gradient-to-r from-[#FF8C00]/10 to-[#9D50BB]/10 text-neutral-900 dark:text-neutral-100 border border-[#FF8C00]/20"
-                : status === "paused"
-                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                : "bg-muted text-muted-foreground border border-border"
-            )}
-          >
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {error && (
-            <span className="text-xs text-destructive mr-2">{error}</span>
-          )}
-
-          <button
-            onClick={handleSaveDraft}
-            disabled={saving || deploying}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full border border-border/40 bg-card/60 backdrop-blur-md hover:bg-muted/50 transition-colors duration-150 disabled:opacity-50"
-          >
-            {saving ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Save className="w-3.5 h-3.5" />
-            )}
-            Save
-          </button>
-
-          {status === "active" ? (
-            <button
-              onClick={handlePause}
-              disabled={saving || deploying}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors duration-150 disabled:opacity-50"
-            >
-              <Pause className="w-3.5 h-3.5" />
-              Pause
-            </button>
-          ) : (
-            <button
-              onClick={handleDeploy}
-              disabled={deployDisabled}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full gradient-accent-bg text-white shadow-sm hover:scale-[1.02] transition-transform duration-150 disabled:opacity-50"
-            >
-              {deploying ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Rocket className="w-3.5 h-3.5" />
-              )}
-              Deploy
-            </button>
-          )}
+  // ── Widget layout (unchanged) ──────────────────────────────────────────
+  if (!isWhatsApp) {
+    return (
+      <div className="flex flex-col h-screen">
+        <TopBar
+          campaign={campaign}
+          agentData={agentData}
+          status={status}
+          isWhatsApp={false}
+          error={error}
+          saving={saving}
+          deploying={deploying}
+          deployDisabled={deployDisabled}
+          backUrl={backUrl}
+          onBack={() => router.push(backUrl)}
+          onSave={handleSaveDraft}
+          onDeploy={handleDeploy}
+          onPause={handlePause}
+        />
+        <div className="flex flex-1 gap-4 px-5 pb-5 pt-2 overflow-hidden">
+          <ConfigPanel
+            config={widgetConfig}
+            onChange={setWidgetConfig}
+            clientWebsite={clientWebsite}
+            onClientWebsiteChange={setClientWebsite}
+            allowedOrigins={allowedOrigins}
+            onAllowedOriginsChange={setAllowedOrigins}
+            embedCode={status === "active" ? embedCode : null}
+          />
+          <PreviewPanel
+            config={widgetConfig}
+            token={token}
+            agentId={agentId}
+            clientWebsite={clientWebsite}
+            screenshotUrl={screenshotUrl}
+            onScreenshotChange={setScreenshotUrl}
+          />
         </div>
       </div>
+    );
+  }
 
-      {/* Main content — floating card layout */}
-      <div className="flex flex-1 gap-4 px-5 pb-5 pt-2 overflow-hidden">
-        {isWhatsApp ? (
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* WhatsApp Tab Bar */}
-            <div className="flex items-center p-1.5 rounded-full border border-border/40 bg-card/60 backdrop-blur-md w-fit shadow-sm mb-4 shrink-0">
-              {WA_TABS.map((tab) => {
-                const Icon = tab.icon;
-                const isActive = waTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => tab.enabled && setWaTab(tab.id)}
-                    disabled={!tab.enabled}
-                    style={isActive ? tabGradientStyle : undefined}
+  // ── WhatsApp layout (redesigned) ───────────────────────────────────────
+  return (
+    <div className="flex flex-col h-screen bg-[#fafafa] dark:bg-[#0a0a0a]">
+      <TopBar
+        campaign={campaign}
+        agentData={agentData}
+        status={status}
+        isWhatsApp
+        error={error}
+        saving={saving}
+        deploying={deploying}
+        deployDisabled={deployDisabled}
+        backUrl={backUrl}
+        onBack={() => router.push(backUrl)}
+        onSave={handleSaveDraft}
+        onDeploy={handleDeploy}
+        onPause={handlePause}
+      />
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* ── Left sidebar: navigation + setup progress ────────────── */}
+        <div className="w-[240px] shrink-0 border-r border-neutral-200/50 dark:border-neutral-800/50 flex flex-col">
+          {/* Tab navigation */}
+          <nav className="p-3 space-y-1">
+            {WA_TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = waTab === tab.id;
+              const needsChannel = tab.id !== "settings" && !channel;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => !needsChannel && setWaTab(tab.id)}
+                  disabled={needsChannel}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all",
+                    isActive
+                      ? "bg-white dark:bg-neutral-900 shadow-sm border border-neutral-200/60 dark:border-neutral-700/40"
+                      : needsChannel
+                        ? "text-muted-foreground/40 cursor-not-allowed"
+                        : "hover:bg-white/60 dark:hover:bg-neutral-900/40 text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <div
                     className={cn(
-                      "flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-full border-2 transition-all",
+                      "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
                       isActive
-                        ? "[--card-bg:#fff] dark:[--card-bg:#171717] border-transparent text-foreground"
-                        : tab.enabled
-                          ? "border-transparent text-muted-foreground hover:text-foreground"
-                          : "border-transparent text-muted-foreground/40 cursor-not-allowed"
+                        ? "gradient-accent-bg"
+                        : "bg-neutral-100 dark:bg-neutral-800"
                     )}
                   >
-                    <Icon className="w-3.5 h-3.5" />
-                    {tab.label}
-                    {!tab.enabled && (
-                      <span className="text-[9px] ml-0.5 opacity-60">Soon</span>
+                    <Icon className={cn("w-4 h-4", isActive ? "text-white" : "text-muted-foreground")} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className={cn(
+                      "text-xs font-medium",
+                      isActive ? "text-foreground" : ""
+                    )}>
+                      {tab.label}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      {tab.description}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Setup progress */}
+          <div className="mt-auto p-4 border-t border-neutral-200/50 dark:border-neutral-800/50">
+            <div className="rounded-[20px] bg-white dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-700/40 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Setup Progress
+                </p>
+                <span className="text-[10px] font-semibold text-foreground">
+                  {completedSteps}/{setupSteps.length}
+                </span>
+              </div>
+
+              {/* Progress bar */}
+              <div className="h-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#FF8C00] to-[#9D50BB] transition-all duration-500"
+                  style={{ width: `${(completedSteps / setupSteps.length) * 100}%` }}
+                />
+              </div>
+
+              {/* Steps */}
+              <div className="space-y-2">
+                {setupSteps.map((step, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    {step.done ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                    ) : (
+                      <Circle className="w-3.5 h-3.5 text-neutral-300 dark:text-neutral-600 shrink-0 mt-0.5" />
                     )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* WhatsApp Tab Content */}
-            <div className="flex-1 overflow-hidden">
-              {waTab === "settings" && (
-                <div className="flex gap-4 h-full">
-                  <WhatsAppConfigPanel
-                    config={waConfig}
-                    onChange={setWaConfig}
-                    rateLimitRpm={rateLimitRpm}
-                    onRateLimitChange={setRateLimitRpm}
-                    webhookUrl={webhookUrl}
-                    verifyTokenDisplay={waConfig.verifyToken ?? ""}
-                  />
-                  {/* WhatsApp status panel (right side) */}
-                  <div className="flex-1 flex items-center justify-center">
-                    <div className="max-w-md w-full rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-8 text-center space-y-5">
-                      <div className="w-16 h-16 rounded-2xl gradient-accent-bg flex items-center justify-center mx-auto">
-                        <MessageCircle className="w-8 h-8 text-white" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <h3 className="text-base font-semibold text-foreground">
-                          WhatsApp Campaign
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {status === "active"
-                            ? "Your WhatsApp channel is live and receiving messages."
-                            : status === "paused"
-                              ? "Your WhatsApp channel is paused. Deploy to start receiving messages."
-                              : "Configure your Meta API credentials, then deploy to start receiving WhatsApp messages."}
-                        </p>
-                      </div>
-
-                      {/* Connection status */}
-                      <div className="rounded-[20px] border border-black/5 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] p-4 space-y-3 text-left">
-                        <StatusRow
-                          label="Credentials"
-                          ok={canDeployWhatsApp}
-                          detail={canDeployWhatsApp ? "Configured" : "Missing required fields"}
-                        />
-                        <StatusRow
-                          label="Channel"
-                          ok={!!channel}
-                          detail={channel ? "Created" : "Will be created on save"}
-                        />
-                        <StatusRow
-                          label="Webhook"
-                          ok={!!webhookUrl}
-                          detail={webhookUrl ? "Ready" : "Available after first save"}
-                        />
-                        <StatusRow
-                          label="Status"
-                          ok={status === "active"}
-                          detail={status === "active" ? "Live" : "Not deployed"}
-                        />
-                      </div>
-
-                      {channel && (
-                        <p className="text-[11px] text-muted-foreground">
-                          Channel ID: <code className="font-mono text-[10px]">{channel.id.slice(0, 8)}...</code>
-                        </p>
-                      )}
+                    <div>
+                      <p className={cn(
+                        "text-[11px] font-medium",
+                        step.done ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
+                      )}>
+                        {step.label}
+                      </p>
+                      <p className="text-[9px] text-muted-foreground">{step.description}</p>
                     </div>
                   </div>
-                </div>
-              )}
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
 
-              {waTab === "templates" && channel && (
-                <div className="h-full overflow-y-auto rounded-[2rem] bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] p-6">
+        {/* ── Main content area ────────────────────────────────── */}
+        <div className="flex-1 overflow-hidden flex flex-col">
+          {/* Tab content */}
+          <div className="flex-1 overflow-y-auto">
+            {/* ═══ SETTINGS TAB ═══ */}
+            {waTab === "settings" && (
+              <div className="max-w-4xl mx-auto p-6 space-y-6">
+                {/* Quick status banner */}
+                {status === "active" && (
+                  <div
+                    className="rounded-[20px] border-2 border-transparent p-4 flex items-center gap-4 [--card-bg:#f8f9fa] dark:[--card-bg:#1E1E1E]"
+                    style={gradientBorderStyle}
+                  >
+                    <div className="w-10 h-10 rounded-xl gradient-accent-bg flex items-center justify-center shrink-0">
+                      <Zap className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground">Campaign is Live</p>
+                      <p className="text-xs text-muted-foreground">
+                        Your WhatsApp channel is active and receiving messages. Changes are saved automatically.
+                      </p>
+                    </div>
+                    {webhookUrl && (
+                      <button
+                        onClick={copyWebhookUrl}
+                        className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-full border border-neutral-200/60 dark:border-neutral-700/50 hover:bg-white dark:hover:bg-neutral-800 transition-colors"
+                      >
+                        {webhookCopied ? (
+                          <><Check className="w-3 h-3 text-emerald-500" /> Copied</>
+                        ) : (
+                          <><Copy className="w-3 h-3" /> Webhook URL</>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Two-column layout: config + guide */}
+                <div className="flex gap-6">
+                  {/* Config panel */}
+                  <div className="flex-1">
+                    <WhatsAppConfigPanel
+                      config={waConfig}
+                      onChange={setWaConfig}
+                      rateLimitRpm={rateLimitRpm}
+                      onRateLimitChange={setRateLimitRpm}
+                      webhookUrl={webhookUrl}
+                      verifyTokenDisplay={waConfig.verifyToken ?? ""}
+                    />
+                  </div>
+
+                  {/* Guide sidebar */}
+                  <div className="w-[280px] shrink-0 space-y-4">
+                    {/* Getting started guide */}
+                    <div className="rounded-[20px] bg-white dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-700/40 p-5 space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-muted-foreground" />
+                        <h4 className="text-xs font-semibold text-foreground">Getting Started</h4>
+                      </div>
+
+                      <div className="space-y-3">
+                        <GuideStep
+                          number={1}
+                          title="Create a Meta App"
+                          description="Go to developers.facebook.com and create a Business app with WhatsApp."
+                          done={hasCredentials}
+                        />
+                        <GuideStep
+                          number={2}
+                          title="Copy your credentials"
+                          description="Find your Phone Number ID, WABA ID, and generate a system user token."
+                          done={hasCredentials && hasWaba}
+                        />
+                        <GuideStep
+                          number={3}
+                          title="Save & configure webhook"
+                          description="Save your settings, then paste the webhook URL in your Meta app dashboard."
+                          done={!!webhookUrl}
+                        />
+                        <GuideStep
+                          number={4}
+                          title="Deploy your campaign"
+                          description="Click Deploy to start receiving and responding to WhatsApp messages."
+                          done={status === "active"}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Quick stats (when deployed) */}
+                    {channel && (
+                      <div className="rounded-[20px] bg-white dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-700/40 p-5 space-y-3">
+                        <h4 className="text-xs font-semibold text-foreground flex items-center gap-2">
+                          <Globe className="w-4 h-4 text-muted-foreground" />
+                          Connection
+                        </h4>
+                        <div className="space-y-2">
+                          <StatusRow
+                            label="Channel"
+                            ok
+                            detail={channel.is_enabled ? "Active" : "Paused"}
+                          />
+                          <StatusRow
+                            label="Webhook"
+                            ok={!!webhookUrl}
+                            detail={webhookUrl ? "Configured" : "Pending"}
+                          />
+                          <StatusRow
+                            label="Inbound"
+                            ok={status === "active"}
+                            detail={status === "active" ? "Receiving" : "Stopped"}
+                          />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground pt-1 border-t border-neutral-200/50 dark:border-neutral-700/50">
+                          ID: <code className="font-mono">{channel.id.slice(0, 12)}...</code>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ═══ TEMPLATES TAB ═══ */}
+            {waTab === "templates" && channel && (
+              <div className="max-w-4xl mx-auto p-6">
+                <div className="rounded-[2rem] bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] p-6">
                   <TemplatesTab
                     agentId={agentId}
                     channelId={channel.id}
-                    hasBusinessAccountId={!!waConfig.businessAccountId?.trim()}
+                    hasBusinessAccountId={hasWaba}
                   />
                 </div>
-              )}
+              </div>
+            )}
 
-              {waTab === "templates" && !channel && (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center max-w-xs">
-                    <FileText className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
-                    <p className="text-sm font-medium text-foreground mb-1">
-                      Save Settings First
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Configure and save your WhatsApp credentials in the
-                      Settings tab before managing templates.
-                    </p>
-                  </div>
-                </div>
-              )}
+            {waTab === "templates" && !channel && (
+              <EmptyTabState
+                icon={FileText}
+                title="Save Settings First"
+                description="Configure and save your WhatsApp credentials in the Settings tab to unlock template management."
+                action="Go to Settings"
+                onAction={() => setWaTab("settings")}
+              />
+            )}
 
-              {(waTab === "contacts" || waTab === "sends") && (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center max-w-xs">
-                    <Users className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
-                    <p className="text-sm font-medium text-foreground mb-1">
-                      Coming Soon
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Contact management and outbound sending will be available
-                      in the next update.
-                    </p>
-                  </div>
+            {/* ═══ CONTACTS TAB ═══ */}
+            {waTab === "contacts" && channel && (
+              <div className="max-w-4xl mx-auto p-6">
+                <div className="rounded-[2rem] bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] p-6">
+                  <ContactsTab
+                    campaignId={campaign.id}
+                    channelId={channel.id}
+                  />
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {waTab === "contacts" && !channel && (
+              <EmptyTabState
+                icon={Users}
+                title="Deploy First"
+                description="Deploy your campaign to start managing contacts. You'll be able to import CSV files and add contacts manually."
+                action="Go to Settings"
+                onAction={() => setWaTab("settings")}
+              />
+            )}
+
+            {/* ═══ SENDS TAB ═══ */}
+            {waTab === "sends" && channel && (
+              <div className="max-w-4xl mx-auto p-6">
+                <div className="rounded-[2rem] bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] p-6">
+                  <SendsTab
+                    agentId={agentId}
+                    channelId={channel.id}
+                    campaignId={campaign.id}
+                  />
+                </div>
+              </div>
+            )}
+
+            {waTab === "sends" && !channel && (
+              <EmptyTabState
+                icon={Send}
+                title="Deploy First"
+                description="Deploy your campaign, create templates, and import contacts before sending outbound messages."
+                action="Go to Settings"
+                onAction={() => setWaTab("settings")}
+              />
+            )}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+/** Shared top bar for both widget and WhatsApp */
+function TopBar({
+  campaign,
+  agentData,
+  status,
+  isWhatsApp,
+  error,
+  saving,
+  deploying,
+  deployDisabled,
+  onBack,
+  onSave,
+  onDeploy,
+  onPause,
+}: {
+  campaign: CampaignData;
+  agentData: { id: string; name: string; personality: unknown } | null | undefined;
+  status: string;
+  isWhatsApp: boolean;
+  error: string | null;
+  saving: boolean;
+  deploying: boolean;
+  deployDisabled: boolean;
+  backUrl: string;
+  onBack: () => void;
+  onSave: () => void;
+  onDeploy: () => void;
+  onPause: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-200/50 dark:border-neutral-800/50 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md shrink-0">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onBack}
+          className="p-2 rounded-full border border-border/40 bg-card/60 backdrop-blur-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </button>
+        <div>
+          <h1 className="text-sm font-semibold text-foreground">{campaign.name}</h1>
+          <p className="text-xs text-muted-foreground">
+            {agentData?.name ?? "Unknown agent"}
+            {campaign.clients?.name
+              ? ` \u2022 ${campaign.clients.name}`
+              : campaign.client_name
+                ? ` \u2022 ${campaign.client_name}`
+                : null}
+          </p>
+        </div>
+
+        {isWhatsApp && (
+          <span className="inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full font-medium bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
+            <MessageCircle className="w-3 h-3" />
+            WhatsApp
+          </span>
+        )}
+
+        <span
+          className={cn(
+            "text-[10px] px-2.5 py-0.5 rounded-full font-medium",
+            status === "active"
+              ? "bg-gradient-to-r from-[#FF8C00]/10 to-[#9D50BB]/10 text-neutral-900 dark:text-neutral-100 border border-[#FF8C00]/20"
+              : status === "paused"
+                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                : "bg-muted text-muted-foreground border border-border"
+          )}
+        >
+          {status.charAt(0).toUpperCase() + status.slice(1)}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        {error && <span className="text-xs text-destructive mr-2">{error}</span>}
+
+        <button
+          onClick={onSave}
+          disabled={saving || deploying}
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full border border-border/40 bg-card/60 backdrop-blur-md hover:bg-muted/50 transition-colors disabled:opacity-50"
+        >
+          {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+          Save
+        </button>
+
+        {status === "active" ? (
+          <button
+            onClick={onPause}
+            disabled={saving || deploying}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+          >
+            <Pause className="w-3.5 h-3.5" />
+            Pause
+          </button>
         ) : (
-          <>
-            <ConfigPanel
-              config={widgetConfig}
-              onChange={setWidgetConfig}
-              clientWebsite={clientWebsite}
-              onClientWebsiteChange={setClientWebsite}
-              allowedOrigins={allowedOrigins}
-              onAllowedOriginsChange={setAllowedOrigins}
-              embedCode={status === "active" ? embedCode : null}
-            />
-            <PreviewPanel
-              config={widgetConfig}
-              token={token}
-              agentId={agentId}
-              clientWebsite={clientWebsite}
-              screenshotUrl={screenshotUrl}
-              onScreenshotChange={setScreenshotUrl}
-            />
-          </>
+          <button
+            onClick={onDeploy}
+            disabled={deployDisabled}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full gradient-accent-bg text-white shadow-sm hover:scale-[1.02] transition-transform disabled:opacity-50"
+          >
+            {deploying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Rocket className="w-3.5 h-3.5" />}
+            Deploy
+          </button>
         )}
       </div>
     </div>
@@ -557,26 +792,81 @@ export function CampaignBuilder({
 }
 
 /** Small status indicator row */
-function StatusRow({
-  label,
-  ok,
-  detail,
-}: {
-  label: string;
-  ok: boolean;
-  detail: string;
-}) {
+function StatusRow({ label, ok, detail }: { label: string; ok: boolean; detail: string }) {
   return (
     <div className="flex items-center justify-between">
       <span className="text-xs font-medium text-foreground">{label}</span>
       <div className="flex items-center gap-1.5">
         <span className="text-[11px] text-muted-foreground">{detail}</span>
-        <span
-          className={cn(
-            "w-2 h-2 rounded-full shrink-0",
-            ok ? "bg-emerald-500" : "bg-neutral-300 dark:bg-neutral-600"
-          )}
-        />
+        <span className={cn("w-2 h-2 rounded-full shrink-0", ok ? "bg-emerald-500" : "bg-neutral-300 dark:bg-neutral-600")} />
+      </div>
+    </div>
+  );
+}
+
+/** Numbered guide step */
+function GuideStep({
+  number,
+  title,
+  description,
+  done,
+}: {
+  number: number;
+  title: string;
+  description: string;
+  done: boolean;
+}) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <div
+        className={cn(
+          "w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5",
+          done
+            ? "gradient-accent-bg text-white"
+            : "bg-neutral-100 dark:bg-neutral-800 text-muted-foreground"
+        )}
+      >
+        {done ? <Check className="w-3 h-3" /> : number}
+      </div>
+      <div>
+        <p className={cn("text-[11px] font-medium", done ? "text-foreground" : "text-muted-foreground")}>
+          {title}
+        </p>
+        <p className="text-[10px] text-muted-foreground leading-relaxed">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+/** Empty state for tabs that require a channel */
+function EmptyTabState({
+  icon: Icon,
+  title,
+  description,
+  action,
+  onAction,
+}: {
+  icon: typeof FileText;
+  title: string;
+  description: string;
+  action: string;
+  onAction: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-center h-full">
+      <div className="text-center max-w-xs">
+        <div className="w-14 h-14 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mx-auto mb-4">
+          <Icon className="w-7 h-7 text-muted-foreground/40" />
+        </div>
+        <p className="text-sm font-medium text-foreground mb-1">{title}</p>
+        <p className="text-xs text-muted-foreground mb-4">{description}</p>
+        <button
+          type="button"
+          onClick={onAction}
+          className="px-4 py-2 text-xs font-medium rounded-full gradient-accent-bg text-white shadow-sm hover:scale-[1.02] transition-transform"
+        >
+          {action}
+        </button>
       </div>
     </div>
   );

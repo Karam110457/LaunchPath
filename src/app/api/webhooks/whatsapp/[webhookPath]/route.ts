@@ -16,7 +16,9 @@ import { logger } from "@/lib/security/logger";
 import {
   verifyWebhookSignature,
   parseInboundMessage,
+  parseStatusUpdate,
   sendWhatsAppMessage,
+  sendTemplateMessage,
   markMessageRead,
   isSessionWindowOpen,
 } from "@/lib/channels/whatsapp";
@@ -103,14 +105,90 @@ export async function POST(
   }
 
   const parsed = parseInboundMessage(body);
+  const statusUpdate = !parsed ? parseStatusUpdate(body) : null;
 
-  // Status updates (sent/delivered/read) or unparseable — acknowledge and exit
+  // Neither a message nor a status update — acknowledge and exit
+  if (!parsed && !statusUpdate) {
+    return new Response("OK", { status: 200 });
+  }
+
+  // -------------------------------------------------------------------------
+  // 3. Handle delivery status updates (sent/delivered/read/failed)
+  // -------------------------------------------------------------------------
+  if (statusUpdate && !parsed) {
+    const supabase = createServiceClient();
+
+    after(async () => {
+      try {
+        // Update template_send_messages status
+        const statusMap: Record<string, Record<string, unknown>> = {
+          sent: { status: "sent", sent_at: new Date(statusUpdate.timestamp * 1000).toISOString() },
+          delivered: { status: "delivered", delivered_at: new Date(statusUpdate.timestamp * 1000).toISOString() },
+          read: { status: "read", read_at: new Date(statusUpdate.timestamp * 1000).toISOString() },
+          failed: {
+            status: "failed",
+            error_code: statusUpdate.errorCode ?? null,
+            error_message: statusUpdate.errorTitle ?? null,
+          },
+        };
+
+        const updates = statusMap[statusUpdate.status];
+        if (!updates) return;
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: msg } = await (supabase.from as any)("template_send_messages")
+          .update(updates)
+          .eq("whatsapp_message_id", statusUpdate.messageId)
+          .select("job_id")
+          .single();
+
+        // Increment job counter
+        if (msg?.job_id) {
+          const counterField =
+            statusUpdate.status === "delivered"
+              ? "delivered_count"
+              : statusUpdate.status === "read"
+                ? "read_count"
+                : statusUpdate.status === "failed"
+                  ? "failed_count"
+                  : null;
+
+          if (counterField) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data: job } = await (supabase.from as any)("template_send_jobs")
+              .select(counterField)
+              .eq("id", msg.job_id)
+              .single();
+
+            if (job) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              await (supabase.from as any)("template_send_jobs")
+                .update({
+                  [counterField]: (job[counterField] ?? 0) + 1,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", msg.job_id);
+            }
+          }
+        }
+      } catch (err) {
+        logger.error("Status update processing failed", {
+          messageId: statusUpdate.messageId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    });
+
+    return new Response("OK", { status: 200 });
+  }
+
+  // At this point we have a parsed inbound message
   if (!parsed) {
     return new Response("OK", { status: 200 });
   }
 
   // -------------------------------------------------------------------------
-  // 3. Look up channel
+  // 4. Look up channel
   // -------------------------------------------------------------------------
   const supabase = createServiceClient();
   const { data: channel } = await supabase
@@ -351,11 +429,41 @@ async function processInboundMessage(ctx: {
         text: assistantReply,
       });
     } else {
-      logger.warn("WhatsApp session window closed, cannot send free-form reply", {
+      logger.warn("WhatsApp session window closed, attempting template fallback", {
         channelId: channel.id,
         to: parsed.from,
       });
-      // Phase 2: send template message fallback here
+
+      // Template fallback: send a pre-configured template when 24h window is closed
+      const templateFallback = (config as unknown as Record<string, unknown>).templateFallback as
+        | { enabled?: boolean; templateId?: string }
+        | undefined;
+
+      if (templateFallback?.enabled && templateFallback.templateId) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: fallbackTemplate } = await (supabase.from as any)("whatsapp_templates")
+            .select("name, language")
+            .eq("id", templateFallback.templateId)
+            .eq("status", "APPROVED")
+            .single();
+
+          if (fallbackTemplate) {
+            await sendTemplateMessage({
+              phoneNumberId: config.phoneNumberId,
+              accessToken: config.accessToken,
+              to: parsed.from,
+              templateName: fallbackTemplate.name,
+              language: fallbackTemplate.language,
+            });
+          }
+        } catch (fallbackErr) {
+          logger.error("Template fallback send failed", {
+            channelId: channel.id,
+            error: fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr),
+          });
+        }
+      }
     }
   }
 

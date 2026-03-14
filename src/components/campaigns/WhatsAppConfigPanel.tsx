@@ -113,7 +113,7 @@ export function WhatsAppConfigPanel({
   }
 
   return (
-    <div className="w-[400px] shrink-0 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] flex flex-col h-full overflow-hidden">
+    <div className="w-full bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] flex flex-col overflow-hidden">
       {/* Tab Navigation */}
       <div className="flex border-b border-neutral-200/50 dark:border-neutral-700/50 shrink-0">
         {TABS.map((tab) => {

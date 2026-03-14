@@ -69,6 +69,8 @@ export interface WhatsAppConfig {
   autoClose?: { enabled: boolean; hours?: number };
   /** Auto-escalate to human on keywords/loops */
   autoEscalation?: { enabled: boolean; keywords?: string[] };
+  /** Template fallback when 24-hour session window is closed */
+  templateFallback?: { enabled: boolean; templateId?: string };
 }
 
 /** Union of all channel-specific config types */

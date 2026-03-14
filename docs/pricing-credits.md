@@ -72,6 +72,28 @@ Typical agent message: ~15,000 input tokens, ~500 output tokens.
 | Sonnet 4.5       | 127         | 444           | 1,269        | 3,807       |
 | Opus 4.6         | 76          | 267           | 762          | 2,285       |
 
+## Knowledge Base Limits Per Tier
+
+| Tier     | Max Documents | Max Chunks | ~Equivalent Pages |
+|----------|--------------|------------|-------------------|
+| Free     | 10           | 200        | ~50               |
+| Starter  | 50           | 500        | ~125              |
+| Growth   | 100          | 1,500      | ~375              |
+| Agency   | 200          | 3,000      | ~750              |
+| Scale    | 500          | 10,000     | ~2,500            |
+
+- **Chunk-based limits** are the primary gate — document count is a secondary soft cap
+- ~4 chunks per page at 800-token target chunk size
+- FAQs = 1 chunk each, so they're cheap against the budget
+- Website scrapes produce ~1 chunk per 1,600 chars of content
+- Uploaded docs (PDF/DOCX) use ~3,200 char chunks by default
+- Embedding cost is one-time at ingest (~$0.02 per 1M tokens via OpenAI `text-embedding-3-small`)
+- At Scale tier (10K chunks), one-time embedding cost ≈ $0.06 — negligible vs ongoing chat credits
+
+### Why chunk-based, not document-based?
+
+A single PDF can produce 5 chunks or 500 chunks. Document-count limits are misleading — a user with 20 one-page FAQs uses far fewer resources than a user with 5 large PDFs. Chunk limits align cost with actual storage, embedding, and retrieval overhead.
+
 ## Design Rationale
 
 - **Constant 150** gives 60-77% margins across all tiers — healthy for infrastructure SaaS
