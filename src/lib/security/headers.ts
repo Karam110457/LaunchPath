@@ -54,6 +54,11 @@ function isChannelRoute(pathname: string): boolean {
   return pathname.startsWith("/api/channels/") || pathname.startsWith("/try/");
 }
 
+/** Routes that need microphone access (agent builder voice test). */
+function needsMicrophone(pathname: string): boolean {
+  return pathname.startsWith("/agents/") || pathname.startsWith("/dashboard");
+}
+
 export function applySecurityHeaders(
   response: NextResponse,
   pathname?: string
@@ -65,9 +70,12 @@ export function applySecurityHeaders(
   }
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+
+  // Allow microphone on agent builder pages for voice testing
+  const micPolicy = pathname && needsMicrophone(pathname) ? "microphone=(self)" : "microphone=()";
   response.headers.set(
     "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+    `camera=(), ${micPolicy}, geolocation=(), interest-cohort=()`
   );
   const allowEval = pathname ? needsEval(pathname) : false;
   response.headers.set(
