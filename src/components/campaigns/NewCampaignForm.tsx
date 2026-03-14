@@ -93,6 +93,7 @@ export function NewCampaignForm({ agents, lockedClientId, redirectBase }: NewCam
           client_id: clientId || null,
           client_name: clientName.trim() || null,
           client_website: clientWebsite.trim() || null,
+          channel_type: channelType,
         }),
       });
 

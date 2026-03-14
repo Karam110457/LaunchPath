@@ -155,9 +155,9 @@ export function WhatsAppConfigPanel({
   }
 
   return (
-    <div className="w-full bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] flex flex-col overflow-hidden">
+    <div className="w-full flex flex-col">
       {/* Tab Navigation */}
-      <div className="flex border-b border-neutral-200/50 dark:border-neutral-700/50 shrink-0">
+      <div className="flex gap-1 pb-4 border-b border-neutral-200/60 dark:border-neutral-700/40 shrink-0">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -166,11 +166,10 @@ export function WhatsAppConfigPanel({
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              style={isActive ? gradientBorderStyle : undefined}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-all border-b-2 ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-lg transition-all ${
                 isActive
-                  ? "border-transparent text-foreground [--card-bg:rgba(255,255,255,0.7)] dark:[--card-bg:rgba(23,23,23,0.7)]"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
+                  ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900"
+                  : "text-muted-foreground hover:text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800"
               }`}
               title={tab.description}
             >
@@ -182,7 +181,7 @@ export function WhatsAppConfigPanel({
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-5">
+      <div className="flex-1 pt-5 space-y-5">
         {/* ═══════ CREDENTIALS TAB ═══════ */}
         {activeTab === "credentials" && (
           <>

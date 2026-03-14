@@ -17,9 +17,7 @@ import {
   Circle,
   Copy,
   Check,
-  Shield,
   Zap,
-  Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConfigPanel } from "./ConfigPanel";
@@ -393,9 +391,9 @@ export function CampaignBuilder({
     );
   }
 
-  // ── WhatsApp layout (redesigned) ───────────────────────────────────────
+  // ── WhatsApp layout ─────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-screen bg-[#fafafa] dark:bg-[#0a0a0a]">
+    <div className="flex flex-col h-screen bg-white dark:bg-[#0f0f0f]">
       <TopBar
         campaign={campaign}
         agentData={agentData}
@@ -414,10 +412,9 @@ export function CampaignBuilder({
       />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* ── Left sidebar: navigation + setup progress ────────────── */}
-        <div className="w-[240px] shrink-0 border-r border-neutral-200/50 dark:border-neutral-800/50 flex flex-col">
-          {/* Tab navigation */}
-          <nav className="p-3 space-y-1">
+        {/* ── Left sidebar ─────────────────────────────────────── */}
+        <div className="w-[220px] shrink-0 border-r border-neutral-200/60 dark:border-neutral-800/60 bg-neutral-50/50 dark:bg-neutral-950/50 flex flex-col">
+          <nav className="p-2.5 space-y-0.5">
             {WA_TABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = waTab === tab.id;
@@ -429,78 +426,48 @@ export function CampaignBuilder({
                   onClick={() => !needsChannel && setWaTab(tab.id)}
                   disabled={needsChannel}
                   className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all",
+                    "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all",
                     isActive
-                      ? "bg-white dark:bg-neutral-900 shadow-sm border border-neutral-200/60 dark:border-neutral-700/40"
+                      ? "bg-white dark:bg-neutral-800/80 text-foreground shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
                       : needsChannel
-                        ? "text-muted-foreground/40 cursor-not-allowed"
-                        : "hover:bg-white/60 dark:hover:bg-neutral-900/40 text-muted-foreground hover:text-foreground"
+                        ? "text-muted-foreground/30 cursor-not-allowed"
+                        : "text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-neutral-800/40"
                   )}
                 >
-                  <div
-                    className={cn(
-                      "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                      isActive
-                        ? "gradient-accent-bg"
-                        : "bg-neutral-100 dark:bg-neutral-800"
-                    )}
-                  >
-                    <Icon className={cn("w-4 h-4", isActive ? "text-white" : "text-muted-foreground")} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className={cn(
-                      "text-xs font-medium",
-                      isActive ? "text-foreground" : ""
-                    )}>
-                      {tab.label}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground truncate">
-                      {tab.description}
-                    </p>
-                  </div>
+                  <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-foreground" : "")} />
+                  <span className="text-[13px] font-medium">{tab.label}</span>
                 </button>
               );
             })}
           </nav>
 
-          {/* Setup progress */}
-          <div className="mt-auto p-4 border-t border-neutral-200/50 dark:border-neutral-800/50">
-            <div className="rounded-[20px] bg-white dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-700/40 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Setup Progress
-                </p>
-                <span className="text-[10px] font-semibold text-foreground">
-                  {completedSteps}/{setupSteps.length}
-                </span>
+          {/* Setup progress — compact */}
+          <div className="mt-auto px-3 pb-3">
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Setup</span>
+                <span className="text-[10px] font-semibold text-foreground">{completedSteps}/{setupSteps.length}</span>
               </div>
-
-              {/* Progress bar */}
-              <div className="h-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+              <div className="h-1 rounded-full bg-neutral-200/70 dark:bg-neutral-800 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-[#FF8C00] to-[#9D50BB] transition-all duration-500"
                   style={{ width: `${(completedSteps / setupSteps.length) * 100}%` }}
                 />
               </div>
-
-              {/* Steps */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {setupSteps.map((step, i) => (
-                  <div key={i} className="flex items-start gap-2">
+                  <div key={i} className="flex items-center gap-1.5 px-1">
                     {step.done ? (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                      <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
                     ) : (
-                      <Circle className="w-3.5 h-3.5 text-neutral-300 dark:text-neutral-600 shrink-0 mt-0.5" />
+                      <Circle className="w-3 h-3 text-neutral-300 dark:text-neutral-600 shrink-0" />
                     )}
-                    <div>
-                      <p className={cn(
-                        "text-[11px] font-medium",
-                        step.done ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
-                      )}>
-                        {step.label}
-                      </p>
-                      <p className="text-[9px] text-muted-foreground">{step.description}</p>
-                    </div>
+                    <span className={cn(
+                      "text-[10px]",
+                      step.done ? "text-muted-foreground line-through" : "text-muted-foreground"
+                    )}>
+                      {step.label}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -508,217 +475,141 @@ export function CampaignBuilder({
           </div>
         </div>
 
-        {/* ── Main content area ────────────────────────────────── */}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          {/* Tab content */}
-          <div className="flex-1 overflow-y-auto">
-            {/* ═══ SETTINGS TAB ═══ */}
-            {waTab === "settings" && (
-              <div className="max-w-4xl mx-auto p-6 space-y-6">
-                {/* Quick status banner */}
-                {status === "active" && (
-                  <div
-                    className="rounded-[20px] border-2 border-transparent p-4 flex items-center gap-4 [--card-bg:#f8f9fa] dark:[--card-bg:#1E1E1E]"
-                    style={gradientBorderStyle}
-                  >
-                    <div className="w-10 h-10 rounded-xl gradient-accent-bg flex items-center justify-center shrink-0">
-                      <Zap className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground">Campaign is Live</p>
-                      <p className="text-xs text-muted-foreground">
-                        Your WhatsApp channel is active and receiving messages. Changes are saved automatically.
-                      </p>
-                    </div>
-                    {webhookUrl && (
-                      <button
-                        onClick={copyWebhookUrl}
-                        className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-full border border-neutral-200/60 dark:border-neutral-700/50 hover:bg-white dark:hover:bg-neutral-800 transition-colors"
-                      >
-                        {webhookCopied ? (
-                          <><Check className="w-3 h-3 text-emerald-500" /> Copied</>
-                        ) : (
-                          <><Copy className="w-3 h-3" /> Webhook URL</>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Two-column layout: config + guide */}
-                <div className="flex gap-6">
-                  {/* Config panel */}
-                  <div className="flex-1">
-                    <WhatsAppConfigPanel
-                      config={waConfig}
-                      onChange={setWaConfig}
-                      rateLimitRpm={rateLimitRpm}
-                      onRateLimitChange={setRateLimitRpm}
-                      webhookUrl={webhookUrl}
-                      verifyTokenDisplay={waConfig.verifyToken ?? ""}
-                      approvedTemplates={approvedTemplates}
-                      campaignId={campaign.id}
-                    />
-                  </div>
-
-                  {/* Guide sidebar */}
-                  <div className="w-[280px] shrink-0 space-y-4">
-                    {/* Getting started guide */}
-                    <div className="rounded-[20px] bg-white dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-700/40 p-5 space-y-4">
-                      <div className="flex items-center gap-2">
-                        <Shield className="w-4 h-4 text-muted-foreground" />
-                        <h4 className="text-xs font-semibold text-foreground">Getting Started</h4>
-                      </div>
-
-                      <div className="space-y-3">
-                        <GuideStep
-                          number={1}
-                          title="Create a Meta App"
-                          description="Go to developers.facebook.com and create a Business app with WhatsApp."
-                          done={hasCredentials}
-                        />
-                        <GuideStep
-                          number={2}
-                          title="Copy your credentials"
-                          description="Find your Phone Number ID, WABA ID, and generate a system user token."
-                          done={hasCredentials && hasWaba}
-                        />
-                        <GuideStep
-                          number={3}
-                          title="Save & configure webhook"
-                          description="Save your settings, then paste the webhook URL in your Meta app dashboard."
-                          done={!!webhookUrl}
-                        />
-                        <GuideStep
-                          number={4}
-                          title="Deploy your campaign"
-                          description="Click Deploy to start receiving and responding to WhatsApp messages."
-                          done={status === "active"}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Quick stats (when deployed) */}
-                    {channel && (
-                      <div className="rounded-[20px] bg-white dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-700/40 p-5 space-y-3">
-                        <h4 className="text-xs font-semibold text-foreground flex items-center gap-2">
-                          <Globe className="w-4 h-4 text-muted-foreground" />
-                          Connection
-                        </h4>
-                        <div className="space-y-2">
-                          <StatusRow
-                            label="Channel"
-                            ok
-                            detail={channel.is_enabled ? "Active" : "Paused"}
-                          />
-                          <StatusRow
-                            label="Webhook"
-                            ok={!!webhookUrl}
-                            detail={webhookUrl ? "Configured" : "Pending"}
-                          />
-                          <StatusRow
-                            label="Inbound"
-                            ok={status === "active"}
-                            detail={status === "active" ? "Receiving" : "Stopped"}
-                          />
-                        </div>
-                        <p className="text-[10px] text-muted-foreground pt-1 border-t border-neutral-200/50 dark:border-neutral-700/50">
-                          ID: <code className="font-mono">{channel.id.slice(0, 12)}...</code>
-                        </p>
-                      </div>
-                    )}
-                  </div>
+        {/* ── Main content ─────────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto">
+          {/* ═══ SETTINGS TAB ═══ */}
+          {waTab === "settings" && (
+            <div className="max-w-3xl mx-auto px-8 py-6 space-y-6">
+              {/* Live banner */}
+              {status === "active" && (
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/40 dark:border-emerald-800/30">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400 flex-1">
+                    Campaign is live and receiving messages
+                  </p>
+                  {webhookUrl && (
+                    <button
+                      onClick={copyWebhookUrl}
+                      className="shrink-0 flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline"
+                    >
+                      {webhookCopied ? <><Check className="w-3 h-3" /> Copied</> : <><Copy className="w-3 h-3" /> Copy webhook URL</>}
+                    </button>
+                  )}
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* ═══ TEMPLATES TAB ═══ */}
-            {waTab === "templates" && channel && (
-              <div className="max-w-4xl mx-auto p-6">
-                <div className="rounded-[2rem] bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] p-6">
-                  <TemplatesTab
-                    agentId={agentId}
-                    channelId={channel.id}
-                    hasBusinessAccountId={hasWaba}
-                  />
-                </div>
-              </div>
-            )}
-
-            {waTab === "templates" && !channel && (
-              <EmptyTabState
-                icon={FileText}
-                title="Save Settings First"
-                description="Configure and save your WhatsApp credentials in the Settings tab to unlock template management."
-                action="Go to Settings"
-                onAction={() => setWaTab("settings")}
+              <WhatsAppConfigPanel
+                config={waConfig}
+                onChange={setWaConfig}
+                rateLimitRpm={rateLimitRpm}
+                onRateLimitChange={setRateLimitRpm}
+                webhookUrl={webhookUrl}
+                verifyTokenDisplay={waConfig.verifyToken ?? ""}
+                approvedTemplates={approvedTemplates}
+                campaignId={campaign.id}
               />
-            )}
 
-            {/* ═══ CONTACTS TAB ═══ */}
-            {waTab === "contacts" && channel && (
-              <div className="max-w-4xl mx-auto p-6">
-                <div className="rounded-[2rem] bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] p-6">
-                  <ContactsTab
-                    campaignId={campaign.id}
-                    channelId={channel.id}
-                  />
+              {/* Connection status — inline, not a sidebar card */}
+              {channel && (
+                <div className="flex items-center gap-4 px-1 py-2 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <span className={cn("w-1.5 h-1.5 rounded-full", channel.is_enabled ? "bg-emerald-500" : "bg-neutral-300")} />
+                    Channel {channel.is_enabled ? "Active" : "Paused"}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className={cn("w-1.5 h-1.5 rounded-full", webhookUrl ? "bg-emerald-500" : "bg-neutral-300")} />
+                    Webhook {webhookUrl ? "Configured" : "Pending"}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className={cn("w-1.5 h-1.5 rounded-full", status === "active" ? "bg-emerald-500" : "bg-neutral-300")} />
+                    Inbound {status === "active" ? "Receiving" : "Stopped"}
+                  </span>
+                  <span className="ml-auto font-mono text-[10px] text-muted-foreground/60">
+                    {channel.id.slice(0, 8)}
+                  </span>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+          )}
 
-            {waTab === "contacts" && !channel && (
-              <EmptyTabState
-                icon={Users}
-                title="Deploy First"
-                description="Deploy your campaign to start managing contacts. You'll be able to import CSV files and add contacts manually."
-                action="Go to Settings"
-                onAction={() => setWaTab("settings")}
+          {/* ═══ TEMPLATES TAB ═══ */}
+          {waTab === "templates" && channel && (
+            <div className="max-w-3xl mx-auto px-8 py-6">
+              <TemplatesTab
+                agentId={agentId}
+                channelId={channel.id}
+                hasBusinessAccountId={hasWaba}
               />
-            )}
+            </div>
+          )}
 
-            {/* ═══ SENDS TAB ═══ */}
-            {waTab === "sends" && channel && (
-              <div className="max-w-4xl mx-auto p-6">
-                <div className="rounded-[2rem] bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] p-6">
-                  <SendsTab
-                    agentId={agentId}
-                    channelId={channel.id}
-                    campaignId={campaign.id}
-                  />
-                </div>
-              </div>
-            )}
+          {waTab === "templates" && !channel && (
+            <EmptyTabState
+              icon={FileText}
+              title="Save Settings First"
+              description="Configure and save your WhatsApp credentials in the Settings tab to unlock template management."
+              action="Go to Settings"
+              onAction={() => setWaTab("settings")}
+            />
+          )}
 
-            {waTab === "sends" && !channel && (
-              <EmptyTabState
-                icon={Send}
-                title="Deploy First"
-                description="Deploy your campaign, create templates, and import contacts before sending outbound messages."
-                action="Go to Settings"
-                onAction={() => setWaTab("settings")}
+          {/* ═══ CONTACTS TAB ═══ */}
+          {waTab === "contacts" && channel && (
+            <div className="max-w-3xl mx-auto px-8 py-6">
+              <ContactsTab
+                campaignId={campaign.id}
+                channelId={channel.id}
               />
-            )}
+            </div>
+          )}
 
-            {/* ═══ SEQUENCES TAB ═══ */}
-            {waTab === "sequences" && channel && (
-              <div className="max-w-4xl mx-auto p-6">
-                <div className="rounded-[2rem] bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] p-6">
-                  <SequencesTab campaignId={campaign.id} channelId={channel.id} />
-                </div>
-              </div>
-            )}
+          {waTab === "contacts" && !channel && (
+            <EmptyTabState
+              icon={Users}
+              title="Deploy First"
+              description="Deploy your campaign to start managing contacts. You'll be able to import CSV files and add contacts manually."
+              action="Go to Settings"
+              onAction={() => setWaTab("settings")}
+            />
+          )}
 
-            {waTab === "sequences" && !channel && (
-              <EmptyTabState
-                icon={Zap}
-                title="Deploy First"
-                description="Deploy your campaign before creating follow-up sequences."
-                action="Go to Settings"
-                onAction={() => setWaTab("settings")}
+          {/* ═══ SENDS TAB ═══ */}
+          {waTab === "sends" && channel && (
+            <div className="max-w-3xl mx-auto px-8 py-6">
+              <SendsTab
+                agentId={agentId}
+                channelId={channel.id}
+                campaignId={campaign.id}
               />
-            )}
-          </div>
+            </div>
+          )}
+
+          {waTab === "sends" && !channel && (
+            <EmptyTabState
+              icon={Send}
+              title="Deploy First"
+              description="Deploy your campaign, create templates, and import contacts before sending outbound messages."
+              action="Go to Settings"
+              onAction={() => setWaTab("settings")}
+            />
+          )}
+
+          {/* ═══ SEQUENCES TAB ═══ */}
+          {waTab === "sequences" && channel && (
+            <div className="max-w-3xl mx-auto px-8 py-6">
+              <SequencesTab campaignId={campaign.id} channelId={channel.id} />
+            </div>
+          )}
+
+          {waTab === "sequences" && !channel && (
+            <EmptyTabState
+              icon={Zap}
+              title="Deploy First"
+              description="Deploy your campaign before creating follow-up sequences."
+              action="Go to Settings"
+              onAction={() => setWaTab("settings")}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -839,53 +730,6 @@ function TopBar({
             Deploy
           </button>
         )}
-      </div>
-    </div>
-  );
-}
-
-/** Small status indicator row */
-function StatusRow({ label, ok, detail }: { label: string; ok: boolean; detail: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-xs font-medium text-foreground">{label}</span>
-      <div className="flex items-center gap-1.5">
-        <span className="text-[11px] text-muted-foreground">{detail}</span>
-        <span className={cn("w-2 h-2 rounded-full shrink-0", ok ? "bg-emerald-500" : "bg-neutral-300 dark:bg-neutral-600")} />
-      </div>
-    </div>
-  );
-}
-
-/** Numbered guide step */
-function GuideStep({
-  number,
-  title,
-  description,
-  done,
-}: {
-  number: number;
-  title: string;
-  description: string;
-  done: boolean;
-}) {
-  return (
-    <div className="flex items-start gap-2.5">
-      <div
-        className={cn(
-          "w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5",
-          done
-            ? "gradient-accent-bg text-white"
-            : "bg-neutral-100 dark:bg-neutral-800 text-muted-foreground"
-        )}
-      >
-        {done ? <Check className="w-3 h-3" /> : number}
-      </div>
-      <div>
-        <p className={cn("text-[11px] font-medium", done ? "text-foreground" : "text-muted-foreground")}>
-          {title}
-        </p>
-        <p className="text-[10px] text-muted-foreground leading-relaxed">{description}</p>
       </div>
     </div>
   );

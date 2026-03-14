@@ -14,7 +14,7 @@ export default async function ClientCampaignsPage({
 
   const { data: campaigns } = await supabase
     .from("campaigns")
-    .select("id, name, status, ai_agents(name, personality)")
+    .select("id, name, status, channel_type, ai_agents(name, personality)")
     .eq("client_id", clientId)
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
