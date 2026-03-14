@@ -2,13 +2,30 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Rocket, Pause, Save, MessageCircle } from "lucide-react";
+import { ArrowLeft, Loader2, Rocket, Pause, Save, MessageCircle, Settings2, FileText, Users, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConfigPanel } from "./ConfigPanel";
 import { PreviewPanel } from "./PreviewPanel";
 import { WhatsAppConfigPanel } from "./WhatsAppConfigPanel";
+import { TemplatesTab } from "./whatsapp/TemplatesTab";
 import type { WidgetConfig, WhatsAppConfig } from "@/lib/channels/types";
 import type { ChannelResponse } from "@/lib/channels/types";
+
+type WhatsAppTab = "settings" | "templates" | "contacts" | "sends";
+
+const WA_TABS: { id: WhatsAppTab; label: string; icon: typeof Settings2; enabled: boolean }[] = [
+  { id: "settings", label: "Settings", icon: Settings2, enabled: true },
+  { id: "templates", label: "Templates", icon: FileText, enabled: true },
+  { id: "contacts", label: "Contacts", icon: Users, enabled: false },
+  { id: "sends", label: "Sends", icon: Send, enabled: false },
+];
+
+const tabGradientStyle: React.CSSProperties = {
+  backgroundImage:
+    "linear-gradient(var(--card-bg), var(--card-bg)), linear-gradient(135deg, #FF8C00, #9D50BB)",
+  backgroundOrigin: "border-box",
+  backgroundClip: "padding-box, border-box",
+};
 
 interface CampaignData {
   id: string;
@@ -72,6 +89,9 @@ export function CampaignBuilder({
   const [rateLimitRpm, setRateLimitRpm] = useState(
     existingChannel?.rate_limit_rpm?.toString() ?? ""
   );
+
+  // WhatsApp tab state
+  const [waTab, setWaTab] = useState<WhatsAppTab>("settings");
 
   // Shared state
   const [channel, setChannel] = useState<ChannelResponse | null>(
@@ -372,66 +392,144 @@ export function CampaignBuilder({
       {/* Main content — floating card layout */}
       <div className="flex flex-1 gap-4 px-5 pb-5 pt-2 overflow-hidden">
         {isWhatsApp ? (
-          <>
-            <WhatsAppConfigPanel
-              config={waConfig}
-              onChange={setWaConfig}
-              rateLimitRpm={rateLimitRpm}
-              onRateLimitChange={setRateLimitRpm}
-              webhookUrl={webhookUrl}
-              verifyTokenDisplay={waConfig.verifyToken ?? ""}
-            />
-            {/* WhatsApp status panel (right side) */}
-            <div className="flex-1 flex items-center justify-center">
-              <div className="max-w-md w-full rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-8 text-center space-y-5">
-                <div className="w-16 h-16 rounded-2xl gradient-accent-bg flex items-center justify-center mx-auto">
-                  <MessageCircle className="w-8 h-8 text-white" />
-                </div>
-                <div className="space-y-1.5">
-                  <h3 className="text-base font-semibold text-foreground">
-                    WhatsApp Campaign
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {status === "active"
-                      ? "Your WhatsApp channel is live and receiving messages."
-                      : status === "paused"
-                        ? "Your WhatsApp channel is paused. Deploy to start receiving messages."
-                        : "Configure your Meta API credentials, then deploy to start receiving WhatsApp messages."}
-                  </p>
-                </div>
-
-                {/* Connection status */}
-                <div className="rounded-[20px] border border-black/5 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] p-4 space-y-3 text-left">
-                  <StatusRow
-                    label="Credentials"
-                    ok={canDeployWhatsApp}
-                    detail={canDeployWhatsApp ? "Configured" : "Missing required fields"}
-                  />
-                  <StatusRow
-                    label="Channel"
-                    ok={!!channel}
-                    detail={channel ? "Created" : "Will be created on save"}
-                  />
-                  <StatusRow
-                    label="Webhook"
-                    ok={!!webhookUrl}
-                    detail={webhookUrl ? "Ready" : "Available after first save"}
-                  />
-                  <StatusRow
-                    label="Status"
-                    ok={status === "active"}
-                    detail={status === "active" ? "Live" : "Not deployed"}
-                  />
-                </div>
-
-                {channel && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Channel ID: <code className="font-mono text-[10px]">{channel.id.slice(0, 8)}...</code>
-                  </p>
-                )}
-              </div>
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* WhatsApp Tab Bar */}
+            <div className="flex items-center p-1.5 rounded-full border border-border/40 bg-card/60 backdrop-blur-md w-fit shadow-sm mb-4 shrink-0">
+              {WA_TABS.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = waTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => tab.enabled && setWaTab(tab.id)}
+                    disabled={!tab.enabled}
+                    style={isActive ? tabGradientStyle : undefined}
+                    className={cn(
+                      "flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-full border-2 transition-all",
+                      isActive
+                        ? "[--card-bg:#fff] dark:[--card-bg:#171717] border-transparent text-foreground"
+                        : tab.enabled
+                          ? "border-transparent text-muted-foreground hover:text-foreground"
+                          : "border-transparent text-muted-foreground/40 cursor-not-allowed"
+                    )}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {tab.label}
+                    {!tab.enabled && (
+                      <span className="text-[9px] ml-0.5 opacity-60">Soon</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
-          </>
+
+            {/* WhatsApp Tab Content */}
+            <div className="flex-1 overflow-hidden">
+              {waTab === "settings" && (
+                <div className="flex gap-4 h-full">
+                  <WhatsAppConfigPanel
+                    config={waConfig}
+                    onChange={setWaConfig}
+                    rateLimitRpm={rateLimitRpm}
+                    onRateLimitChange={setRateLimitRpm}
+                    webhookUrl={webhookUrl}
+                    verifyTokenDisplay={waConfig.verifyToken ?? ""}
+                  />
+                  {/* WhatsApp status panel (right side) */}
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="max-w-md w-full rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-8 text-center space-y-5">
+                      <div className="w-16 h-16 rounded-2xl gradient-accent-bg flex items-center justify-center mx-auto">
+                        <MessageCircle className="w-8 h-8 text-white" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <h3 className="text-base font-semibold text-foreground">
+                          WhatsApp Campaign
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {status === "active"
+                            ? "Your WhatsApp channel is live and receiving messages."
+                            : status === "paused"
+                              ? "Your WhatsApp channel is paused. Deploy to start receiving messages."
+                              : "Configure your Meta API credentials, then deploy to start receiving WhatsApp messages."}
+                        </p>
+                      </div>
+
+                      {/* Connection status */}
+                      <div className="rounded-[20px] border border-black/5 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] p-4 space-y-3 text-left">
+                        <StatusRow
+                          label="Credentials"
+                          ok={canDeployWhatsApp}
+                          detail={canDeployWhatsApp ? "Configured" : "Missing required fields"}
+                        />
+                        <StatusRow
+                          label="Channel"
+                          ok={!!channel}
+                          detail={channel ? "Created" : "Will be created on save"}
+                        />
+                        <StatusRow
+                          label="Webhook"
+                          ok={!!webhookUrl}
+                          detail={webhookUrl ? "Ready" : "Available after first save"}
+                        />
+                        <StatusRow
+                          label="Status"
+                          ok={status === "active"}
+                          detail={status === "active" ? "Live" : "Not deployed"}
+                        />
+                      </div>
+
+                      {channel && (
+                        <p className="text-[11px] text-muted-foreground">
+                          Channel ID: <code className="font-mono text-[10px]">{channel.id.slice(0, 8)}...</code>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {waTab === "templates" && channel && (
+                <div className="h-full overflow-y-auto rounded-[2rem] bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] p-6">
+                  <TemplatesTab
+                    agentId={agentId}
+                    channelId={channel.id}
+                    hasBusinessAccountId={!!waConfig.businessAccountId?.trim()}
+                  />
+                </div>
+              )}
+
+              {waTab === "templates" && !channel && (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center max-w-xs">
+                    <FileText className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+                    <p className="text-sm font-medium text-foreground mb-1">
+                      Save Settings First
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Configure and save your WhatsApp credentials in the
+                      Settings tab before managing templates.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {(waTab === "contacts" || waTab === "sends") && (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center max-w-xs">
+                    <Users className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+                    <p className="text-sm font-medium text-foreground mb-1">
+                      Coming Soon
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Contact management and outbound sending will be available
+                      in the next update.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         ) : (
           <>
             <ConfigPanel

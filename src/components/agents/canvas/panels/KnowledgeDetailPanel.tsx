@@ -192,7 +192,7 @@ export function KnowledgeDetailPanel({
     [agentId, refreshDocuments],
   );
 
-  const MAX_DOCUMENTS = 20;
+  const MAX_DOCUMENTS = 50;
   const atLimit = documents.length >= MAX_DOCUMENTS;
 
   return (

@@ -11,7 +11,7 @@ import { scrapeWebsite } from "@/lib/knowledge/web-scraper";
 import { chunkText } from "@/lib/knowledge/chunking";
 import { embedTexts } from "@/lib/knowledge/embeddings";
 
-const MAX_DOCS_PER_AGENT = 20;
+const MAX_DOCS_PER_AGENT = 50;
 
 export async function POST(
   request: NextRequest,

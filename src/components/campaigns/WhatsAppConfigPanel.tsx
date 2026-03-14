@@ -162,8 +162,8 @@ export function WhatsAppConfigPanel({
             </FieldGroup>
 
             <FieldGroup
-              label="Business Account ID"
-              hint="Your WhatsApp Business Account (WABA) ID"
+              label="Business Account ID *"
+              hint="Your WhatsApp Business Account (WABA) ID — required for templates"
             >
               <input
                 value={config.businessAccountId ?? ""}

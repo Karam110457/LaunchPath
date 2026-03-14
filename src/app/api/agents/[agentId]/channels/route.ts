@@ -115,10 +115,11 @@ export async function POST(
     if (
       !cfg?.phoneNumberId ||
       !cfg?.accessToken ||
-      !cfg?.verifyToken
+      !cfg?.verifyToken ||
+      !cfg?.businessAccountId
     ) {
       return NextResponse.json(
-        { error: "WhatsApp channels require phoneNumberId, accessToken, and verifyToken in config" },
+        { error: "WhatsApp channels require phoneNumberId, businessAccountId, accessToken, and verifyToken in config" },
         { status: 400 }
       );
     }

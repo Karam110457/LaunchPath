@@ -53,8 +53,8 @@ export interface WidgetConfig {
 export interface WhatsAppConfig {
   /** Meta phone number ID */
   phoneNumberId: string;
-  /** WhatsApp Business Account ID */
-  businessAccountId?: string;
+  /** WhatsApp Business Account ID (required for template management) */
+  businessAccountId: string;
   /** Long-lived system user access token (masked in API responses) */
   accessToken: string;
   /** Shared secret for webhook verification handshake */

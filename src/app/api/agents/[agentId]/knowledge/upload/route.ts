@@ -15,7 +15,7 @@ import { chunkText } from "@/lib/knowledge/chunking";
 import { embedTexts } from "@/lib/knowledge/embeddings";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
-const MAX_DOCS_PER_AGENT = 20;
+const MAX_DOCS_PER_AGENT = 50;
 
 const ALLOWED_MIME = new Set([
   "application/pdf",
