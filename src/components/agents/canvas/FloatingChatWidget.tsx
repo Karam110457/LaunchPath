@@ -348,131 +348,130 @@ export function FloatingChatWidget({
     }
   }, [isProcessing, addTranscriptEntry, sendToAgent, speakText]);
 
-  // ─── Mic + Speech Recognition lifecycle ─────────────────────────────────
-  // Single effect: acquire mic FIRST (one getUserMedia call), then start
-  // SpeechRecognition. The mic stream is also passed to the orb for visuals.
-  useEffect(() => {
-    if (!isListening) {
-      // Stop recognition
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-        recognitionRef.current = null;
+  // ─── Start / stop voice ─────────────────────────────────────────────────
+  // getUserMedia MUST be called directly in the click handler (user gesture)
+  // so the browser shows the permission prompt. Calling it in useEffect loses
+  // the transient activation and Edge/Chrome silently deny.
+
+  const stopVoice = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.abort();
+      recognitionRef.current = null;
+    }
+    if (micStream) {
+      micStream.getTracks().forEach((t) => t.stop());
+    }
+    setMicStream(null);
+    setIsListening(false);
+    setInterimText("");
+  }, [micStream]);
+
+  const startVoice = useCallback(async () => {
+    // Step 1: Acquire mic — MUST happen in the click call-stack
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      console.error("[Voice] getUserMedia failed:", err);
+      // Check if previously blocked
+      try {
+        const perm = await navigator.permissions.query({ name: "microphone" as PermissionName });
+        if (perm.state === "denied") {
+          setVoiceError(
+            "Microphone blocked. Click the lock icon in the address bar → reset Microphone to \"Ask\"."
+          );
+        } else {
+          setVoiceError("Microphone access denied. Check browser permissions.");
+        }
+      } catch {
+        setVoiceError("Microphone access denied. Check browser permissions.");
       }
-      // Release mic stream
-      if (micStream) {
-        micStream.getTracks().forEach((t) => t.stop());
-        setMicStream(null);
-      }
-      setInterimText("");
       return;
     }
 
-    let cancelled = false;
-    let stream: MediaStream | null = null;
+    setMicStream(stream);
+    setVoiceError(null);
+    setIsListening(true);
 
-    const startVoice = async () => {
-      // Step 1: Acquire mic permission (single getUserMedia call)
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch (err) {
-        console.error("[Voice] getUserMedia failed:", err);
-        setVoiceError("Microphone access denied. Check browser permissions.");
-        setIsListening(false);
-        return;
+    // Step 2: Start SpeechRecognition (mic already allowed)
+    const recognition = createSpeechRecognition();
+    if (!recognition) {
+      setVoiceError("Speech recognition not supported in this browser. Try Chrome or Edge.");
+      stream.getTracks().forEach((t) => t.stop());
+      setMicStream(null);
+      setIsListening(false);
+      return;
+    }
+
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let interim = "";
+      let finalText = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const txt = result[0]?.transcript ?? "";
+        if (result.isFinal) {
+          finalText += txt;
+        } else {
+          interim += txt;
+        }
       }
 
-      if (cancelled) {
-        stream.getTracks().forEach((t) => t.stop());
-        return;
-      }
+      setInterimText(interim);
 
-      setMicStream(stream);
-      setVoiceError(null);
-
-      // Step 2: Start SpeechRecognition (mic already allowed, so no second prompt)
-      const recognition = createSpeechRecognition();
-      if (!recognition) {
-        setVoiceError("Speech recognition not supported in this browser. Try Chrome or Edge.");
-        setIsListening(false);
-        stream.getTracks().forEach((t) => t.stop());
-        setMicStream(null);
-        return;
-      }
-
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = "en-US";
-
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
-        let interim = "";
-        let finalText = "";
-
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const result = event.results[i];
-          const txt = result[0]?.transcript ?? "";
-          if (result.isFinal) {
-            finalText += txt;
-          } else {
-            interim += txt;
-          }
-        }
-
-        setInterimText(interim);
-
-        if (finalText.trim()) {
-          setInterimText("");
-          handleRecognizedSpeech(finalText.trim());
-        }
-      };
-
-      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error("[Voice] SpeechRecognition error:", event.error, event.message);
-        if (event.error === "not-allowed") {
-          setVoiceError("Microphone access denied. Check browser permissions.");
-          setIsListening(false);
-        } else if (event.error !== "aborted" && event.error !== "no-speech") {
-          setVoiceError(`Speech recognition error: ${event.error}`);
-        }
-      };
-
-      recognition.onend = () => {
-        // Auto-restart if still supposed to be listening
-        if (recognitionRef.current === recognition && !cancelled) {
-          try {
-            recognition.start();
-          } catch {
-            // May fail if already started — ignore
-          }
-        }
-      };
-
-      recognitionRef.current = recognition;
-
-      try {
-        recognition.start();
-        console.log("[Voice] Mic acquired + SpeechRecognition started");
-      } catch (err) {
-        console.error("[Voice] Failed to start SpeechRecognition:", err);
-        setVoiceError("Failed to start speech recognition");
-        setIsListening(false);
+      if (finalText.trim()) {
+        setInterimText("");
+        handleRecognizedSpeech(finalText.trim());
       }
     };
 
-    startVoice();
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      console.error("[Voice] SpeechRecognition error:", event.error, event.message);
+      if (event.error === "not-allowed") {
+        setVoiceError("Microphone blocked. Click the lock icon in the address bar → reset Microphone.");
+        setIsListening(false);
+      } else if (event.error !== "aborted" && event.error !== "no-speech") {
+        setVoiceError(`Speech recognition error: ${event.error}`);
+      }
+    };
 
+    recognition.onend = () => {
+      // Auto-restart if still supposed to be listening
+      if (recognitionRef.current === recognition) {
+        try {
+          recognition.start();
+        } catch {
+          // May fail if already started — ignore
+        }
+      }
+    };
+
+    recognitionRef.current = recognition;
+
+    try {
+      recognition.start();
+      console.log("[Voice] Mic acquired + SpeechRecognition started");
+    } catch (err) {
+      console.error("[Voice] Failed to start SpeechRecognition:", err);
+      setVoiceError("Failed to start speech recognition");
+      setIsListening(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handleRecognizedSpeech]);
+
+  // Cleanup on unmount or mode switch
+  useEffect(() => {
     return () => {
-      cancelled = true;
       if (recognitionRef.current) {
         recognitionRef.current.abort();
         recognitionRef.current = null;
       }
-      if (stream) {
-        stream.getTracks().forEach((t) => t.stop());
-      }
-      setMicStream(null);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isListening]);
+  }, []);
 
   // ─── Play greeting ───────────────────────────────────────────────────────
   const playGreeting = useCallback(async () => {
@@ -714,7 +713,7 @@ export function FloatingChatWidget({
               <div className="flex items-center gap-3 mt-3">
                 <button
                   type="button"
-                  onClick={() => setIsListening((prev) => !prev)}
+                  onClick={() => isListening ? stopVoice() : startVoice()}
                   disabled={isProcessing}
                   className={cn(
                     "w-12 h-12 rounded-full flex items-center justify-center transition-all",
