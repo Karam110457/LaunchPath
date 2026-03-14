@@ -256,21 +256,22 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
       // Clean up any existing microphone first
       stopMicrophone();
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,  // Better for voice analysis
-          noiseSuppression: false,  // Better for voice analysis
-          autoGainControl: false,   // Better for voice analysis
-          sampleRate: 44100,
-        },
-      });
+      // Use simple constraints — strict settings (echoCancellation:false, etc.)
+      // can cause OverconstrainedError on some devices
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (err) {
+        console.error('[Orb] getUserMedia failed:', err);
+        return false;
+      }
 
       // Store the stream reference for cleanup
       mediaStreamRef.current = stream;
 
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
 
-      // Resume audio context if needed
+      // Resume audio context if needed (required after user gesture in most browsers)
       if (audioContextRef.current.state === 'suspended') {
         await audioContextRef.current.resume();
       }
@@ -279,19 +280,19 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
       microphoneRef.current = audioContextRef.current.createMediaStreamSource(stream);
 
       // Optimize for voice detection
-      analyserRef.current.fftSize = 512;  // Higher resolution
-      analyserRef.current.smoothingTimeConstant = 0.3;  // Less smoothing for responsiveness
-      analyserRef.current.minDecibels = -90;
+      analyserRef.current.fftSize = 256;
+      analyserRef.current.smoothingTimeConstant = 0.4;
+      analyserRef.current.minDecibels = -85;
       analyserRef.current.maxDecibels = -10;
 
       microphoneRef.current.connect(analyserRef.current);
       dataArrayRef.current = new Uint8Array(analyserRef.current.frequencyBinCount);
 
       isMicReadyRef.current = true;
-      console.log('Microphone initialized successfully');
+      console.log('[Orb] Microphone initialized, analyser bins:', analyserRef.current.frequencyBinCount);
       return true;
     } catch (error) {
-      console.warn("Microphone access denied or not available:", error);
+      console.error("[Orb] Microphone init error:", error);
       return false;
     }
   };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -76,13 +76,44 @@ const chatVariants = {
   exit: { x: 24, opacity: 0, scale: 0.97 },
 };
 
-/** Group voice-ready models by provider for the quick-switch dropdown */
 function groupByProvider(models: ModelOption[]): Record<string, ModelOption[]> {
   const groups: Record<string, ModelOption[]> = {};
   for (const m of models) {
     (groups[m.provider] ??= []).push(m);
   }
   return groups;
+}
+
+// ─── SpeechRecognition types (Web Speech API) ────────────────────────────────
+interface SpeechRecognitionEvent extends Event {
+  resultIndex: number;
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message?: string;
+}
+
+type SpeechRecognitionInstance = EventTarget & {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+  onspeechstart: (() => void) | null;
+  onspeechend: (() => void) | null;
+};
+
+function createSpeechRecognition(): SpeechRecognitionInstance | null {
+  const W = window as unknown as Record<string, unknown>;
+  const Ctor = W.SpeechRecognition ?? W.webkitSpeechRecognition;
+  if (!Ctor) return null;
+  return new (Ctor as new () => SpeechRecognitionInstance)();
 }
 
 export function FloatingChatWidget({
@@ -104,8 +135,14 @@ export function FloatingChatWidget({
   const [showTranscript, setShowTranscript] = useState(false);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [showModelPicker, setShowModelPicker] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [interimText, setInterimText] = useState("");
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const conversationHistoryRef = useRef<Array<{ role: string; content: string }>>([]);
+  const abortRef = useRef<AbortController | null>(null);
 
   const config = voiceConfig ?? DEFAULT_VOICE_CONFIG;
   const voiceReady = isVoiceReadyModel(agentModel);
@@ -122,75 +159,329 @@ export function FloatingChatWidget({
 
   const addTranscriptEntry = useCallback((role: "user" | "agent", text: string) => {
     setTranscript((prev) => [...prev, { role, text, timestamp: new Date() }]);
-    // Auto-scroll after React re-render
     setTimeout(() => transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
   }, []);
 
+  // ─── Audio playback ──────────────────────────────────────────────────────
   const stopPlayback = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current.src = "";
+      audioRef.current.currentTime = 0;
       audioRef.current = null;
     }
     setIsPlaying(false);
     setIsLoading(false);
   }, []);
 
-  const playPreview = useCallback(async () => {
-    stopPlayback();
+  /** Play audio from an MP3 blob, returning a promise that resolves when done */
+  const playAudioBlob = useCallback((blob: Blob): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio();
+
+      audio.onended = () => {
+        setIsPlaying(false);
+        URL.revokeObjectURL(url);
+        audioRef.current = null;
+        resolve();
+      };
+      audio.onerror = (e) => {
+        console.error("[Voice] Audio playback error:", e);
+        setIsPlaying(false);
+        URL.revokeObjectURL(url);
+        audioRef.current = null;
+        reject(new Error("Audio playback failed"));
+      };
+
+      audioRef.current = audio;
+      audio.src = url;
+      setIsPlaying(true);
+
+      // Play with error handling
+      audio.play().catch((err) => {
+        console.error("[Voice] audio.play() rejected:", err);
+        setIsPlaying(false);
+        URL.revokeObjectURL(url);
+        audioRef.current = null;
+        reject(err);
+      });
+    });
+  }, []);
+
+  /** Call the TTS API and play the result */
+  const speakText = useCallback(async (text: string): Promise<void> => {
     setIsLoading(true);
-
-    const text = greetingMessage || "Hello! How can I help you today?";
-
     try {
       const res = await fetch(`/api/agents/${agentId}/voice-preview`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text,
+          text: text.slice(0, 500),
           voiceId: config.voiceId || "nova",
           speed: config.speed,
         }),
       });
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Preview failed" }));
-        throw new Error(err.error || "Preview failed");
+        const err = await res.json().catch(() => ({ error: "TTS failed" }));
+        console.error("[Voice] TTS API error:", err);
+        setVoiceError(err.error || "Failed to generate speech");
+        setIsLoading(false);
+        return;
       }
 
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
+      if (blob.size === 0) {
+        console.error("[Voice] TTS returned empty blob");
+        setVoiceError("Received empty audio response");
+        setIsLoading(false);
+        return;
+      }
 
-      // Add agent greeting to transcript
-      addTranscriptEntry("agent", text);
-
-      audio.onended = () => {
-        setIsPlaying(false);
-        URL.revokeObjectURL(url);
-      };
-      audio.onerror = () => {
-        setIsPlaying(false);
-        URL.revokeObjectURL(url);
-      };
-
-      audioRef.current = audio;
       setIsLoading(false);
-      setIsPlaying(true);
-      await audio.play();
-    } catch {
+      await playAudioBlob(blob);
+    } catch (err) {
+      console.error("[Voice] speakText error:", err);
       setIsLoading(false);
       setIsPlaying(false);
     }
-  }, [agentId, greetingMessage, config.voiceId, config.speed, stopPlayback, addTranscriptEntry]);
+  }, [agentId, config.voiceId, config.speed, playAudioBlob]);
+
+  // ─── Send text to agent chat API and get response ────────────────────────
+  const sendToAgent = useCallback(async (userText: string): Promise<string> => {
+    // Add to conversation history
+    conversationHistoryRef.current.push({ role: "user", content: userText });
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      const res = await fetch(`/api/agents/${agentId}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: conversationHistoryRef.current.map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+          userMessage: userText,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!res.ok || !res.body) {
+        throw new Error(`Chat API returned ${res.status}`);
+      }
+
+      // Parse SSE stream to extract the full assistant response
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullText = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const chunks = buffer.split("\n\n");
+        buffer = chunks.pop() ?? "";
+
+        for (const chunk of chunks) {
+          if (!chunk.startsWith("data: ")) continue;
+          const json = chunk.slice(6);
+          if (json === "[DONE]") continue;
+
+          try {
+            const event = JSON.parse(json);
+            if (event.type === "text-delta" && event.delta) {
+              fullText += event.delta;
+            } else if (event.type === "done" && event.text) {
+              fullText = event.text;
+            }
+          } catch {
+            // Skip malformed SSE events
+          }
+        }
+      }
+
+      // Save to conversation history
+      if (fullText) {
+        conversationHistoryRef.current.push({ role: "assistant", content: fullText });
+      }
+
+      return fullText;
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return "";
+      console.error("[Voice] Agent chat error:", err);
+      throw err;
+    }
+  }, [agentId]);
+
+  // ─── Full voice loop: recognize → agent → TTS → transcript ──────────────
+  const handleRecognizedSpeech = useCallback(async (text: string) => {
+    if (!text.trim() || isProcessing) return;
+
+    setIsProcessing(true);
+    setVoiceError(null);
+
+    // Add user speech to transcript
+    addTranscriptEntry("user", text);
+
+    try {
+      // Send to agent and get response
+      const response = await sendToAgent(text);
+
+      if (response) {
+        // Add agent response to transcript
+        addTranscriptEntry("agent", response);
+
+        // Speak the response via TTS
+        await speakText(response);
+      }
+    } catch (err) {
+      console.error("[Voice] Conversation loop error:", err);
+      setVoiceError("Failed to get agent response");
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [isProcessing, addTranscriptEntry, sendToAgent, speakText]);
+
+  // ─── Speech Recognition lifecycle ───────────────────────────────────────
+  useEffect(() => {
+    if (!isListening) {
+      // Stop recognition
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+        recognitionRef.current = null;
+      }
+      setInterimText("");
+      return;
+    }
+
+    const recognition = createSpeechRecognition();
+    if (!recognition) {
+      setVoiceError("Speech recognition not supported in this browser. Try Chrome or Edge.");
+      setIsListening(false);
+      return;
+    }
+
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let interim = "";
+      let finalText = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const transcript = result[0]?.transcript ?? "";
+        if (result.isFinal) {
+          finalText += transcript;
+        } else {
+          interim += transcript;
+        }
+      }
+
+      setInterimText(interim);
+
+      if (finalText.trim()) {
+        setInterimText("");
+        // Process recognized speech
+        handleRecognizedSpeech(finalText.trim());
+      }
+    };
+
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      console.error("[Voice] SpeechRecognition error:", event.error, event.message);
+      if (event.error === "not-allowed") {
+        setVoiceError("Microphone access denied. Check browser permissions.");
+        setIsListening(false);
+      } else if (event.error !== "aborted" && event.error !== "no-speech") {
+        setVoiceError(`Speech recognition error: ${event.error}`);
+      }
+    };
+
+    recognition.onend = () => {
+      // Auto-restart if still supposed to be listening
+      if (recognitionRef.current === recognition) {
+        try {
+          recognition.start();
+        } catch {
+          // May fail if already started — ignore
+        }
+      }
+    };
+
+    recognition.onspeechstart = () => {
+      setVoiceDetected(true);
+    };
+
+    recognition.onspeechend = () => {
+      setVoiceDetected(false);
+    };
+
+    recognitionRef.current = recognition;
+
+    try {
+      recognition.start();
+      console.log("[Voice] SpeechRecognition started");
+      setVoiceError(null);
+    } catch (err) {
+      console.error("[Voice] Failed to start SpeechRecognition:", err);
+      setVoiceError("Failed to start speech recognition");
+      setIsListening(false);
+    }
+
+    return () => {
+      recognitionRef.current = null;
+      try {
+        recognition.abort();
+      } catch {
+        // Ignore
+      }
+    };
+  }, [isListening, handleRecognizedSpeech]);
+
+  // ─── Play greeting ───────────────────────────────────────────────────────
+  const playGreeting = useCallback(async () => {
+    stopPlayback();
+    const text = greetingMessage || "Hello! How can I help you today?";
+    addTranscriptEntry("agent", text);
+    setShowTranscript(true);
+    await speakText(text);
+  }, [greetingMessage, stopPlayback, addTranscriptEntry, speakText]);
 
   const handlePlayStop = () => {
     if (isPlaying) {
       stopPlayback();
     } else {
-      playPreview();
+      playGreeting();
     }
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
+      if (abortRef.current) {
+        abortRef.current.abort();
+      }
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
+  }, []);
+
+  // Auto-show transcript when there are entries
+  useEffect(() => {
+    if (transcript.length > 0 && !showTranscript) {
+      setShowTranscript(true);
+    }
+  }, [transcript.length, showTranscript]);
 
   return (
     <motion.div
@@ -290,7 +581,6 @@ export function FloatingChatWidget({
                       </div>
                     </div>
 
-                    {/* Quick-switch model picker */}
                     <AnimatePresence>
                       {showModelPicker && (
                         <motion.div
@@ -338,9 +628,32 @@ export function FloatingChatWidget({
               )}
             </AnimatePresence>
 
+            {/* Error banner */}
+            <AnimatePresence>
+              {voiceError && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden shrink-0"
+                >
+                  <div className="mx-4 mt-2 rounded-lg bg-red-50/80 canvas-dark:bg-red-950/30 border border-red-200/50 canvas-dark:border-red-500/20 px-3 py-2">
+                    <p className="text-[11px] text-red-700 canvas-dark:text-red-300">{voiceError}</p>
+                    <button
+                      type="button"
+                      onClick={() => setVoiceError(null)}
+                      className="text-[10px] text-red-500 hover:text-red-700 mt-1"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Orb area */}
             <div className="flex-1 flex flex-col items-center justify-center px-6 py-4 min-h-0">
-              <div className="w-48 h-48 relative">
+              <div className="w-40 h-40 relative">
                 <VoicePoweredOrb
                   enableVoiceControl={isListening}
                   className="rounded-2xl overflow-hidden"
@@ -350,28 +663,34 @@ export function FloatingChatWidget({
               </div>
 
               {/* Status text */}
-              <p className="mt-4 text-xs text-neutral-500 canvas-dark:text-neutral-400 text-center">
-                {isLoading
-                  ? "Generating audio..."
-                  : isPlaying
-                    ? "Playing response..."
-                    : isListening
-                      ? voiceDetected
-                        ? "Listening..."
-                        : "Speak now..."
-                      : "Tap the mic to start"}
+              <p className="mt-3 text-xs text-neutral-500 canvas-dark:text-neutral-400 text-center">
+                {isProcessing
+                  ? "Thinking..."
+                  : isLoading
+                    ? "Generating speech..."
+                    : isPlaying
+                      ? "Speaking..."
+                      : isListening
+                        ? interimText
+                          ? `"${interimText}"`
+                          : voiceDetected
+                            ? "Listening..."
+                            : "Speak now..."
+                        : "Tap the mic to start"}
               </p>
 
               {/* Mic + Play + Transcript controls */}
-              <div className="flex items-center gap-3 mt-4">
+              <div className="flex items-center gap-3 mt-3">
                 <button
                   type="button"
                   onClick={() => setIsListening((prev) => !prev)}
+                  disabled={isProcessing}
                   className={cn(
                     "w-12 h-12 rounded-full flex items-center justify-center transition-all",
                     isListening
                       ? "gradient-accent-bg text-white shadow-lg shadow-orange-500/20 scale-110"
-                      : "bg-neutral-100 canvas-dark:bg-neutral-800 text-neutral-600 canvas-dark:text-neutral-300 hover:bg-neutral-200 canvas-dark:hover:bg-neutral-700"
+                      : "bg-neutral-100 canvas-dark:bg-neutral-800 text-neutral-600 canvas-dark:text-neutral-300 hover:bg-neutral-200 canvas-dark:hover:bg-neutral-700",
+                    isProcessing && "opacity-50 cursor-not-allowed"
                   )}
                 >
                   {isListening ? (
@@ -384,13 +703,13 @@ export function FloatingChatWidget({
                 <button
                   type="button"
                   onClick={handlePlayStop}
-                  disabled={isLoading}
+                  disabled={isLoading || isProcessing}
                   className={cn(
                     "w-12 h-12 rounded-full flex items-center justify-center transition-all",
                     isPlaying
                       ? "bg-red-500 text-white shadow-lg shadow-red-500/20"
                       : "bg-neutral-100 canvas-dark:bg-neutral-800 text-neutral-600 canvas-dark:text-neutral-300 hover:bg-neutral-200 canvas-dark:hover:bg-neutral-700",
-                    isLoading && "opacity-50 cursor-not-allowed"
+                    (isLoading || isProcessing) && "opacity-50 cursor-not-allowed"
                   )}
                 >
                   {isLoading ? (
@@ -402,7 +721,6 @@ export function FloatingChatWidget({
                   )}
                 </button>
 
-                {/* Transcript toggle */}
                 <button
                   type="button"
                   onClick={() => setShowTranscript((prev) => !prev)}
@@ -442,7 +760,10 @@ export function FloatingChatWidget({
                       {transcript.length > 0 && (
                         <button
                           type="button"
-                          onClick={() => setTranscript([])}
+                          onClick={() => {
+                            setTranscript([]);
+                            conversationHistoryRef.current = [];
+                          }}
                           className="text-[10px] text-neutral-400 canvas-dark:text-neutral-500 hover:text-neutral-600 canvas-dark:hover:text-neutral-300 transition-colors"
                         >
                           Clear
@@ -450,31 +771,50 @@ export function FloatingChatWidget({
                       )}
                     </div>
                     <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2">
-                      {transcript.length === 0 ? (
+                      {transcript.length === 0 && !interimText ? (
                         <p className="text-[11px] text-neutral-400 canvas-dark:text-neutral-500 text-center py-6">
                           Transcript will appear here as you speak
                         </p>
                       ) : (
-                        transcript.map((entry, i) => (
-                          <div
-                            key={i}
-                            className={cn(
-                              "flex gap-2",
-                              entry.role === "user" ? "justify-end" : "justify-start"
-                            )}
-                          >
+                        <>
+                          {transcript.map((entry, i) => (
                             <div
+                              key={i}
                               className={cn(
-                                "max-w-[85%] rounded-xl px-3 py-1.5 text-[11px] leading-relaxed",
-                                entry.role === "user"
-                                  ? "bg-neutral-200/60 canvas-dark:bg-neutral-700/60 text-neutral-800 canvas-dark:text-neutral-200"
-                                  : "bg-white/60 canvas-dark:bg-neutral-800/60 border border-neutral-200/40 canvas-dark:border-neutral-700/40 text-neutral-700 canvas-dark:text-neutral-300"
+                                "flex gap-2",
+                                entry.role === "user" ? "justify-end" : "justify-start"
                               )}
                             >
-                              {entry.text}
+                              <div
+                                className={cn(
+                                  "max-w-[85%] rounded-xl px-3 py-1.5 text-[11px] leading-relaxed",
+                                  entry.role === "user"
+                                    ? "bg-neutral-200/60 canvas-dark:bg-neutral-700/60 text-neutral-800 canvas-dark:text-neutral-200"
+                                    : "bg-white/60 canvas-dark:bg-neutral-800/60 border border-neutral-200/40 canvas-dark:border-neutral-700/40 text-neutral-700 canvas-dark:text-neutral-300"
+                                )}
+                              >
+                                {entry.text}
+                              </div>
                             </div>
-                          </div>
-                        ))
+                          ))}
+                          {/* Show interim (live) text while speaking */}
+                          {interimText && (
+                            <div className="flex justify-end">
+                              <div className="max-w-[85%] rounded-xl px-3 py-1.5 text-[11px] leading-relaxed bg-neutral-100/60 canvas-dark:bg-neutral-800/40 text-neutral-400 canvas-dark:text-neutral-500 italic">
+                                {interimText}...
+                              </div>
+                            </div>
+                          )}
+                          {/* Processing indicator */}
+                          {isProcessing && (
+                            <div className="flex justify-start">
+                              <div className="rounded-xl px-3 py-1.5 text-[11px] bg-white/60 canvas-dark:bg-neutral-800/60 border border-neutral-200/40 canvas-dark:border-neutral-700/40 text-neutral-400 canvas-dark:text-neutral-500 flex items-center gap-1.5">
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                Thinking...
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
                       <div ref={transcriptEndRef} />
                     </div>
@@ -509,7 +849,6 @@ export function FloatingChatWidget({
                     className="overflow-hidden"
                   >
                     <div className="px-5 pb-4 space-y-3">
-                      {/* Voice picker */}
                       <div className="space-y-1">
                         <Label className="text-[11px] text-neutral-500 canvas-dark:text-neutral-400">Voice</Label>
                         <Select
@@ -528,7 +867,6 @@ export function FloatingChatWidget({
                         </Select>
                       </div>
 
-                      {/* Speed */}
                       <div className="space-y-1">
                         <Label className="text-[11px] text-neutral-500 canvas-dark:text-neutral-400">Speed</Label>
                         <Select
