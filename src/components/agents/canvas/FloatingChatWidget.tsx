@@ -144,6 +144,7 @@ export function FloatingChatWidget({
   const playbackSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const isSpeakingRef = useRef(false); // true while agent TTS is playing — suppresses mic auto-restart
   const conversationHistoryRef = useRef<Array<{ role: string; content: string }>>([]);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -338,11 +339,19 @@ export function FloatingChatWidget({
   }, [agentId]);
 
   // ─── Full voice loop: recognize → agent → TTS → transcript ──────────────
+  // Half-duplex: pause SpeechRecognition while agent is thinking + speaking
+  // to prevent TTS audio from being picked up by the mic (echo/feedback loop).
   const handleRecognizedSpeech = useCallback(async (text: string) => {
     if (!text.trim() || isProcessing) return;
 
     setIsProcessing(true);
     setVoiceError(null);
+
+    // Half-duplex: pause recognition so mic doesn't pick up TTS output
+    isSpeakingRef.current = true;
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch { /* ok */ }
+    }
 
     // Add user speech to transcript
     addTranscriptEntry("user", text);
@@ -355,7 +364,7 @@ export function FloatingChatWidget({
         // Add agent response to transcript
         addTranscriptEntry("agent", response);
 
-        // Speak the response via TTS
+        // Speak the response via TTS (mic is paused)
         await speakText(response);
       }
     } catch (err) {
@@ -363,6 +372,12 @@ export function FloatingChatWidget({
       setVoiceError("Failed to get agent response");
     } finally {
       setIsProcessing(false);
+
+      // Resume recognition after TTS finishes
+      isSpeakingRef.current = false;
+      if (recognitionRef.current) {
+        try { recognitionRef.current.start(); } catch { /* may already be started */ }
+      }
     }
   }, [isProcessing, addTranscriptEntry, sendToAgent, speakText]);
 
@@ -392,7 +407,9 @@ export function FloatingChatWidget({
     // Step 1: Acquire mic — MUST happen in the click call-stack
     let stream: MediaStream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
     } catch (err) {
       console.error("[Voice] getUserMedia failed:", err);
       // Check if previously blocked
@@ -462,8 +479,9 @@ export function FloatingChatWidget({
     };
 
     recognition.onend = () => {
-      // Auto-restart if still supposed to be listening
-      if (recognitionRef.current === recognition) {
+      // Auto-restart if still supposed to be listening — but NOT while agent is speaking
+      // (half-duplex: mic stays paused during TTS to prevent echo feedback loop)
+      if (recognitionRef.current === recognition && !isSpeakingRef.current) {
         try {
           recognition.start();
         } catch {
