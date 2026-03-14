@@ -5,10 +5,13 @@ import { CampaignBuilder } from "@/components/campaigns/CampaignBuilder";
 
 export default async function ClientCampaignBuilderPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ clientId: string; campaignId: string }>;
+  searchParams: Promise<{ channel?: string }>;
 }) {
   const { clientId, campaignId } = await params;
+  const { channel: channelParam } = await searchParams;
   const user = await requireAuth();
   const supabase = await createClient();
 
@@ -29,11 +32,15 @@ export default async function ClientCampaignBuilderPage({
     .eq("campaign_id", campaignId)
     .eq("user_id", user.id);
 
+  const initialChannelType =
+    channelParam === "whatsapp" ? "whatsapp" : undefined;
+
   return (
     <CampaignBuilder
       campaign={campaign}
       channels={channels ?? []}
       backUrl={`/dashboard/clients/${clientId}/campaigns`}
+      initialChannelType={initialChannelType}
     />
   );
 }

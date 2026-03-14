@@ -2,11 +2,12 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Rocket, Pause, Save } from "lucide-react";
+import { ArrowLeft, Loader2, Rocket, Pause, Save, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConfigPanel } from "./ConfigPanel";
 import { PreviewPanel } from "./PreviewPanel";
-import type { WidgetConfig } from "@/lib/channels/types";
+import { WhatsAppConfigPanel } from "./WhatsAppConfigPanel";
+import type { WidgetConfig, WhatsAppConfig } from "@/lib/channels/types";
 import type { ChannelResponse } from "@/lib/channels/types";
 
 interface CampaignData {
@@ -24,33 +25,55 @@ interface CampaignData {
     | null;
 }
 
+type ChannelType = "widget" | "whatsapp";
+
 interface CampaignBuilderProps {
   campaign: CampaignData;
   channels: ChannelResponse[];
   backUrl?: string;
+  initialChannelType?: ChannelType;
 }
 
 export function CampaignBuilder({
   campaign,
   channels: initialChannels,
   backUrl = "/dashboard/clients",
+  initialChannelType,
 }: CampaignBuilderProps) {
   const router = useRouter();
 
-  // Find existing widget channel for this campaign
-  const existingChannel = initialChannels.find(
-    (ch) => ch.channel_type === "widget"
-  );
+  // Determine channel type from existing channels or initial prop
+  const existingWhatsApp = initialChannels.find((ch) => ch.channel_type === "whatsapp");
+  const existingWidget = initialChannels.find((ch) => ch.channel_type === "widget");
+  const channelType: ChannelType = existingWhatsApp
+    ? "whatsapp"
+    : existingWidget
+      ? "widget"
+      : initialChannelType ?? "widget";
 
-  const [config, setConfig] = useState<WidgetConfig>(
-    (existingChannel?.config as WidgetConfig) ?? {}
+  const isWhatsApp = channelType === "whatsapp";
+  const existingChannel = isWhatsApp ? existingWhatsApp : existingWidget;
+
+  // Widget state
+  const [widgetConfig, setWidgetConfig] = useState<WidgetConfig>(
+    (!isWhatsApp ? (existingChannel?.config as WidgetConfig) : null) ?? {}
   );
   const [clientWebsite, setClientWebsite] = useState(
     campaign.client_website ?? ""
   );
   const [allowedOrigins, setAllowedOrigins] = useState(
-    existingChannel?.allowed_origins?.join("\n") ?? ""
+    (!isWhatsApp ? existingChannel?.allowed_origins?.join("\n") : null) ?? ""
   );
+
+  // WhatsApp state
+  const [waConfig, setWaConfig] = useState<Partial<WhatsAppConfig>>(
+    isWhatsApp ? ((existingChannel?.config ?? {}) as Partial<WhatsAppConfig>) : {}
+  );
+  const [rateLimitRpm, setRateLimitRpm] = useState(
+    existingChannel?.rate_limit_rpm?.toString() ?? ""
+  );
+
+  // Shared state
   const [channel, setChannel] = useState<ChannelResponse | null>(
     existingChannel ?? null
   );
@@ -65,9 +88,14 @@ export function CampaignBuilder({
   const appOrigin =
     typeof window !== "undefined" ? window.location.origin : "";
 
-  const embedCode = channel
+  const embedCode = channel && !isWhatsApp
     ? `<script src="${appOrigin}/widget.js" data-channel="${channel.id}" async></script>`
     : null;
+
+  const webhookUrl =
+    isWhatsApp && channel?.webhook_path
+      ? `${appOrigin}/api/webhooks/whatsapp/${channel.webhook_path}`
+      : null;
 
   const originsArray = allowedOrigins
     .split("\n")
@@ -76,46 +104,103 @@ export function CampaignBuilder({
 
   const saveChannel = useCallback(
     async (enabled: boolean) => {
-      const channelBody = {
-        channel_type: "widget",
-        name: `${campaign.name} Widget`,
-        config,
-        allowed_origins: originsArray,
-        campaign_id: campaign.id,
-        is_enabled: enabled,
-      };
+      if (isWhatsApp) {
+        // WhatsApp channel
+        const config: Record<string, unknown> = {
+          phoneNumberId: waConfig.phoneNumberId,
+          businessAccountId: waConfig.businessAccountId || undefined,
+          accessToken: waConfig.accessToken,
+          verifyToken: waConfig.verifyToken,
+          responseDelay: waConfig.responseDelay ?? 2000,
+          readReceipts: waConfig.readReceipts !== false,
+          greetingMessage: waConfig.greetingMessage || undefined,
+        };
+        const rpm = rateLimitRpm ? parseInt(rateLimitRpm, 10) : undefined;
 
-      if (channel) {
-        // Update existing
-        const res = await fetch(
-          `/api/agents/${agentId}/channels/${channel.id}`,
-          {
-            method: "PATCH",
+        if (channel) {
+          const res = await fetch(
+            `/api/agents/${agentId}/channels/${channel.id}`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: `${campaign.name} WhatsApp`,
+                config,
+                rate_limit_rpm: rpm ?? null,
+                is_enabled: enabled,
+              }),
+            }
+          );
+          if (!res.ok) throw new Error("Failed to update channel");
+          const data = await res.json();
+          setChannel(data.channel);
+        } else {
+          const res = await fetch(`/api/agents/${agentId}/channels`, {
+            method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
+              channel_type: "whatsapp",
+              name: `${campaign.name} WhatsApp`,
               config,
-              allowed_origins: originsArray,
+              rate_limit_rpm: rpm,
+              campaign_id: campaign.id,
               is_enabled: enabled,
             }),
+          });
+          if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.error || "Failed to create channel");
           }
-        );
-        if (!res.ok) throw new Error("Failed to update channel");
-        const data = await res.json();
-        setChannel(data.channel);
+          const data = await res.json();
+          setChannel(data.channel);
+        }
       } else {
-        // Create new
-        const res = await fetch(`/api/agents/${agentId}/channels`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(channelBody),
-        });
-        if (!res.ok) throw new Error("Failed to create channel");
-        const data = await res.json();
-        setChannel(data.channel);
+        // Widget channel (existing logic)
+        const channelBody = {
+          channel_type: "widget",
+          name: `${campaign.name} Widget`,
+          config: widgetConfig,
+          allowed_origins: originsArray,
+          campaign_id: campaign.id,
+          is_enabled: enabled,
+        };
+
+        if (channel) {
+          const res = await fetch(
+            `/api/agents/${agentId}/channels/${channel.id}`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                config: widgetConfig,
+                allowed_origins: originsArray,
+                is_enabled: enabled,
+              }),
+            }
+          );
+          if (!res.ok) throw new Error("Failed to update channel");
+          const data = await res.json();
+          setChannel(data.channel);
+        } else {
+          const res = await fetch(`/api/agents/${agentId}/channels`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(channelBody),
+          });
+          if (!res.ok) throw new Error("Failed to create channel");
+          const data = await res.json();
+          setChannel(data.channel);
+        }
       }
     },
-    [channel, config, originsArray, agentId, campaign.id, campaign.name]
+    [channel, widgetConfig, waConfig, originsArray, rateLimitRpm, agentId, campaign.id, campaign.name, isWhatsApp]
   );
+
+  // Validation for WhatsApp deploy
+  const canDeployWhatsApp =
+    !!waConfig.phoneNumberId?.trim() &&
+    !!waConfig.accessToken?.trim() &&
+    !!waConfig.verifyToken?.trim();
 
   async function handleSaveDraft() {
     setSaving(true);
@@ -123,7 +208,6 @@ export function CampaignBuilder({
     try {
       await saveChannel(channel?.is_enabled ?? false);
 
-      // Update campaign
       await fetch(`/api/campaigns/${campaign.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -192,6 +276,10 @@ export function CampaignBuilder({
     ? campaign.ai_agents[0]
     : campaign.ai_agents;
 
+  const deployDisabled = isWhatsApp
+    ? saving || deploying || !canDeployWhatsApp
+    : saving || deploying;
+
   return (
     <div className="flex flex-col h-screen">
       {/* Top bar */}
@@ -216,6 +304,13 @@ export function CampaignBuilder({
                   : null}
             </p>
           </div>
+          {/* Channel type badge */}
+          {isWhatsApp && (
+            <span className="inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full font-medium bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
+              <MessageCircle className="w-3 h-3" />
+              WhatsApp
+            </span>
+          )}
           <span
             className={cn(
               "text-[10px] px-2.5 py-0.5 rounded-full font-medium ml-1",
@@ -260,7 +355,7 @@ export function CampaignBuilder({
           ) : (
             <button
               onClick={handleDeploy}
-              disabled={saving || deploying}
+              disabled={deployDisabled}
               className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full gradient-accent-bg text-white shadow-sm hover:scale-[1.02] transition-transform duration-150 disabled:opacity-50"
             >
               {deploying ? (
@@ -276,22 +371,113 @@ export function CampaignBuilder({
 
       {/* Main content — floating card layout */}
       <div className="flex flex-1 gap-4 px-5 pb-5 pt-2 overflow-hidden">
-        <ConfigPanel
-          config={config}
-          onChange={setConfig}
-          clientWebsite={clientWebsite}
-          onClientWebsiteChange={setClientWebsite}
-          allowedOrigins={allowedOrigins}
-          onAllowedOriginsChange={setAllowedOrigins}
-          embedCode={status === "active" ? embedCode : null}
-        />
-        <PreviewPanel
-          config={config}
-          token={token}
-          agentId={agentId}
-          clientWebsite={clientWebsite}
-          screenshotUrl={screenshotUrl}
-          onScreenshotChange={setScreenshotUrl}
+        {isWhatsApp ? (
+          <>
+            <WhatsAppConfigPanel
+              config={waConfig}
+              onChange={setWaConfig}
+              rateLimitRpm={rateLimitRpm}
+              onRateLimitChange={setRateLimitRpm}
+              webhookUrl={webhookUrl}
+              verifyTokenDisplay={waConfig.verifyToken ?? ""}
+            />
+            {/* WhatsApp status panel (right side) */}
+            <div className="flex-1 flex items-center justify-center">
+              <div className="max-w-md w-full rounded-[32px] border border-black/5 dark:border-[#2A2A2A] bg-[#f8f9fa] dark:bg-[#1E1E1E]/80 p-8 text-center space-y-5">
+                <div className="w-16 h-16 rounded-2xl gradient-accent-bg flex items-center justify-center mx-auto">
+                  <MessageCircle className="w-8 h-8 text-white" />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="text-base font-semibold text-foreground">
+                    WhatsApp Campaign
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {status === "active"
+                      ? "Your WhatsApp channel is live and receiving messages."
+                      : status === "paused"
+                        ? "Your WhatsApp channel is paused. Deploy to start receiving messages."
+                        : "Configure your Meta API credentials, then deploy to start receiving WhatsApp messages."}
+                  </p>
+                </div>
+
+                {/* Connection status */}
+                <div className="rounded-[20px] border border-black/5 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] p-4 space-y-3 text-left">
+                  <StatusRow
+                    label="Credentials"
+                    ok={canDeployWhatsApp}
+                    detail={canDeployWhatsApp ? "Configured" : "Missing required fields"}
+                  />
+                  <StatusRow
+                    label="Channel"
+                    ok={!!channel}
+                    detail={channel ? "Created" : "Will be created on save"}
+                  />
+                  <StatusRow
+                    label="Webhook"
+                    ok={!!webhookUrl}
+                    detail={webhookUrl ? "Ready" : "Available after first save"}
+                  />
+                  <StatusRow
+                    label="Status"
+                    ok={status === "active"}
+                    detail={status === "active" ? "Live" : "Not deployed"}
+                  />
+                </div>
+
+                {channel && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Channel ID: <code className="font-mono text-[10px]">{channel.id.slice(0, 8)}...</code>
+                  </p>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <ConfigPanel
+              config={widgetConfig}
+              onChange={setWidgetConfig}
+              clientWebsite={clientWebsite}
+              onClientWebsiteChange={setClientWebsite}
+              allowedOrigins={allowedOrigins}
+              onAllowedOriginsChange={setAllowedOrigins}
+              embedCode={status === "active" ? embedCode : null}
+            />
+            <PreviewPanel
+              config={widgetConfig}
+              token={token}
+              agentId={agentId}
+              clientWebsite={clientWebsite}
+              screenshotUrl={screenshotUrl}
+              onScreenshotChange={setScreenshotUrl}
+            />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Small status indicator row */
+function StatusRow({
+  label,
+  ok,
+  detail,
+}: {
+  label: string;
+  ok: boolean;
+  detail: string;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-xs font-medium text-foreground">{label}</span>
+      <div className="flex items-center gap-1.5">
+        <span className="text-[11px] text-muted-foreground">{detail}</span>
+        <span
+          className={cn(
+            "w-2 h-2 rounded-full shrink-0",
+            ok ? "bg-emerald-500" : "bg-neutral-300 dark:bg-neutral-600"
+          )}
         />
       </div>
     </div>
