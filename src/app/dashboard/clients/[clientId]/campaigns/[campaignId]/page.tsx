@@ -33,7 +33,11 @@ export default async function ClientCampaignBuilderPage({
     .eq("user_id", user.id);
 
   const initialChannelType =
-    channelParam === "whatsapp" ? "whatsapp" : undefined;
+    channelParam === "whatsapp"
+      ? "whatsapp"
+      : (campaign as Record<string, unknown>).channel_type === "whatsapp"
+        ? "whatsapp"
+        : undefined;
 
   return (
     <CampaignBuilder
