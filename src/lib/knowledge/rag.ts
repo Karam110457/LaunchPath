@@ -7,8 +7,29 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 const SIMILARITY_THRESHOLD = 0.3;
 
-/** Below this chunk count, inject ALL chunks — no similarity search needed. */
-export const SMALL_KB_THRESHOLD = 200;
+/**
+ * Minimum RRF score for hybrid search results.
+ * With rrf_k=50 and match_count=8 (candidate pool = 16 per ranking):
+ * - Rank 1 in one ranking only: 1/51 = 0.0196
+ * - Rank 16 in one ranking only: 1/66 = 0.0152 (minimum possible)
+ * 0.01 is a safety net — rarely filters with current SQL, but catches
+ * edge cases if ranking behavior changes.
+ */
+const RRF_MIN_SCORE = 0.01;
+
+/**
+ * Below this chunk count, inject ALL chunks — no similarity search needed.
+ * Keep this low: a 926-char avg chunk × 200 = ~46,000 tokens injected every
+ * message. Set to 10 so only truly tiny KBs skip embedding retrieval.
+ */
+export const SMALL_KB_THRESHOLD = 10;
+
+/**
+ * Max chunks to fall back to loading when embedding API fails.
+ * At ~926 chars avg, 50 chunks ≈ ~11,500 tokens — acceptable for degraded mode.
+ * KBs over this limit still have the search_knowledge_base tool as a safety net.
+ */
+export const EMBEDDING_FALLBACK_LIMIT = 50;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -103,7 +124,7 @@ export async function retrieveContextWithMetadata(
         query_text: query,
         query_embedding: JSON.stringify(queryEmbedding),
         match_agent_id: agentId,
-        match_count: 5,
+        match_count: 8,
       }
     );
 
@@ -121,7 +142,7 @@ export async function retrieveContextWithMetadata(
         source_name: string;
         source_type: string;
       }>
-    ).filter((c) => c.similarity > 0);
+    ).filter((c) => c.similarity >= RRF_MIN_SCORE);
 
     if (relevant.length === 0) {
       return { contextString: "", chunks: [] };
@@ -145,8 +166,9 @@ export async function retrieveContextWithMetadata(
 
     return { contextString, chunks: ragChunks };
   } catch (err) {
+    // Re-throw so the caller can implement fallback strategy (e.g. loadAllChunks)
     console.error("RAG retrieval failed:", err);
-    return { contextString: "", chunks: [] };
+    throw err;
   }
 }
 

@@ -18,6 +18,7 @@ import {
   retrieveContextWithMetadata,
   loadAllChunks,
   SMALL_KB_THRESHOLD,
+  EMBEDDING_FALLBACK_LIMIT,
 } from "@/lib/knowledge/rag";
 import type { RagChunk } from "@/lib/knowledge/rag";
 import { buildAgentTools } from "@/lib/tools/builder";
@@ -83,6 +84,10 @@ export interface RunAgentChatParams {
 // ---------------------------------------------------------------------------
 
 const MAX_HISTORY_MESSAGES = 30;
+
+/** Approximate token budget for conversation history (~4 chars per token). */
+const MAX_HISTORY_TOKENS = 6000;
+const CHARS_PER_TOKEN = 4;
 
 export async function runAgentChat(
   params: RunAgentChatParams
@@ -185,7 +190,7 @@ export async function runAgentChat(
   }
 
   // -------------------------------------------------------------------------
-  // Load enabled tools
+  // Load enabled tools + RAG context in parallel (independent phases)
   // -------------------------------------------------------------------------
 
   const { data: toolRecords } = await supabase
@@ -208,7 +213,11 @@ export async function runAgentChat(
     }
   }
 
-  const { tools, failures } = await buildAgentTools(
+  // Phase A: Build agent tools (may involve Composio API calls)
+  // Phase B: RAG retrieval (may involve embedding API + pgvector search)
+  // These are independent — run them concurrently to save 150-250ms.
+
+  const toolBuildPromise = buildAgentTools(
     agentToolRecords,
     composioUserId,
     {
@@ -217,6 +226,83 @@ export async function runAgentChat(
       supabase,
     }
   );
+
+  const ragPromise = (async (): Promise<{
+    ragContext: string;
+    ragChunks: RagChunk[];
+    hasKnowledgeBase: boolean;
+  }> => {
+    const { count: docCount } = await supabase
+      .from("agent_knowledge_documents")
+      .select("id", { count: "exact", head: true })
+      .eq("agent_id", agentId)
+      .eq("status", "ready");
+
+    const hasKB = (docCount ?? 0) > 0;
+    if (!hasKB) return { ragContext: "", ragChunks: [], hasKnowledgeBase: false };
+
+    const { count: chunkCount } = await supabase
+      .from("agent_knowledge_chunks")
+      .select("id", { count: "exact", head: true })
+      .eq("agent_id", agentId);
+
+    const totalChunks = chunkCount ?? 0;
+
+    if (totalChunks <= SMALL_KB_THRESHOLD && totalChunks > 0) {
+      const allResult = await loadAllChunks(agentId, supabase);
+      return { ragContext: allResult.contextString, ragChunks: allResult.chunks, hasKnowledgeBase: true };
+    }
+
+    // Larger knowledge base — similarity search with embedding
+    const recentUserMsgs = conversationHistory
+      .filter((m) => m.role === "user")
+      .slice(-2)
+      .map((m) => m.content);
+    recentUserMsgs.push(userMessage);
+    const retrievalQuery = recentUserMsgs.join("\n");
+
+    try {
+      const ragResult = await retrieveContextWithMetadata(
+        agentId,
+        retrievalQuery,
+        supabase
+      );
+      return { ragContext: ragResult.contextString, ragChunks: ragResult.chunks, hasKnowledgeBase: true };
+    } catch {
+      // Embedding API down — fall back to loading all chunks if KB is small enough
+      if (totalChunks <= EMBEDDING_FALLBACK_LIMIT) {
+        logger.warn("RAG embedding failed, falling back to loadAllChunks", {
+          agentId,
+          totalChunks,
+        });
+        try {
+          const fallback = await loadAllChunks(agentId, supabase);
+          return { ragContext: fallback.contextString, ragChunks: fallback.chunks, hasKnowledgeBase: true };
+        } catch (fallbackErr) {
+          logger.error("Fallback loadAllChunks also failed", {
+            agentId,
+            error: fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr),
+          });
+          return { ragContext: "", ragChunks: [], hasKnowledgeBase: true };
+        }
+      }
+      // KB too large for brute-force injection — agent still has search_knowledge_base tool
+      logger.warn("RAG embedding failed, KB too large for fallback", {
+        agentId,
+        totalChunks,
+      });
+      return { ragContext: "", ragChunks: [], hasKnowledgeBase: true };
+    }
+  })();
+
+  const [{ tools, failures }, ragData] = await Promise.all([
+    toolBuildPromise,
+    ragPromise,
+  ]);
+
+  const ragContext = ragData.ragContext;
+  const ragChunks = ragData.ragChunks;
+  const hasKnowledgeBase = ragData.hasKnowledgeBase;
 
   // Map Composio tool keys to friendly display names.
   for (const t of agentToolRecords) {
@@ -239,54 +325,8 @@ export async function runAgentChat(
     }
   }
 
-  // -------------------------------------------------------------------------
-  // RAG: retrieve relevant knowledge if the agent has documents
-  // -------------------------------------------------------------------------
-
-  let ragContext = "";
-  let ragChunks: RagChunk[] = [];
-
-  const { count: docCount } = await supabase
-    .from("agent_knowledge_documents")
-    .select("id", { count: "exact", head: true })
-    .eq("agent_id", agentId)
-    .eq("status", "ready");
-
-  const hasKnowledgeBase = (docCount ?? 0) > 0;
-
+  // Inject knowledge search tool after both phases complete
   if (hasKnowledgeBase) {
-    // Check total chunk count to decide retrieval strategy
-    const { count: chunkCount } = await supabase
-      .from("agent_knowledge_chunks")
-      .select("id", { count: "exact", head: true })
-      .eq("agent_id", agentId);
-
-    const totalChunks = chunkCount ?? 0;
-
-    if (totalChunks <= SMALL_KB_THRESHOLD && totalChunks > 0) {
-      // Small knowledge base — inject ALL chunks directly (no embedding, no threshold)
-      const allResult = await loadAllChunks(agentId, supabase);
-      ragContext = allResult.contextString;
-      ragChunks = allResult.chunks;
-    } else {
-      // Larger knowledge base — similarity search with embedding
-      const recentUserMsgs = conversationHistory
-        .filter((m) => m.role === "user")
-        .slice(-2)
-        .map((m) => m.content);
-      recentUserMsgs.push(userMessage);
-      const retrievalQuery = recentUserMsgs.join("\n");
-
-      const ragResult = await retrieveContextWithMetadata(
-        agentId,
-        retrievalQuery,
-        supabase
-      );
-      ragContext = ragResult.contextString;
-      ragChunks = ragResult.chunks;
-    }
-
-    // Auto-inject knowledge search tool (agent can call explicitly)
     const { toolName, toolDef } = buildKnowledgeTool(agentId, supabase);
     tools[toolName] = toolDef;
     toolDisplayNames[toolName] = KNOWLEDGE_TOOL_DISPLAY_NAME;
@@ -341,6 +381,42 @@ export async function runAgentChat(
 
   type AIMessage = { role: "user" | "assistant"; content: string };
 
+  /** Summarize tool args so every key is represented even if values are truncated. */
+  function summarizeToolArgs(
+    args: Record<string, unknown>,
+    maxChars: number
+  ): string {
+    const entries = Object.entries(args);
+    if (entries.length === 0) return "";
+    const parts: string[] = [];
+    const perKey = Math.max(30, Math.floor(maxChars / entries.length));
+    for (const [key, value] of entries) {
+      let valStr: string;
+      try {
+        valStr = typeof value === "string" ? value : (JSON.stringify(value) ?? "null");
+      } catch {
+        valStr = "[unserializable]";
+      }
+      const truncVal =
+        valStr.length > perKey ? valStr.slice(0, perKey - 1) + "…" : valStr;
+      parts.push(`${key}: ${truncVal}`);
+    }
+    return parts.join(", ").slice(0, maxChars);
+  }
+
+  /** Truncate text at a sentence or line boundary when possible. */
+  function truncateAtBoundary(text: string, max: number): string {
+    if (text.length <= max) return text;
+    const region = text.slice(0, max);
+    const lastBreak = Math.max(
+      region.lastIndexOf("\n"),
+      region.lastIndexOf(". ")
+    );
+    const cutAt =
+      lastBreak > max * 0.6 ? lastBreak + 1 : max;
+    return text.slice(0, cutAt) + "…";
+  }
+
   const recentHistory = conversationHistory.slice(-MAX_HISTORY_MESSAGES);
 
   const aiMessages: AIMessage[] = [];
@@ -348,20 +424,61 @@ export async function runAgentChat(
     if (m.role === "user" || m.role === "assistant") {
       aiMessages.push({ role: m.role, content: m.content });
     } else if (m.role === "tool-call") {
+      // Summarize tool args so every key is visible — full args are in conversation record
+      const argsPreview = m.toolArgs
+        ? summarizeToolArgs(m.toolArgs as Record<string, unknown>, 350)
+        : "";
       aiMessages.push({
         role: "assistant",
-        content: `[Used tool \`${m.toolName}\`${m.toolArgs ? ` with ${JSON.stringify(m.toolArgs)}` : ""}]`,
+        content: `[Used tool \`${m.toolName}\`${argsPreview ? ` with ${argsPreview}` : ""}]`,
       });
     } else if (m.role === "tool-result") {
       const status = m.toolSuccess === false ? "failed" : "succeeded";
+      // Truncate at sentence/line boundary — full results are in conversation record
+      const truncatedContent = truncateAtBoundary(m.content, 500);
       aiMessages.push({
         role: "assistant",
-        content: `[Tool \`${m.toolName}\` ${status}: ${m.content}]`,
+        content: `[Tool \`${m.toolName}\` ${status}: ${truncatedContent}]`,
       });
     }
   }
 
   aiMessages.push({ role: "user", content: userMessage });
+
+  // Apply token budget: trim oldest messages (keep current user msg) so history
+  // doesn't dominate the context window. Walk backwards from newest to oldest.
+  const maxHistoryChars = MAX_HISTORY_TOKENS * CHARS_PER_TOKEN;
+  let totalChars = 0;
+  let cutIndex = 0;
+  for (let i = aiMessages.length - 1; i >= 0; i--) {
+    totalChars += aiMessages[i].content.length;
+    if (totalChars > maxHistoryChars) {
+      cutIndex = i + 1;
+      break;
+    }
+  }
+  if (cutIndex > 0) {
+    // Capture the first user message before trimming — it often contains
+    // the core intent (e.g. "book a dental cleaning for Tuesday at 2pm").
+    const firstUserMsg = aiMessages.find((m) => m.role === "user");
+    const firstUserIdx = firstUserMsg ? aiMessages.indexOf(firstUserMsg) : -1;
+
+    aiMessages.splice(0, cutIndex);
+
+    // Re-inject the original request if it was trimmed, so the agent
+    // never loses the user's core intent even in long conversations.
+    if (firstUserMsg && firstUserIdx >= 0 && firstUserIdx < cutIndex) {
+      const maxIntent = 500;
+      const content =
+        firstUserMsg.content.length > maxIntent
+          ? firstUserMsg.content.slice(0, maxIntent) + "…"
+          : firstUserMsg.content;
+      aiMessages.unshift({
+        role: "user",
+        content: `[Original request] ${content}`,
+      });
+    }
+  }
 
   // -------------------------------------------------------------------------
   // Run agent in background

@@ -99,9 +99,10 @@ export function assemblePrompt(input: AssemblePromptInput): AssemblePromptResult
     if (ragContext) {
       // Auto-retrieval found hits — agent already has context, just note the tool
       const knowledgeNote =
-        "You also have a `search_knowledge_base` tool for deeper or follow-up searches " +
-        "across your knowledge base. Use it when the pre-loaded context above doesn't " +
-        "fully answer the user's question, or when the user asks about a different topic.";
+        "The knowledge context above covers the most relevant excerpts for the user's latest message. " +
+        "If the user asks about multiple topics, some may not be covered above. " +
+        "Use the `search_knowledge_base` tool to find information on any topic not addressed above, " +
+        "or when you need more detail on a specific point.";
       sections.push({
         id: "knowledge",
         label: "Knowledge Tool Note",

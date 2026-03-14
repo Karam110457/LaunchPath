@@ -155,9 +155,38 @@ function fixArraySchemas(node: any): any {
   return fixed;
 }
 
+/** Max chars for tool-level descriptions — longer wastes tokens every message. */
+const MAX_TOOL_DESC_CHARS = 120;
+
+/** Max chars for individual parameter descriptions — higher to preserve format specs. */
+const MAX_PARAM_DESC_CHARS = 200;
+
+/**
+ * Truncate a description string to a max length.
+ * Prefers cutting at sentence boundaries (". ") to preserve complete thoughts
+ * and format specifications. Falls back to word boundaries.
+ */
+function truncateDesc(desc: string | undefined, max: number): string | undefined {
+  if (!desc || typeof desc !== "string") return desc;
+  const cleaned = desc.replace(/\n{3,}/g, "\n\n").replace(/\s{2,}/g, " ").trim();
+  if (cleaned.length <= max) return cleaned;
+
+  // Try to cut at the last sentence boundary within budget
+  const withinBudget = cleaned.slice(0, max);
+  const lastPeriod = withinBudget.lastIndexOf(". ");
+  if (lastPeriod > max * 0.5) {
+    return cleaned.slice(0, lastPeriod + 1);
+  }
+
+  // Fallback: cut at word boundary
+  const lastSpace = withinBudget.lastIndexOf(" ");
+  return cleaned.slice(0, lastSpace > 0 ? lastSpace : max - 1) + "…";
+}
+
 /**
  * Creates a schema modifier that cleans descriptions, strips pinned (fixed)
- * parameter fields, and annotates default parameter fields.
+ * parameter fields, truncates verbose descriptions, and annotates default
+ * parameter fields. All optional params are preserved (see client.ts).
  */
 function makeSchemaModifier(
   pinnedParamsMap: Map<string, Record<string, unknown>>,
@@ -168,12 +197,9 @@ function makeSchemaModifier(
     // Clone to avoid mutating any SDK-cached schema objects
     const schema = { ...context.schema };
 
-    // Clean up description whitespace
+    // Truncate tool-level description
     if (typeof schema.description === "string") {
-      schema.description = schema.description
-        .replace(/\n{3,}/g, "\n\n")
-        .replace(/\s{2,}/g, " ")
-        .trim();
+      schema.description = truncateDesc(schema.description, MAX_TOOL_DESC_CHARS);
     }
 
     const origInputSchema =
@@ -222,6 +248,22 @@ function makeSchemaModifier(
             ` (default: ${valStr})`;
           inputSchema.properties[paramName] = clonedProp;
         }
+      }
+    }
+
+    // NOTE: Do NOT strip non-required optional params here. Composio marks
+    // important fields like description, subject, body, location as optional.
+    // Stripping them breaks calendar booking and email sending flows.
+    // See client.ts strict: false comment for rationale.
+
+    // Truncate individual parameter descriptions to save tokens
+    for (const paramName of Object.keys(inputSchema.properties)) {
+      const prop = inputSchema.properties[paramName];
+      if (prop && typeof prop === "object" && typeof prop.description === "string") {
+        inputSchema.properties[paramName] = {
+          ...prop,
+          description: truncateDesc(prop.description, MAX_PARAM_DESC_CHARS),
+        };
       }
     }
 

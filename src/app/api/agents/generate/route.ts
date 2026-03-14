@@ -8,6 +8,7 @@ import { getTemplateById } from "@/lib/agents/templates";
 import { withRateLimitRetry } from "@/lib/ai/rate-limit-retry";
 import { getComposioClient } from "@/lib/composio/client";
 import { generateConfigDirectives, updatePromptDirectives } from "@/lib/agents/config-directives";
+import { deduplicateAgainstDirectives } from "@/lib/agents/prompt-dedup";
 import { extractWebsiteFacts } from "@/lib/ai/extract-website-facts";
 import { chunkText } from "@/lib/knowledge/chunking";
 import { embedTexts } from "@/lib/knowledge/embeddings";
@@ -180,6 +181,18 @@ export async function POST(request: NextRequest) {
           toolGuidelines: filteredToolGuidelines,
         });
         if (configDirectives) {
+          // Remove AI-generated sentences that duplicate config directive content
+          const { cleaned, removedCount } = deduplicateAgainstDirectives(
+            finalSystemPrompt,
+            configDirectives
+          );
+          if (removedCount > 0) {
+            logger.info("Dedup removed overlapping sentences from generated prompt", {
+              removedCount,
+              userId: user.id,
+            });
+            finalSystemPrompt = cleaned;
+          }
           finalSystemPrompt = updatePromptDirectives(finalSystemPrompt, configDirectives);
         }
 
