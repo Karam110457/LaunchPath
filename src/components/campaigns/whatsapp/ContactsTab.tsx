@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Plus, Upload, Search, Loader2, Users, Tag, X, ChevronDown, Copy, Check, Link, Database } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Plus, Upload, Search, Loader2, Users, Tag, X, ChevronDown, Copy, Check, Link, Database, ChevronLeft, ChevronRight, Calendar, CheckSquare, Trash2 } from "lucide-react";
 import { ContactsList, type ContactRecord } from "./ContactsList";
 import { CsvUploadDialog } from "./CsvUploadDialog";
 import { AddContactDialog } from "./AddContactDialog";
@@ -29,19 +30,49 @@ const STATUS_PILLS: { value: StatusFilter; label: string }[] = [
 ];
 
 export function ContactsTab({ campaignId, channelId }: ContactsTabProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Initialize from URL params
   const [contacts, setContacts] = useState<ContactRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [search, setSearch] = useState(searchParams.get("q") ?? "");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
+    (searchParams.get("status") as StatusFilter) || "all"
+  );
   const [showUpload, setShowUpload] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
   const [showCrmImport, setShowCrmImport] = useState(false);
   const [selectedContact, setSelectedContact] = useState<ContactRecord | null>(null);
   const [tagFilter, setTagFilter] = useState("");
-  const [activeTags, setActiveTags] = useState<string[]>([]);
+  const [activeTags, setActiveTags] = useState<string[]>(
+    searchParams.get("tags")?.split(",").filter(Boolean) ?? []
+  );
+  const [dateFrom, setDateFrom] = useState(searchParams.get("from") ?? "");
+  const [dateTo, setDateTo] = useState(searchParams.get("to") ?? "");
+  const [page, setPage] = useState(Number(searchParams.get("page")) || 1);
+  const pageSize = 50;
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkTagInput, setBulkTagInput] = useState("");
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   void channelId; // Used by future CRM import
+
+  // Persist filters in URL params
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set("q", search);
+    if (statusFilter !== "all") params.set("status", statusFilter);
+    if (activeTags.length > 0) params.set("tags", activeTags.join(","));
+    if (dateFrom) params.set("from", dateFrom);
+    if (dateTo) params.set("to", dateTo);
+    if (page > 1) params.set("page", String(page));
+    const qs = params.toString();
+    const newUrl = qs ? `?${qs}` : window.location.pathname;
+    router.replace(newUrl, { scroll: false });
+  }, [search, statusFilter, activeTags, dateFrom, dateTo, page, router]);
 
   function addTagFilter() {
     const tag = tagFilter.trim();
@@ -55,12 +86,72 @@ export function ContactsTab({ campaignId, channelId }: ContactsTabProps) {
     setActiveTags((prev) => prev.filter((t) => t !== tag));
   }
 
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    if (selectedIds.size === contacts.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(contacts.map((c) => c.id)));
+    }
+  }
+
+  async function bulkTag() {
+    const tag = bulkTagInput.trim();
+    if (!tag || selectedIds.size === 0) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((id) =>
+          fetch(`/api/campaigns/${campaignId}/contacts/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ add_tags: [tag] }),
+          })
+        )
+      );
+      setBulkTagInput("");
+      setSelectedIds(new Set());
+      fetchContacts();
+    } catch { /* ignore */ }
+    setBulkLoading(false);
+  }
+
+  async function bulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Delete ${selectedIds.size} contact(s)? This cannot be undone.`)) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((id) =>
+          fetch(`/api/campaigns/${campaignId}/contacts/${id}`, { method: "DELETE" })
+        )
+      );
+      setSelectedIds(new Set());
+      fetchContacts();
+    } catch { /* ignore */ }
+    setBulkLoading(false);
+  }
+
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
   const fetchContacts = useCallback(async () => {
     try {
+      setFetchError(null);
       const params = new URLSearchParams();
       if (statusFilter !== "all") params.set("status", statusFilter);
       if (search.trim()) params.set("search", search.trim());
       if (activeTags.length > 0) params.set("tags", activeTags.join(","));
+      if (dateFrom) params.set("from", dateFrom);
+      if (dateTo) params.set("to", dateTo);
+      params.set("page", String(page));
+      params.set("limit", String(pageSize));
 
       const res = await fetch(
         `/api/campaigns/${campaignId}/contacts?${params.toString()}`
@@ -69,13 +160,20 @@ export function ContactsTab({ campaignId, channelId }: ContactsTabProps) {
         const data = await res.json();
         setContacts(data.contacts ?? []);
         setTotal(data.total ?? 0);
+      } else {
+        setFetchError("Failed to load contacts");
       }
     } catch {
-      // Silently fail
+      setFetchError("Failed to load contacts");
     } finally {
       setLoading(false);
     }
-  }, [campaignId, statusFilter, search, activeTags]);
+  }, [campaignId, statusFilter, search, activeTags, dateFrom, dateTo, page]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter, search, activeTags, dateFrom, dateTo]);
 
   useEffect(() => {
     setLoading(true);
@@ -94,6 +192,18 @@ export function ContactsTab({ campaignId, channelId }: ContactsTabProps) {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => { setSelectionMode(!selectionMode); setSelectedIds(new Set()); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-full border transition-colors ${
+              selectionMode
+                ? "border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400"
+                : "border-neutral-200/60 dark:border-[#2A2A2A] hover:bg-neutral-50 dark:hover:bg-neutral-800"
+            }`}
+          >
+            <CheckSquare className="w-3 h-3" />
+            {selectionMode ? "Cancel" : "Select"}
+          </button>
           <button
             type="button"
             onClick={() => setShowCrmImport(true)}
@@ -169,6 +279,35 @@ export function ContactsTab({ campaignId, channelId }: ContactsTabProps) {
         </div>
       </div>
 
+      {/* Date range filter */}
+      <div className="flex items-center gap-2">
+        <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          className="text-xs rounded-full border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-3 py-1.5 outline-none focus:ring-2 focus:ring-neutral-400/20 transition-all"
+          placeholder="From"
+        />
+        <span className="text-xs text-muted-foreground">to</span>
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          className="text-xs rounded-full border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-3 py-1.5 outline-none focus:ring-2 focus:ring-neutral-400/20 transition-all"
+          placeholder="To"
+        />
+        {(dateFrom || dateTo) && (
+          <button
+            type="button"
+            onClick={() => { setDateFrom(""); setDateTo(""); }}
+            className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
       {/* Active tag chips */}
       {activeTags.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -193,6 +332,49 @@ export function ContactsTab({ campaignId, channelId }: ContactsTabProps) {
         </div>
       )}
 
+      {/* Error */}
+      {fetchError && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50/60 dark:bg-red-900/20 border border-red-200/50 dark:border-red-800/30">
+          <p className="text-xs text-red-700 dark:text-red-400 flex-1">{fetchError}</p>
+          <button type="button" onClick={() => fetchContacts()} className="text-xs text-red-600 hover:underline">Retry</button>
+        </div>
+      )}
+
+      {/* Bulk action bar */}
+      {selectionMode && selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-orange-50/60 dark:bg-orange-900/10 border border-orange-200/50 dark:border-orange-800/30">
+          <span className="text-xs font-medium text-orange-700 dark:text-orange-400">
+            {selectedIds.size} selected
+          </span>
+          <div className="flex items-center gap-1.5 flex-1">
+            <input
+              value={bulkTagInput}
+              onChange={(e) => setBulkTagInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); bulkTag(); } }}
+              placeholder="Add tag…"
+              className="px-2.5 py-1 text-xs rounded-full border border-orange-200/60 dark:border-orange-800/40 bg-white dark:bg-neutral-900 outline-none focus:ring-2 focus:ring-orange-300/30 w-32"
+            />
+            <button
+              type="button"
+              onClick={bulkTag}
+              disabled={!bulkTagInput.trim() || bulkLoading}
+              className="px-3 py-1 text-[11px] font-medium rounded-full gradient-accent-bg text-white disabled:opacity-50"
+            >
+              Tag
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={bulkDelete}
+            disabled={bulkLoading}
+            className="flex items-center gap-1 px-3 py-1 text-[11px] font-medium rounded-full border border-red-200/60 dark:border-red-800/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+          >
+            <Trash2 className="w-3 h-3" />
+            Delete
+          </button>
+        </div>
+      )}
+
       {/* List */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
@@ -209,7 +391,45 @@ export function ContactsTab({ campaignId, channelId }: ContactsTabProps) {
           <span className="text-xs">Upload a CSV or add contacts manually</span>
         </button>
       ) : (
-        <ContactsList contacts={contacts} onSelect={setSelectedContact} />
+        <>
+          <ContactsList
+            contacts={contacts}
+            onSelect={setSelectedContact}
+            selectionMode={selectionMode}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+            onToggleAll={toggleAll}
+          />
+          {/* Pagination */}
+          {total > pageSize && (
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-[11px] text-muted-foreground">
+                Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total}
+              </p>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="p-1.5 rounded-lg border border-neutral-200/60 dark:border-[#2A2A2A] hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors disabled:opacity-30"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <span className="text-xs font-medium text-foreground px-2">
+                  {page} / {Math.ceil(total / pageSize)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(Math.ceil(total / pageSize), p + 1))}
+                  disabled={page >= Math.ceil(total / pageSize)}
+                  className="p-1.5 rounded-lg border border-neutral-200/60 dark:border-[#2A2A2A] hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors disabled:opacity-30"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* CSV Upload Dialog */}

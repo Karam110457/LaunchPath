@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Plus, Trash2, Loader2, GripVertical } from "lucide-react";
+import { X, Plus, Trash2, Loader2, ChevronUp, ChevronDown } from "lucide-react";
 import { Label } from "@/components/ui/label";
 
 const INPUT_CLASS =
@@ -23,12 +23,14 @@ interface TemplateSummary {
 
 interface SequenceEditorProps {
   campaignId: string;
+  agentId: string;
+  channelId: string;
   sequenceId?: string | null;
   onDone: () => void;
   onCancel: () => void;
 }
 
-export function SequenceEditor({ campaignId, sequenceId, onDone, onCancel }: SequenceEditorProps) {
+export function SequenceEditor({ campaignId, agentId, channelId, sequenceId, onDone, onCancel }: SequenceEditorProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [steps, setSteps] = useState<SequenceStep[]>([
@@ -42,9 +44,9 @@ export function SequenceEditor({ campaignId, sequenceId, onDone, onCancel }: Seq
   const [loading, setLoading] = useState(!!sequenceId);
   const [error, setError] = useState<string | null>(null);
 
-  // Load templates
+  // Load templates from the correct channel-level endpoint
   useEffect(() => {
-    fetch(`/api/campaigns/${campaignId}/templates`)
+    fetch(`/api/agents/${agentId}/channels/${channelId}/templates?status=APPROVED`)
       .then((r) => r.json())
       .then((data) => {
         setTemplates(
@@ -52,7 +54,7 @@ export function SequenceEditor({ campaignId, sequenceId, onDone, onCancel }: Seq
         );
       })
       .catch(() => {});
-  }, [campaignId]);
+  }, [agentId, channelId]);
 
   // Load existing sequence if editing
   useEffect(() => {
@@ -98,6 +100,16 @@ export function SequenceEditor({ campaignId, sequenceId, onDone, onCancel }: Seq
     setSteps((prev) =>
       prev.map((s, i) => (i === idx ? { ...s, ...updates } : s))
     );
+  }
+
+  function moveStep(idx: number, direction: "up" | "down") {
+    setSteps((prev) => {
+      const next = [...prev];
+      const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+      if (targetIdx < 0 || targetIdx >= next.length) return prev;
+      [next[idx], next[targetIdx]] = [next[targetIdx], next[idx]];
+      return next.map((s, i) => ({ ...s, stepNumber: i + 1 }));
+    });
   }
 
   async function handleSave() {
@@ -216,9 +228,24 @@ export function SequenceEditor({ campaignId, sequenceId, onDone, onCancel }: Seq
               key={idx}
               className="flex items-start gap-3 p-3 rounded-xl border border-neutral-200/50 dark:border-neutral-700/30 bg-neutral-50/50 dark:bg-neutral-800/20"
             >
-              <div className="flex items-center gap-1 pt-2 text-muted-foreground">
-                <GripVertical className="w-3.5 h-3.5" />
-                <span className="text-[10px] font-semibold w-4">{idx + 1}</span>
+              <div className="flex flex-col items-center gap-0.5 pt-1 text-muted-foreground">
+                <button
+                  type="button"
+                  onClick={() => moveStep(idx, "up")}
+                  disabled={idx === 0}
+                  className="p-0.5 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors disabled:opacity-20"
+                >
+                  <ChevronUp className="w-3 h-3" />
+                </button>
+                <span className="text-[10px] font-semibold">{idx + 1}</span>
+                <button
+                  type="button"
+                  onClick={() => moveStep(idx, "down")}
+                  disabled={idx === steps.length - 1}
+                  className="p-0.5 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors disabled:opacity-20"
+                >
+                  <ChevronDown className="w-3 h-3" />
+                </button>
               </div>
 
               <div className="flex-1 space-y-2">

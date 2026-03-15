@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Plus, Loader2, Send } from "lucide-react";
+import { Plus, Loader2, Send, Download } from "lucide-react";
 import { SendJobCard, type SendJobRecord } from "./SendJobCard";
 import { BulkSendDialog } from "./BulkSendDialog";
+import { SendAnalytics } from "./SendAnalytics";
 import type { TemplateRecord } from "./TemplateList";
 
 interface SendsTabProps {
@@ -17,19 +18,23 @@ export function SendsTab({ agentId, channelId, campaignId }: SendsTabProps) {
   const [templates, setTemplates] = useState<TemplateRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showBulkSend, setShowBulkSend] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const channelApiBase = `/api/agents/${agentId}/channels/${channelId}`;
 
   const fetchJobs = useCallback(async () => {
     try {
+      setFetchError(null);
       const res = await fetch(`${channelApiBase}/send-jobs`);
       if (res.ok) {
         const data = await res.json();
         setJobs(data.jobs ?? []);
+      } else {
+        setFetchError("Failed to load send jobs");
       }
     } catch {
-      // Silently fail
+      setFetchError("Failed to load send jobs");
     } finally {
       setLoading(false);
     }
@@ -43,7 +48,7 @@ export function SendsTab({ agentId, channelId, campaignId }: SendsTabProps) {
         setTemplates(data.templates ?? []);
       }
     } catch {
-      // Silently fail
+      // Templates are secondary — don't block UI
     }
   }, [channelApiBase]);
 
@@ -52,24 +57,44 @@ export function SendsTab({ agentId, channelId, campaignId }: SendsTabProps) {
     fetchTemplates();
   }, [fetchJobs, fetchTemplates]);
 
-  // Poll for active jobs
+  // Poll for active jobs — pause when tab is hidden
   useEffect(() => {
     const hasActive = jobs.some(
       (j) => j.status === "pending" || j.status === "processing"
     );
 
-    if (hasActive && !pollRef.current) {
-      pollRef.current = setInterval(() => fetchJobs(), 5000);
-    } else if (!hasActive && pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
+    function startPoll() {
+      if (!pollRef.current && hasActive) {
+        pollRef.current = setInterval(() => fetchJobs(), 5000);
+      }
     }
 
-    return () => {
+    function stopPoll() {
       if (pollRef.current) {
         clearInterval(pollRef.current);
         pollRef.current = null;
       }
+    }
+
+    function handleVisibility() {
+      if (document.visibilityState === "hidden") {
+        stopPoll();
+      } else if (hasActive) {
+        fetchJobs();
+        startPoll();
+      }
+    }
+
+    if (hasActive && document.visibilityState !== "hidden") {
+      startPoll();
+    } else {
+      stopPoll();
+    }
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      stopPoll();
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [jobs, fetchJobs]);
 
@@ -87,9 +112,11 @@ export function SendsTab({ agentId, channelId, campaignId }: SendsTabProps) {
             j.id === jobId ? { ...j, status: "cancelled" as const } : j
           )
         );
+      } else {
+        setFetchError("Failed to cancel send job");
       }
     } catch {
-      // Silently fail
+      setFetchError("Failed to cancel send job");
     }
   }
 
@@ -109,16 +136,42 @@ export function SendsTab({ agentId, channelId, campaignId }: SendsTabProps) {
             </span>
           )}
         </div>
-        <button
-          type="button"
-          onClick={() => setShowBulkSend(true)}
-          disabled={templates.length === 0}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-full gradient-accent-bg text-white shadow-sm hover:scale-[1.02] transition-transform disabled:opacity-50"
-        >
-          <Plus className="w-3 h-3" />
-          New Send
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const a = document.createElement("a");
+              a.href = `/api/campaigns/${campaignId}/conversations/export?format=csv`;
+              a.download = "conversations.csv";
+              a.click();
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-full border border-neutral-200/60 dark:border-[#2A2A2A] hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+          >
+            <Download className="w-3 h-3" />
+            Export
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowBulkSend(true)}
+            disabled={templates.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-full gradient-accent-bg text-white shadow-sm hover:scale-[1.02] transition-transform disabled:opacity-50"
+          >
+            <Plus className="w-3 h-3" />
+            New Send
+          </button>
+        </div>
       </div>
+
+      {/* Analytics */}
+      {!loading && jobs.length > 0 && <SendAnalytics jobs={jobs} />}
+
+      {/* Error */}
+      {fetchError && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50/60 dark:bg-red-900/20 border border-red-200/50 dark:border-red-800/30">
+          <p className="text-xs text-red-700 dark:text-red-400 flex-1">{fetchError}</p>
+          <button type="button" onClick={() => { setFetchError(null); fetchJobs(); }} className="text-xs text-red-600 hover:underline">Retry</button>
+        </div>
+      )}
 
       {/* Jobs list */}
       {loading ? (

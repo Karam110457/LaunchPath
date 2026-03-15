@@ -73,7 +73,19 @@ export async function POST(
       date_to?: string;
     };
     variable_mapping?: Record<string, string>;
+    scheduled_for?: string;
   };
+
+  // Validate scheduled_for if provided
+  if (body.scheduled_for) {
+    const scheduledDate = new Date(body.scheduled_for);
+    if (isNaN(scheduledDate.getTime())) {
+      return NextResponse.json({ error: "Invalid scheduled_for date" }, { status: 400 });
+    }
+    if (scheduledDate.getTime() < Date.now() - 60_000) {
+      return NextResponse.json({ error: "scheduled_for must be in the future" }, { status: 400 });
+    }
+  }
 
   // Build audience query
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -110,6 +122,7 @@ export async function POST(
       audience_filter: body.audience_filter ?? null,
       variable_mapping: body.variable_mapping ?? template.variable_mapping ?? null,
       total_contacts: contacts.length,
+      scheduled_for: body.scheduled_for ?? null,
     })
     .select("id")
     .single();

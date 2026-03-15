@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { X, Loader2, Send, ChevronRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, Loader2, Send, ChevronRight, Clock } from "lucide-react";
 import { AudienceBuilder, type AudienceFilter } from "./AudienceBuilder";
 import type { TemplateRecord } from "./TemplateList";
 
@@ -37,6 +37,8 @@ export function BulkSendDialog({
   const [audienceFilter, setAudienceFilter] = useState<AudienceFilter>({});
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduledFor, setScheduledFor] = useState("");
 
   async function handleSend() {
     if (!selectedTemplate) return;
@@ -51,6 +53,9 @@ export function BulkSendDialog({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             audience_filter: audienceFilter,
+            scheduled_for: scheduleEnabled && scheduledFor
+              ? new Date(scheduledFor).toISOString()
+              : undefined,
           }),
         }
       );
@@ -67,12 +72,31 @@ export function BulkSendDialog({
     }
   }
 
+  const [recipientCount, setRecipientCount] = useState<number | null>(null);
+
+  // Fetch recipient count when reaching confirm step
+  useEffect(() => {
+    if (step !== "confirm") return;
+    const params = new URLSearchParams({ limit: "1" });
+    if (audienceFilter.tags?.length) params.set("tags", audienceFilter.tags.join(","));
+    if (audienceFilter.status) params.set("status", audienceFilter.status);
+    fetch(`/api/campaigns/${campaignId}/contacts?${params.toString()}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setRecipientCount(data.total ?? 0); })
+      .catch(() => {});
+  }, [step, campaignId, audienceFilter]);
+
   const bodyPreview = selectedTemplate
     ? (selectedTemplate.components.find((c) => c.type === "BODY")?.text as string) ?? ""
     : "";
 
+  // Close on Escape
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Escape" && !sending) onClose();
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onKeyDown={handleKeyDown}>
       <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[2rem] bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200/50 dark:border-neutral-700/50">
@@ -176,6 +200,36 @@ export function BulkSendDialog({
                     : "All contacts"}
                   {audienceFilter.status ? ` · Status: ${audienceFilter.status}` : ""}
                 </p>
+                {recipientCount !== null && (
+                  <p className="text-sm font-semibold text-foreground">
+                    {recipientCount} contact{recipientCount !== 1 ? "s" : ""} will receive this message
+                  </p>
+                )}
+              </div>
+
+              {/* Schedule option */}
+              <div className="rounded-[16px] bg-neutral-50/60 dark:bg-neutral-800/30 border border-neutral-200/50 dark:border-neutral-700/50 p-4 space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={scheduleEnabled}
+                    onChange={(e) => setScheduleEnabled(e.target.checked)}
+                    className="rounded"
+                  />
+                  <span className="text-xs font-medium text-foreground flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    Schedule for later
+                  </span>
+                </label>
+                {scheduleEnabled && (
+                  <input
+                    type="datetime-local"
+                    value={scheduledFor}
+                    onChange={(e) => setScheduledFor(e.target.value)}
+                    min={new Date().toISOString().slice(0, 16)}
+                    className="w-full rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-neutral-400/20 transition-all"
+                  />
+                )}
               </div>
 
               <div className="rounded-[16px] bg-amber-50/60 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-800/30 p-3">
@@ -237,12 +291,12 @@ export function BulkSendDialog({
                 {sending ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Starting…
+                    {scheduleEnabled ? "Scheduling…" : "Starting…"}
                   </>
                 ) : (
                   <>
-                    <Send className="w-3.5 h-3.5" />
-                    Start Sending
+                    {scheduleEnabled ? <Clock className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
+                    {scheduleEnabled ? "Schedule Send" : "Start Sending"}
                   </>
                 )}
               </button>

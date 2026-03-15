@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, Loader2, Trash2, Phone, Calendar, Hash, MessageCircle, Plus } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import type { ContactRecord } from "./ContactsList";
@@ -105,6 +105,19 @@ export function ContactDetail({
     }
   }
 
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Focus panel on open + close on Escape
+  useEffect(() => {
+    panelRef.current?.focus();
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       {/* Backdrop */}
@@ -114,7 +127,11 @@ export function ContactDetail({
       />
 
       {/* Slide-over panel */}
-      <div className="relative w-full max-w-md bg-white dark:bg-[#141414] border-l border-neutral-200/50 dark:border-neutral-700/40 overflow-y-auto animate-in slide-in-from-right duration-200">
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        className="relative w-full max-w-md bg-white dark:bg-[#141414] border-l border-neutral-200/50 dark:border-neutral-700/40 overflow-y-auto animate-in slide-in-from-right duration-200 outline-none"
+      >
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-neutral-200/50 dark:border-neutral-700/40 bg-white/80 dark:bg-[#141414]/80 backdrop-blur-md">
           <h2 className="text-sm font-semibold text-foreground">

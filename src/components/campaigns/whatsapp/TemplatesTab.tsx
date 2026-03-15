@@ -7,6 +7,7 @@ import {
   Loader2,
   Search,
   FileText,
+  ArrowUpDown,
 } from "lucide-react";
 import { TemplateList, type TemplateRecord } from "./TemplateList";
 import { TemplateEditor } from "./TemplateEditor";
@@ -16,9 +17,11 @@ interface TemplatesTabProps {
   agentId: string;
   channelId: string;
   hasBusinessAccountId: boolean;
+  campaignId?: string;
 }
 
 type StatusFilter = "ALL" | "APPROVED" | "PENDING" | "REJECTED";
+type SortField = "name" | "created_at" | "category";
 
 const FILTER_PILLS: { value: StatusFilter; label: string }[] = [
   { value: "ALL", label: "All" },
@@ -38,6 +41,7 @@ export function TemplatesTab({
   agentId,
   channelId,
   hasBusinessAccountId,
+  campaignId,
 }: TemplatesTabProps) {
   const [templates, setTemplates] = useState<TemplateRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,8 +51,11 @@ export function TemplatesTab({
   const [showEditor, setShowEditor] = useState(false);
   const [editingTemplate, setEditingTemplate] =
     useState<TemplateRecord | null>(null);
+  const [sortBy, setSortBy] = useState<SortField>("created_at");
 
   const channelApiBase = `/api/agents/${agentId}/channels/${channelId}`;
+
+  const [error, setError] = useState<string | null>(null);
 
   const fetchTemplates = useCallback(async () => {
     try {
@@ -60,9 +67,11 @@ export function TemplatesTab({
       if (res.ok) {
         const data = await res.json();
         setTemplates(data.templates ?? []);
+      } else {
+        setError("Failed to load templates");
       }
     } catch {
-      // Silently fail
+      setError("Failed to load templates");
     } finally {
       setLoading(false);
     }
@@ -75,15 +84,18 @@ export function TemplatesTab({
 
   async function handleSync() {
     setSyncing(true);
+    setError(null);
     try {
       const res = await fetch(`${channelApiBase}/templates/sync`, {
         method: "POST",
       });
       if (res.ok) {
         await fetchTemplates();
+      } else {
+        setError("Sync failed. Check your Business Account ID.");
       }
     } catch {
-      // Silently fail
+      setError("Sync failed. Please try again.");
     } finally {
       setSyncing(false);
     }
@@ -93,6 +105,7 @@ export function TemplatesTab({
     if (!window.confirm("Delete this template? This will also remove it from Meta and cannot be undone.")) {
       return;
     }
+    setError(null);
     try {
       const res = await fetch(
         `${channelApiBase}/templates/${templateId}`,
@@ -100,20 +113,27 @@ export function TemplatesTab({
       );
       if (res.ok) {
         setTemplates((prev) => prev.filter((t) => t.id !== templateId));
+      } else {
+        setError("Failed to delete template");
       }
     } catch {
-      // Silently fail
+      setError("Failed to delete template");
     }
   }
 
-  // Filter by search (client-side)
-  const filtered = search.trim()
+  // Filter by search (client-side) and sort
+  const filtered = (search.trim()
     ? templates.filter(
         (t) =>
           t.name.toLowerCase().includes(search.toLowerCase()) ||
           t.category.toLowerCase().includes(search.toLowerCase())
       )
-    : templates;
+    : templates
+  ).sort((a, b) => {
+    if (sortBy === "name") return a.name.localeCompare(b.name);
+    if (sortBy === "category") return a.category.localeCompare(b.category);
+    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+  });
 
   if (!hasBusinessAccountId) {
     return (
@@ -192,7 +212,28 @@ export function TemplatesTab({
             className="w-full pl-8 pr-3 py-1.5 text-xs rounded-full border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] outline-none focus:ring-2 focus:ring-neutral-400/20 transition-all"
           />
         </div>
+
+        <div className="flex items-center gap-1.5">
+          <ArrowUpDown className="w-3 h-3 text-muted-foreground" />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortField)}
+            className="text-[11px] rounded-full border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-2 py-1.5 outline-none focus:ring-2 focus:ring-neutral-400/20 transition-all"
+          >
+            <option value="created_at">Newest</option>
+            <option value="name">Name</option>
+            <option value="category">Category</option>
+          </select>
+        </div>
       </div>
+
+      {/* Error */}
+      {error && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50/60 dark:bg-red-900/20 border border-red-200/50 dark:border-red-800/30">
+          <p className="text-xs text-red-700 dark:text-red-400 flex-1">{error}</p>
+          <button type="button" onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-xs">Dismiss</button>
+        </div>
+      )}
 
       {/* List */}
       {loading ? (
@@ -224,6 +265,7 @@ export function TemplatesTab({
         <VariableMappingEditor
           template={editingTemplate}
           channelApiBase={channelApiBase}
+          campaignId={campaignId}
           onSaved={() => {
             setEditingTemplate(null);
             fetchTemplates();

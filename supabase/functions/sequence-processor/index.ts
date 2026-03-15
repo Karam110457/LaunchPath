@@ -40,6 +40,7 @@ async function sendTemplateMessage(opts: {
   to: string;
   templateName: string;
   language: string;
+  components?: Record<string, unknown>[];
 }): Promise<{ messageId: string }> {
   const url = `https://graph.facebook.com/${META_API_VERSION}/${opts.phoneNumberId}/messages`;
 
@@ -56,6 +57,7 @@ async function sendTemplateMessage(opts: {
       template: {
         name: opts.templateName,
         language: { code: opts.language },
+        ...(opts.components ? { components: opts.components } : {}),
       },
     }),
   });
@@ -100,14 +102,26 @@ Deno.serve(async (req: Request) => {
   let totalCompleted = 0;
 
   try {
-    // Get enrollments ready to send
+    // Atomically claim a batch of enrollments to prevent duplicate
+    // processing when concurrent cron invocations overlap.
+    const claimToken = crypto.randomUUID();
+    const { data: claimedCount } = await supabase.rpc("claim_sequence_enrollments", {
+      p_claim_token: claimToken,
+      p_limit: BATCH_SIZE,
+    });
+
+    if (!claimedCount || claimedCount === 0) {
+      return new Response(
+        JSON.stringify({ processed: 0, sent: 0, failed: 0, completed: 0 }),
+        { headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch the claimed enrollments
     const { data: enrollments } = await supabase
       .from("contact_sequence_state")
       .select("id, sequence_id, contact_id, current_step")
-      .eq("status", "active")
-      .lte("next_send_at", new Date().toISOString())
-      .order("next_send_at", { ascending: true })
-      .limit(BATCH_SIZE);
+      .eq("claim_token", claimToken);
 
     if (!enrollments || enrollments.length === 0) {
       return new Response(
@@ -153,6 +167,7 @@ Deno.serve(async (req: Request) => {
             status: "stopped_manual",
             stopped_at: new Date().toISOString(),
             stop_reason: "Sequence no longer active",
+            claim_token: null,
           })
           .eq("id", enrollment.id);
         continue;
@@ -169,16 +184,17 @@ Deno.serve(async (req: Request) => {
           .update({
             status: "completed",
             completed_at: new Date().toISOString(),
+            claim_token: null,
           })
           .eq("id", enrollment.id);
         totalCompleted++;
         continue;
       }
 
-      // Load template
+      // Load template (including components for variable resolution)
       const { data: template } = await supabase
         .from("whatsapp_templates")
-        .select("name, language")
+        .select("name, language, components, variable_mapping")
         .eq("id", step.templateId)
         .eq("status", "APPROVED")
         .single();
@@ -193,22 +209,23 @@ Deno.serve(async (req: Request) => {
             .update({
               current_step: nextStep,
               next_send_at: new Date(Date.now() + nextStepDef.delayMinutes * 60 * 1000).toISOString(),
+              claim_token: null,
             })
             .eq("id", enrollment.id);
         } else {
           await supabase
             .from("contact_sequence_state")
-            .update({ status: "completed", completed_at: new Date().toISOString() })
+            .update({ status: "completed", completed_at: new Date().toISOString(), claim_token: null })
             .eq("id", enrollment.id);
           totalCompleted++;
         }
         continue;
       }
 
-      // Load contact phone
+      // Load contact data (phone + fields for variable resolution)
       const { data: contact } = await supabase
         .from("campaign_contacts")
-        .select("phone, status")
+        .select("phone, name, email, status, custom_fields")
         .eq("id", enrollment.contact_id)
         .single();
 
@@ -219,18 +236,58 @@ Deno.serve(async (req: Request) => {
             status: "stopped_optout",
             stopped_at: new Date().toISOString(),
             stop_reason: "Contact opted out",
+            claim_token: null,
           })
           .eq("id", enrollment.id);
         continue;
       }
 
       try {
+        // Resolve template variables using contact data
+        const templateData = template as {
+          name: string;
+          language: string;
+          components?: { type: string; text?: string }[];
+          variable_mapping?: Record<string, string> | null;
+        };
+        const contactData = contact as {
+          phone: string;
+          name: string | null;
+          email: string | null;
+          custom_fields: Record<string, string> | null;
+        };
+
+        let resolvedComponents: Record<string, unknown>[] | undefined;
+        const varMapping = templateData.variable_mapping ?? {};
+        if (Object.keys(varMapping).length > 0 && templateData.components) {
+          const bodyComp = templateData.components.find((c) => c.type === "BODY");
+          const matches = bodyComp?.text?.match(/\{\{(\d+)\}\}/g);
+          if (matches && matches.length > 0) {
+            const parameters = matches.map((m: string) => {
+              const key = m.replace(/[{}]/g, "");
+              const field = varMapping[key];
+              let value = key;
+              if (field) {
+                if (field.startsWith("custom_fields.")) {
+                  const cfKey = field.replace("custom_fields.", "");
+                  value = contactData.custom_fields?.[cfKey] ?? key;
+                } else {
+                  value = (contactData as unknown as Record<string, string>)[field] ?? key;
+                }
+              }
+              return { type: "text", text: value };
+            });
+            resolvedComponents = [{ type: "body", parameters }];
+          }
+        }
+
         await sendTemplateMessage({
           phoneNumberId: config.phoneNumberId,
           accessToken: config.accessToken,
-          to: (contact as { phone: string }).phone,
-          templateName: (template as { name: string }).name,
-          language: (template as { language: string }).language,
+          to: contactData.phone,
+          templateName: templateData.name,
+          language: templateData.language,
+          components: resolvedComponents,
         });
 
         totalSent++;
@@ -246,6 +303,7 @@ Deno.serve(async (req: Request) => {
               current_step: nextStep,
               last_sent_at: new Date().toISOString(),
               next_send_at: new Date(Date.now() + nextStepDef.delayMinutes * 60 * 1000).toISOString(),
+              claim_token: null,
             })
             .eq("id", enrollment.id);
         } else {
@@ -256,6 +314,7 @@ Deno.serve(async (req: Request) => {
               status: "completed",
               last_sent_at: new Date().toISOString(),
               completed_at: new Date().toISOString(),
+              claim_token: null,
             })
             .eq("id", enrollment.id);
           totalCompleted++;

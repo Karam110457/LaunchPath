@@ -28,9 +28,30 @@ export function AddContactDialog({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    const trimmedPhone = phone.trim();
+    const trimmedPhone = phone.trim().replace(/\s+/g, "");
     if (!trimmedPhone) {
       setError("Phone number is required");
+      return;
+    }
+
+    const normalized = trimmedPhone.startsWith("+") ? trimmedPhone : `+${trimmedPhone}`;
+    if (!/^\+[1-9]\d{6,14}$/.test(normalized)) {
+      setError("Invalid phone format. Use E.164 format (e.g., +1234567890)");
+      return;
+    }
+
+    // Validate tags
+    const tagList = tags
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    if (tagList.length > 20) {
+      setError("Maximum 20 tags per contact");
+      return;
+    }
+    if (tagList.some((t) => t.length > 50)) {
+      setError("Each tag must be 50 characters or less");
       return;
     }
 
@@ -38,16 +59,11 @@ export function AddContactDialog({
     setError(null);
 
     try {
-      const tagList = tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean);
-
       const res = await fetch(`/api/campaigns/${campaignId}/contacts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phone: trimmedPhone,
+          phone: normalized,
           name: name.trim() || undefined,
           email: email.trim() || undefined,
           tags: tagList.length > 0 ? tagList : undefined,

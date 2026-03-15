@@ -34,6 +34,7 @@ import {
 type TestMode = "chat" | "voice";
 
 interface TranscriptEntry {
+  id: number;
   role: "user" | "agent";
   text: string;
   timestamp: Date;
@@ -162,7 +163,17 @@ export function FloatingChatWidget({
   );
 
   const addTranscriptEntry = useCallback((role: "user" | "agent", text: string) => {
-    setTranscript((prev) => [...prev, { role, text, timestamp: new Date() }]);
+    const id = Date.now();
+    setTranscript((prev) => [...prev, { role, text, timestamp: new Date(), id }]);
+    setTimeout(() => transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    return id;
+  }, []);
+
+  /** Update an existing transcript entry's text (for streaming display) */
+  const updateTranscriptText = useCallback((id: number, text: string) => {
+    setTranscript((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, text } : e))
+    );
     setTimeout(() => transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
   }, []);
 
@@ -267,98 +278,57 @@ export function FloatingChatWidget({
     }
   }, [agentId, config.voiceId, config.speed, playAudioBlob]);
 
-  // ─── Send text to agent chat API and get response ────────────────────────
-  const sendToAgent = useCallback(async (userText: string): Promise<string> => {
-    // Add to conversation history
-    conversationHistoryRef.current.push({ role: "user", content: userText });
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    // When in voice mode, prepend a system instruction to keep responses
-    // short and conversational (same pattern as VAPI/Retell).
-    const voiceSystemMessage = mode === "voice" ? {
-      role: "system",
-      content: "You are currently in a VOICE conversation. The user is speaking to you and will hear your response read aloud. Follow these rules strictly:\n" +
-        "Keep every response to 1 to 2 sentences maximum.\n" +
-        "Ask only one question at a time, never stack questions.\n" +
-        "Never use emojis, markdown formatting, bullet points, or dashes.\n" +
-        "Use natural spoken language with contractions.\n" +
-        "Say dates and numbers in spoken form (e.g. say January fifteenth, not 1/15).\n" +
-        "Be warm and conversational, not robotic.",
-    } : null;
-
-    const messages = [
-      ...(voiceSystemMessage ? [voiceSystemMessage] : []),
-      ...conversationHistoryRef.current.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
-    ];
-
+  // ─── Sentence-level TTS helper ──────────────────────────────────────────
+  // Fetches TTS for a single sentence and plays it. Returns when audio finishes.
+  const speakSentence = useCallback(async (sentence: string): Promise<void> => {
     try {
-      const res = await fetch(`/api/agents/${agentId}/chat`, {
+      const res = await fetch(`/api/agents/${agentId}/voice-preview`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages,
-          userMessage: userText,
+          text: sentence.slice(0, 500),
+          voiceId: config.voiceId || "nova",
+          speed: config.speed,
         }),
-        signal: controller.signal,
       });
-
-      if (!res.ok || !res.body) {
-        throw new Error(`Chat API returned ${res.status}`);
-      }
-
-      // Parse SSE stream to extract the full assistant response
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let fullText = "";
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const chunks = buffer.split("\n\n");
-        buffer = chunks.pop() ?? "";
-
-        for (const chunk of chunks) {
-          if (!chunk.startsWith("data: ")) continue;
-          const json = chunk.slice(6);
-          if (json === "[DONE]") continue;
-
-          try {
-            const event = JSON.parse(json);
-            if (event.type === "text-delta" && event.delta) {
-              fullText += event.delta;
-            } else if (event.type === "done" && event.text) {
-              fullText = event.text;
-            }
-          } catch {
-            // Skip malformed SSE events
-          }
-        }
-      }
-
-      // Save to conversation history
-      if (fullText) {
-        conversationHistoryRef.current.push({ role: "assistant", content: fullText });
-      }
-
-      return fullText;
-    } catch (err) {
-      if ((err as Error).name === "AbortError") return "";
-      console.error("[Voice] Agent chat error:", err);
-      throw err;
+      if (!res.ok) return;
+      const blob = await res.blob();
+      if (blob.size === 0) return;
+      await playAudioBlob(blob);
+    } catch {
+      // Non-fatal: skip this sentence's audio
     }
-  }, [agentId, mode]);
+  }, [agentId, config.voiceId, config.speed, playAudioBlob]);
 
-  // ─── Full voice loop: recognize → agent → TTS → transcript ──────────────
-  // Half-duplex: pause SpeechRecognition while agent is thinking + speaking
-  // to prevent TTS audio from being picked up by the mic (echo/feedback loop).
+  // ─── Sentence boundary detection ──────────────────────────────────────────
+  // Splits on sentence-ending punctuation, avoids false positives (Dr., Mr., etc.)
+  const ABBREVIATIONS = /(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|vs|etc|Inc|Ltd|Corp|Ave|St|Blvd)\.\s*$/i;
+
+  const extractSentences = useCallback((text: string): { sentences: string[]; remainder: string } => {
+    const sentences: string[] = [];
+    let remainder = text;
+
+    // Match sentence-ending punctuation followed by a space or end of string
+    const re = /[.!?]+[\s]+/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = re.exec(remainder)) !== null) {
+      const candidate = remainder.slice(lastIndex, match.index + match[0].length).trim();
+      // Skip abbreviations and very short fragments
+      if (candidate.length >= 10 && !ABBREVIATIONS.test(candidate)) {
+        sentences.push(candidate);
+        lastIndex = match.index + match[0].length;
+      }
+    }
+
+    return { sentences, remainder: remainder.slice(lastIndex) };
+  }, [ABBREVIATIONS]);
+
+  // ─── Streaming voice loop ─────────────────────────────────────────────────
+  // Like VAPI/Retell: stream LLM tokens → detect sentence boundaries →
+  // send each sentence to TTS immediately → play audio while LLM still generates.
+  // Transcript updates progressively as text arrives.
   const handleRecognizedSpeech = useCallback(async (text: string) => {
     if (!text.trim() || isProcessing) return;
 
@@ -374,30 +344,122 @@ export function FloatingChatWidget({
     // Add user speech to transcript
     addTranscriptEntry("user", text);
 
+    // Create a transcript entry for the agent that we'll update progressively
+    const agentEntryId = addTranscriptEntry("agent", "...");
+
+    // Conversation history
+    conversationHistoryRef.current.push({ role: "user", content: text });
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    // Voice system instruction (same pattern as VAPI/Retell)
+    const voiceSystemMessage = mode === "voice" ? {
+      role: "system",
+      content: "You are currently in a VOICE conversation. The user is speaking to you and will hear your response read aloud. Follow these rules strictly:\n" +
+        "Keep every response to 1 to 2 sentences maximum.\n" +
+        "Ask only one question at a time, never stack questions.\n" +
+        "Never use emojis, markdown formatting, bullet points, or dashes.\n" +
+        "Use natural spoken language with contractions.\n" +
+        "Say dates and numbers in spoken form (e.g. say January fifteenth, not 1/15).\n" +
+        "Be warm and conversational, not robotic.",
+    } : null;
+
+    const apiMessages = [
+      ...(voiceSystemMessage ? [voiceSystemMessage] : []),
+      ...conversationHistoryRef.current.map((m) => ({ role: m.role, content: m.content })),
+    ];
+
     try {
-      // Send to agent and get response
-      const response = await sendToAgent(text);
+      const res = await fetch(`/api/agents/${agentId}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: apiMessages, userMessage: text }),
+        signal: controller.signal,
+      });
 
-      if (response) {
-        // Add agent response to transcript
-        addTranscriptEntry("agent", response);
+      if (!res.ok || !res.body) {
+        throw new Error(`Chat API returned ${res.status}`);
+      }
 
-        // Speak the response via TTS (mic is paused)
-        await speakText(response);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let sseBuffer = "";
+      let fullText = "";
+      let sentenceBuffer = "";
+      // Chain TTS playback: each sentence waits for the previous to finish
+      let ttsChain = Promise.resolve();
+
+      // Read the SSE stream
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        sseBuffer += decoder.decode(value, { stream: true });
+        const chunks = sseBuffer.split("\n\n");
+        sseBuffer = chunks.pop() ?? "";
+
+        for (const chunk of chunks) {
+          if (!chunk.startsWith("data: ")) continue;
+          const json = chunk.slice(6);
+          if (json === "[DONE]") continue;
+
+          try {
+            const event = JSON.parse(json);
+            if (event.type === "text-delta" && event.delta) {
+              fullText += event.delta;
+              sentenceBuffer += event.delta;
+
+              // Update transcript progressively
+              updateTranscriptText(agentEntryId, fullText);
+
+              // Check for complete sentences — send each to TTS immediately
+              const { sentences, remainder } = extractSentences(sentenceBuffer);
+              if (sentences.length > 0) {
+                sentenceBuffer = remainder;
+                for (const s of sentences) {
+                  ttsChain = ttsChain.then(() => speakSentence(s));
+                }
+              }
+            } else if (event.type === "done" && event.text) {
+              fullText = event.text;
+              updateTranscriptText(agentEntryId, fullText);
+            }
+          } catch {
+            // Skip malformed SSE events
+          }
+        }
+      }
+
+      // Flush remaining text as final sentence
+      if (sentenceBuffer.trim()) {
+        ttsChain = ttsChain.then(() => speakSentence(sentenceBuffer.trim()));
+      }
+
+      // Wait for all queued TTS to finish playing
+      await ttsChain;
+
+      // Save final text to conversation history
+      if (fullText) {
+        conversationHistoryRef.current.push({ role: "assistant", content: fullText });
+        updateTranscriptText(agentEntryId, fullText);
       }
     } catch (err) {
-      console.error("[Voice] Conversation loop error:", err);
-      setVoiceError("Failed to get agent response");
+      if ((err as Error).name !== "AbortError") {
+        console.error("[Voice] Conversation loop error:", err);
+        setVoiceError("Failed to get agent response");
+      }
     } finally {
       setIsProcessing(false);
 
-      // Resume recognition after TTS finishes
+      // Resume recognition after all TTS finishes
       isSpeakingRef.current = false;
       if (recognitionRef.current) {
         try { recognitionRef.current.start(); } catch { /* may already be started */ }
       }
     }
-  }, [isProcessing, addTranscriptEntry, sendToAgent, speakText]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isProcessing, agentId, mode, addTranscriptEntry, updateTranscriptText, speakSentence, extractSentences]);
 
   // ─── Start / stop voice ─────────────────────────────────────────────────
   // getUserMedia MUST be called directly in the click handler (user gesture)
@@ -869,9 +931,9 @@ export function FloatingChatWidget({
                         </p>
                       ) : (
                         <>
-                          {transcript.map((entry, i) => (
+                          {transcript.map((entry) => (
                             <div
-                              key={i}
+                              key={entry.id}
                               className={cn(
                                 "flex gap-2",
                                 entry.role === "user" ? "justify-end" : "justify-start"

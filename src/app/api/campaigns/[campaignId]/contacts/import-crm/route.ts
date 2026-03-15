@@ -65,6 +65,13 @@ export async function POST(req: NextRequest, { params }: Params) {
     // Parse contacts from result
     const rawContacts = extractContacts(result);
 
+    if (rawContacts.length > 1000) {
+      return NextResponse.json(
+        { error: `Too many contacts (${rawContacts.length}). Maximum 1000 per import.` },
+        { status: 400 }
+      );
+    }
+
     if (preview) {
       return NextResponse.json({
         contacts: rawContacts.slice(0, 50),
@@ -73,43 +80,61 @@ export async function POST(req: NextRequest, { params }: Params) {
       });
     }
 
-    // Import contacts
+    // Validate and prepare contacts
+    const E164_RE = /^\+[1-9]\d{6,14}$/;
     let imported = 0;
     let skipped = 0;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const fromAny = supabase.from as any;
 
+    interface PreparedContact {
+      phone: string;
+      name: string | null;
+      email: string | null;
+      source_id: string | null;
+    }
+    const prepared: PreparedContact[] = [];
+
     for (const c of rawContacts) {
-      if (!c.phone) {
-        skipped++;
-        continue;
-      }
+      if (!c.phone) { skipped++; continue; }
 
       let phone = c.phone.replace(/\s+/g, "");
       if (!phone.startsWith("+")) phone = `+${phone}`;
+      if (!E164_RE.test(phone)) { skipped++; continue; }
+
+      prepared.push({
+        phone,
+        name: c.name || null,
+        email: c.email || null,
+        source_id: c.id || null,
+      });
+    }
+
+    // Batch upsert in chunks of 200
+    const CHUNK_SIZE = 200;
+    for (let i = 0; i < prepared.length; i += CHUNK_SIZE) {
+      const chunk = prepared.slice(i, i + CHUNK_SIZE);
+      const rows = chunk.map((c) => ({
+        user_id: user.id,
+        channel_id: channel.id,
+        agent_id: campaign.agent_id,
+        phone: c.phone,
+        name: c.name,
+        email: c.email,
+        source: `crm_${body.toolkit}`,
+        source_id: c.source_id,
+        tags: ["crm-import"],
+        custom_fields: {},
+      }));
 
       const { error } = await fromAny("campaign_contacts")
-        .upsert(
-          {
-            user_id: user.id,
-            channel_id: channel.id,
-            agent_id: campaign.agent_id,
-            phone,
-            name: c.name || null,
-            email: c.email || null,
-            source: `crm_${body.toolkit}`,
-            source_id: c.id || null,
-            tags: ["crm-import"],
-            custom_fields: c.custom_fields || {},
-          },
-          { onConflict: "channel_id,phone" }
-        );
+        .upsert(rows, { onConflict: "channel_id,phone" });
 
       if (error) {
-        skipped++;
+        skipped += chunk.length;
       } else {
-        imported++;
+        imported += chunk.length;
       }
     }
 

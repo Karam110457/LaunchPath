@@ -77,6 +77,7 @@ export function SequenceDetail({ campaignId, sequenceId, onBack }: SequenceDetai
   }
 
   async function enrollAllActive() {
+    if (!window.confirm("Enroll all active contacts into this sequence?")) return;
     setEnrolling(true);
     try {
       await fetch(`/api/campaigns/${campaignId}/sequences/${sequenceId}/enroll`, {
@@ -220,8 +221,8 @@ export function SequenceDetail({ campaignId, sequenceId, onBack }: SequenceDetai
                     {idx === 0 ? "Immediately" : `After ${formatDelay(step.delayMinutes)}`}
                   </span>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  Template: {step.templateId.slice(0, 8)}...
+                <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">
+                  Template: <span className="bg-neutral-100 dark:bg-neutral-800 px-1 py-0.5 rounded">{step.templateId.slice(0, 8)}</span>
                 </p>
               </div>
             </div>

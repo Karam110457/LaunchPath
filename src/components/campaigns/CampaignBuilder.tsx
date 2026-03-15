@@ -132,18 +132,37 @@ export function CampaignBuilder({
   const agentId = campaign.agent_id;
   const token = channel?.token ?? "";
 
+  const tabTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Animate tab content on switch
   const switchWaTab = useCallback((next: WhatsAppTab) => {
     if (next === waTab) return;
     setTabTransition(true);
-    const timeout = setTimeout(() => {
+    if (tabTimeoutRef.current) clearTimeout(tabTimeoutRef.current);
+    tabTimeoutRef.current = setTimeout(() => {
       prevTabRef.current = next;
       setWaTab(next);
-      // Re-enable after a frame so the new content fades in
       requestAnimationFrame(() => setTabTransition(false));
     }, 120);
-    return () => clearTimeout(timeout);
   }, [waTab]);
+
+  // Clean up tab transition timeout on unmount (fix 4.3)
+  useEffect(() => {
+    return () => {
+      if (tabTimeoutRef.current) clearTimeout(tabTimeoutRef.current);
+    };
+  }, []);
+
+  // Warn about unsaved changes (fix 4.2)
+  useEffect(() => {
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      if (saving || deploying) {
+        e.preventDefault();
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [saving, deploying]);
 
   // Fetch approved templates for fallback selector
   useEffect(() => {
@@ -594,6 +613,7 @@ export function CampaignBuilder({
           agentId={agentId}
           channelId={channel.id}
           hasBusinessAccountId={hasWaba}
+          campaignId={campaign.id}
         />
       )}
 
@@ -643,7 +663,7 @@ export function CampaignBuilder({
       )}
 
       {waTab === "sequences" && channel && (
-        <SequencesTab campaignId={campaign.id} channelId={channel.id} />
+        <SequencesTab campaignId={campaign.id} agentId={agentId} channelId={channel.id} />
       )}
 
       {waTab === "sequences" && !channel && (

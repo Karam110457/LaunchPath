@@ -180,6 +180,18 @@ export function CsvUploadDialog({
               <div
                 className="rounded-[20px] border-2 border-dashed border-neutral-300/60 dark:border-neutral-700/50 p-8 text-center cursor-pointer hover:border-primary/40 transition-colors"
                 onClick={() => fileRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const f = e.dataTransfer.files?.[0];
+                  if (f && (f.name.endsWith(".csv") || f.type === "text/csv")) {
+                    handleFileSelect(f);
+                  } else {
+                    setError("Please drop a CSV file");
+                  }
+                }}
               >
                 {loading ? (
                   <Loader2 className="w-8 h-8 animate-spin text-muted-foreground mx-auto" />
@@ -230,11 +242,17 @@ export function CsvUploadDialog({
                       }
                       className={`${INPUT_CLASS} flex-1`}
                     >
-                      {MAPPABLE_FIELDS.map((f) => (
-                        <option key={f.value} value={f.value}>
-                          {f.label}
+                      {MAPPABLE_FIELDS.map((f) => {
+                        // Disable fields already mapped to another column (prevent duplicates)
+                        const alreadyMapped = f.value && Object.entries(mapping).some(
+                          ([col, val]) => val === f.value && col !== header
+                        );
+                        return (
+                        <option key={f.value} value={f.value} disabled={!!alreadyMapped}>
+                          {f.label}{alreadyMapped ? " (mapped)" : ""}
                         </option>
-                      ))}
+                        );
+                      })}
                     </select>
                   </div>
                 ))}

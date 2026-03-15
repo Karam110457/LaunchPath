@@ -3,6 +3,8 @@
  */
 
 const GRAPH_API_BASE = "https://graph.facebook.com/v25.0";
+const MEDIA_DOWNLOAD_TIMEOUT_MS = 15_000; // 15 seconds
+const MAX_MEDIA_SIZE_BYTES = 16 * 1024 * 1024; // 16MB
 
 /**
  * Download media from WhatsApp Cloud API.
@@ -17,6 +19,7 @@ export async function downloadWhatsAppMedia(params: {
   // Get media URL
   const metaRes = await fetch(`${GRAPH_API_BASE}/${mediaId}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(MEDIA_DOWNLOAD_TIMEOUT_MS),
   });
 
   if (!metaRes.ok) {
@@ -28,16 +31,27 @@ export async function downloadWhatsAppMedia(params: {
     mime_type: string;
   };
 
-  // Download binary
+  // Download binary with timeout and size limit
   const mediaRes = await fetch(metaData.url, {
     headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(MEDIA_DOWNLOAD_TIMEOUT_MS),
   });
 
   if (!mediaRes.ok) {
     throw new Error(`Failed to download media (${mediaRes.status})`);
   }
 
+  // Check Content-Length header first (fast rejection)
+  const contentLength = parseInt(mediaRes.headers.get("content-length") ?? "0", 10);
+  if (contentLength > MAX_MEDIA_SIZE_BYTES) {
+    throw new Error(`Media too large (${contentLength} bytes). Maximum ${MAX_MEDIA_SIZE_BYTES} bytes.`);
+  }
+
   const arrayBuffer = await mediaRes.arrayBuffer();
+  if (arrayBuffer.byteLength > MAX_MEDIA_SIZE_BYTES) {
+    throw new Error(`Media too large (${arrayBuffer.byteLength} bytes). Maximum ${MAX_MEDIA_SIZE_BYTES} bytes.`);
+  }
+
   return {
     buffer: Buffer.from(arrayBuffer),
     mimeType: metaData.mime_type,

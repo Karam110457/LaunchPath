@@ -68,7 +68,14 @@ export async function GET(
   }
 
   if (search) {
-    query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%,email.ilike.%${search}%`);
+    // Sanitize search to prevent PostgREST filter injection:
+    // strip characters that have special meaning in PostgREST filter syntax
+    const sanitized = search.replace(/[%_().,]/g, "").trim();
+    if (sanitized) {
+      query = query.or(
+        `name.ilike.%${sanitized}%,phone.ilike.%${sanitized}%,email.ilike.%${sanitized}%`
+      );
+    }
   }
 
   if (tagsParam) {
@@ -76,6 +83,15 @@ export async function GET(
     if (tags.length > 0) {
       query = query.contains("tags", tags);
     }
+  }
+
+  const from = searchParams.get("from");
+  const to = searchParams.get("to");
+  if (from) {
+    query = query.gte("created_at", `${from}T00:00:00Z`);
+  }
+  if (to) {
+    query = query.lte("created_at", `${to}T23:59:59Z`);
   }
 
   const { data: contacts, count, error } = await query;

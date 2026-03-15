@@ -131,10 +131,23 @@ export async function POST(
   let skipped = 0;
   const importErrors: { row: number; reason: string }[] = [];
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fromAny = supabase.from as any;
+
+  // Validate and prepare all rows first
+  interface PreparedRow {
+    csvRow: number;
+    phone: string;
+    name: string | null;
+    email: string | null;
+    tags: string[];
+    custom_fields: Record<string, string>;
+  }
+  const prepared: PreparedRow[] = [];
+
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
 
-    // Extract phone
     let phone = (row[mapping.phone] ?? "").replace(/\s+/g, "");
     if (!phone) {
       skipped++;
@@ -151,7 +164,6 @@ export async function POST(
     const name = mapping.name ? (row[mapping.name] ?? "").trim() || null : null;
     const email = mapping.email ? (row[mapping.email] ?? "").trim() || null : null;
 
-    // Build custom fields from any extra mapped columns
     const customFields: Record<string, string> = {};
     for (const [field, csvCol] of Object.entries(mapping)) {
       if (!["phone", "name", "email", "tags"].includes(field) && row[csvCol]) {
@@ -159,38 +171,43 @@ export async function POST(
       }
     }
 
-    // Row-level tags
     const rowTags = mapping.tags
       ? (row[mapping.tags] ?? "").split(",").map((t) => t.trim()).filter(Boolean)
       : [];
     const allTags = [...new Set([...importTags, ...rowTags])];
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: contact, error } = await (supabase.from as any)("campaign_contacts")
-      .upsert(
-        {
-          user_id: user.id,
-          channel_id: channel.id,
-          agent_id: campaign.agent_id,
-          phone,
-          name,
-          email,
-          tags: allTags,
-          custom_fields: Object.keys(customFields).length > 0 ? customFields : {},
-          source: "csv_upload",
-        },
-        { onConflict: "channel_id,phone" }
-      )
-      .select("id, created_at, updated_at")
-      .single();
+    prepared.push({ csvRow: i + 2, phone, name, email, tags: allTags, custom_fields: customFields });
+  }
+
+  // Batch upsert in chunks of 500
+  const CHUNK_SIZE = 500;
+  for (let i = 0; i < prepared.length; i += CHUNK_SIZE) {
+    const chunk = prepared.slice(i, i + CHUNK_SIZE);
+    const upsertRows = chunk.map((p) => ({
+      user_id: user.id,
+      channel_id: channel.id,
+      agent_id: campaign.agent_id,
+      phone: p.phone,
+      name: p.name,
+      email: p.email,
+      tags: p.tags,
+      custom_fields: Object.keys(p.custom_fields).length > 0 ? p.custom_fields : {},
+      source: "csv_upload",
+    }));
+
+    const { data: results, error } = await fromAny("campaign_contacts")
+      .upsert(upsertRows, { onConflict: "channel_id,phone" })
+      .select("id, created_at, updated_at");
 
     if (error) {
-      skipped++;
-      importErrors.push({ row: i + 2, reason: "Database error" });
+      skipped += chunk.length;
+      for (const p of chunk) {
+        importErrors.push({ row: p.csvRow, reason: "Database error" });
+      }
       continue;
     }
 
-    if (contact) {
+    for (const contact of (results ?? []) as { id: string; created_at: string; updated_at: string }[]) {
       const createdAt = new Date(contact.created_at).getTime();
       const updatedAt = new Date(contact.updated_at).getTime();
       if (Math.abs(updatedAt - createdAt) < 1000) {

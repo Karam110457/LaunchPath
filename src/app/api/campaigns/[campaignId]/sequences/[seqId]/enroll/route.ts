@@ -54,6 +54,9 @@ export async function POST(req: NextRequest, { params }: Params) {
   let contactIds: string[] = [];
 
   if (body.contactIds && body.contactIds.length > 0) {
+    if (body.contactIds.length > 1000) {
+      return NextResponse.json({ error: "Maximum 1000 contactIds per request" }, { status: 400 });
+    }
     contactIds = body.contactIds;
   } else if (body.filter) {
     // Build filter query

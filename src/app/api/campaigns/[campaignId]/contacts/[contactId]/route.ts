@@ -82,6 +82,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     name?: string;
     email?: string;
     tags?: string[];
+    add_tags?: string[];
     status?: string;
     custom_fields?: Record<string, unknown>;
   };
@@ -92,7 +93,38 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
   if (body.name !== undefined) updates.name = body.name?.trim() || null;
   if (body.email !== undefined) updates.email = body.email?.trim() || null;
-  if (body.tags !== undefined) updates.tags = body.tags;
+  if (body.tags !== undefined) {
+    if (!Array.isArray(body.tags)) {
+      return NextResponse.json({ error: "tags must be an array" }, { status: 400 });
+    }
+    if (body.tags.length > 20) {
+      return NextResponse.json({ error: "Maximum 20 tags per contact" }, { status: 400 });
+    }
+    for (const tag of body.tags) {
+      if (typeof tag !== "string" || !tag.trim()) {
+        return NextResponse.json({ error: "Each tag must be a non-empty string" }, { status: 400 });
+      }
+      if (tag.length > 50) {
+        return NextResponse.json({ error: "Each tag must be 50 characters or less" }, { status: 400 });
+      }
+    }
+    updates.tags = body.tags.map((t) => t.trim());
+  }
+  if (body.add_tags && Array.isArray(body.add_tags) && !body.tags) {
+    // Fetch existing tags and merge
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: existing } = await (supabase.from as any)("campaign_contacts")
+      .select("tags")
+      .eq("id", contactId)
+      .eq("channel_id", channel.id)
+      .single();
+    const currentTags: string[] = existing?.tags ?? [];
+    const merged = [...new Set([...currentTags, ...body.add_tags.map((t) => t.trim()).filter(Boolean)])];
+    if (merged.length > 20) {
+      return NextResponse.json({ error: "Maximum 20 tags per contact" }, { status: 400 });
+    }
+    updates.tags = merged;
+  }
   if (body.status !== undefined) {
     const allowed = ["active", "opted_out"];
     if (!allowed.includes(body.status)) {
@@ -100,7 +132,29 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     }
     updates.status = body.status;
   }
-  if (body.custom_fields !== undefined) updates.custom_fields = body.custom_fields;
+  if (body.custom_fields !== undefined) {
+    if (typeof body.custom_fields !== "object" || Array.isArray(body.custom_fields) || body.custom_fields === null) {
+      return NextResponse.json({ error: "custom_fields must be an object" }, { status: 400 });
+    }
+    const keys = Object.keys(body.custom_fields);
+    if (keys.length > 20) {
+      return NextResponse.json({ error: "Maximum 20 custom fields" }, { status: 400 });
+    }
+    const serialized = JSON.stringify(body.custom_fields);
+    if (serialized.length > 4096) {
+      return NextResponse.json({ error: "custom_fields must be under 4KB" }, { status: 400 });
+    }
+    for (const key of keys) {
+      if (key.length > 64) {
+        return NextResponse.json({ error: "custom_fields key must be 64 characters or less" }, { status: 400 });
+      }
+      const val = body.custom_fields[key];
+      if (val !== null && typeof val !== "string" && typeof val !== "number" && typeof val !== "boolean") {
+        return NextResponse.json({ error: `custom_fields["${key}"] must be a string, number, boolean, or null` }, { status: 400 });
+      }
+    }
+    updates.custom_fields = body.custom_fields;
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: contact, error } = await (supabase.from as any)("campaign_contacts")

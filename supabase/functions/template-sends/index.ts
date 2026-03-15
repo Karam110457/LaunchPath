@@ -13,6 +13,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const BATCH_SIZE = 50;
 const META_API_VERSION = "v25.0";
+const MAX_RETRIES = 3;
+const RETRY_DELAYS_MS = [60_000, 300_000, 900_000]; // 1m, 5m, 15m
 
 // Types
 interface WhatsAppConfig {
@@ -181,7 +183,23 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    for (const job of jobs as SendJob[]) {
+    // Filter out scheduled jobs that aren't due yet
+    const now = new Date().toISOString();
+    const readyJobs = (jobs as SendJob[]).filter((job) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const scheduledFor = (job as any).scheduled_for;
+      if (scheduledFor && scheduledFor > now) return false;
+      return true;
+    });
+
+    if (readyJobs.length === 0) {
+      return new Response(
+        JSON.stringify({ processed: 0, sent: 0, failed: 0 }),
+        { headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    for (const job of readyJobs) {
       // Mark as processing
       if (job.status === "pending") {
         await supabase
@@ -235,33 +253,85 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      // Get batch of queued messages
-      const { data: messages } = await supabase
-        .from("template_send_messages")
-        .select("id, phone, contact_id")
-        .eq("job_id", job.id)
-        .eq("status", "queued")
-        .limit(BATCH_SIZE);
+      // Atomically claim a batch of queued messages to prevent duplicate
+      // processing when concurrent cron invocations overlap.
+      const claimToken = crypto.randomUUID();
+      const { count: claimedCount } = await supabase.rpc("claim_send_messages", {
+        p_job_id: job.id,
+        p_claim_token: claimToken,
+        p_limit: BATCH_SIZE,
+      });
 
-      if (!messages || messages.length === 0) {
-        // No more queued messages — mark complete
-        await supabase
-          .from("template_send_jobs")
-          .update({
-            status: "completed",
-            completed_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", job.id);
+      if (!claimedCount || claimedCount === 0) {
+        // No more queued messages — check if job is truly done
+        const { data: remaining } = await supabase
+          .from("template_send_messages")
+          .select("id", { count: "exact", head: true })
+          .eq("job_id", job.id)
+          .in("status", ["queued", "processing"]);
+
+        if (!remaining || (remaining as unknown[]).length === 0) {
+          await supabase
+            .from("template_send_jobs")
+            .update({
+              status: "completed",
+              completed_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", job.id);
+        }
         continue;
       }
+
+      // Fetch the claimed messages (also filter out opted-out contacts)
+      const { data: messages } = await supabase
+        .from("template_send_messages")
+        .select("id, phone, contact_id, retry_count, next_retry_at")
+        .eq("job_id", job.id)
+        .eq("claim_token", claimToken);
 
       const variableMapping = (job.variable_mapping ??
         template.variable_mapping ??
         {}) as Record<string, string>;
 
+      if (!messages || messages.length === 0) continue;
+
+      // Filter out messages that aren't ready for retry yet
+      const nowMs = Date.now();
+      const readyMessages = (messages as (SendMessage & { retry_count?: number; next_retry_at?: string })[]).filter((m) => {
+        if (m.next_retry_at && new Date(m.next_retry_at).getTime() > nowMs) return false;
+        return true;
+      });
+
+      if (readyMessages.length === 0) continue;
+
+      // Filter out opted-out contacts before sending
+      const contactIdsInBatch = readyMessages
+        .map((m) => m.contact_id)
+        .filter(Boolean) as string[];
+      const optedOutIds = new Set<string>();
+      if (contactIdsInBatch.length > 0) {
+        const { data: optedOut } = await supabase
+          .from("campaign_contacts")
+          .select("id")
+          .in("id", contactIdsInBatch)
+          .eq("status", "opted_out");
+        for (const c of optedOut ?? []) {
+          optedOutIds.add((c as { id: string }).id);
+        }
+      }
+
       // Process each message
-      for (const msg of messages as SendMessage[]) {
+      for (const msg of readyMessages) {
+        // Skip opted-out contacts
+        if (msg.contact_id && optedOutIds.has(msg.contact_id)) {
+          await supabase
+            .from("template_send_messages")
+            .update({ status: "skipped", error_message: "Contact opted out" })
+            .eq("id", msg.id);
+          continue;
+        }
+
         try {
           let resolvedComponents: Record<string, unknown>[] | undefined;
 
@@ -304,14 +374,32 @@ Deno.serve(async (req: Request) => {
 
           totalSent++;
         } catch (err) {
-          await supabase
-            .from("template_send_messages")
-            .update({
-              status: "failed",
-              error_message:
-                err instanceof Error ? err.message : String(err),
-            })
-            .eq("id", msg.id);
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const currentRetry = (msg as any).retry_count ?? 0;
+
+          if (currentRetry < MAX_RETRIES) {
+            const delayMs = RETRY_DELAYS_MS[currentRetry] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1];
+            const nextRetryAt = new Date(Date.now() + delayMs).toISOString();
+            await supabase
+              .from("template_send_messages")
+              .update({
+                status: "queued",
+                retry_count: currentRetry + 1,
+                last_error: errorMessage,
+                next_retry_at: nextRetryAt,
+              })
+              .eq("id", msg.id);
+          } else {
+            await supabase
+              .from("template_send_messages")
+              .update({
+                status: "failed",
+                error_message: errorMessage,
+                last_error: errorMessage,
+              })
+              .eq("id", msg.id);
+          }
 
           totalFailed++;
         }

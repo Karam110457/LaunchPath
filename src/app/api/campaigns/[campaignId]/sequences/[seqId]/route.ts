@@ -74,7 +74,27 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
   if (body.name !== undefined) updates.name = body.name.trim();
   if (body.description !== undefined) updates.description = body.description?.trim() || null;
-  if (body.steps !== undefined) updates.steps = body.steps;
+  if (body.steps !== undefined) {
+    if (!Array.isArray(body.steps)) {
+      return NextResponse.json({ error: "steps must be an array" }, { status: 400 });
+    }
+    if (body.steps.length > 20) {
+      return NextResponse.json({ error: "Maximum 20 steps per sequence" }, { status: 400 });
+    }
+    for (let i = 0; i < body.steps.length; i++) {
+      const s = body.steps[i];
+      if (typeof s.stepNumber !== "number" || typeof s.delayMinutes !== "number" || typeof s.templateId !== "string") {
+        return NextResponse.json({ error: `Step ${i}: stepNumber (number), delayMinutes (number), and templateId (string) are required` }, { status: 400 });
+      }
+      if (s.delayMinutes < 0 || s.delayMinutes > 525600) {
+        return NextResponse.json({ error: `Step ${i}: delayMinutes must be between 0 and 525600 (365 days)` }, { status: 400 });
+      }
+      if (!s.templateId.trim()) {
+        return NextResponse.json({ error: `Step ${i}: templateId must not be empty` }, { status: 400 });
+      }
+    }
+    updates.steps = body.steps;
+  }
   if (body.auto_enroll !== undefined) updates.auto_enroll = body.auto_enroll;
   if (body.stop_on_reply !== undefined) updates.stop_on_reply = body.stop_on_reply;
   if (body.stop_on_tags !== undefined) updates.stop_on_tags = body.stop_on_tags;

@@ -52,10 +52,30 @@ export async function GET(
     }
   }
 
-  const shapedChannels = channels.map((ch) => ({
-    ...ch,
-    conversation_count: conversationCounts[ch.id as string] ?? 0,
-  }));
+  // Strip sensitive fields from channel config before sending to portal users
+  const SENSITIVE_CONFIG_KEYS = new Set([
+    "accessToken", "access_token",
+    "verifyToken", "verify_token",
+    "webhookSecret", "webhook_secret",
+    "appSecret", "app_secret",
+  ]);
+
+  const shapedChannels = channels.map((ch) => {
+    const config = ch.config as Record<string, unknown> | null;
+    let safeConfig = config;
+    if (config && typeof config === "object") {
+      safeConfig = Object.fromEntries(
+        Object.entries(config).map(([k, v]) =>
+          SENSITIVE_CONFIG_KEYS.has(k) ? [k, "••••" + String(v ?? "").slice(-4)] : [k, v]
+        )
+      );
+    }
+    return {
+      ...ch,
+      config: safeConfig,
+      conversation_count: conversationCounts[ch.id as string] ?? 0,
+    };
+  });
 
   return NextResponse.json({
     campaign: {
@@ -112,8 +132,36 @@ export async function PATCH(
 
   // Update channel config if provided
   if (body.channel_id && body.channel_config) {
+    // Verify the channel belongs to this campaign (prevents updating arbitrary channels)
+    const { data: ownedChannel } = await serviceClient
+      .from("agent_channels")
+      .select("id, config")
+      .eq("id", body.channel_id)
+      .eq("campaign_id", campaignId)
+      .single();
+
+    if (!ownedChannel) {
+      return NextResponse.json({ error: "Channel not found for this campaign" }, { status: 403 });
+    }
+
+    // Prevent portal users from overwriting sensitive config fields
+    // Merge incoming config with existing, preserving secrets that portal can't see
+    const existingConfig = (ownedChannel.config ?? {}) as Record<string, unknown>;
+    const SENSITIVE_CONFIG_KEYS = new Set([
+      "accessToken", "access_token",
+      "verifyToken", "verify_token",
+      "webhookSecret", "webhook_secret",
+      "appSecret", "app_secret",
+    ]);
+    const mergedConfig = { ...existingConfig };
+    for (const [key, value] of Object.entries(body.channel_config)) {
+      // Skip masked values (portal sends back "••••xxxx") and sensitive keys
+      if (SENSITIVE_CONFIG_KEYS.has(key)) continue;
+      mergedConfig[key] = value;
+    }
+
     const channelUpdates: Record<string, unknown> = {
-      config: body.channel_config,
+      config: mergedConfig,
     };
     if (body.allowed_origins) {
       channelUpdates.allowed_origins = body.allowed_origins;
@@ -128,7 +176,8 @@ export async function PATCH(
     const { error } = await serviceClient
       .from("agent_channels")
       .update(channelUpdates)
-      .eq("id", body.channel_id);
+      .eq("id", body.channel_id)
+      .eq("campaign_id", campaignId);
 
     if (error) {
       logger.error("Portal: failed to update channel", { error, channelId: body.channel_id });

@@ -20,6 +20,10 @@ export interface ContactRecord {
 interface ContactsListProps {
   contacts: ContactRecord[];
   onSelect?: (contact: ContactRecord) => void;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+  onToggleAll?: () => void;
+  selectionMode?: boolean;
 }
 
 function formatDate(dateStr: string) {
@@ -27,7 +31,7 @@ function formatDate(dateStr: string) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export function ContactsList({ contacts, onSelect }: ContactsListProps) {
+export function ContactsList({ contacts, onSelect, selectedIds, onToggleSelect, onToggleAll, selectionMode }: ContactsListProps) {
   if (contacts.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-neutral-300/60 dark:border-neutral-700/50 bg-neutral-100/30 dark:bg-neutral-800/20 p-6">
@@ -40,8 +44,16 @@ export function ContactsList({ contacts, onSelect }: ContactsListProps) {
 
   return (
     <div className="space-y-1">
-      {/* Header */}
-      <div className="grid grid-cols-[1fr_120px_100px_80px_60px] gap-3 px-4 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+      {/* Header — hidden on small screens */}
+      <div className={`hidden md:grid ${selectionMode ? "grid-cols-[28px_1fr_120px_100px_80px_60px]" : "grid-cols-[1fr_120px_100px_80px_60px]"} gap-3 px-4 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider`}>
+        {selectionMode && (
+          <input
+            type="checkbox"
+            checked={selectedIds?.size === contacts.length && contacts.length > 0}
+            onChange={() => onToggleAll?.()}
+            className="rounded accent-orange-500"
+          />
+        )}
         <span>Contact</span>
         <span>Phone</span>
         <span>Tags</span>
@@ -50,14 +62,22 @@ export function ContactsList({ contacts, onSelect }: ContactsListProps) {
       </div>
 
       {contacts.map((c) => (
-        <button
+        <div
           key={c.id}
-          type="button"
-          onClick={() => onSelect?.(c)}
-          className="w-full grid grid-cols-[1fr_120px_100px_80px_60px] gap-3 items-center px-4 py-2.5 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors text-left group"
+          className={`w-full ${selectionMode ? "md:grid-cols-[28px_1fr_120px_100px_80px_60px]" : "md:grid-cols-[1fr_120px_100px_80px_60px]"} md:grid gap-3 items-center px-4 py-2.5 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors text-left group flex flex-col md:flex-row cursor-pointer ${selectedIds?.has(c.id) ? "bg-orange-50/40 dark:bg-orange-900/10" : ""}`}
+          onClick={() => selectionMode ? onToggleSelect?.(c.id) : onSelect?.(c)}
         >
-          {/* Name + email */}
-          <div className="min-w-0">
+          {selectionMode && (
+            <input
+              type="checkbox"
+              checked={selectedIds?.has(c.id) ?? false}
+              onChange={() => onToggleSelect?.(c.id)}
+              onClick={(e) => e.stopPropagation()}
+              className="rounded accent-orange-500"
+            />
+          )}
+          {/* Name + email + phone (stacked on mobile) */}
+          <div className="min-w-0 w-full md:w-auto">
             <p className="text-sm font-medium text-foreground truncate">
               {c.name || c.profile_name || "Unknown"}
             </p>
@@ -67,16 +87,21 @@ export function ContactsList({ contacts, onSelect }: ContactsListProps) {
                 {c.email}
               </p>
             )}
+            {/* Phone inline on mobile */}
+            <p className="text-[11px] text-muted-foreground font-mono flex items-center gap-1 mt-0.5 md:hidden">
+              <Phone className="w-3 h-3 shrink-0" />
+              {c.phone}
+            </p>
           </div>
 
-          {/* Phone */}
-          <span className="text-xs text-muted-foreground font-mono flex items-center gap-1">
+          {/* Phone — desktop only */}
+          <span className="hidden md:flex text-xs text-muted-foreground font-mono items-center gap-1">
             <Phone className="w-3 h-3 shrink-0" />
             {c.phone.length > 12 ? `${c.phone.slice(0, 4)}...${c.phone.slice(-4)}` : c.phone}
           </span>
 
           {/* Tags */}
-          <div className="flex items-center gap-1 overflow-hidden">
+          <div className="flex items-center gap-1 overflow-hidden mt-1 md:mt-0">
             {c.tags.slice(0, 2).map((tag) => (
               <span
                 key={tag}
@@ -91,17 +116,17 @@ export function ContactsList({ contacts, onSelect }: ContactsListProps) {
             )}
           </div>
 
-          {/* Source */}
-          <span className="text-[10px] text-muted-foreground capitalize">
+          {/* Source — hidden on mobile */}
+          <span className="hidden md:block text-[10px] text-muted-foreground capitalize">
             {c.source?.replace("_", " ") ?? "—"}
           </span>
 
-          {/* Conversation count */}
-          <span className="text-xs text-muted-foreground text-right flex items-center justify-end gap-1">
+          {/* Conversation count — hidden on mobile */}
+          <span className="hidden md:flex text-xs text-muted-foreground text-right items-center justify-end gap-1">
             <MessageCircle className="w-3 h-3" />
             {c.conversation_count ?? 0}
           </span>
-        </button>
+        </div>
       ))}
     </div>
   );

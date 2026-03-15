@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Copy, Check, Shield, MessageSquare, Settings2, Sliders } from "lucide-react";
+import { Copy, Check, Shield, MessageSquare, Settings2, Sliders, Eye, EyeOff } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import type { WhatsAppConfig } from "@/lib/channels/types";
 import { EventsConfigPanel } from "./whatsapp/EventsConfigPanel";
@@ -140,6 +140,8 @@ export function WhatsAppConfigPanel({
   const [activeTab, setActiveTab] = useState<TabId>("credentials");
   const [copied, setCopied] = useState(false);
   const [tabFading, setTabFading] = useState(false);
+  const [tokenRevealed, setTokenRevealed] = useState(false);
+  const [tokenCopied, setTokenCopied] = useState(false);
   const [contentHeight, setContentHeight] = useState<number | undefined>(undefined);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -164,9 +166,20 @@ export function WhatsAppConfigPanel({
 
   function updateConfig<K extends keyof WhatsAppConfig>(
     key: K,
-    value: WhatsAppConfig[K]
+    value: Partial<WhatsAppConfig>[K]
   ) {
     onChange({ ...config, [key]: value });
+  }
+
+  /** Type-safe updater for businessHours — fills defaults so required fields are always present */
+  function updateBusinessHours(patch: Partial<NonNullable<WhatsAppConfig["businessHours"]>>) {
+    const current = config.businessHours ?? {
+      enabled: false,
+      timezone: "UTC",
+      schedule: {},
+      outsideHoursBehavior: "away_message" as const,
+    };
+    updateConfig("businessHours", { ...current, ...patch });
   }
 
   async function copyWebhookUrl() {
@@ -358,10 +371,10 @@ export function WhatsAppConfigPanel({
               <Toggle
                 checked={config.templateFallback?.enabled ?? false}
                 onChange={(v) =>
-                  updateConfig("templateFallback" as keyof WhatsAppConfig, {
+                  updateConfig("templateFallback", {
                     ...config.templateFallback,
                     enabled: v,
-                  } as never)
+                  })
                 }
               />
             </div>
@@ -374,11 +387,11 @@ export function WhatsAppConfigPanel({
                 <select
                   value={config.templateFallback?.templateId ?? ""}
                   onChange={(e) =>
-                    updateConfig("templateFallback" as keyof WhatsAppConfig, {
+                    updateConfig("templateFallback", {
                       ...config.templateFallback,
                       enabled: true,
                       templateId: e.target.value || undefined,
-                    } as never)
+                    })
                   }
                   className={INPUT_CLASS}
                 >
@@ -409,19 +422,35 @@ export function WhatsAppConfigPanel({
             />
 
             <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-xs">Enable Business Hours</Label>
-                <p className="text-[11px] text-muted-foreground">
-                  Only auto-respond during configured hours
-                </p>
+              <div className="flex items-center gap-2">
+                <div>
+                  <Label className="text-xs">Enable Business Hours</Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Only auto-respond during configured hours
+                  </p>
+                </div>
+                {config.businessHours?.enabled && (() => {
+                  const tz = config.businessHours?.timezone ?? "UTC";
+                  const schedule = config.businessHours?.schedule ?? {};
+                  const now = new Date();
+                  const dayName = now.toLocaleDateString("en-US", { weekday: "long", timeZone: tz }).toLowerCase();
+                  const daySchedule = schedule[dayName];
+                  if (!daySchedule) {
+                    return <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium">Closed today</span>;
+                  }
+                  const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: tz });
+                  const isOpen = timeStr >= daySchedule.open && timeStr < daySchedule.close;
+                  return isOpen
+                    ? <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-medium">Open now</span>
+                    : <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 font-medium">Closed</span>;
+                })()}
               </div>
               <Toggle
                 checked={config.businessHours?.enabled ?? false}
                 onChange={(v) =>
-                  updateConfig("businessHours" as keyof WhatsAppConfig, {
-                    ...config.businessHours,
+                  updateBusinessHours({
                     enabled: v,
-                    timezone: config.businessHours?.timezone ?? "UTC",
+                    timezone: config.businessHours?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
                     schedule: config.businessHours?.schedule ?? {
                       monday: { open: "09:00", close: "17:00" },
                       tuesday: { open: "09:00", close: "17:00" },
@@ -431,8 +460,7 @@ export function WhatsAppConfigPanel({
                       saturday: null,
                       sunday: null,
                     },
-                    outsideHoursBehavior: config.businessHours?.outsideHoursBehavior ?? "away_message",
-                  } as never)
+                  })
                 }
               />
             </div>
@@ -443,18 +471,42 @@ export function WhatsAppConfigPanel({
                   <select
                     value={config.businessHours?.timezone ?? "UTC"}
                     onChange={(e) =>
-                      updateConfig("businessHours" as keyof WhatsAppConfig, {
-                        ...config.businessHours,
-                        timezone: e.target.value,
-                      } as never)
+                      updateBusinessHours({ timezone: e.target.value })
                     }
                     className={INPUT_CLASS}
                   >
-                    {TIMEZONES.map((tz) => (
-                      <option key={tz} value={tz}>{tz}</option>
-                    ))}
+                    {(() => {
+                      const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                      const allTz = TIMEZONES.includes(detected) ? TIMEZONES : [detected, ...TIMEZONES];
+                      return allTz.map((tz) => (
+                        <option key={tz} value={tz}>
+                          {tz}{tz === detected ? " (detected)" : ""}
+                        </option>
+                      ));
+                    })()}
                   </select>
                 </FieldGroup>
+
+                {/* Quick presets */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Quick Presets</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { label: "9-5 Weekdays", schedule: { monday: { open: "09:00", close: "17:00" }, tuesday: { open: "09:00", close: "17:00" }, wednesday: { open: "09:00", close: "17:00" }, thursday: { open: "09:00", close: "17:00" }, friday: { open: "09:00", close: "17:00" }, saturday: null, sunday: null } },
+                      { label: "9-6 Mon–Sat", schedule: { monday: { open: "09:00", close: "18:00" }, tuesday: { open: "09:00", close: "18:00" }, wednesday: { open: "09:00", close: "18:00" }, thursday: { open: "09:00", close: "18:00" }, friday: { open: "09:00", close: "18:00" }, saturday: { open: "09:00", close: "18:00" }, sunday: null } },
+                      { label: "24/7", schedule: { monday: { open: "00:00", close: "23:59" }, tuesday: { open: "00:00", close: "23:59" }, wednesday: { open: "00:00", close: "23:59" }, thursday: { open: "00:00", close: "23:59" }, friday: { open: "00:00", close: "23:59" }, saturday: { open: "00:00", close: "23:59" }, sunday: { open: "00:00", close: "23:59" } } },
+                    ].map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => updateBusinessHours({ schedule: preset.schedule })}
+                        className="px-2.5 py-1 text-[10px] font-medium rounded-full border border-neutral-200/60 dark:border-[#2A2A2A] hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
                 {/* Per-day schedule */}
                 <div className="space-y-2">
@@ -472,10 +524,7 @@ export function WhatsAppConfigPanel({
                             newSchedule[day.key] = v
                               ? { open: "09:00", close: "17:00" }
                               : null;
-                            updateConfig("businessHours" as keyof WhatsAppConfig, {
-                              ...config.businessHours,
-                              schedule: newSchedule,
-                            } as never);
+                            updateBusinessHours({ schedule: newSchedule });
                           }}
                         />
                         <span className="text-xs font-medium w-8">{day.label}</span>
@@ -490,10 +539,7 @@ export function WhatsAppConfigPanel({
                                   ...dayVal,
                                   open: e.target.value,
                                 };
-                                updateConfig("businessHours" as keyof WhatsAppConfig, {
-                                  ...config.businessHours,
-                                  schedule: newSchedule,
-                                } as never);
+                                updateBusinessHours({ schedule: newSchedule });
                               }}
                               className="text-xs rounded-lg border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-2 py-1"
                             />
@@ -507,10 +553,7 @@ export function WhatsAppConfigPanel({
                                   ...dayVal,
                                   close: e.target.value,
                                 };
-                                updateConfig("businessHours" as keyof WhatsAppConfig, {
-                                  ...config.businessHours,
-                                  schedule: newSchedule,
-                                } as never);
+                                updateBusinessHours({ schedule: newSchedule });
                               }}
                               className="text-xs rounded-lg border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-2 py-1"
                             />
@@ -527,10 +570,9 @@ export function WhatsAppConfigPanel({
                   <select
                     value={config.businessHours?.outsideHoursBehavior ?? "away_message"}
                     onChange={(e) =>
-                      updateConfig("businessHours" as keyof WhatsAppConfig, {
-                        ...config.businessHours,
-                        outsideHoursBehavior: e.target.value,
-                      } as never)
+                      updateBusinessHours({
+                        outsideHoursBehavior: e.target.value as "queue" | "away_message" | "always_on",
+                      })
                     }
                     className={INPUT_CLASS}
                   >
@@ -545,10 +587,7 @@ export function WhatsAppConfigPanel({
                     <textarea
                       value={config.businessHours?.awayMessage ?? ""}
                       onChange={(e) =>
-                        updateConfig("businessHours" as keyof WhatsAppConfig, {
-                          ...config.businessHours,
-                          awayMessage: e.target.value,
-                        } as never)
+                        updateBusinessHours({ awayMessage: e.target.value })
                       }
                       rows={2}
                       className={TEXTAREA_CLASS}
@@ -577,9 +616,9 @@ export function WhatsAppConfigPanel({
               <Toggle
                 checked={config.voiceNotes?.transcriptionEnabled ?? false}
                 onChange={(v) =>
-                  updateConfig("voiceNotes" as keyof WhatsAppConfig, {
+                  updateConfig("voiceNotes", {
                     transcriptionEnabled: v,
-                  } as never)
+                  })
                 }
               />
             </div>
@@ -602,9 +641,9 @@ export function WhatsAppConfigPanel({
               <Toggle
                 checked={config.imageHandling?.visionEnabled ?? false}
                 onChange={(v) =>
-                  updateConfig("imageHandling" as keyof WhatsAppConfig, {
+                  updateConfig("imageHandling", {
                     visionEnabled: v,
-                  } as never)
+                  })
                 }
               />
             </div>
@@ -655,12 +694,40 @@ export function WhatsAppConfigPanel({
                   </div>
                 </div>
 
-                {/* Verify Token Display */}
+                {/* Verify Token Display — masked by default */}
                 <div className="space-y-1.5">
                   <Label className="text-xs">Verify Token</Label>
-                  <pre className="bg-neutral-100/60 dark:bg-neutral-800/40 rounded-2xl p-3 text-xs font-mono text-foreground/80 border border-neutral-200/50 dark:border-neutral-700/50">
-                    {verifyTokenDisplay}
-                  </pre>
+                  <div className="relative">
+                    <pre className="bg-neutral-100/60 dark:bg-neutral-800/40 rounded-2xl p-3 pr-20 text-xs font-mono text-foreground/80 border border-neutral-200/50 dark:border-neutral-700/50">
+                      {tokenRevealed
+                        ? verifyTokenDisplay
+                        : verifyTokenDisplay.length > 4
+                          ? `${"•".repeat(Math.max(verifyTokenDisplay.length - 4, 8))}${verifyTokenDisplay.slice(-4)}`
+                          : "•".repeat(8)}
+                    </pre>
+                    <div className="absolute top-2 right-2 flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setTokenRevealed((v) => !v)}
+                        className="px-2 py-1 text-[10px] font-medium bg-card/80 backdrop-blur-md border border-border/40 rounded-full hover:bg-muted/50 transition-colors"
+                        title={tokenRevealed ? "Hide" : "Reveal"}
+                      >
+                        {tokenRevealed ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await navigator.clipboard.writeText(verifyTokenDisplay);
+                          setTokenCopied(true);
+                          setTimeout(() => setTokenCopied(false), 2000);
+                        }}
+                        className="px-2 py-1 text-[10px] font-medium bg-card/80 backdrop-blur-md border border-border/40 rounded-full hover:bg-muted/50 transition-colors"
+                        title="Copy"
+                      >
+                        {tokenCopied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 <hr className="border-neutral-200/50 dark:border-neutral-700/50" />

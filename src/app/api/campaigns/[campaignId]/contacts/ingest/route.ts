@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { rateLimit } from "@/lib/api/rate-limit";
+import { rateLimitDb } from "@/lib/api/rate-limit";
 import { logger } from "@/lib/security/logger";
 import { checkAutoEnrollOnIngest } from "@/lib/sequences/triggers";
 
@@ -43,7 +43,8 @@ export async function POST(
   }
 
   // Rate limit per token (not per IP — this is a machine-to-machine API)
-  const rl = rateLimit(token, "contact-ingest", 10);
+  // Uses DB-backed limiter for cross-instance accuracy
+  const rl = await rateLimitDb(token, "contact-ingest", 10);
   if (!rl.success) {
     return NextResponse.json(
       { error: "Rate limited. Try again later.", retryAfterMs: rl.retryAfter },
@@ -79,9 +80,25 @@ export async function POST(
   let skipped = 0;
   const errors: { index: number; reason: string }[] = [];
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fromAny = supabase.from as any;
+
+  // Separate contacts with source_id (need individual lookup) from phone-only (can batch)
+  interface ValidContact {
+    index: number;
+    phone: string;
+    name: string | null;
+    email: string | null;
+    tags: string[];
+    source: string;
+    source_id: string | null;
+    custom_fields: Record<string, unknown>;
+  }
+  const sourceIdContacts: ValidContact[] = [];
+  const phoneOnlyContacts: ValidContact[] = [];
+
   for (let i = 0; i < body.contacts.length; i++) {
     const c = body.contacts[i];
-
     let phone = (c.phone ?? "").replace(/\s+/g, "");
     if (!phone.startsWith("+")) phone = `+${phone}`;
 
@@ -91,65 +108,94 @@ export async function POST(
       continue;
     }
 
-    // Try source_id match first (CRM records may change phone numbers)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const fromAny = supabase.from as any;
-    if (c.source_id) {
-      const { data: existingBySource } = await fromAny("campaign_contacts")
-        .select("id")
-        .eq("channel_id", channel.id)
-        .eq("source_id", c.source_id)
-        .single();
+    const valid: ValidContact = {
+      index: i,
+      phone,
+      name: c.name?.trim() || null,
+      email: c.email?.trim() || null,
+      tags: c.tags ?? [],
+      source: c.source ?? "api",
+      source_id: c.source_id ?? null,
+      custom_fields: c.custom_fields ?? {},
+    };
 
-      if (existingBySource) {
-        await fromAny("campaign_contacts")
-          .update({
-            phone,
-            name: c.name?.trim() || null,
-            email: c.email?.trim() || null,
-            tags: c.tags ?? [],
-            source: c.source ?? "api",
-            custom_fields: c.custom_fields ?? {},
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", existingBySource.id);
-        updated++;
-        continue;
-      }
+    if (c.source_id) {
+      sourceIdContacts.push(valid);
+    } else {
+      phoneOnlyContacts.push(valid);
+    }
+  }
+
+  // Handle source_id contacts: batch lookup then individual update or add to phone batch
+  if (sourceIdContacts.length > 0) {
+    const sourceIds = sourceIdContacts.map((c) => c.source_id!);
+    const { data: existingBySrc } = await fromAny("campaign_contacts")
+      .select("id, source_id")
+      .eq("channel_id", channel.id)
+      .in("source_id", sourceIds);
+
+    const srcMap = new Map<string, string>();
+    for (const row of (existingBySrc ?? []) as { id: string; source_id: string }[]) {
+      srcMap.set(row.source_id, row.id);
     }
 
-    // Fall through to phone-based upsert
-    const { data: contact, error } = await fromAny("campaign_contacts")
-      .upsert(
-        {
-          user_id: channel.user_id,
-          channel_id: channel.id,
-          agent_id: channel.agent_id,
-          phone,
-          name: c.name?.trim() || null,
-          email: c.email?.trim() || null,
-          tags: c.tags ?? [],
-          source: c.source ?? "api",
-          source_id: c.source_id ?? null,
-          custom_fields: c.custom_fields ?? {},
-        },
-        { onConflict: "channel_id,phone" }
-      )
-      .select("id, created_at, updated_at")
-      .single();
+    for (const c of sourceIdContacts) {
+      const existingId = srcMap.get(c.source_id!);
+      if (existingId) {
+        // Update existing by source_id
+        await fromAny("campaign_contacts")
+          .update({
+            phone: c.phone,
+            name: c.name,
+            email: c.email,
+            tags: c.tags,
+            source: c.source,
+            custom_fields: c.custom_fields,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existingId);
+        updated++;
+      } else {
+        // No source_id match — add to phone batch
+        phoneOnlyContacts.push(c);
+      }
+    }
+  }
+
+  // Batch upsert phone-only contacts in chunks of 100
+  const CHUNK_SIZE = 100;
+  for (let i = 0; i < phoneOnlyContacts.length; i += CHUNK_SIZE) {
+    const chunk = phoneOnlyContacts.slice(i, i + CHUNK_SIZE);
+    const rows = chunk.map((c) => ({
+      user_id: channel.user_id,
+      channel_id: channel.id,
+      agent_id: channel.agent_id,
+      phone: c.phone,
+      name: c.name,
+      email: c.email,
+      tags: c.tags,
+      source: c.source,
+      source_id: c.source_id,
+      custom_fields: c.custom_fields,
+    }));
+
+    const { data: results, error } = await fromAny("campaign_contacts")
+      .upsert(rows, { onConflict: "channel_id,phone" })
+      .select("id, created_at, updated_at");
 
     if (error) {
-      skipped++;
-      errors.push({ index: i, reason: "Database error" });
+      skipped += chunk.length;
+      for (const c of chunk) {
+        errors.push({ index: c.index, reason: "Database error" });
+      }
       continue;
     }
 
-    if (contact) {
+    for (const contact of (results ?? []) as { id: string; created_at: string; updated_at: string }[]) {
       const createdAt = new Date(contact.created_at).getTime();
       const updatedAt = new Date(contact.updated_at).getTime();
       if (Math.abs(updatedAt - createdAt) < 1000) {
         imported++;
-        // Auto-enroll new contacts in active sequences
         checkAutoEnrollOnIngest(supabase, contact.id, channel.id).catch(() => {});
       } else {
         updated++;

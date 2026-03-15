@@ -125,6 +125,19 @@ export async function PATCH(
   }
 
   if (body.client_id !== undefined) {
+    // Verify ownership of the client being assigned
+    if (body.client_id) {
+      const { data: client } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("id", body.client_id)
+        .eq("user_id", user.id)
+        .single();
+
+      if (!client) {
+        return NextResponse.json({ error: "Client not found" }, { status: 404 });
+      }
+    }
     updates.client_id = body.client_id || null;
   }
 

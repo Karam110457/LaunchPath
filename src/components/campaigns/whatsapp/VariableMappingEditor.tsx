@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { X, Loader2, Save } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import type { TemplateRecord } from "./TemplateList";
@@ -8,18 +8,17 @@ import type { TemplateRecord } from "./TemplateList";
 const INPUT_CLASS =
   "w-full rounded-xl border border-neutral-200/60 dark:border-[#2A2A2A] bg-white dark:bg-[#151515] px-3 py-2 text-sm shadow-sm outline-none focus:ring-2 focus:ring-neutral-400/20 focus:border-neutral-400/50 dark:focus:ring-neutral-500/20 dark:focus:border-neutral-500/40 transition-all placeholder:text-muted-foreground/50";
 
-const CONTACT_FIELDS = [
+const BASE_CONTACT_FIELDS = [
   { value: "name", label: "Contact Name" },
   { value: "phone", label: "Phone Number" },
   { value: "email", label: "Email" },
-  { value: "custom_fields.company", label: "Company (custom)" },
-  { value: "custom_fields.order_id", label: "Order ID (custom)" },
-  { value: "custom_fields.amount", label: "Amount (custom)" },
 ];
 
 interface VariableMappingEditorProps {
   template: TemplateRecord;
   channelApiBase: string;
+  /** Campaign ID — used to fetch dynamic custom field keys */
+  campaignId?: string;
   onSaved: () => void;
   onClose: () => void;
 }
@@ -39,10 +38,41 @@ function extractVariables(components: Record<string, unknown>[]): string[] {
 export function VariableMappingEditor({
   template,
   channelApiBase,
+  campaignId,
   onSaved,
   onClose,
 }: VariableMappingEditorProps) {
   const variables = extractVariables(template.components);
+  const [customFieldKeys, setCustomFieldKeys] = useState<string[]>([]);
+
+  // Fetch distinct custom_field keys from campaign contacts
+  useEffect(() => {
+    if (!campaignId) return;
+    fetch(`/api/campaigns/${campaignId}/contacts?limit=50`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data?.contacts) return;
+        const keys = new Set<string>();
+        for (const c of data.contacts) {
+          if (c.custom_fields && typeof c.custom_fields === "object") {
+            for (const k of Object.keys(c.custom_fields)) {
+              keys.add(k);
+            }
+          }
+        }
+        setCustomFieldKeys(Array.from(keys).sort());
+      })
+      .catch(() => {});
+  }, [campaignId]);
+
+  const contactFields = useMemo(() => {
+    const fields = [...BASE_CONTACT_FIELDS];
+    for (const key of customFieldKeys) {
+      fields.push({ value: `custom_fields.${key}`, label: `${key} (custom)` });
+    }
+    return fields;
+  }, [customFieldKeys]);
+
   const [mapping, setMapping] = useState<Record<string, string>>(
     (template.variable_mapping ?? {}) as Record<string, string>
   );
@@ -85,6 +115,19 @@ export function VariableMappingEditor({
   const bodyComponent = template.components.find((c) => c.type === "BODY");
   const bodyText = (bodyComponent?.text as string) ?? "";
 
+  // Build preview text with example values filled in
+  const previewText = useMemo(() => {
+    let text = bodyText;
+    for (const v of variables) {
+      const key = v.replace(/[{}]/g, "");
+      const val = exampleValues[key] || mapping[key] || v;
+      // If mapped to a field and has example, show example; else show field name
+      const display = exampleValues[key] ? exampleValues[key] : mapping[key] ? `[${mapping[key]}]` : v;
+      text = text.replace(v, display);
+    }
+    return text;
+  }, [bodyText, variables, exampleValues, mapping]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[2rem] bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-2xl">
@@ -117,6 +160,25 @@ export function VariableMappingEditor({
               {bodyText}
             </p>
           </div>
+
+          {/* WhatsApp-style preview bubble */}
+          {variables.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                Preview
+              </p>
+              <div className="flex justify-end">
+                <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-[#dcf8c6] dark:bg-emerald-900/40 px-3 py-2 shadow-sm">
+                  <p className="text-xs text-neutral-900 dark:text-neutral-100 whitespace-pre-wrap">
+                    {previewText}
+                  </p>
+                  <p className="text-[9px] text-neutral-500 dark:text-neutral-400 text-right mt-1">
+                    {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {variables.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-4">
@@ -156,7 +218,7 @@ export function VariableMappingEditor({
                           className={INPUT_CLASS}
                         >
                           <option value="">— Static value —</option>
-                          {CONTACT_FIELDS.map((f) => (
+                          {contactFields.map((f) => (
                             <option key={f.value} value={f.value}>
                               {f.label}
                             </option>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { X, Loader2, Download, Database } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, Loader2, Download, Database, AlertCircle } from "lucide-react";
 import { Label } from "@/components/ui/label";
 
 const INPUT_CLASS =
@@ -34,6 +34,29 @@ export function CrmImportDialog({ campaignId, onDone, onClose }: CrmImportDialog
   const [previewContacts, setPreviewContacts] = useState<PreviewContact[] | null>(null);
   const [result, setResult] = useState<{ imported: number; skipped: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [connectedApps, setConnectedApps] = useState<string[] | null>(null);
+  const [checkingConnections, setCheckingConnections] = useState(true);
+
+  // Check which CRM connections the user has
+  useEffect(() => {
+    fetch("/api/composio/connections")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.connections) {
+          setConnectedApps(
+            data.connections.map((c: { appName?: string }) => c.appName?.toLowerCase() ?? "")
+          );
+        } else {
+          setConnectedApps([]);
+        }
+      })
+      .catch(() => setConnectedApps([]))
+      .finally(() => setCheckingConnections(false));
+  }, []);
+
+  const isConnected = toolkit
+    ? connectedApps?.includes(toolkit) ?? false
+    : false;
 
   async function handlePreview() {
     if (!toolkit) return;
@@ -124,9 +147,24 @@ export function CrmImportDialog({ campaignId, onDone, onClose }: CrmImportDialog
                 <option key={src.value} value={src.value}>{src.label}</option>
               ))}
             </select>
-            <p className="text-[10px] text-muted-foreground">
-              Requires an active Composio connection for the selected CRM.
-            </p>
+            {checkingConnections ? (
+              <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Checking connections…
+              </p>
+            ) : toolkit && !isConnected ? (
+              <div className="flex items-start gap-1.5 text-[10px] text-amber-600 dark:text-amber-400">
+                <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
+                <span>
+                  No active connection for this CRM. Connect it via{" "}
+                  <span className="font-medium">Settings → Integrations</span> first.
+                </span>
+              </div>
+            ) : (
+              <p className="text-[10px] text-muted-foreground">
+                Requires an active Composio connection for the selected CRM.
+              </p>
+            )}
           </div>
 
           {/* Preview button */}
@@ -134,7 +172,7 @@ export function CrmImportDialog({ campaignId, onDone, onClose }: CrmImportDialog
             <button
               type="button"
               onClick={handlePreview}
-              disabled={previewing}
+              disabled={previewing || !isConnected}
               className="flex items-center gap-1.5 px-4 py-2 text-[11px] font-medium rounded-full border border-neutral-200/60 dark:border-[#2A2A2A] hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors disabled:opacity-50"
             >
               {previewing ? <Loader2 className="w-3 h-3 animate-spin" /> : "Preview Contacts"}

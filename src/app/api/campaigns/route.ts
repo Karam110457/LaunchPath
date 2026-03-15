@@ -76,6 +76,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
   }
 
+  // Verify client_id ownership if provided
+  if (body.client_id) {
+    const { data: client } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("id", body.client_id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (!client) {
+      return NextResponse.json({ error: "Client not found" }, { status: 404 });
+    }
+  }
+
   const { data: campaign, error } = await supabase
     .from("campaigns")
     .insert({

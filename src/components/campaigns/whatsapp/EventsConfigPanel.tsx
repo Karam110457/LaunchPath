@@ -93,11 +93,12 @@ export function EventsConfigPanel({ campaignId }: EventsConfigPanelProps) {
   }
 
   async function handleDelete(id: string) {
+    if (!window.confirm("Delete this webhook subscription?")) return;
     try {
       await fetch(`/api/campaigns/${campaignId}/events/${id}`, { method: "DELETE" });
       fetchSubscriptions();
     } catch {
-      // Silently fail
+      setError("Failed to delete webhook");
     }
   }
 

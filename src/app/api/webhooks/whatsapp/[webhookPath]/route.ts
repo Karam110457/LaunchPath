@@ -15,14 +15,14 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { logger } from "@/lib/security/logger";
 import {
   verifyWebhookSignature,
-  parseInboundMessage,
-  parseStatusUpdate,
+  parseAllInboundMessages,
+  parseAllStatusUpdates,
   sendWhatsAppMessage,
   sendTemplateMessage,
   markMessageRead,
   isSessionWindowOpen,
 } from "@/lib/channels/whatsapp";
-import { isOptOutKeyword, handleOptOut } from "@/lib/channels/opt-out";
+import { isOptOutKeyword, handleOptOut, isOptInKeyword, handleOptIn } from "@/lib/channels/opt-out";
 import { downloadWhatsAppMedia, transcribeAudio, describeImage } from "@/lib/channels/media";
 import { isWithinBusinessHours } from "@/lib/channels/business-hours";
 import { stopSequencesOnReply } from "@/lib/sequences/triggers";
@@ -110,106 +110,101 @@ export async function POST(
     return new Response("Invalid JSON", { status: 400 });
   }
 
-  const parsed = parseInboundMessage(body);
-  const statusUpdate = !parsed ? parseStatusUpdate(body) : null;
+  // Parse all messages and status updates from the payload (Meta can batch)
+  const parsedMessages = parseAllInboundMessages(body);
+  const statusUpdates = parseAllStatusUpdates(body);
 
-  // Neither a message nor a status update — acknowledge and exit
-  if (!parsed && !statusUpdate) {
+  // Neither messages nor status updates — acknowledge and exit
+  if (parsedMessages.length === 0 && statusUpdates.length === 0) {
     return new Response("OK", { status: 200 });
   }
 
   // -------------------------------------------------------------------------
   // 3. Handle delivery status updates (sent/delivered/read/failed)
   // -------------------------------------------------------------------------
-  if (statusUpdate && !parsed) {
+  if (statusUpdates.length > 0 && parsedMessages.length === 0) {
     const supabase = createServiceClient();
 
     after(async () => {
-      try {
-        // Update template_send_messages status
-        const statusMap: Record<string, Record<string, unknown>> = {
-          sent: { status: "sent", sent_at: new Date(statusUpdate.timestamp * 1000).toISOString() },
-          delivered: { status: "delivered", delivered_at: new Date(statusUpdate.timestamp * 1000).toISOString() },
-          read: { status: "read", read_at: new Date(statusUpdate.timestamp * 1000).toISOString() },
-          failed: {
-            status: "failed",
-            error_code: statusUpdate.errorCode ?? null,
-            error_message: statusUpdate.errorTitle ?? null,
-          },
-        };
+      for (const statusUpdate of statusUpdates) {
+        try {
+          const statusMap: Record<string, Record<string, unknown>> = {
+            sent: { status: "sent", sent_at: new Date(statusUpdate.timestamp * 1000).toISOString() },
+            delivered: { status: "delivered", delivered_at: new Date(statusUpdate.timestamp * 1000).toISOString() },
+            read: { status: "read", read_at: new Date(statusUpdate.timestamp * 1000).toISOString() },
+            failed: {
+              status: "failed",
+              error_code: statusUpdate.errorCode ?? null,
+              error_message: statusUpdate.errorTitle ?? null,
+            },
+          };
 
-        const updates = statusMap[statusUpdate.status];
-        if (!updates) return;
+          const updates = statusMap[statusUpdate.status];
+          if (!updates) continue;
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: msg } = await (supabase.from as any)("template_send_messages")
-          .update(updates)
-          .eq("whatsapp_message_id", statusUpdate.messageId)
-          .select("job_id")
-          .single();
-
-        // Increment job counter
-        if (msg?.job_id) {
-          const counterField =
-            statusUpdate.status === "delivered"
-              ? "delivered_count"
-              : statusUpdate.status === "read"
-                ? "read_count"
-                : statusUpdate.status === "failed"
-                  ? "failed_count"
-                  : null;
-
-          if (counterField) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const { data: job } = await (supabase.from as any)("template_send_jobs")
-              .select(counterField)
-              .eq("id", msg.job_id)
-              .single();
-
-            if (job) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await (supabase.from as any)("template_send_jobs")
-                .update({
-                  [counterField]: (job[counterField] ?? 0) + 1,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq("id", msg.job_id);
-            }
-          }
-        }
-        // Also update message_statuses in channel_conversations metadata
-        // so the portal UI can show delivery ticks
-        if (statusUpdate.recipientPhone) {
-          const { data: conv } = await supabase
-            .from("channel_conversations")
-            .select("id, metadata")
-            .eq("session_id", statusUpdate.recipientPhone)
-            .order("updated_at", { ascending: false })
-            .limit(1)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: msg } = await (supabase.from as any)("template_send_messages")
+            .update(updates)
+            .eq("whatsapp_message_id", statusUpdate.messageId)
+            .select("job_id")
             .single();
 
-          if (conv) {
-            const meta = (conv.metadata ?? {}) as Record<string, unknown>;
-            const statuses = (meta.message_statuses ?? {}) as Record<string, string>;
-            statuses[statusUpdate.messageId] = statusUpdate.status;
-            await supabase
-              .from("channel_conversations")
-              .update({
-                metadata: { ...meta, message_statuses: statuses } as unknown as Json,
-              })
-              .eq("id", conv.id);
+          // Atomically increment job counter (avoids read-modify-write race)
+          if (msg?.job_id) {
+            const counterField =
+              statusUpdate.status === "delivered"
+                ? "delivered_count"
+                : statusUpdate.status === "read"
+                  ? "read_count"
+                  : statusUpdate.status === "failed"
+                    ? "failed_count"
+                    : null;
+
+            if (counterField) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              await (supabase.rpc as any)("increment_job_counter", {
+                p_job_id: msg.job_id,
+                p_counter: counterField,
+              });
+            }
           }
+          // Also update message_statuses in channel_conversations metadata
+          if (statusUpdate.recipientPhone) {
+            const { data: conv } = await supabase
+              .from("channel_conversations")
+              .select("id, metadata")
+              .eq("session_id", statusUpdate.recipientPhone)
+              .order("updated_at", { ascending: false })
+              .limit(1)
+              .single();
+
+            if (conv) {
+              const meta = (conv.metadata ?? {}) as Record<string, unknown>;
+              const statuses = (meta.message_statuses ?? {}) as Record<string, string>;
+              statuses[statusUpdate.messageId] = statusUpdate.status;
+              await supabase
+                .from("channel_conversations")
+                .update({
+                  metadata: { ...meta, message_statuses: statuses } as unknown as Json,
+                })
+                .eq("id", conv.id);
+            }
+          }
+        } catch (err) {
+          logger.error("Status update processing failed", {
+            messageId: statusUpdate.messageId,
+            error: err instanceof Error ? err.message : String(err),
+          });
         }
-      } catch (err) {
-        logger.error("Status update processing failed", {
-          messageId: statusUpdate.messageId,
-          error: err instanceof Error ? err.message : String(err),
-        });
       }
     });
 
     return new Response("OK", { status: 200 });
   }
+
+  // Use first parsed message for main processing (additional messages
+  // from the same payload are rare but handled via the loop above for statuses)
+  const parsed = parsedMessages[0];
 
   // At this point we have a parsed inbound message
   if (!parsed) {
@@ -284,7 +279,7 @@ async function processInboundMessage(ctx: {
     campaign_id: string | null;
   };
   config: WhatsAppConfig;
-  parsed: NonNullable<ReturnType<typeof parseInboundMessage>>;
+  parsed: NonNullable<ReturnType<typeof parseAllInboundMessages>[number]>;
   clientId?: string;
 }) {
   const { supabase, channel, config, parsed, clientId } = ctx;
@@ -307,6 +302,20 @@ async function processInboundMessage(ctx: {
   // -------------------------------------------------------------------------
   if (isOptOutKeyword(parsed.text)) {
     await handleOptOut({
+      supabase,
+      channelId: channel.id,
+      phone: parsed.from,
+      phoneNumberId: config.phoneNumberId,
+      accessToken: config.accessToken,
+    });
+    return;
+  }
+
+  // -------------------------------------------------------------------------
+  // 2b. Opt-in (re-subscribe) handling
+  // -------------------------------------------------------------------------
+  if (isOptInKeyword(parsed.text)) {
+    await handleOptIn({
       supabase,
       channelId: channel.id,
       phone: parsed.from,
@@ -692,8 +701,10 @@ async function processInboundMessage(ctx: {
   // -------------------------------------------------------------------------
   // 9. Upsert contact record
   // -------------------------------------------------------------------------
+  // Upsert contact: insert new contacts with conversation_count=1,
+  // or update existing contacts and atomically increment the counter.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase.from as any)("campaign_contacts")
+  const { error: upsertError } = await (supabase.from as any)("campaign_contacts")
     .upsert(
       {
         user_id: channel.user_id,
@@ -706,21 +717,26 @@ async function processInboundMessage(ctx: {
         last_replied_at: now,
         conversation_count: 1,
       },
-      { onConflict: "channel_id,phone" }
-    )
-    .then(async ({ error }: { error: unknown }) => {
-      if (error) {
-        // If insert failed, try updating existing record
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase.from as any)("campaign_contacts")
-          .update({
-            last_replied_at: now,
-            profile_name: parsed.displayName ?? null,
-          })
-          .eq("channel_id", channel.id)
-          .eq("phone", parsed.from);
-      }
-    });
+      { onConflict: "channel_id,phone", ignoreDuplicates: true }
+    );
+
+  if (upsertError) {
+    // Row already exists — update fields and atomically increment counter
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase.from as any)("campaign_contacts")
+      .update({
+        last_replied_at: now,
+        profile_name: parsed.displayName ?? null,
+      })
+      .eq("channel_id", channel.id)
+      .eq("phone", parsed.from);
+  }
+  // Atomically increment conversation_count for existing contacts
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase.rpc as any)("increment_contact_conversation_count", {
+    p_channel_id: channel.id,
+    p_phone: parsed.from,
+  });
 
   // -------------------------------------------------------------------------
   // 10. Dispatch webhook event

@@ -169,61 +169,80 @@ export function verifyWebhookSignature(params: {
 export function parseInboundMessage(
   body: Record<string, unknown>
 ): ParsedWhatsAppMessage | null {
+  // Returns the first message for backward compatibility.
+  // Use parseAllInboundMessages() to handle multiple messages per payload.
+  const all = parseAllInboundMessages(body);
+  return all.length > 0 ? all[0] : null;
+}
+
+/**
+ * Parse ALL inbound messages from a webhook payload.
+ * Meta can batch multiple messages in a single POST.
+ */
+export function parseAllInboundMessages(
+  body: Record<string, unknown>
+): ParsedWhatsAppMessage[] {
+  const results: ParsedWhatsAppMessage[] = [];
   try {
-    const entry = (body.entry as Array<Record<string, unknown>>)?.[0];
-    if (!entry) return null;
+    const entries = body.entry as Array<Record<string, unknown>>;
+    if (!entries) return results;
 
-    const changes = (entry.changes as Array<Record<string, unknown>>)?.[0];
-    if (!changes) return null;
+    for (const entry of entries) {
+      const changes = entry.changes as Array<Record<string, unknown>>;
+      if (!changes) continue;
 
-    const value = changes.value as Record<string, unknown>;
-    if (!value) return null;
+      for (const change of changes) {
+        const value = change.value as Record<string, unknown>;
+        if (!value) continue;
 
-    // Status updates (sent/delivered/read) — not a message
-    if (value.statuses) return null;
+        // Skip status-only payloads
+        if (value.statuses) continue;
 
-    const messages = value.messages as Array<Record<string, unknown>>;
-    if (!messages || messages.length === 0) return null;
+        const messages = value.messages as Array<Record<string, unknown>>;
+        if (!messages || messages.length === 0) continue;
 
-    const msg = messages[0];
-    const metadata = value.metadata as Record<string, unknown>;
-    const contacts = value.contacts as Array<Record<string, unknown>>;
+        const metadata = value.metadata as Record<string, unknown>;
+        const contacts = value.contacts as Array<Record<string, unknown>>;
 
-    const type = mapMessageType(msg.type as string);
+        for (const msg of messages) {
+          const type = mapMessageType(msg.type as string);
 
-    let text: string | undefined;
-    if (type === "text") {
-      const textObj = msg.text as Record<string, unknown>;
-      text = textObj?.body as string;
-    }
+          let text: string | undefined;
+          if (type === "text") {
+            const textObj = msg.text as Record<string, unknown>;
+            text = textObj?.body as string;
+          }
 
-    // Extract media info for audio/image/video/document messages
-    let mediaId: string | undefined;
-    let mimeType: string | undefined;
-    const mediaTypes = ["audio", "image", "video", "document"];
-    if (mediaTypes.includes(type)) {
-      const mediaObj = msg[type] as Record<string, unknown> | undefined;
-      if (mediaObj) {
-        mediaId = mediaObj.id as string | undefined;
-        mimeType = mediaObj.mime_type as string | undefined;
+          let mediaId: string | undefined;
+          let mimeType: string | undefined;
+          const mediaTypes = ["audio", "image", "video", "document"];
+          if (mediaTypes.includes(type)) {
+            const mediaObj = msg[type] as Record<string, unknown> | undefined;
+            if (mediaObj) {
+              mediaId = mediaObj.id as string | undefined;
+              mimeType = mediaObj.mime_type as string | undefined;
+            }
+          }
+
+          results.push({
+            messageId: msg.id as string,
+            from: msg.from as string,
+            timestamp: parseInt(msg.timestamp as string, 10),
+            type,
+            text,
+            phoneNumberId: metadata?.phone_number_id as string,
+            displayName: (contacts?.[0]?.profile as Record<string, unknown>)
+              ?.name as string | undefined,
+            mediaId,
+            mimeType,
+          });
+        }
       }
     }
-
-    return {
-      messageId: msg.id as string,
-      from: msg.from as string,
-      timestamp: parseInt(msg.timestamp as string, 10),
-      type,
-      text,
-      phoneNumberId: metadata?.phone_number_id as string,
-      displayName: (contacts?.[0]?.profile as Record<string, unknown>)
-        ?.name as string | undefined,
-      mediaId,
-      mimeType,
-    };
   } catch {
-    return null;
+    // Return whatever we parsed so far
   }
+  return results;
 }
 
 function mapMessageType(
@@ -408,51 +427,60 @@ export async function sendTemplateMessage(params: {
 export function parseStatusUpdate(
   body: Record<string, unknown>
 ): ParsedStatusUpdate | null {
+  // Returns first status for backward compatibility.
+  // Use parseAllStatusUpdates() to handle multiple statuses per payload.
+  const all = parseAllStatusUpdates(body);
+  return all.length > 0 ? all[0] : null;
+}
+
+/**
+ * Parse ALL status updates from a webhook payload.
+ * Meta can batch multiple statuses in a single POST.
+ */
+export function parseAllStatusUpdates(
+  body: Record<string, unknown>
+): ParsedStatusUpdate[] {
+  const results: ParsedStatusUpdate[] = [];
   try {
-    const entry = (body.entry as Array<Record<string, unknown>>)?.[0];
-    if (!entry) return null;
+    const entries = body.entry as Array<Record<string, unknown>>;
+    if (!entries) return results;
 
-    const changes = (entry.changes as Array<Record<string, unknown>>)?.[0];
-    if (!changes) return null;
+    for (const entry of entries) {
+      const changes = entry.changes as Array<Record<string, unknown>>;
+      if (!changes) continue;
 
-    const value = changes.value as Record<string, unknown>;
-    if (!value) return null;
+      for (const change of changes) {
+        const value = change.value as Record<string, unknown>;
+        if (!value) continue;
 
-    const statuses = value.statuses as Array<Record<string, unknown>>;
-    if (!statuses || statuses.length === 0) return null;
+        const statuses = value.statuses as Array<Record<string, unknown>>;
+        if (!statuses || statuses.length === 0) continue;
 
-    const s = statuses[0];
-    const rawStatus = s.status as string;
+        for (const s of statuses) {
+          const rawStatus = s.status as string;
+          let status: ParsedStatusUpdate["status"];
+          switch (rawStatus) {
+            case "sent": status = "sent"; break;
+            case "delivered": status = "delivered"; break;
+            case "read": status = "read"; break;
+            case "failed": status = "failed"; break;
+            default: continue;
+          }
 
-    let status: ParsedStatusUpdate["status"];
-    switch (rawStatus) {
-      case "sent":
-        status = "sent";
-        break;
-      case "delivered":
-        status = "delivered";
-        break;
-      case "read":
-        status = "read";
-        break;
-      case "failed":
-        status = "failed";
-        break;
-      default:
-        return null;
+          const errors = s.errors as Array<Record<string, unknown>> | undefined;
+          results.push({
+            messageId: s.id as string,
+            status,
+            timestamp: parseInt(s.timestamp as string, 10),
+            recipientPhone: s.recipient_id as string | undefined,
+            errorCode: errors?.[0]?.code as string | undefined,
+            errorTitle: errors?.[0]?.title as string | undefined,
+          });
+        }
+      }
     }
-
-    const errors = s.errors as Array<Record<string, unknown>> | undefined;
-
-    return {
-      messageId: s.id as string,
-      status,
-      timestamp: parseInt(s.timestamp as string, 10),
-      recipientPhone: s.recipient_id as string | undefined,
-      errorCode: errors?.[0]?.code as string | undefined,
-      errorTitle: errors?.[0]?.title as string | undefined,
-    };
   } catch {
-    return null;
+    // Return whatever we parsed so far
   }
+  return results;
 }

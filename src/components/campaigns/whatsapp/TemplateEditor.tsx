@@ -150,8 +150,13 @@ export function TemplateEditor({
     }
   }
 
+  // Close on Escape
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Escape") onClose();
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onKeyDown={handleKeyDown}>
       <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-[2rem] bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-white/60 dark:border-neutral-700/40 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200/50 dark:border-neutral-700/50">
@@ -242,6 +247,7 @@ export function TemplateEditor({
               placeholder="e.g., Order Update"
               maxLength={60}
             />
+            <CharCount current={headerText.length} max={60} />
           </div>
 
           {/* Body */}
@@ -265,9 +271,12 @@ export function TemplateEditor({
               placeholder={"Hi {{1}}, your order #{{2}} has been shipped!"}
               required
             />
-            <p className="text-[10px] text-muted-foreground">
-              Use {"{{1}}"}, {"{{2}}"}, etc. for dynamic values. Max 1024 chars.
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] text-muted-foreground">
+                Use {"{{1}}"}, {"{{2}}"}, etc. for dynamic values.
+              </p>
+              <CharCount current={bodyText.length} max={1024} />
+            </div>
           </div>
 
           {/* Footer */}
@@ -280,6 +289,7 @@ export function TemplateEditor({
               placeholder="e.g., Reply STOP to unsubscribe"
               maxLength={60}
             />
+            <CharCount current={footerText.length} max={60} />
           </div>
 
           <hr className="border-neutral-200/50 dark:border-neutral-700/50" />
@@ -390,5 +400,15 @@ export function TemplateEditor({
         </form>
       </div>
     </div>
+  );
+}
+
+function CharCount({ current, max }: { current: number; max: number }) {
+  const ratio = current / max;
+  const color = ratio >= 1 ? "text-red-500" : ratio >= 0.8 ? "text-amber-500" : "text-muted-foreground/60";
+  return (
+    <span className={`text-[10px] font-mono ${color}`}>
+      {current}/{max}
+    </span>
   );
 }

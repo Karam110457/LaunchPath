@@ -17,6 +17,7 @@ interface SequenceRecord {
 
 interface SequencesTabProps {
   campaignId: string;
+  agentId: string;
   channelId: string;
 }
 
@@ -27,14 +28,12 @@ const STATUS_COLORS: Record<string, string> = {
   archived: "bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-500",
 };
 
-export function SequencesTab({ campaignId, channelId }: SequencesTabProps) {
+export function SequencesTab({ campaignId, agentId, channelId }: SequencesTabProps) {
   const [sequences, setSequences] = useState<SequenceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showEditor, setShowEditor] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  void channelId;
 
   const fetchSequences = useCallback(async () => {
     try {
@@ -71,6 +70,8 @@ export function SequencesTab({ campaignId, channelId }: SequencesTabProps) {
     return (
       <SequenceEditor
         campaignId={campaignId}
+        agentId={agentId}
+        channelId={channelId}
         sequenceId={editingId}
         onDone={() => {
           setShowEditor(false);

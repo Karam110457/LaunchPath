@@ -26,6 +26,7 @@ export function AudienceBuilder({
   const [tagInput, setTagInput] = useState(filter.tags?.join(", ") ?? "");
 
   useEffect(() => {
+    const abortController = new AbortController();
     const timer = setTimeout(async () => {
       try {
         const params = new URLSearchParams({ limit: "1" });
@@ -33,18 +34,23 @@ export function AudienceBuilder({
         if (filter.status) params.set("status", filter.status);
 
         const res = await fetch(
-          `/api/campaigns/${campaignId}/contacts?${params.toString()}`
+          `/api/campaigns/${campaignId}/contacts?${params.toString()}`,
+          { signal: abortController.signal }
         );
         if (res.ok) {
           const data = await res.json();
           setMatchCount(data.total ?? 0);
         }
-      } catch {
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
         setMatchCount(null);
       }
     }, 300);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      abortController.abort();
+    };
   }, [campaignId, filter]);
 
   return (
