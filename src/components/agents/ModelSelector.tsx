@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { Search, ChevronDown, Check, X } from "lucide-react";
+import { Search, ChevronDown, Check, X, Volume2 } from "lucide-react";
 import {
   MODEL_OPTIONS,
   getAvailableProviders,
@@ -53,7 +53,7 @@ export function ModelSelector({ value, onChange, className, compact }: ModelSele
           <optgroup key={provider} label={provider}>
             {models.map((m) => (
               <option key={m.value} value={m.value}>
-                {m.label}{m.voiceReady ? " 🎙" : ""} — {m.multiplier}x
+                {m.label}{m.voiceReady ? " · Voice-ready" : ""} — {m.multiplier}x
               </option>
             ))}
           </optgroup>
@@ -291,7 +291,8 @@ export function ModelSelector({ value, onChange, className, compact }: ModelSele
                           </span>
                         </div>
                         {m.voiceReady && (
-                          <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                          <span className="shrink-0 inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                            <Volume2 className="w-2.5 h-2.5" />
                             Voice
                           </span>
                         )}
