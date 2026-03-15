@@ -33,6 +33,9 @@ import {
 
 type TestMode = "chat" | "voice";
 
+/** 4-state model matching VAPI/LiveKit: idle → listening → thinking → speaking */
+type VoiceState = "idle" | "listening" | "thinking" | "speaking";
+
 interface TranscriptEntry {
   id: number;
   role: "user" | "agent";
@@ -137,9 +140,12 @@ export function FloatingChatWidget({
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [showModelPicker, setShowModelPicker] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [voiceState, setVoiceState] = useState<VoiceState>("idle");
   const [interimText, setInterimText] = useState("");
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [micStream, setMicStream] = useState<MediaStream | null>(null);
+  /** Tracks how much of the agent transcript has been spoken (for delayed reveal) */
+  const spokenTextRef = useRef("");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playbackCtxRef = useRef<AudioContext | null>(null);
   const playbackSourceRef = useRef<AudioBufferSourceNode | null>(null);
@@ -280,7 +286,11 @@ export function FloatingChatWidget({
 
   // ─── Sentence-level TTS helper ──────────────────────────────────────────
   // Fetches TTS for a single sentence and plays it. Returns when audio finishes.
-  const speakSentence = useCallback(async (sentence: string): Promise<void> => {
+  // Also updates voiceState and reveals transcript text as each sentence is spoken.
+  const speakSentence = useCallback(async (
+    sentence: string,
+    transcriptId?: number,
+  ): Promise<void> => {
     try {
       const res = await fetch(`/api/agents/${agentId}/voice-preview`, {
         method: "POST",
@@ -294,11 +304,19 @@ export function FloatingChatWidget({
       if (!res.ok) return;
       const blob = await res.blob();
       if (blob.size === 0) return;
+
+      // Transition to speaking and reveal this sentence in transcript
+      setVoiceState("speaking");
+      spokenTextRef.current = (spokenTextRef.current + " " + sentence).trim();
+      if (transcriptId) {
+        updateTranscriptText(transcriptId, spokenTextRef.current);
+      }
+
       await playAudioBlob(blob);
     } catch {
       // Non-fatal: skip this sentence's audio
     }
-  }, [agentId, config.voiceId, config.speed, playAudioBlob]);
+  }, [agentId, config.voiceId, config.speed, playAudioBlob, updateTranscriptText]);
 
   // ─── Sentence boundary detection ──────────────────────────────────────────
   // Splits on sentence-ending punctuation, avoids false positives (Dr., Mr., etc.)
@@ -333,7 +351,9 @@ export function FloatingChatWidget({
     if (!text.trim() || isProcessing) return;
 
     setIsProcessing(true);
+    setVoiceState("thinking");
     setVoiceError(null);
+    spokenTextRef.current = "";
 
     // Half-duplex: pause recognition so mic doesn't pick up TTS output
     isSpeakingRef.current = true;
@@ -344,8 +364,8 @@ export function FloatingChatWidget({
     // Add user speech to transcript
     addTranscriptEntry("user", text);
 
-    // Create a transcript entry for the agent that we'll update progressively
-    const agentEntryId = addTranscriptEntry("agent", "...");
+    // Create a transcript entry — text revealed as each sentence is SPOKEN (not generated)
+    const agentEntryId = addTranscriptEntry("agent", "");
 
     // Conversation history
     conversationHistoryRef.current.push({ role: "user", content: text });
@@ -410,20 +430,17 @@ export function FloatingChatWidget({
               fullText += event.delta;
               sentenceBuffer += event.delta;
 
-              // Update transcript progressively
-              updateTranscriptText(agentEntryId, fullText);
-
               // Check for complete sentences — send each to TTS immediately
+              // Transcript text is revealed inside speakSentence as audio plays
               const { sentences, remainder } = extractSentences(sentenceBuffer);
               if (sentences.length > 0) {
                 sentenceBuffer = remainder;
                 for (const s of sentences) {
-                  ttsChain = ttsChain.then(() => speakSentence(s));
+                  ttsChain = ttsChain.then(() => speakSentence(s, agentEntryId));
                 }
               }
             } else if (event.type === "done" && event.text) {
               fullText = event.text;
-              updateTranscriptText(agentEntryId, fullText);
             }
           } catch {
             // Skip malformed SSE events
@@ -433,13 +450,13 @@ export function FloatingChatWidget({
 
       // Flush remaining text as final sentence
       if (sentenceBuffer.trim()) {
-        ttsChain = ttsChain.then(() => speakSentence(sentenceBuffer.trim()));
+        ttsChain = ttsChain.then(() => speakSentence(sentenceBuffer.trim(), agentEntryId));
       }
 
       // Wait for all queued TTS to finish playing
       await ttsChain;
 
-      // Save final text to conversation history
+      // Save final text to conversation history and ensure full transcript is shown
       if (fullText) {
         conversationHistoryRef.current.push({ role: "assistant", content: fullText });
         updateTranscriptText(agentEntryId, fullText);
@@ -451,6 +468,7 @@ export function FloatingChatWidget({
       }
     } finally {
       setIsProcessing(false);
+      setVoiceState("listening");
 
       // Resume recognition after all TTS finishes
       isSpeakingRef.current = false;
@@ -476,6 +494,7 @@ export function FloatingChatWidget({
     }
     setMicStream(null);
     setIsListening(false);
+    setVoiceState("idle");
     setInterimText("");
   }, [micStream]);
 
@@ -520,6 +539,7 @@ export function FloatingChatWidget({
     setMicStream(stream);
     setVoiceError(null);
     setIsListening(true);
+    setVoiceState("listening");
 
     // Step 2: Start SpeechRecognition (mic already allowed)
     const recognition = createSpeechRecognition();
@@ -822,24 +842,30 @@ export function FloatingChatWidget({
                   className="rounded-2xl overflow-hidden"
                   onVoiceDetected={setVoiceDetected}
                   voiceSensitivity={2}
+                  hue={voiceState === "thinking" ? 40 : voiceState === "speaking" ? 270 : undefined}
                 />
               </div>
 
-              {/* Status text */}
-              <p className="mt-3 text-xs text-neutral-500 canvas-dark:text-neutral-400 text-center">
-                {isProcessing
+              {/* Status text — 4-state model: idle / listening / thinking / speaking */}
+              <p className={cn(
+                "mt-3 text-xs text-center transition-colors",
+                voiceState === "thinking"
+                  ? "text-amber-500 canvas-dark:text-amber-400 animate-pulse"
+                  : voiceState === "speaking"
+                    ? "text-violet-500 canvas-dark:text-violet-400"
+                    : "text-neutral-500 canvas-dark:text-neutral-400"
+              )}>
+                {voiceState === "thinking"
                   ? "Thinking..."
-                  : isLoading
-                    ? "Generating speech..."
-                    : isPlaying
-                      ? "Speaking..."
-                      : isListening
-                        ? interimText
-                          ? `"${interimText}"`
-                          : voiceDetected
-                            ? "Listening..."
-                            : "Speak now..."
-                        : "Tap the mic to start"}
+                  : voiceState === "speaking"
+                    ? "Speaking..."
+                    : isListening
+                      ? interimText
+                        ? `"${interimText}"`
+                        : voiceDetected
+                          ? "Listening..."
+                          : "Speak now..."
+                      : "Tap the mic to start"}
               </p>
 
               {/* Mic + Play + Transcript controls */}
@@ -956,7 +982,13 @@ export function FloatingChatWidget({
                                     : "bg-white/60 canvas-dark:bg-neutral-800/60 border border-neutral-200/40 canvas-dark:border-neutral-700/40 text-neutral-700 canvas-dark:text-neutral-300"
                                 )}
                               >
-                                {entry.text}
+                                {entry.text || (
+                                  <span className="inline-flex gap-1 items-center text-neutral-400">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse [animation-delay:150ms]" />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse [animation-delay:300ms]" />
+                                  </span>
+                                )}
                               </div>
                             </div>
                           ))}
