@@ -116,7 +116,10 @@ export const MODEL_OPTIONS: ModelOption[] = [
   // Google — openrouter.ai, March 2026
   // ---------------------------------------------------------------------------
   // Fast
+  { value: "google/gemini-2.0-flash-001", label: "Gemini 2.0 Flash", provider: "Google", tier: "fast", inputPrice: 0.10, outputPrice: 0.40, multiplier: 0.04, voiceReady: true },
+  { value: "google/gemini-2.0-flash-lite-001", label: "Gemini 2.0 Flash Lite", provider: "Google", tier: "fast", inputPrice: 0.075, outputPrice: 0.30, multiplier: 0.03, voiceReady: true },
   { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "Google", tier: "fast", inputPrice: 0.30, outputPrice: 2.50, multiplier: 0.20, voiceReady: true },
+  { value: "google/gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite", provider: "Google", tier: "fast", inputPrice: 0.10, outputPrice: 0.40, multiplier: 0.04, voiceReady: true },
   { value: "google/gemini-3-flash-preview", label: "Gemini 3 Flash", provider: "Google", tier: "fast", inputPrice: 0.50, outputPrice: 3.00, multiplier: 0.26, voiceReady: true },
   { value: "google/gemini-3.1-flash-lite-preview", label: "Gemini 3.1 Flash Lite", provider: "Google", tier: "fast", inputPrice: 0.25, outputPrice: 1.50, multiplier: 0.13, voiceReady: true },
   // Standard
@@ -130,7 +133,7 @@ export const MODEL_OPTIONS: ModelOption[] = [
   { value: "meta-llama/llama-3.3-8b-instruct", label: "Llama 3.3 8B", provider: "Meta", tier: "fast", inputPrice: 0.03, outputPrice: 0.05, multiplier: 0.01, voiceReady: true },
   { value: "meta-llama/llama-4-scout", label: "Llama 4 Scout", provider: "Meta", tier: "fast", inputPrice: 0.08, outputPrice: 0.30, multiplier: 0.03, voiceReady: true },
   // Standard
-  { value: "meta-llama/llama-3.3-70b-instruct", label: "Llama 3.3 70B", provider: "Meta", tier: "standard", inputPrice: 0.10, outputPrice: 0.32, multiplier: 0.04 },
+  { value: "meta-llama/llama-3.3-70b-instruct", label: "Llama 3.3 70B", provider: "Meta", tier: "standard", inputPrice: 0.10, outputPrice: 0.32, multiplier: 0.04, voiceReady: true },
   { value: "meta-llama/llama-4-maverick", label: "Llama 4 Maverick", provider: "Meta", tier: "standard", inputPrice: 0.15, outputPrice: 0.60, multiplier: 0.06 },
   // Advanced
   { value: "meta-llama/llama-3.1-405b-instruct", label: "Llama 3.1 405B", provider: "Meta", tier: "advanced", inputPrice: 4.00, outputPrice: 4.00, multiplier: 0.84 },

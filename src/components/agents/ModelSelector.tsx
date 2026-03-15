@@ -53,7 +53,7 @@ export function ModelSelector({ value, onChange, className, compact }: ModelSele
           <optgroup key={provider} label={provider}>
             {models.map((m) => (
               <option key={m.value} value={m.value}>
-                {m.label} — {m.multiplier}x
+                {m.label}{m.voiceReady ? " 🎙" : ""} — {m.multiplier}x
               </option>
             ))}
           </optgroup>
@@ -290,6 +290,11 @@ export function ModelSelector({ value, onChange, className, compact }: ModelSele
                             {m.label}
                           </span>
                         </div>
+                        {m.voiceReady && (
+                          <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                            Voice
+                          </span>
+                        )}
                         <span
                           className={`shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${TIER_BADGE_COLORS[m.tier]}`}
                         >

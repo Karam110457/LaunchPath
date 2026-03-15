@@ -275,15 +275,33 @@ export function FloatingChatWidget({
     const controller = new AbortController();
     abortRef.current = controller;
 
+    // When in voice mode, prepend a system instruction to keep responses
+    // short and conversational (same pattern as VAPI/Retell).
+    const voiceSystemMessage = mode === "voice" ? {
+      role: "system",
+      content: "You are currently in a VOICE conversation. The user is speaking to you and will hear your response read aloud. Follow these rules strictly:\n" +
+        "Keep every response to 1 to 2 sentences maximum.\n" +
+        "Ask only one question at a time, never stack questions.\n" +
+        "Never use emojis, markdown formatting, bullet points, or dashes.\n" +
+        "Use natural spoken language with contractions.\n" +
+        "Say dates and numbers in spoken form (e.g. say January fifteenth, not 1/15).\n" +
+        "Be warm and conversational, not robotic.",
+    } : null;
+
+    const messages = [
+      ...(voiceSystemMessage ? [voiceSystemMessage] : []),
+      ...conversationHistoryRef.current.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+    ];
+
     try {
       const res = await fetch(`/api/agents/${agentId}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: conversationHistoryRef.current.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
+          messages,
           userMessage: userText,
         }),
         signal: controller.signal,
@@ -336,7 +354,7 @@ export function FloatingChatWidget({
       console.error("[Voice] Agent chat error:", err);
       throw err;
     }
-  }, [agentId]);
+  }, [agentId, mode]);
 
   // ─── Full voice loop: recognize → agent → TTS → transcript ──────────────
   // Half-duplex: pause SpeechRecognition while agent is thinking + speaking

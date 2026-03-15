@@ -53,7 +53,7 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
       "Books meetings and captures lead details. Perfect for service businesses.",
     icon: "Calendar",
     default_system_prompt_hint:
-      "An AI agent that qualifies leads by asking about their needs, then books appointments on the calendar. Captures the configured lead fields before booking.",
+      "An AI agent that qualifies leads by asking about their needs, then books appointments on the calendar. Captures the configured lead fields before booking. Keep responses concise, no more than 2 to 3 sentences. Ask only one question at a time. Never use emojis, markdown formatting, or dashes. Use natural, conversational language.",
     suggested_personality: {
       tone: "friendly and efficient",
       greeting_message:
@@ -111,7 +111,7 @@ CRITICAL RULES:
       "Handles support queries using your knowledge base. Escalates complex issues.",
     icon: "LifeBuoy",
     default_system_prompt_hint:
-      "A support agent that resolves customer issues using the knowledge base. Asks clarifying questions, provides step-by-step solutions, and escalates to a human when it cannot resolve the issue.",
+      "A support agent that resolves customer issues using the knowledge base. Asks clarifying questions, provides clear solutions, and escalates to a human when it cannot resolve the issue. Keep responses concise, no more than 2 to 3 sentences. Ask only one question at a time. Never use emojis, markdown formatting, or dashes. Use natural, conversational language.",
     suggested_personality: {
       tone: "patient and helpful",
       greeting_message:
@@ -160,7 +160,7 @@ When a conversation needs to be escalated (account changes, billing, technical i
       "Captures lead details through conversation and saves them to a spreadsheet.",
     icon: "Target",
     default_system_prompt_hint:
-      "An AI agent that engages visitors in helpful conversation while naturally collecting qualifying information. Saves lead data to Google Sheets and notifies the team via email.",
+      "An AI agent that engages visitors in helpful conversation while naturally collecting qualifying information. Saves lead data to Google Sheets and notifies the team via email. Keep responses concise, no more than 2 to 3 sentences. Ask only one question at a time. Never use emojis, markdown formatting, or dashes. Use natural, conversational language.",
     suggested_personality: {
       tone: "warm and conversational",
       greeting_message:
