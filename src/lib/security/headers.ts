@@ -72,11 +72,14 @@ export function applySecurityHeaders(
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
 
-  // Allow microphone on agent builder pages for voice testing
+  // Allow microphone on agent builder pages for voice testing.
+  // NOTE: interest-cohort=() was removed — Chrome deprecated it and unrecognised
+  // directives can cause Chrome to misparse the entire header, silently blocking
+  // other directives like microphone=(self). Use browsing-topics=() instead.
   const micPolicy = pathname && needsMicrophone(pathname) ? "microphone=(self)" : "microphone=()";
   response.headers.set(
     "Permissions-Policy",
-    `camera=(), ${micPolicy}, geolocation=(), interest-cohort=()`
+    `camera=(), ${micPolicy}, geolocation=(), browsing-topics=()`
   );
   const allowEval = pathname ? needsEval(pathname) : false;
   response.headers.set(

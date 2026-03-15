@@ -491,19 +491,28 @@ export function FloatingChatWidget({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
     } catch (err) {
-      console.error("[Voice] getUserMedia failed:", err);
-      // Check if previously blocked
-      try {
-        const perm = await navigator.permissions.query({ name: "microphone" as PermissionName });
-        if (perm.state === "denied") {
-          setVoiceError(
-            "Microphone blocked. Click the lock icon in the address bar → reset Microphone to \"Ask\"."
-          );
-        } else {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error("[Voice] getUserMedia failed:", errMsg);
+
+      // Distinguish Permissions-Policy block from user denial
+      if (errMsg.includes("Permissions Policy") || errMsg.includes("permissions policy")) {
+        setVoiceError(
+          "Microphone blocked by site policy. Please try refreshing the page (Ctrl+Shift+R)."
+        );
+      } else {
+        // Check user-level permission state
+        try {
+          const perm = await navigator.permissions.query({ name: "microphone" as PermissionName });
+          if (perm.state === "denied") {
+            setVoiceError(
+              "Microphone blocked. Click the lock icon in the address bar and reset Microphone to \"Ask\"."
+            );
+          } else {
+            setVoiceError("Microphone access denied. Check browser permissions.");
+          }
+        } catch {
           setVoiceError("Microphone access denied. Check browser permissions.");
         }
-      } catch {
-        setVoiceError("Microphone access denied. Check browser permissions.");
       }
       return;
     }
