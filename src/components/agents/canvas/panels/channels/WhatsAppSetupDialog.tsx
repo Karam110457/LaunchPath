@@ -11,7 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import type { ChannelResponse, WhatsAppConfig } from "@/lib/channels/types";
 
 interface WhatsAppSetupDialogProps {
@@ -48,9 +47,6 @@ export function WhatsAppSetupDialog({
   );
   const [readReceipts, setReadReceipts] = useState(
     existingConfig.readReceipts !== false
-  );
-  const [greetingMessage, setGreetingMessage] = useState(
-    existingConfig.greetingMessage ?? ""
   );
   const [rateLimitRpm, setRateLimitRpm] = useState(
     existing?.rate_limit_rpm?.toString() ?? ""
@@ -94,7 +90,6 @@ export function WhatsAppSetupDialog({
       verifyToken,
       responseDelay: responseDelay ? parseInt(responseDelay, 10) : 2000,
       readReceipts,
-      greetingMessage: greetingMessage || undefined,
     };
 
     const rpm = rateLimitRpm ? parseInt(rateLimitRpm, 10) : undefined;
@@ -354,18 +349,6 @@ export function WhatsAppSetupDialog({
                 }`}
               />
             </button>
-          </div>
-
-          {/* Greeting Message */}
-          <div className="space-y-1.5">
-            <Label htmlFor="wa-greeting">Greeting Message</Label>
-            <Textarea
-              id="wa-greeting"
-              value={greetingMessage}
-              onChange={(e) => setGreetingMessage(e.target.value)}
-              placeholder="Optional message for first-time contacts"
-              rows={2}
-            />
           </div>
 
           {/* Rate Limit */}

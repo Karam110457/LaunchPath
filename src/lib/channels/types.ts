@@ -63,8 +63,6 @@ export interface WhatsAppConfig {
   responseDelay?: number;
   /** Send read receipts on incoming messages */
   readReceipts?: boolean;
-  /** Message sent to first-time contacts */
-  greetingMessage?: string;
   /** Auto-close conversations after N hours of inactivity */
   autoClose?: { enabled: boolean; hours?: number };
   /** Auto-escalate to human on keywords/loops */

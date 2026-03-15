@@ -325,21 +325,6 @@ export function WhatsAppConfigPanel({
             <hr className="border-neutral-200/50 dark:border-neutral-700/50" />
 
             <FieldGroup
-              label="Greeting Message"
-              hint="Optional message sent to first-time contacts"
-            >
-              <textarea
-                value={config.greetingMessage ?? ""}
-                onChange={(e) => updateConfig("greetingMessage", e.target.value)}
-                rows={2}
-                className={TEXTAREA_CLASS}
-                placeholder="e.g., Hi! Thanks for reaching out. How can I help?"
-              />
-            </FieldGroup>
-
-            <hr className="border-neutral-200/50 dark:border-neutral-700/50" />
-
-            <FieldGroup
               label="Rate Limit (RPM)"
               hint="Maximum replies per minute to avoid Meta throttling"
             >

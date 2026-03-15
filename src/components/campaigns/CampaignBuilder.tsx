@@ -215,7 +215,6 @@ export function CampaignBuilder({
           verifyToken: waConfig.verifyToken,
           responseDelay: waConfig.responseDelay ?? 2000,
           readReceipts: waConfig.readReceipts !== false,
-          greetingMessage: waConfig.greetingMessage || undefined,
           templateFallback: waConfig.templateFallback || undefined,
         };
         const rpm = rateLimitRpm ? parseInt(rateLimitRpm, 10) : undefined;
